@@ -1,0 +1,27 @@
+{
+  "version": "0.1.2",
+  "name": "stream-transform",
+  "description": "Object transformations implementing the Node.js `stream.Transform` API",
+  "keywords": [ "stream", "transform", "csv", "object" ],
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "http://www.github.com/wdavidw/node-stream-transform"
+  },
+  "homepage": "http://csv.adaltas.com/transform/",
+  "dependencies": {},
+  "devDependencies": {
+    "coffee-script": "latest",
+    "pad": "latest",
+    "mocha": "latest",
+    "csv-generate": "latest",
+    "should": "latest"
+  },
+  "optionalDependencies": {},
+  "main": "./lib",
+  "scripts": {
+    "coffee": "./node_modules/.bin/coffee -b -o lib src",
+    "pretest": "./node_modules/.bin/coffee -b -o lib src",
+    "test": "NODE_ENV=test ./node_modules/.bin/mocha --compilers coffee:coffee-script/register --reporter dot"
+  }
+}

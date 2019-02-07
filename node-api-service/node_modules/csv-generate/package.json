@@ -1,0 +1,25 @@
+{
+  "version": "0.0.6",
+  "name": "csv-generate",
+  "description": "CSV and object generation implementing the Node.js `stream.Readable` API",
+  "keywords": [ "stream", "generate", "csv", "object" ],
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "http://www.github.com/wdavidw/node-csv-generate"
+  },
+  "homepage": "http://csv.adaltas.com/generate/",
+  "dependencies": {},
+  "devDependencies": {
+    "coffee-script": "latest",
+    "mocha": "latest",
+    "should": "latest"
+  },
+  "optionalDependencies": {},
+  "main": "./lib",
+  "scripts": {
+    "coffee": "./node_modules/.bin/coffee -b -o lib src",
+    "pretest": "./node_modules/.bin/coffee -b -o lib src",
+    "test": "NODE_ENV=test ./node_modules/.bin/mocha --compilers coffee:coffee-script/register --reporter dot"
+  }
+}

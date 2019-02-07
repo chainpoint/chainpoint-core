@@ -1,0 +1,19 @@
+{
+  "name": "chainpoint-node-btc-tx-service",
+  "version": "0.0.1",
+  "description": "Chainpoint BTC transaction service.",
+  "author": "Glenn Rempe <glenn@tierion.com>",
+  "license": "AGPL-3.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.5.2",
+    "async": "^2.3.0",
+    "blockchain-anchor": "^2.3.2",
+    "envalid": "^3.1.1",
+    "sequelize": "^4.22.6",
+    "sequelize-cockroachdb": "^1.0.2"
+  }
+}

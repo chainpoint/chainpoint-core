@@ -1,0 +1,458 @@
+swagger: "2.0"
+info:
+  version: '1.0'
+  title: 'Chainpoint Services'
+  description: 'Documentation for chainpoint.org API'
+  termsOfService: 'http://chainpoint.org/terms/'
+  contact:
+    email: 'team@chainpoint.org'
+  license:
+    name: 'AGPL-3.0'
+    url: 'http://www.gnu.org/licenses/agpl-3.0.txt'
+host: "chainpoint.org"
+basePath: "/v3"
+tags:
+- name: "hashes"
+  description: "Your hashes to be anchored"
+- name: "proofs"
+  description: "Your Chainpoint proofs created for each of your hashes"
+- name: "verify"
+  description: "Verification process for your proofs"
+- name: "calendar"
+  description: "Chainpoint calendar block data"
+- name: "config"
+  description: "Configuration information about the Chainpoint stack"
+externalDocs:
+  description: "Find out more about Chainpoint"
+  url: "https://chainpoint.org"
+schemes:
+- "http"
+- "https"
+paths:
+  '/hashes':
+    post:
+      tags:
+      - "hashes"
+      summary: "Submit a hash for anchoring"
+      description: ""
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Hex string hash to be anchored"
+        required: true
+        schema:
+          $ref: "#/definitions/PostHashRequest"
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/PostHashResponse"
+        '409':
+          description: "invalid argument in request"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  '/proofs/{hash_id}':
+    get:
+      tags:
+      - "proofs"
+      summary: "Retrieves a proof by hash_id"
+      description: ""
+      produces:
+      - "application/json"
+      parameters:
+        - name: "hash_id"
+          in: "path"
+          required: true
+          description: "The hash_id of the proof to retrieve"
+          type: string
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/GetProofsResponse"
+        '409':
+          description: "invalid argument in request"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  '/proofs/':
+    get:
+      tags:
+      - "proofs"
+      summary: "Retrieves one or more proofs by hashids supplied in header"
+      description: ""
+      produces:
+      - "application/json"
+      parameters:
+        - name: "hashids"
+          in: "header"
+          required: true
+          description: "Comma separated hash_id list of the proofs to retrieve"
+          type: string
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/GetProofsResponse"
+        '409':
+          description: "invalid argument in request"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  '/verify':
+    post:
+      tags:
+      - "verify"
+      summary: "Submit one or more proofs for verification"
+      description: ""
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Array of one or more proof to be verified"
+        required: true
+        schema:
+          $ref: "#/definitions/PostVerifyRequest"
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/PostVerifyResponse"
+        '409':
+          description: "invalid argument in request"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  '/calendar/{height}':
+    get:
+      tags:
+      - "calendar"
+      summary: "Retrieves the calendar block at the given height"
+      description: ""
+      produces:
+      - "application/json"
+      parameters:
+        - name: "height"
+          in: "path"
+          required: true
+          description: "The height of the block to retrieve"
+          type: integer
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            type: object
+            $ref: "#/definitions/GetCalendarBlockResponse"
+        '409':
+          description: "invalid argument in request"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  '/calendar/{height}/data':
+    get:
+      tags:
+      - "calendar"
+      summary: "Retrieves the data stored in the calendar block at the given height"
+      description: ""
+      produces:
+      - "text/plain"
+      parameters:
+        - name: "height"
+          in: "path"
+          required: true
+          description: "The height of the block from which  to retrieve the data"
+          type: integer
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            type: string
+            example: "5e4d1edab8394a0da1156d445beefd1adcb9ef95de2a66bb0285facbd379bb89"
+        '409':
+          description: "invalid argument in request"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  '/calendar/{height}/hash':
+    get:
+      tags:
+      - "calendar"
+      summary: "Retrieves the calendar block hash at the given height"
+      description: ""
+      produces:
+      - "text/plain"
+      parameters:
+        - name: "height"
+          in: "path"
+          required: true
+          description: "The height of the block hash to retrieve"
+          type: integer
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            type: string
+            example: "eac53dde9661daf47a428efea28c81a021c06d64f98eeabbdcff442d992153a8"
+        '409':
+          description: "invalid argument in request"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  '/calendar/{fromHeight}/{toHeight}':
+    get:
+      tags:
+      - "calendar"
+      summary: "Retrieves an array of calendar blocks within the given range"
+      description: ""
+      produces:
+      - "text/plain"
+      parameters:
+        - name: "fromHeight"
+          in: "path"
+          required: true
+          description: "The height of the first block of the range to retrieve"
+          type: integer
+        - name: "toHeight"
+          in: "path"
+          required: true
+          description: "The height of the last block of the range to retrieve"
+          type: integer
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            type: object
+            $ref: "#/definitions/GetCalendarBlockRangeResponse"
+        '409':
+          description: "invalid argument in request"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  '/config':
+    get:
+      tags:
+      - "config"
+      summary: "Retrieves the configuration information for this stack"
+      description: ""
+      produces:
+      - "application/json"
+      responses:
+        '200':
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/GetConfigResponse"
+definitions:
+  PostHashRequest:
+    type: object
+    properties:
+      hash:
+        type: string
+        example: "1957db7fe23e4be1740ddeb941ddda7ae0a6b782e536a9e00b5aa82db1e84547"
+        pattern: "^([a-fA-F0-9]{2}){20,64}$"
+        minLength: 40
+        maxLength: 128
+  PostHashResponse:
+    type: object
+    properties:
+      hash_id:
+        type: string
+        example: "5a001650-2f4a-11e7-ad22-37b426116bc4"
+      hash: 
+        type: string
+        example: "1957db7fe23e4be1740ddeb941ddda7ae0a6b782e536a9e00b5aa82db1e84546"  
+      nist: 
+        type: string
+        example: "1400585240:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C"          
+      submitted_at:
+        type: string
+        format: "date-time"
+        example: "2017-05-02T15:16:44Z"
+      processing_hints:
+        type: object
+        properties:
+          cal:
+            type: string
+            format: "date-time"
+            example: "2017-05-02T15:17:44Z"
+          eth:
+            type: string
+            format: "date-time"
+            example: "2017-05-02T15:27:44Z"
+          btc: 
+            type: string
+            format: "date-time"
+            example: "2017-05-02T16:17:44Z"
+  GetProofsRequest:
+    type: object
+  GetProofsResponse:
+    type: object
+    properties:
+      hash_id:
+        type: string
+        example: "1957db7fe23e4be1740ddeb941ddda7ae0a6b782e536a9e00b5aa82db1e84547"
+      proof:
+        type: object
+  ErrorResponse:
+    type: object
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+  PostVerifyRequest:
+    type: object
+    properties:
+      proofs:
+        type: array
+        items:
+          type: object
+          example: {}
+        minItems: 1
+        maxItems: 1000
+  PostVerifyResponse:
+    type: object
+    properties:
+      proof_index:
+        type: integer
+        example: 0          
+      hash:
+        type: string
+        example: "112233ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab11"
+      hash_id_node:
+        type: string
+        example: "3bce9920-4ed7-11e7-a7d0-3d6269e334e8"
+      hash_submitted_node_at:
+        type: string
+        format: "date-time"
+        example: "2017-06-11T18:53:18Z"       
+      hash_id_core:
+        type: string
+        example: "3bce9920-4ed7-11e7-a7d0-3d6269e334e8"
+      hash_submitted_core_at:
+        type: string
+        format: "date-time"
+        example: "2017-06-11T18:53:18Z"
+      anchors:
+        type: array
+        items:
+          type: object
+          properties:
+            branch:
+              type: string
+              example: "cal_anchor_branch"
+            type:
+              type: string
+              example: "cal"
+            valid: 
+              type: "boolean"
+              example: true
+      status:
+        type: string
+        example: "verified"
+  GetCalendarBlockResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        example: 729          
+      time:
+        type: integer
+        example: 1497225912859
+      version:
+        type: integer
+        example: 1
+      stackId:
+        type: string
+        example: "chainpoint.calendar.a"
+      type:
+        type: string
+        example: "btc-c"
+      dataId:
+        type: string
+        example: "470984"
+      dataVal:
+        type: string
+        example: "1e8b7d0c4f94775191512575dcf808ca97a4079946b3df11cd16f3329e680878"
+      hash:
+        type: string
+        example: "29f72bc7fae6e504d1080ac206b149d6cbf0ca21b4bbd0ac5e9e44213a52165a"
+      sig:
+        type: string
+        example: "lfdvO6fOeRo+wAj9n3Ca9GHMsRsosawRdZ6o2fkvdgIjMkaAa83RkTX/iveK5ogTs7FdNrxnnjmvC9bR5ayLACn3K8f65uUE0QgKwgaxSdbL2MohtLvQrF6eRCE6UhZa"
+  GetCalendarBlockRangeResponse:
+    type: object
+    properties:
+      blocks:
+        type: array
+        items: 
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 729
+            time:
+              type: integer
+              example: 1497225912859
+            version:
+              type: integer
+              example: 1
+            stackId:
+              type: string
+              example: "chainpoint.calendar.a"
+            type:
+              type: string
+              example: "btc-c"
+            dataId:
+              type: string
+              example: "470984"
+            dataVal:
+              type: string
+              example: "1e8b7d0c4f94775191512575dcf808ca97a4079946b3df11cd16f3329e680878"
+            hash:
+              type: string
+              example: "29f72bc7fae6e504d1080ac206b149d6cbf0ca21b4bbd0ac5e9e44213a52165a"
+            sig:
+              type: string
+              example: "lfdvO6fOeRo+wAj9n3Ca9GHMsRsosawRdZ6o2fkvdgIjMkaAa83RkTX/iveK5ogTs7FdNrxnnjmvC9bR5ayLACn3K8f65uUE0QgKwgaxSdbL2MohtLvQrF6eRCE6UhZa"
+  GetConfigResponse:
+    type: object
+    properties:       
+      chainpoint_core_base_uri:
+        type: string
+        example: https://a.prod.server.com
+      anchor_btc:
+        type: string
+        example: enabled
+      anchor_eth:
+        type: string
+        example: disabled
+      proof_expire_minutes:
+        type: integer
+        example: 1440
+      get_proofs_max_rest:
+        type: integer
+        example: 250
+      post_verify_proofs_max:
+        type: integer
+        example: 1000
+      time:
+        type: string
+        format: date-time
+        example: "2017-07-14T18:07:31Z"
+      calendar:
+        type: object
+        properties:
+          height:
+            type: integer
+            example: 43625
+          audit_challenge:
+            type: string
+            example: 1500476217578:42041:42625:548fd77a637681170f35639edc1c9fa14201aa7dab9e06f48224bfd96aed8486

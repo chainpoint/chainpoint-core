@@ -1,0 +1,16 @@
+{
+  "name": "chainpoint-node-nist-beacon-service",
+  "version": "0.0.1",
+  "description": "Chainpoint NIST Beacon service.",
+  "author": "Glenn Rempe <glenn@tierion.com>",
+  "license": "AGPL-3.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "envalid": "^3.1.1",
+    "nist-randomness-beacon": "^2.0.4",
+    "zeromq": "^5.1.0"
+  }
+}

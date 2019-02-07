@@ -1,0 +1,26 @@
+{
+  "version": "0.0.8",
+  "name": "csv-stringify",
+  "description": "CSV stringifier implementing the Node.js `stream.Transform` API",
+  "keywords": [ "csv", "stringify", "stringifier" ],
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "http://www.github.com/wdavidw/node-csv-stringify"
+  },
+  "homepage": "http://csv.adaltas.com/stringify/",
+  "dependencies": {},
+  "devDependencies": {
+    "coffee-script": "latest",
+    "csv-generate": "latest",
+    "mocha": "latest",
+    "should": "latest"
+  },
+  "optionalDependencies": {},
+  "main": "./lib",
+  "scripts": {
+    "coffee": "./node_modules/.bin/coffee -b -o lib src",
+    "pretest": "./node_modules/.bin/coffee -b -o lib src",
+    "test": "NODE_ENV=test ./node_modules/.bin/mocha --compilers coffee:coffee-script/register --reporter dot"
+  }
+}

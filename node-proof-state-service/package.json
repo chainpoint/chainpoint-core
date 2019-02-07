@@ -1,0 +1,21 @@
+{
+  "name": "chainpoint-node-proof-state-service",
+  "version": "0.0.1",
+  "description": "Chainpoint proof state service.",
+  "author": "Glenn Rempe <glenn@tierion.com>",
+  "license": "AGPL-3.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.5.2",
+    "envalid": "^3.1.1",
+    "exit-hook": "^1.1.1",
+    "exp-leader-election": "https://github.com/Tierion/exp-leader-election.git#837ac9155f2c2eba89124157880675f6472aa94a",
+    "ioredis": "^3.2.2",
+    "node-resque": "^5.4.1",
+    "sequelize": "^4.33.3",
+    "sequelize-cockroachdb": "https://github.com/cockroachdb/sequelize-cockroachdb.git#f6b15cfaf23c17882e4b813a4dfc9758a77aa5a9"
+  }
+}
