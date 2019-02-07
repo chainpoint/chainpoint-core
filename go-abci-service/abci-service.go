@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
-	"github.com/chainpoint/merkletools-go"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	//"github.com/jasonlvhit/gocron"
 	"github.com/tendermint/tendermint/abci/server"
 	"github.com/tendermint/tendermint/abci/types"

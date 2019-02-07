@@ -6,6 +6,35 @@ networks:
 
 services:
 
+  abci:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.abci
+    image: abci
+    environment:
+      TENDERMINT_HOST: tendermint
+      TENDERMINT_PORT: 26657
+    ports:
+    - "26658"
+    command: bash -c "abci-service"
+    networks:
+    - chainpoint
+
+  tendermint:
+    depends_on:
+    - abci
+    image: tierion/tendermint-cleveldb
+    entrypoint: ''
+    volumes:
+    - ./config/node:/tendermint/config:Z
+    - ./data:/tendermint/data:Z
+    command: sh -c "tendermint node --moniker=`hostname` --proxy_app=abci:26658"
+    ports:
+    - "26656"
+    - "26657:26657"
+    networks:
+    - chainpoint
+
   # NGINX Proxy
   #
   # An auto-scaling reverse proxy that reconfigures
@@ -39,10 +68,9 @@ services:
   # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
   #
   base:
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-base:${DOCKER_TAG}
     build:
       context: .
-      dockerfile: Dockerfile.node-base
+      dockerfile: docker/Dockerfile.node-base
 
   # HTTP API
   # Restify Node public web API service.
@@ -65,10 +93,9 @@ services:
   #
   api:
     restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-api-service:${DOCKER_TAG}
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: docker/Dockerfile.api
     depends_on:
       - base
       - roach1
@@ -87,11 +114,10 @@ services:
       VIRTUAL_HOST: api.local
 
   api-test:
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-api-service-test:${DOCKER_TAG}
     container_name: node-api-service-test
     build:
       context: .
-      dockerfile: Dockerfile.api-test
+      dockerfile: docker/Dockerfile.api-test
     depends_on:
       - base
       - roach1
@@ -109,41 +135,6 @@ services:
       SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY} 
       VIRTUAL_HOST: api.local
 
-  # Aggregator
-  #
-  # SCALED: true
-  #
-  # PORTS : none
-  #
-  aggregator:
-    restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-aggregator-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: Dockerfile.aggregator
-    depends_on:
-      - base
-      - rabbitmq
-      - nist-beacon
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-
-  aggregator-test:
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-aggregator-service-test:${DOCKER_TAG}
-    container_name: node-aggregator-service-test
-    build:
-      context: .
-      dockerfile: Dockerfile.aggregator-test
-    depends_on:
-      - base
-      - rabbitmq
-      - nist-beacon
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: test
 
   # NIST Beacon
   # Retrieve and store current NIST Beacon records
@@ -154,10 +145,9 @@ services:
   #
   nist-beacon:
     restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-nist-beacon-service:${DOCKER_TAG}
     build:
       context: .
-      dockerfile: Dockerfile.nist-beacon
+      dockerfile: docker/Dockerfile.nist-beacon
     container_name: nist-beacon-core
     depends_on:
       - base
@@ -166,48 +156,14 @@ services:
     environment:
       NODE_ENV: development
 
-  # Calendar
-  # Aggregate Merkle roots from the `aggregator` service instances
-  # and write them to the Calendar event/block chains.
-  #
-  # SCALED: false
-  #
-  # PORTS : none
-  #
-  calendar:
-    restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-calendar-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: Dockerfile.calendar
-    container_name: calendar-core
-    depends_on:
-      - base
-      - roach1
-      - rabbitmq
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      ANCHOR_BTC: ${ANCHOR_BTC}
-      ANCHOR_ETH: ${ANCHOR_ETH}
-      SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY}
-      DEBUG: "calendar:*"
-      DEBUG_HIDE_DATE: "false"
-      # DEBUG_COLORS: "true"
-      DEBUG_DEPTH: 10
-      DEBUG_SHOW_HIDDEN: "enabled"
-
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
   #
   btc-tx:
     restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-btc-tx-service:${DOCKER_TAG}
     build:
       context: .
-      dockerfile: Dockerfile.btc-tx
+      dockerfile: docker/Dockerfile.btc-tx
     container_name: btc-tx-core
     depends_on:
       - base
@@ -226,10 +182,9 @@ services:
   #
   btc-mon:
     restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-btc-mon-service:${DOCKER_TAG}
     build:
       context: .
-      dockerfile: Dockerfile.btc-mon
+      dockerfile: docker/Dockerfile.btc-mon
     container_name: btc-mon-core
     depends_on:
       - base
@@ -246,10 +201,9 @@ services:
   #
   proof-state:
     restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-proof-state-service:${DOCKER_TAG}
     build:
       context: .
-      dockerfile: Dockerfile.proof-state
+      dockerfile: docker/Dockerfile.proof-state
     depends_on:
       - base
       - rabbitmq
@@ -269,10 +223,9 @@ services:
   #
   proof-gen:
     restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-proof-gen-service:${DOCKER_TAG}
     build:
       context: .
-      dockerfile: Dockerfile.proof-gen
+      dockerfile: docker/Dockerfile.proof-gen
     volumes:
       - ./data/gcp:/gcp
     depends_on:
@@ -284,24 +237,6 @@ services:
     environment:
       NODE_ENV: development
       GOOGLE_APPLICATION_CREDENTIALS: /gcp/proof-proxy-544fdab72f21.json
-
-  audit-producer:
-    restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-audit-producer-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: Dockerfile.audit-producer
-    container_name: audit-producer
-    depends_on:
-      - base
-      - roach1
-      - rabbitmq
-      - consul
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
 
   # RabbitMQ
   #
@@ -384,122 +319,15 @@ services:
     environment:
       COCKROACH_TRACE_SQL: "1000ms"
 
-  # Command-line version of Ganache, a fast Ethereum RPC client for testing and development.
-  #
-  ganache:
-    image: trufflesuite/ganache-cli:latest
-    ports:
-      - "8545:8545" # RPC
-    networks:
-      - chainpoint
-
-  # Ethereum Contracts
-  # Builds and deploys the contracts to the ganache node
-  # The built contracts are stored in a mounted local dir
-  # which is also mounted RO in the other Ethereum services.
-  # This allows them to be able to discover the address of the
-  # migrated TNT contract in ganache.
-  #
-  eth-contracts:
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-eth-contracts:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: Dockerfile.eth-contracts
-    container_name: eth-contracts-core
-    depends_on:
-      - base
-      - ganache
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-      ETH_TNT_TOKEN_ADDR: ${ETH_TNT_TOKEN_ADDR}
-    volumes:
-      - ./data/contracts:/home/node/app/build/contracts
-    command: yarn migrate --network ganache
-
-  # Ethereum TNT Transaction Service
-  # Accepts requests from other services related to the TNT token.
-  #
-  eth-tnt-tx-service:
-    restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-eth-tnt-tx-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: Dockerfile.eth-tnt-tx
-    container_name: eth-tnt-tx-core
-    depends_on:
-      - base
-      - redis
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-      LISTEN_TX_PORT: 8085
-      ETH_TNT_SOURCE_WALLET_PK: ${ETH_TNT_SOURCE_WALLET_PK}
-      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
-      ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
-      ETH_JSON_RPC_URI: ${ETH_JSON_RPC_URI}
-    ports:
-      - "8085:8085" # REST API
-    command: yarn start
-
-  # Ethereum TNT Listener
-  # Listens for incoming TNT transfers from the nodes
-  #
-  #eth-tnt-listener-service:
-  #  image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-eth-tnt-listener-service:${DOCKER_TAG}
-  #  build:
-  #    context: ./node-eth-tnt-listener-service
-  #  container_name: eth-tnt-listener-core
-  #  depends_on:
-  #    - base
-  #    - ganache
-  #    - roach1
-  #    - eth-contracts
-  #  networks:
-  #    - chainpoint
-  #  environment:
-  #    NODE_ENV: development
-  #    ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}      
-  #    ETH_TNT_TOKEN_ADDR: ${ETH_TNT_TOKEN_ADDR}
-  #  command: yarn start
-  #  volumes:
-  #    - ./data/contracts:/home/node/app/contracts:ro
-
-  # TNT Reward
-  # Responsible for rewarding TNT to random Nodes passing
-  # requisite audit checks at regular intervals
-  #
-  tnt-reward:
-    restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-tnt-reward-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: Dockerfile.tnt-reward
-    container_name: tnt-reward-core
-    depends_on:
-      - base
-      - eth-tnt-tx-service
-      - rabbitmq
-      - consul
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      CORE_REWARD_ETH_ADDR: ${CORE_REWARD_ETH_ADDR}
-      CORE_REWARD_ELIGIBLE: ${CORE_REWARD_ELIGIBLE}
 
   # Task Handler
   # node-resque job processing queue
   #
   task-handler:
     restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-task-handler-service:${DOCKER_TAG}
     build:
       context: .
-      dockerfile: Dockerfile.task-handler
+      dockerfile: docker/Dockerfile.task-handler
     depends_on:
       - base
       - roach1
@@ -537,26 +365,3 @@ services:
       REDIS_PORT: 6379
       REDIS_DB: 0
       REDIS_NAMESPACE: resque
-
-  # Task Accumulator
-  # Accumulates and performs tasks in batches
-  # 
-  task-accumulator:
-    restart: always
-    image: gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-task-accumulator-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: Dockerfile.task-accumulator
-    depends_on:
-      - base
-      - redis
-      - rabbitmq
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-      DEBUG: "task-accumulator:*"
-      DEBUG_HIDE_DATE: "false"
-      # DEBUG_COLORS: "true"
-      DEBUG_DEPTH: 10
-      DEBUG_SHOW_HIDDEN: "enabled"
