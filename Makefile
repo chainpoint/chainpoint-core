@@ -67,7 +67,7 @@ up: build cockroachdb-setup
 
 ## up-no-build               : Startup without performing builds, rely on pull of images.
 .PHONY : up-no-build
-up-no-build: pull cockroachdb-setup
+up-no-build: cockroachdb-setup
 	docker-compose up -d --no-build
 
 ## down                      : Shutdown Application
@@ -88,7 +88,11 @@ logs:
 ## clean                     : Shutdown and destroy all local application data
 .PHONY : clean
 clean: down
-	@rm -rf ./data/*
+	@sudo rm -rf ./data/*
+	@sudo chmod 777 config/node
+	@sudo chmod 777 config/node/*
+	@cp config/node/priv_validator_key.json config/node/priv_validator.json
+	@sudo docker system prune --volumes -f
 
 ## prune                     : Shutdown and destroy all docker assets
 .PHONY : prune
