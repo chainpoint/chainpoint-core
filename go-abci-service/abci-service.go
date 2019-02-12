@@ -3,16 +3,14 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/jasonlvhit/gocron"
-	"github.com/tendermint/tendermint/rpc/client"
-	types2 "github.com/tendermint/tendermint/types"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	//"github.com/jasonlvhit/gocron"
 	"github.com/tendermint/tendermint/abci/server"
@@ -21,7 +19,6 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/chainpoint/chainpoint-aggregator-go/aggregator"
 )
 
 var proofDB *dbm.GoLevelDB
@@ -52,6 +49,15 @@ func main() {
 		return
 	}
 
+	for {
+		var err error
+		if nodeStatus, err = abci.GetStatus(tmServer, tmPort); err != nil {
+			continue
+		} else {
+			break
+		}
+	}
+
 	// Begin scheduled methods
 	go func(){
 		gocron.Every(1).Minutes().Do(loopCAL, tmServer, tmPort)
@@ -67,11 +73,12 @@ func main() {
 }
 
 func loopCAL(tmServer string, tmPort string) error {
-	rpc := getHTTPClient(tmServer, tmPort)
+	rpc := abci.GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
 	var agg aggregator.Aggregation
 	agg.Aggregate()
 	if agg.AggRoot != "" {
+		fmt.Printf("Root: %s\n", agg.AggRoot)
 		tx := abci.Tx{TxType: []byte("CAL"), Data: []byte(agg.AggRoot), Version: 2, Time: time.Now().Unix()}
 		txJSON, _ := json.Marshal(tx)
 		params := base64.StdEncoding.EncodeToString(txJSON)
@@ -83,11 +90,9 @@ func loopCAL(tmServer string, tmPort string) error {
 			return nil
 		}
 	}
-	return error.New("No hashes to aggregate")
+	return errors.New("No hashes to aggregate")
 }
 
-func getHTTPClient(tmServer string, tmPort string) *client.HTTP {
-	return client.NewHTTP(fmt.Sprintf("http://%s:%s", tmServer, tmPort), "/websocket")
-}
+
 
 

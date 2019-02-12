@@ -310,7 +310,7 @@ services:
       - "26257:26257"
       - "8080:8080"
     volumes:
-      - ./data/roach1:/cockroach/cockroach-data
+      - ./data/roach1:/cockroach/cockroach-data:Z
     command:
       - start
       - --insecure

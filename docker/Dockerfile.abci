@@ -1,9 +1,10 @@
 FROM golang:latest
+RUN curl https://glide.sh/get | sh
 ENV GOBIN /go/bin
-RUN mkdir -p $GOPATH/src/github.com/chainpoint/chainpoint-core/go-abci-service
-WORKDIR $GOPATH/src/github.com/chainpoint/chainpoint-core/go-abci-service
-ADD ./go-abci-service/ ./
-RUN ls
-RUN make
-RUN make get_vendor_deps
+ENV PKG_NAME=github.com/chainpoint/chainpoint-core/go-abci-service
+ENV PKG_PATH=$GOPATH/src/$PKG_NAME
+WORKDIR $PKG_PATH
+COPY go-abci-service/glide.yaml go-abci-service/glide.lock $PKG_PATH/
+RUN glide install
+ADD go-abci-service $PKG_PATH
 RUN make install
