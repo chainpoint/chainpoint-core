@@ -24,6 +24,15 @@
       },
       "power": "1",
       "name": "tendermint_1"
+    },
+    {
+      "address": "A9767C6B5DC36192D81D911AA4381955B80FD784",
+      "pub_key": {
+        "type": "tendermint/PubKeyEd25519",
+        "value": "G++fgw9cRhQUB9qU7LRkrX1uSI3tOy7RBa9cDKTOyrE="
+      },
+      "name": "tendermint_2",
+      "power": "1"
     }
   ],
   "app_hash": ""

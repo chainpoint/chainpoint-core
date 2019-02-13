@@ -22,8 +22,8 @@ import (
 )
 
 var proofDB *dbm.GoLevelDB
-var nodeStatus core_types.ResultStatus
-var netInfo core_types.ResultNetInfo
+var nodeStatus abci.NodeStatus
+var netInfo *core_types.ResultNetInfo
 var currentCalTree merkletools.MerkleTree
 
 func main() {
@@ -60,7 +60,13 @@ func main() {
 
 	// Begin scheduled methods
 	go func(){
-		gocron.Every(1).Minutes().Do(loopCAL, tmServer, tmPort)
+		calThread := gocron.NewScheduler()
+		calThread.Every(1).Minutes().Do(loopCAL, tmServer, tmPort)
+		<-calThread.Start()
+	}()
+
+	go func(){
+		gocron.Every(1).Minutes().Do(aggregateAndAnchorBTC, tmServer, tmPort)
 		<-gocron.Start()
 	}()
 
@@ -72,7 +78,14 @@ func main() {
 	return
 }
 
+func aggregateAndAnchorBTC(tmServer string, tmPort string)  {
+	//iAmLeader, leader := abci.ElectLeader(tmServer, tmPort)
+	//TODO: ElectLeader should check sync status of elected peer
+	//TODO: Grab all transactions since 
+}
+
 func loopCAL(tmServer string, tmPort string) error {
+	fmt.Println("starting scheduled aggregation")
 	rpc := abci.GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
 	var agg aggregator.Aggregation

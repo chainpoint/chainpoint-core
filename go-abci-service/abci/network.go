@@ -1,31 +1,42 @@
 package abci
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/rpc/client"
-	"github.com/tendermint/tendermint/rpc/core/types"
+	"io/ioutil"
+	"net/http"
 	"sort"
 	"time"
 )
 
-func GetStatus(tmServer string, tmPort string) (core_types.ResultStatus, error){
-	rpc := GetHTTPClient(tmServer, tmPort)
-	defer rpc.Stop()
-	result, err := rpc.Status()
-	return *result, err
+func GetStatus(tmServer string, tmPort string) (NodeStatus, error) {
+	resp, err := http.Get(fmt.Sprintf("http://%s:%s/status", tmServer, tmPort))
+	if err != nil {
+		return NodeStatus{}, err
+	}
+	var status NodeStatus
+	body, _ := ioutil.ReadAll(resp.Body)
+	json.Unmarshal(body, &status)
+	resp.Body.Close()
+	return status, nil
 }
 
-func GetNetInfo(tmServer string, tmPort string) (core_types.ResultNetInfo, error){
-	rpc := GetHTTPClient(tmServer, tmPort)
-	defer rpc.Stop()
-	result, err := rpc.NetInfo()
-	return *result, err
+func GetNetInfo(tmServer string, tmPort string) (NetInfo, error){
+		resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tmServer, tmPort))
+		if err != nil {
+			return NetInfo{}, err
+		}
+		var info NetInfo
+		body, _ := ioutil.ReadAll(resp.Body)
+		json.Unmarshal(body, &info)
+		resp.Body.Close()
+		return info, nil
 }
 
-func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader p2p.ID){
-	var status core_types.ResultStatus
-	var netInfo core_types.ResultNetInfo
+func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string){
+	var status NodeStatus
+	var netInfo NetInfo
 	var err error
 	var err2 error
 
@@ -41,24 +52,26 @@ func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader p2p.ID){
 		}
 	}
 	if err != nil || err2 != nil {
+		fmt.Println(err)
+		fmt.Println(err2)
 		return false, ""
 	}
 
-	currentNodeID := status.NodeInfo.ID()
-	if len(netInfo.Peers) > 0 {
-		nodeArray := make([]p2p.DefaultNodeInfo, len(netInfo.Peers)+1)
-		for i := 0; i < len(netInfo.Peers); i++ {
-			nodeArray[i] = netInfo.Peers[i].NodeInfo
+	currentNodeID := status.Result.NodeInfo.ID
+	if len(netInfo.Result.Peers) > 0 {
+		nodeArray := make([]NodeInfo, len(netInfo.Result.Peers)+1)
+		for i := 0; i < len(netInfo.Result.Peers); i++ {
+			nodeArray[i] = netInfo.Result.Peers[i].NodeInfo
 		}
-		nodeArray[len(netInfo.Peers)] = status.NodeInfo
+		nodeArray[len(netInfo.Result.Peers)] = status.Result.NodeInfo
 		sort.Slice(nodeArray[:], func(i, j int) bool {
-			return nodeArray[i].ID() > nodeArray[j].ID()
+			return nodeArray[i].ID > nodeArray[j].ID
 		})
-		if !status.SyncInfo.CatchingUp{
-			blockHash := status.SyncInfo.LatestBlockHash
-			index := getSeededRandInt(blockHash, len(nodeArray))
+		if !status.Result.SyncInfo.CatchingUp{
+			blockHash := status.Result.SyncInfo.LatestBlockHash
+			index := getSeededRandInt([]byte(blockHash), len(nodeArray))
 			leader := nodeArray[index]
-			return leader.ID() == currentNodeID, leader.ID()
+			return leader.ID == currentNodeID, leader.ID
 		}
 		return false, ""
 	}else{
