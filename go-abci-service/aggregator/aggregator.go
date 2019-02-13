@@ -44,8 +44,6 @@ const aggQueueIn = "work.agg"
 const aggQueueOut = "work.agg"
 const proofStateQueueOut = "work.proofstate"
 
-var RABBITMQ_CONNECT_URI = "amqp://chainpoint:chainpoint@rabbitmq:5672/"
-
 type Session struct {
 	conn *amqp.Connection
 	ch *amqp.Channel
@@ -91,9 +89,9 @@ func dial(amqpUrl string, queue string)(Session, error){
 	}
 }
 
-func connectAndConsume()(session Session, err error){
+func connectAndConsume(rabbitmqConnectUri string)(session Session, err error){
 	//Connect to Queue
-	session, err = dial(RABBITMQ_CONNECT_URI, aggQueueIn)
+	session, err = dial(rabbitmqConnectUri, aggQueueIn)
 	session.msgs, err = session.ch.Consume(
 		session.queue.Name,     // queue
 		"", // consumer
@@ -107,7 +105,7 @@ func connectAndConsume()(session Session, err error){
 	return
 }
 
-func (agg *Aggregation) Aggregate() {
+func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 
 	var session Session
 	var err error
@@ -116,7 +114,7 @@ func (agg *Aggregation) Aggregate() {
 	msgStructSlice := make([]amqp.Delivery, 0)
 	go func() {
 		for i:=0; i < 5; i++ {
-			session, err = connectAndConsume()
+			session, err = connectAndConsume(rabbitmqConnectUri)
 			if err != nil{
 				continue
 			}
@@ -195,7 +193,7 @@ func (agg *Aggregation) Aggregate() {
 
 	aggJson, err := json.Marshal(agg)
 
-	destSession,err := dial(RABBITMQ_CONNECT_URI, proofStateQueueOut)
+	destSession,err := dial(rabbitmqConnectUri, proofStateQueueOut)
 	defer destSession.conn.Close()
 	defer destSession.ch.Close()
 	err = destSession.ch.Publish(

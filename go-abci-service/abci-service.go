@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/jasonlvhit/gocron"
 	"os"
 	"time"
@@ -27,8 +28,9 @@ var netInfo *core_types.ResultNetInfo
 var currentCalTree merkletools.MerkleTree
 
 func main() {
-	tmServer := os.Getenv("TENDERMINT_HOST")
-	tmPort := os.Getenv("TENDERMINT_PORT")
+	tmServer := util.GetEnv("TENDERMINT_HOST", "tendermint")
+	tmPort := util.GetEnv("TENDERMINT_PORT", "26657")
+	rabbitmqUri := util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
 
 	allowLevel, _ := log.AllowLevel("debug")
 	logger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
@@ -61,7 +63,7 @@ func main() {
 	// Begin scheduled methods
 	go func(){
 		calThread := gocron.NewScheduler()
-		calThread.Every(1).Minutes().Do(loopCAL, tmServer, tmPort)
+		calThread.Every(1).Minutes().Do(loopCAL, tmServer, tmPort, rabbitmqUri)
 		<-calThread.Start()
 	}()
 
@@ -81,15 +83,15 @@ func main() {
 func aggregateAndAnchorBTC(tmServer string, tmPort string)  {
 	//iAmLeader, leader := abci.ElectLeader(tmServer, tmPort)
 	//TODO: ElectLeader should check sync status of elected peer
-	//TODO: Grab all transactions since 
+	//TODO: Grab all transactions since
 }
 
-func loopCAL(tmServer string, tmPort string) error {
+func loopCAL(tmServer string, tmPort string, rabbitmqUri string) error {
 	fmt.Println("starting scheduled aggregation")
 	rpc := abci.GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
 	var agg aggregator.Aggregation
-	agg.Aggregate()
+	agg.Aggregate(rabbitmqUri)
 	if agg.AggRoot != "" {
 		fmt.Printf("Root: %s\n", agg.AggRoot)
 		tx := abci.Tx{TxType: []byte("CAL"), Data: []byte(agg.AggRoot), Version: 2, Time: time.Now().Unix()}

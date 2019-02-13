@@ -3,6 +3,7 @@ package abci
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/rpc/client"
 	"io/ioutil"
 	"net/http"
@@ -69,7 +70,7 @@ func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string){
 		})
 		if !status.Result.SyncInfo.CatchingUp{
 			blockHash := status.Result.SyncInfo.LatestBlockHash
-			index := getSeededRandInt([]byte(blockHash), len(nodeArray))
+			index := util.GetSeededRandInt([]byte(blockHash), len(nodeArray))
 			leader := nodeArray[index]
 			return leader.ID == currentNodeID, leader.ID
 		}

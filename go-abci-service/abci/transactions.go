@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -39,12 +40,12 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) (types.ResponseDel
 		break
 	case "BTC-A":
 		app.state.db.Set([]byte("latest_btca"), rawTx)
-		app.state.db.Set([]byte("latest_btca_height"), int64ToByte(app.state.Height+1))
+		app.state.db.Set([]byte("latest_btca_height"), util.Int64ToByte(app.state.Height+1))
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-C":
 		app.state.db.Set([]byte("latest_btcc"), rawTx)
-		app.state.db.Set([]byte("latest_btcc_height"), int64ToByte(app.state.Height+1))
+		app.state.db.Set([]byte("latest_btcc_height"), util.Int64ToByte(app.state.Height+1))
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "NIST":
