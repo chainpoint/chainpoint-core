@@ -8,6 +8,7 @@ import (
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
+	types2 "github.com/tendermint/tendermint/types"
 )
 
 
@@ -55,4 +56,23 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) (types.ResponseDel
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
 	}
 	return resp
+}
+
+func GetBlockRangeRoots(tmServer string, tmPort string, minHeight int64, maxHeight int64) ([][]byte, error) {
+	rpc := GetHTTPClient(tmServer, tmPort)
+	defer rpc.Stop()
+	Txs := types2.Txs{}
+	for i := minHeight; i < maxHeight; i++ {
+		block, err := rpc.Block(&i)
+		if block != nil {
+			Txs = append(Txs, block.Block.Data.Txs...)
+		} else {
+			return nil, err
+		}
+	}
+	calBytes := make([][]byte, len(Txs))
+	for i, t := range Txs {
+		calBytes[i] = t
+	}
+	return calBytes, nil
 }

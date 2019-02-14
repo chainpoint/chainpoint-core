@@ -5,21 +5,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/jasonlvhit/gocron"
 	"os"
 	"time"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/jasonlvhit/gocron"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
+
 	//"github.com/jasonlvhit/gocron"
 	"github.com/tendermint/tendermint/abci/server"
 	"github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/rpc/core/types"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 var proofDB *dbm.GoLevelDB
@@ -61,14 +64,14 @@ func main() {
 	}
 
 	// Begin scheduled methods
-	go func(){
+	go func() {
 		calThread := gocron.NewScheduler()
 		calThread.Every(1).Minutes().Do(loopCAL, tmServer, tmPort, rabbitmqUri)
 		<-calThread.Start()
 	}()
 
-	go func(){
-		gocron.Every(1).Minutes().Do(aggregateAndAnchorBTC, tmServer, tmPort)
+	go func() {
+		gocron.Every(1).Minutes().Do(loopAnchor, tmServer, tmPort, rabbitmqUri)
 		<-gocron.Start()
 	}()
 
@@ -80,7 +83,8 @@ func main() {
 	return
 }
 
-func aggregateAndAnchorBTC(tmServer string, tmPort string)  {
+func loopAnchor(tmServer string, tmPort string, rabbitmqUri string) error {
+
 	//iAmLeader, leader := abci.ElectLeader(tmServer, tmPort)
 	//TODO: ElectLeader should check sync status of elected peer
 	//TODO: Grab all transactions since
@@ -92,6 +96,8 @@ func loopCAL(tmServer string, tmPort string, rabbitmqUri string) error {
 	defer rpc.Stop()
 	var agg aggregator.Aggregation
 	agg.Aggregate(rabbitmqUri)
+	var calendar calendar.CalAgg
+	calendar.GenerateCalendarTree([]aggregator.Aggregation{agg})
 	if agg.AggRoot != "" {
 		fmt.Printf("Root: %s\n", agg.AggRoot)
 		tx := abci.Tx{TxType: []byte("CAL"), Data: []byte(agg.AggRoot), Version: 2, Time: time.Now().Unix()}
@@ -102,12 +108,11 @@ func loopCAL(tmServer string, tmPort string, rabbitmqUri string) error {
 			return err
 		}
 		if result.Code == 0 {
-			return nil
+			var tx abci.TxTm
+			tx.Hash = result.Hash.Bytes()
+			tx.Data = result.Data.Bytes()
+			calendar.QueueCalStateMessage(tx)
 		}
 	}
 	return errors.New("No hashes to aggregate")
 }
-
-
-
-
