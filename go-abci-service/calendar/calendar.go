@@ -68,25 +68,17 @@ func (treeDataObj *CalAgg) GenerateCalendarTree(aggs []aggregator.Aggregation) {
 	}
 }
 
-func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx abci.TxTm, prevHash string) {
+func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx abci.TxTm) {
 	var calState CalState
 	base_uri := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "tendermint.chainpoint.org")
-	uri := fmt.Sprintf("%s/calendar/%x/hash", base_uri, tx.Hash)
-	var anchor CalAnchor
-	anchor.AnchorId = hex.EncodeToString(tx.Hash)
-	anchor.Uris = []string{uri}
-	opsToBlockHash := Proof{
-		Left:  fmt.Sprintf("%x", tx.Hash),
-		Right: prevHash,
-		Op:    "sha-256",
+	uri := fmt.Sprintf("%s/calendar/%x/data", base_uri, tx.Hash)
+	anchor := CalAnchor{
+		AnchorId: hex.EncodeToString(tx.Hash),
+		Uris:     []string{uri},
 	}
-	calState.ProofData = make([]ProofData, len(treeDataObj.ProofData))
-	for i, calAggProof := range treeDataObj.ProofData {
-		calState.ProofData[i] = ProofData{
-			AggId: calAggProof.AggId,
-			Proof: append(calAggProof.Proof, opsToBlockHash),
-		}
-	}
+	calState.Anchor = anchor
+	calState.ProofData = treeDataObj.ProofData
+	calState.CalId = hex.EncodeToString(tx.Hash)
 	calStateJson, _ := json.Marshal(calState)
 	destSession, err := rabbitmq.Dial(rabbitmqConnectUri, "work.proofstate")
 	if err != nil {
@@ -108,4 +100,8 @@ func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx ab
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 	}
+}
+
+func aggregateAndAnchorBTC(state abci.State) {
+
 }

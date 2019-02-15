@@ -9,7 +9,6 @@ import (
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
-	types2 "github.com/tendermint/tendermint/types"
 )
 
 func DecodeTx(incoming []byte) (Tx, error) {
@@ -23,6 +22,12 @@ func DecodeTx(incoming []byte) (Tx, error) {
 	return calendar, nil
 }
 
+func (app *AnchorApplication) incrementTx(tags []cmn.KVPair) []cmn.KVPair {
+	app.state.txInt++ // no pre-increment :(
+	return append(tags, cmn.KVPair{Key: []byte("txInt"), Value: util.Int64ToByte(app.state.txInt)})
+}
+
+/* Updates state based on type of transaction received. Used by DeliverTx */
 func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeliverTx {
 	tx, err := DecodeTx(rawTx)
 	tags := []cmn.KVPair{}
@@ -35,22 +40,29 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 		if isValidatorTx(tx.Data) {
 			resp = app.execValidatorTx(tx.Data, tags)
 		}
+		app.incrementTx(tags)
 		break
 	case "CAL":
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		app.incrementTx(tags)
 		break
 	case "BTC-A":
-		app.state.db.Set([]byte("latest_btca"), rawTx)
-		app.state.db.Set([]byte("latest_btca_height"), util.Int64ToByte(app.state.Height+1))
+		app.state.LatestBtcaTx = rawTx
+		app.state.LatestBtcaHeight = app.state.Height + 1
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		app.incrementTx(tags)
+		app.state.LatestBtcaTxInt = app.state.txInt
 		break
 	case "BTC-C":
-		app.state.db.Set([]byte("latest_btcc"), rawTx)
-		app.state.db.Set([]byte("latest_btcc_height"), util.Int64ToByte(app.state.Height+1))
+		app.state.LatestBtccTx = rawTx
+		app.state.LatestBtccHeight = app.state.Height + 1
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		app.incrementTx(tags)
+		app.state.LatestBtccTxInt = app.state.txInt
 		break
 	case "NIST":
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		app.incrementTx(tags)
 		break
 	default:
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
@@ -58,16 +70,16 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 	return resp
 }
 
-func GetBlockRangeRoots(tmServer string, tmPort string, minHeight int64, maxHeight int64) ([][]byte, error) {
+/*func GetBlockRangeRoots(tmServer string, tmPort string, minTxInt int64, maxTxInt int64) ([][]byte, error) {
 	rpc := GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
 	Txs := types2.Txs{}
-	for i := minHeight; i < maxHeight; i++ {
-		block, err := rpc.Block(&i)
-		if block != nil {
-			Txs = append(Txs, block.Block.Data.Txs...)
-		} else {
+	for i := minTxInt; i < maxTxInt; i++ {
+		txResult, err := rpc.TxSearch(fmt.Sprintf("txInt=%d", i))
+		if err != nil {
 			return nil, err
+		} else {
+			Txs = append(Txs, block.Block.Data.Txs...)
 		}
 	}
 	calBytes := make([][]byte, len(Txs))
@@ -75,4 +87,4 @@ func GetBlockRangeRoots(tmServer string, tmPort string, minHeight int64, maxHeig
 		calBytes[i] = t
 	}
 	return calBytes, nil
-}
+}*/

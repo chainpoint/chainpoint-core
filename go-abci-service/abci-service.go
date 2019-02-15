@@ -8,12 +8,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/jasonlvhit/gocron"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 
 	//"github.com/jasonlvhit/gocron"
@@ -91,18 +91,15 @@ func loopAnchor(tmServer string, tmPort string, rabbitmqUri string) error {
 	return nil
 }
 
+/* Aggregate submitted hashes into a calendar transaction */
 func loopCAL(tmServer string, tmPort string, rabbitmqUri string) error {
-	nodeStatus, err := abci.GetStatus(tmServer, tmPort)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
 	fmt.Println("starting scheduled aggregation")
 	rpc := abci.GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
 	var agg aggregator.Aggregation
 	agg.Aggregate(rabbitmqUri)
 	var calendar calendar.CalAgg
+	// Because there is a 1 : 1 calendar/aggregation interval, there is only one  root here
 	calendar.GenerateCalendarTree([]aggregator.Aggregation{agg})
 	if agg.AggRoot != "" {
 		fmt.Printf("Root: %s\n", agg.AggRoot)
@@ -118,7 +115,7 @@ func loopCAL(tmServer string, tmPort string, rabbitmqUri string) error {
 			var tx abci.TxTm
 			tx.Hash = result.Hash.Bytes()
 			tx.Data = result.Data.Bytes()
-			calendar.QueueCalStateMessage(rabbitmqUri, tx, nodeStatus.Result.SyncInfo.LatestBlockHash)
+			calendar.QueueCalStateMessage(rabbitmqUri, tx)
 			return nil
 		}
 	}
