@@ -2,9 +2,13 @@ package calendar
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
+	"github.com/streadway/amqp"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
@@ -64,12 +68,44 @@ func (treeDataObj *CalAgg) GenerateCalendarTree(aggs []aggregator.Aggregation) {
 	}
 }
 
-func (treeDataObj *CalAgg) QueueCalStateMessage(tx abci.TxTm) {
+func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx abci.TxTm, prevHash string) {
 	var calState CalState
 	base_uri := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "tendermint.chainpoint.org")
-	uri := fmt.Sprintf("%s/calendar/%x/hash", base_uri, tx.Hash())
+	uri := fmt.Sprintf("%s/calendar/%x/hash", base_uri, tx.Hash)
 	var anchor CalAnchor
 	anchor.AnchorId = hex.EncodeToString(tx.Hash)
 	anchor.Uris = []string{uri}
-	//TODO: opsToBlockHash, sendToQueue
+	opsToBlockHash := Proof{
+		Left:  fmt.Sprintf("%x", tx.Hash),
+		Right: prevHash,
+		Op:    "sha-256",
+	}
+	calState.ProofData = make([]ProofData, len(treeDataObj.ProofData))
+	for i, calAggProof := range treeDataObj.ProofData {
+		calState.ProofData[i] = ProofData{
+			AggId: calAggProof.AggId,
+			Proof: append(calAggProof.Proof, opsToBlockHash),
+		}
+	}
+	calStateJson, _ := json.Marshal(calState)
+	destSession, err := rabbitmq.Dial(rabbitmqConnectUri, "work.proofstate")
+	if err != nil {
+		rabbitmq.LogError(err, "failed to dial for cal queue")
+	}
+	defer destSession.Conn.Close()
+	defer destSession.Ch.Close()
+	err = destSession.Ch.Publish(
+		"",
+		destSession.Queue.Name,
+		false,
+		false,
+		amqp.Publishing{
+			Type:         "cal_batch",
+			Body:         calStateJson,
+			DeliveryMode: 2, //persistent
+			ContentType:  "application/json",
+		})
+	if err != nil {
+		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+	}
 }

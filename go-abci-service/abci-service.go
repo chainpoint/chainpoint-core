@@ -88,9 +88,15 @@ func loopAnchor(tmServer string, tmPort string, rabbitmqUri string) error {
 	//iAmLeader, leader := abci.ElectLeader(tmServer, tmPort)
 	//TODO: ElectLeader should check sync status of elected peer
 	//TODO: Grab all transactions since
+	return nil
 }
 
 func loopCAL(tmServer string, tmPort string, rabbitmqUri string) error {
+	nodeStatus, err := abci.GetStatus(tmServer, tmPort)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 	fmt.Println("starting scheduled aggregation")
 	rpc := abci.GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
@@ -105,13 +111,15 @@ func loopCAL(tmServer string, tmPort string, rabbitmqUri string) error {
 		params := base64.StdEncoding.EncodeToString(txJSON)
 		result, err := rpc.BroadcastTxSync([]byte(params))
 		if err != nil {
+			fmt.Println(err)
 			return err
 		}
 		if result.Code == 0 {
 			var tx abci.TxTm
 			tx.Hash = result.Hash.Bytes()
 			tx.Data = result.Data.Bytes()
-			calendar.QueueCalStateMessage(tx)
+			calendar.QueueCalStateMessage(rabbitmqUri, tx, nodeStatus.Result.SyncInfo.LatestBlockHash)
+			return nil
 		}
 	}
 	return errors.New("No hashes to aggregate")

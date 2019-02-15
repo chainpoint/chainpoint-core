@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
@@ -11,8 +12,7 @@ import (
 	types2 "github.com/tendermint/tendermint/types"
 )
 
-
-func decodeTx(incoming []byte) (Tx, error){
+func DecodeTx(incoming []byte) (Tx, error) {
 	decoded, err := base64.StdEncoding.DecodeString(string(incoming))
 	var calendar Tx
 	if err != nil {
@@ -23,10 +23,10 @@ func decodeTx(incoming []byte) (Tx, error){
 	return calendar, nil
 }
 
-func (app *AnchorApplication) updateStateFromTx(rawTx []byte) (types.ResponseDeliverTx){
-	tx, err := decodeTx(rawTx)
+func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeliverTx {
+	tx, err := DecodeTx(rawTx)
 	tags := []cmn.KVPair{}
-	if err != nil{
+	if err != nil {
 		return types.ResponseDeliverTx{Code: code.CodeTypeEncodingError, Tags: tags}
 	}
 	var resp types.ResponseDeliverTx
