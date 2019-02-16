@@ -11,8 +11,8 @@ import (
 func LogError(err error) error {
 	if err != nil {
 		fmt.Println(err)
-		return err
 	}
+	return err
 }
 
 func Int64ToByte(num int64) []byte {

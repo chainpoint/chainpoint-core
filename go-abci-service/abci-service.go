@@ -91,16 +91,19 @@ func loopAnchor(tmServer string, tmPort string, rabbitmqUri string) error {
 	rpc := abci.GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
 	state, err := abci.GetAbciInfo(tmServer, tmPort)
-	return util.LogError(err)
+	if util.LogError(err) != nil {
+		return err
+	}
 	txLeaves, err := abci.GetTxRange(tmServer, tmPort, state.LatestCalTxInt, state.TxInt)
-	return util.LogError(err)
+	if util.LogError(err) != nil {
+		return err
+	}
 	treeData := calendar.AggregateAndAnchorBTC(txLeaves)
 	btca := abci.Tx{TxType: []byte("BTCA"), Data: []byte(treeData.AggRoot), Version: 2, Time: time.Now().Unix()}
 	txJSON, _ := json.Marshal(btca)
 	params := base64.StdEncoding.EncodeToString(txJSON)
 	result, err := rpc.BroadcastTxSync([]byte(params))
-	if err != nil {
-		fmt.Println(err)
+	if util.LogError(err) != nil {
 		return err
 	}
 	if result.Code == 0 {
@@ -131,8 +134,7 @@ func loopCAL(tmServer string, tmPort string, rabbitmqUri string) error {
 		txJSON, _ := json.Marshal(tx)
 		params := base64.StdEncoding.EncodeToString(txJSON)
 		result, err := rpc.BroadcastTxSync([]byte(params))
-		if err != nil {
-			fmt.Println(err)
+		if util.LogError(err) != nil {
 			return err
 		}
 		if result.Code == 0 {
