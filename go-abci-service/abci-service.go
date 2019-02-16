@@ -84,7 +84,29 @@ func main() {
 }
 
 func loopAnchor(tmServer string, tmPort string, rabbitmqUri string) error {
-
+	fmt.Println("starting scheduled anchor")
+	rpc := abci.GetHTTPClient(tmServer, tmPort)
+	defer rpc.Stop()
+	state, err := abci.GetAbciInfo(tmServer, tmPort)
+	return util.LogError(err)
+	txLeaves, err := abci.GetTxRange(tmServer, tmPort, state.LatestCalTxInt, state.TxInt)
+	return util.LogError(err)
+	treeData := calendar.AggregateAndAnchorBTC(txLeaves)
+	btca := abci.Tx{TxType: []byte("BTCA"), Data: []byte(treeData.AggRoot), Version: 2, Time: time.Now().Unix()}
+	txJSON, _ := json.Marshal(btca)
+	params := base64.StdEncoding.EncodeToString(txJSON)
+	result, err := rpc.BroadcastTxSync([]byte(params))
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	if result.Code == 0 {
+		var tx abci.TxTm
+		tx.Hash = result.Hash.Bytes()
+		tx.Data = result.Data.Bytes()
+		//calendar.queueBtcAStateDataMessage(rabbitmqUri, tx)
+		return nil
+	}
 	//iAmLeader, leader := abci.ElectLeader(tmServer, tmPort)
 	//TODO: ElectLeader should check sync status of elected peer
 	//TODO: Grab all transactions since

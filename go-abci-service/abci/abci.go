@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -16,7 +17,7 @@ const (
 )
 
 var (
-	stateKey        = []byte("chainpoint")
+	stateKey                         = []byte("chainpoint")
 	ProtocolVersion version.Protocol = 0x1
 )
 
@@ -47,8 +48,8 @@ var _ types.Application = (*AnchorApplication)(nil)
 
 type AnchorApplication struct {
 	types.BaseApplication
-	ValUpdates    []types.ValidatorUpdate
-	state         State
+	ValUpdates []types.ValidatorUpdate
+	state      State
 }
 
 func NewAnchorApplication() *AnchorApplication {
@@ -78,8 +79,13 @@ func (app *AnchorApplication) InitChain(req types.RequestInitChain) types.Respon
 }
 
 func (app *AnchorApplication) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
+	infoJson, err := json.Marshal(app.state)
+	if err != nil {
+		fmt.Println(err)
+		infoJson = []byte("{}")
+	}
 	return types.ResponseInfo{
-		Data: "",
+		Data:       string(infoJson),
 		Version:    version.ABCIVersion,
 		AppVersion: ProtocolVersion.Uint64(),
 	}
@@ -116,5 +122,3 @@ func (app *AnchorApplication) Commit() types.ResponseCommit {
 func (app *AnchorApplication) Query(reqQuery types.RequestQuery) (resQuery types.ResponseQuery) {
 	return
 }
-
-

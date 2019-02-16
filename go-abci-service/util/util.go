@@ -2,10 +2,18 @@ package util
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/rand"
 	"os"
 	"strconv"
 )
+
+func LogError(err error) error {
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+}
 
 func Int64ToByte(num int64) []byte {
 	return []byte(strconv.FormatInt(num, binary.MaxVarintLen64))
@@ -16,7 +24,7 @@ func ByteToInt64(arr string) int64 {
 	return n
 }
 
-func GetEnv(key string, def string) string{
+func GetEnv(key string, def string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
 		return def

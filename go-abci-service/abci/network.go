@@ -3,12 +3,13 @@ package abci
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/tendermint/tendermint/rpc/client"
 	"io/ioutil"
 	"net/http"
 	"sort"
 	"time"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/tendermint/tendermint/rpc/client"
 )
 
 func GetStatus(tmServer string, tmPort string) (NodeStatus, error) {
@@ -23,19 +24,35 @@ func GetStatus(tmServer string, tmPort string) (NodeStatus, error) {
 	return status, nil
 }
 
-func GetNetInfo(tmServer string, tmPort string) (NetInfo, error){
-		resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tmServer, tmPort))
-		if err != nil {
-			return NetInfo{}, err
-		}
-		var info NetInfo
-		body, _ := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(body, &info)
-		resp.Body.Close()
-		return info, nil
+func GetNetInfo(tmServer string, tmPort string) (NetInfo, error) {
+	resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tmServer, tmPort))
+	if err != nil {
+		return NetInfo{}, err
+	}
+	var info NetInfo
+	body, _ := ioutil.ReadAll(resp.Body)
+	json.Unmarshal(body, &info)
+	resp.Body.Close()
+	return info, nil
 }
 
-func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string){
+func GetAbciInfo(tmServer string, tmPort string) (State, error) {
+	rpc := GetHTTPClient(tmServer, tmPort)
+	defer rpc.Stop()
+	resp, err := rpc.ABCIInfo()
+	if err != nil {
+		return State{}, err
+	}
+	var anchorState State
+	err = json.Unmarshal([]byte(resp.Response.Data), &anchorState)
+	if err != nil {
+		fmt.Println(err)
+		return State{}, err
+	}
+	return anchorState, nil
+}
+
+func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string) {
 	var status NodeStatus
 	var netInfo NetInfo
 	var err error
@@ -68,14 +85,14 @@ func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string){
 		sort.Slice(nodeArray[:], func(i, j int) bool {
 			return nodeArray[i].ID > nodeArray[j].ID
 		})
-		if !status.Result.SyncInfo.CatchingUp{
+		if !status.Result.SyncInfo.CatchingUp {
 			blockHash := status.Result.SyncInfo.LatestBlockHash
 			index := util.GetSeededRandInt([]byte(blockHash), len(nodeArray))
 			leader := nodeArray[index]
 			return leader.ID == currentNodeID, leader.ID
 		}
 		return false, ""
-	}else{
+	} else {
 		return true, currentNodeID
 	}
 }

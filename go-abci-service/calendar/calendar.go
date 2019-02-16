@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
+
+	"github.com/google/uuid"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
@@ -15,6 +19,17 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 )
+
+type BtcAgg struct {
+	AggId     string         `json:"anchor_btc_agg_id"`
+	AggRoot   string         `json:"anchor_btc_agg_root"`
+	ProofData []BtcProofData `json:"proofData"`
+}
+
+type BtcProofData struct {
+	CalId string  `json:"cal_id"`
+	Proof []Proof `json:"proof"`
+}
 
 type CalAgg struct {
 	CalRoot   string      `json:"cal_root"`
@@ -102,6 +117,31 @@ func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx ab
 	}
 }
 
-func aggregateAndAnchorBTC(state abci.State) {
-
+func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
+	calBytes := make([][]byte, len(txLeaves))
+	for i, t := range txLeaves {
+		calBytes[i] = t.Tx
+	}
+	tree := merkletools.MerkleTree{}
+	tree.AddLeaves(calBytes)
+	tree.MakeTree()
+	var treeData BtcAgg
+	uuid, _ := uuid.NewUUID()
+	treeData.AggId = uuid.String()
+	treeData.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
+	treeData.ProofData = make([]BtcProofData, len(txLeaves))
+	for i, tx := range txLeaves {
+		var proofDataItem BtcProofData
+		proofDataItem.CalId = hex.EncodeToString(tx.Hash)
+		proofs := tree.GetProof(i)
+		for j, p := range proofs {
+			if p.Left {
+				proofDataItem.Proof[j] = Proof{Left: string(p.Value), Op: "sha-256"}
+			} else {
+				proofDataItem.Proof[j] = Proof{Right: string(p.Value), Op: "sha-256"}
+			}
+		}
+		treeData.ProofData[i] = proofDataItem
+	}
+	return treeData
 }

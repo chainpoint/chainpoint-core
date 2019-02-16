@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
@@ -23,8 +25,8 @@ func DecodeTx(incoming []byte) (Tx, error) {
 }
 
 func (app *AnchorApplication) incrementTx(tags []cmn.KVPair) []cmn.KVPair {
-	app.state.txInt++ // no pre-increment :(
-	return append(tags, cmn.KVPair{Key: []byte("txInt"), Value: util.Int64ToByte(app.state.txInt)})
+	app.state.TxInt++ // no pre-increment :(
+	return append(tags, cmn.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
 }
 
 /* Updates state based on type of transaction received. Used by DeliverTx */
@@ -37,32 +39,32 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 	var resp types.ResponseDeliverTx
 	switch string(tx.TxType) {
 	case "VAL":
+		tags := app.incrementTx(tags)
 		if isValidatorTx(tx.Data) {
 			resp = app.execValidatorTx(tx.Data, tags)
 		}
-		app.incrementTx(tags)
 		break
 	case "CAL":
+		tags := app.incrementTx(tags)
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		app.incrementTx(tags)
 		break
 	case "BTC-A":
 		app.state.LatestBtcaTx = rawTx
 		app.state.LatestBtcaHeight = app.state.Height + 1
+		tags := app.incrementTx(tags)
+		app.state.LatestBtcaTxInt = app.state.TxInt
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		app.incrementTx(tags)
-		app.state.LatestBtcaTxInt = app.state.txInt
 		break
 	case "BTC-C":
 		app.state.LatestBtccTx = rawTx
 		app.state.LatestBtccHeight = app.state.Height + 1
+		tags := app.incrementTx(tags)
+		app.state.LatestBtccTxInt = app.state.TxInt
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		app.incrementTx(tags)
-		app.state.LatestBtccTxInt = app.state.txInt
 		break
 	case "NIST":
+		tags := app.incrementTx(tags)
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		app.incrementTx(tags)
 		break
 	default:
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
@@ -70,21 +72,19 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 	return resp
 }
 
-/*func GetBlockRangeRoots(tmServer string, tmPort string, minTxInt int64, maxTxInt int64) ([][]byte, error) {
+func GetTxRange(tmServer string, tmPort string, minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
 	rpc := GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
-	Txs := types2.Txs{}
+	Txs := []core_types.ResultTx{}
 	for i := minTxInt; i < maxTxInt; i++ {
-		txResult, err := rpc.TxSearch(fmt.Sprintf("txInt=%d", i))
+		txResult, err := rpc.TxSearch(fmt.Sprintf("TxInt=%d", i), false, 1, 1)
 		if err != nil {
 			return nil, err
-		} else {
-			Txs = append(Txs, block.Block.Data.Txs...)
+		} else if txResult.TotalCount > 0 {
+			for _, tx := range txResult.Txs {
+				Txs = append(Txs, *tx)
+			}
 		}
 	}
-	calBytes := make([][]byte, len(Txs))
-	for i, t := range Txs {
-		calBytes[i] = t
-	}
-	return calBytes, nil
-}*/
+	return Txs, nil
+}

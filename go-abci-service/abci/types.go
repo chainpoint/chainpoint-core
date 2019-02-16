@@ -8,10 +8,11 @@ import (
 
 type State struct {
 	db               dbm.DB
-	txInt            int64  `json:"txInt"`
+	TxInt            int64  `json:"TxInt"`
 	Size             int64  `json:"size"`
 	Height           int64  `json:"height"`
 	AppHash          []byte `json:"app_hash"`
+	LatestCalTxInt   int64  `json:"latest_cal_int"`
 	LatestBtcaTx     []byte `json:"latest_btca"`
 	LatestBtcaTxInt  int64  `json:"latest_btca_int"`
 	LatestBtcaHeight int64  `json:"latest_btca_height"`
