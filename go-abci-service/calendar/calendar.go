@@ -58,6 +58,7 @@ type Proof struct {
 	Op    string `json: "op"`
 }
 
+/* Generates the MerkleTree for the aggregation roots which will be committed to the calendar*/
 func (treeDataObj *CalAgg) GenerateCalendarTree(aggs []aggregator.Aggregation) {
 	var tree merkletools.MerkleTree
 	for _, agg := range aggs {
@@ -83,6 +84,7 @@ func (treeDataObj *CalAgg) GenerateCalendarTree(aggs []aggregator.Aggregation) {
 	}
 }
 
+/* Lets proof state service know about a cal anchoring via rabbitmq */
 func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx abci.TxTm) {
 	var calState CalState
 	base_uri := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "tendermint.chainpoint.org")
@@ -117,6 +119,7 @@ func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx ab
 	}
 }
 
+/* Takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop */
 func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
 	calBytes := make([][]byte, len(txLeaves))
 	for i, t := range txLeaves {

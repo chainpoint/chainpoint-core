@@ -45,6 +45,7 @@ const aggQueueIn = "work.agg"
 const aggQueueOut = "work.agg"
 const proofStateQueueOut = "work.proofstate"
 
+/*Retrieves hash messages from rabbitmq, stores them, and creates a proof path for each*/
 func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 
 	var session rabbitmq.Session

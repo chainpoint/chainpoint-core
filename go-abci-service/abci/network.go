@@ -12,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/rpc/client"
 )
 
+/* Retrieves status of our node from RPC*/
 func GetStatus(tmServer string, tmPort string) (NodeStatus, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%s/status", tmServer, tmPort))
 	if err != nil {
@@ -24,6 +25,7 @@ func GetStatus(tmServer string, tmPort string) (NodeStatus, error) {
 	return status, nil
 }
 
+/*Retrieves known peer information via rpc*/
 func GetNetInfo(tmServer string, tmPort string) (NetInfo, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tmServer, tmPort))
 	if err != nil {
@@ -36,6 +38,7 @@ func GetNetInfo(tmServer string, tmPort string) (NetInfo, error) {
 	return info, nil
 }
 
+/* Retrieves custom ABCI status struct detailing the state of our application */
 func GetAbciInfo(tmServer string, tmPort string) (State, error) {
 	rpc := GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
@@ -52,6 +55,7 @@ func GetAbciInfo(tmServer string, tmPort string) (State, error) {
 	return anchorState, nil
 }
 
+/* Deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index */
 func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string) {
 	var status NodeStatus
 	var netInfo NetInfo
@@ -97,6 +101,7 @@ func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string) 
 	}
 }
 
+/* Creates an Tendermint RPC client from connection URI/Port details */
 func GetHTTPClient(tmServer string, tmPort string) *client.HTTP {
 	return client.NewHTTP(fmt.Sprintf("http://%s:%s", tmServer, tmPort), "/websocket")
 }

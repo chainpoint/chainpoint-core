@@ -72,6 +72,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 	return resp
 }
 
+/* Get all TXs within a particular range*/
 func GetTxRange(tmServer string, tmPort string, minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
 	rpc := GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()

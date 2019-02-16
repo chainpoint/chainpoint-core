@@ -42,8 +42,6 @@ func main() {
 	var app types.Application
 	app = abci.NewAnchorApplication()
 
-	currentCalTree = merkletools.MerkleTree{} //TODO: reload from storage?
-
 	// Start the ABCI connection to the Tendermint Node
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {
@@ -83,7 +81,12 @@ func main() {
 	return
 }
 
+/* Scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin */
 func loopAnchor(tmServer string, tmPort string, rabbitmqUri string) error {
+	iAmLeader, _ := abci.ElectLeader(tmServer, tmPort)
+	if !iAmLeader {
+		return nil //bail if we aren't the leader
+	}
 	fmt.Println("starting scheduled anchor")
 	rpc := abci.GetHTTPClient(tmServer, tmPort)
 	defer rpc.Stop()
@@ -107,7 +110,6 @@ func loopAnchor(tmServer string, tmPort string, rabbitmqUri string) error {
 		//calendar.queueBtcAStateDataMessage(rabbitmqUri, tx)
 		return nil
 	}
-	//iAmLeader, leader := abci.ElectLeader(tmServer, tmPort)
 	//TODO: ElectLeader should check sync status of elected peer
 	//TODO: Grab all transactions since
 	return nil

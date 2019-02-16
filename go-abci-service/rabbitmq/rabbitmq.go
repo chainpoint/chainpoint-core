@@ -14,13 +14,13 @@ type Session struct {
 	Notify chan *amqp.Error
 }
 
-//TODO: change to retry logic
 func LogError(err error, msg string) {
 	if err != nil {
 		log.Printf("%s: %s", msg, err)
 	}
 }
 
+/* Dial AMQP provider, create a channel, and declare a queue object*/
 func Dial(amqpUrl string, queue string) (Session, error) {
 	var session Session
 	var err error
@@ -51,6 +51,7 @@ func Dial(amqpUrl string, queue string) (Session, error) {
 	}
 }
 
+/* Begins consumption of queue by returning a delivery channel via the session struct*/
 func ConnectAndConsume(rabbitmqConnectUri string, queue string) (session Session, err error) {
 	//Connect to Queue
 	session, err = Dial(rabbitmqConnectUri, queue)
