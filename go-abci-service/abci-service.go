@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
@@ -35,6 +36,8 @@ func main() {
 	tmServer := util.GetEnv("TENDERMINT_HOST", "tendermint")
 	tmPort := util.GetEnv("TENDERMINT_PORT", "26657")
 	rabbitmqUri := util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
+	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
+	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 
 	tendermintRPC = abci.TendermintURI{
 		TMServer: tmServer,
@@ -68,16 +71,20 @@ func main() {
 	}
 
 	// Begin scheduled methods
-	go func() {
-		calThread := gocron.NewScheduler()
-		calThread.Every(1).Minutes().Do(loopCAL, tendermintRPC, rabbitmqUri)
-		<-calThread.Start()
-	}()
+	if doCalLoop {
+		go func() {
+			calThread := gocron.NewScheduler()
+			calThread.Every(1).Minutes().Do(loopCAL, tendermintRPC, rabbitmqUri)
+			<-calThread.Start()
+		}()
+	}
 
-	go func() {
-		gocron.Every(2).Minutes().Do(loopAnchor, tendermintRPC, rabbitmqUri)
-		<-gocron.Start()
-	}()
+	if doAnchorLoop {
+		go func() {
+			gocron.Every(3).Minutes().Do(loopAnchor, tendermintRPC, rabbitmqUri)
+			<-gocron.Start()
+		}()
+	}
 
 	// Wait forever
 	cmn.TrapSignal(func() {
@@ -101,30 +108,31 @@ func loopAnchor(tendermintRPC abci.TendermintURI, rabbitmqUri string) error {
 		return err
 	}
 	/* Get CAL transactions between the latest BTCA tx and the current latest tx */
-	txLeaves, err := abci.GetTxRange(tendermintRPC, state.LatestBtcaTxInt+1, state.TxInt)
-	fmt.Printf("leaves for current anchor: %#v\n", txLeaves)
+	txLeaves, err := abci.GetTxRange(tendermintRPC, state.LatestBtcaTxInt, state.LatestCalTxInt)
 	if util.LogError(err) != nil {
 		return err
 	}
 	treeData := calendar.AggregateAndAnchorBTC(txLeaves)
-	btca := abci.Tx{TxType: []byte("BTC-A"), Data: []byte(treeData.AggRoot), Version: 2, Time: time.Now().Unix()}
-	txJSON, _ := json.Marshal(btca)
-	params := base64.StdEncoding.EncodeToString(txJSON)
-	result, err := rpc.BroadcastTxSync([]byte(params))
-	if util.LogError(err) != nil {
-		return err
+	fmt.Printf("treeData for current anchor: %v\n", treeData)
+	if treeData.AggRoot != "" {
+		btca := abci.Tx{TxType: []byte("BTC-A"), Data: []byte(treeData.AggRoot), Version: 2, Time: time.Now().Unix()}
+		txJSON, _ := json.Marshal(btca)
+		fmt.Printf("BTC-A: %s\n", string(txJSON))
+		params := base64.StdEncoding.EncodeToString(txJSON)
+		result, err := rpc.BroadcastTxSync([]byte(params))
+		if util.LogError(err) != nil {
+			return err
+		}
+		fmt.Printf("Anchor result: %v\n", result)
+		if result.Code == 0 {
+			var tx abci.TxTm
+			tx.Hash = result.Hash.Bytes()
+			tx.Data = result.Data.Bytes()
+			//calendar.queueBtcAStateDataMessage(rabbitmqUri, tx)
+			return nil
+		}
 	}
-	fmt.Printf("Anchor result: %v\n", result)
-	if result.Code == 0 {
-		var tx abci.TxTm
-		tx.Hash = result.Hash.Bytes()
-		tx.Data = result.Data.Bytes()
-		//calendar.queueBtcAStateDataMessage(rabbitmqUri, tx)
-		return nil
-	}
-	//TODO: ElectLeader should check sync status of elected peer
-	//TODO: Grab all transactions since
-	return nil
+	return errors.New("no transactions to aggregate")
 }
 
 /* Aggregate submitted hashes into a calendar transaction */

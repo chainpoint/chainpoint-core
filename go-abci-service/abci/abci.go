@@ -60,11 +60,6 @@ func NewAnchorApplication() *AnchorApplication {
 	}
 
 	state := loadState(db)
-	if state.LatestCalTxInt == 0 && state.LatestBtcaTxInt == 0 && state.LatestBtccTxInt == 0 {
-		state.LatestCalTxInt = 1
-		state.LatestBtcaTxInt = 1
-		state.LatestBtccTxInt = 1
-	}
 	return &AnchorApplication{state: state}
 }
 

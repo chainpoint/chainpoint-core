@@ -3,6 +3,7 @@ package aggregator
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -114,7 +115,7 @@ func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 	uuid, err := uuid.NewUUID()
 	rabbitmq.LogError(err, "can't generate uuid")
 	agg.AggId = uuid.String()
-	agg.AggRoot = fmt.Sprintf("%x", tree.Root)
+	agg.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 
 	//Create proof paths
 	proofSlice := make([]ProofData, len(hashStructSlice))

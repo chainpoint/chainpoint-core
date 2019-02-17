@@ -3,6 +3,7 @@ package abci
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
@@ -75,18 +76,25 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 	return resp
 }
 
-// GetTxRange gets all TXs within a particular range
+// GetTxRange gets all CAL TXs within a particular range
 func GetTxRange(tendermintRPC TendermintURI, minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
+	fmt.Printf("minTxInt: %d, maxTxINt: %d\n", minTxInt, maxTxInt)
+	if maxTxInt < minTxInt {
+		return nil, errors.New("max of tx range is less than min")
+	}
 	rpc := GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
 	Txs := []core_types.ResultTx{}
-	for i := minTxInt; i < maxTxInt; i++ {
+	for i := minTxInt; i <= maxTxInt; i++ {
 		txResult, err := rpc.TxSearch(fmt.Sprintf("TxInt=%d", i), false, 1, 1)
 		if err != nil {
+			fmt.Println("RPC error: " + err.Error())
 			return nil, err
 		} else if txResult.TotalCount > 0 {
 			for _, tx := range txResult.Txs {
+
 				Txs = append(Txs, *tx)
+
 			}
 		}
 	}

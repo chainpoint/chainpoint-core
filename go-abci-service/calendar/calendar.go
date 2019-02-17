@@ -66,7 +66,7 @@ func (treeDataObj *CalAgg) GenerateCalendarTree(aggs []aggregator.Aggregation) {
 		tree.AddLeaf(aggRootBytes)
 	}
 	tree.MakeTree()
-	treeDataObj.CalRoot = fmt.Sprintf("%x", tree.GetMerkleRoot())
+	treeDataObj.CalRoot = hex.EncodeToString(tree.GetMerkleRoot())
 	treeDataObj.ProofData = make([]ProofData, len(aggs))
 	for i, agg := range aggs {
 		var proofData ProofData
@@ -121,9 +121,18 @@ func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx ab
 
 /* Takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop */
 func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
-	calBytes := make([][]byte, len(txLeaves))
-	for i, t := range txLeaves {
-		calBytes[i] = t.Tx
+	calBytes := make([][]byte, 0)
+	calLeaves := make([]core_types.ResultTx, 0)
+	for _, t := range txLeaves {
+		decodedTx, err := abci.DecodeTx(t.Tx)
+		if err != nil {
+			util.LogError(err)
+			continue
+		}
+		if string(decodedTx.TxType) == "CAL" {
+			calBytes = append(calBytes, decodedTx.Data)
+			calLeaves = append(calLeaves, t)
+		}
 	}
 	tree := merkletools.MerkleTree{}
 	tree.AddLeaves(calBytes)
@@ -132,11 +141,12 @@ func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
 	uuid, _ := uuid.NewUUID()
 	treeData.AggId = uuid.String()
 	treeData.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
-	treeData.ProofData = make([]BtcProofData, len(txLeaves))
-	for i, tx := range txLeaves {
+	treeData.ProofData = make([]BtcProofData, len(calLeaves))
+	for i, tx := range calLeaves {
 		var proofDataItem BtcProofData
 		proofDataItem.CalId = hex.EncodeToString(tx.Hash)
 		proofs := tree.GetProof(i)
+		proofDataItem.Proof = make([]Proof, len(proofs))
 		for j, p := range proofs {
 			if p.Left {
 				proofDataItem.Proof[j] = Proof{Left: string(p.Value), Op: "sha-256"}
