@@ -60,6 +60,11 @@ func NewAnchorApplication() *AnchorApplication {
 	}
 
 	state := loadState(db)
+	if state.LatestCalTxInt == 0 && state.LatestBtcaTxInt == 0 && state.LatestBtccTxInt == 0 {
+		state.LatestCalTxInt = 1
+		state.LatestBtcaTxInt = 1
+		state.LatestBtccTxInt = 1
+	}
 	return &AnchorApplication{state: state}
 }
 
@@ -79,13 +84,13 @@ func (app *AnchorApplication) InitChain(req types.RequestInitChain) types.Respon
 }
 
 func (app *AnchorApplication) Info(req types.RequestInfo) (resInfo types.ResponseInfo) {
-	infoJson, err := json.Marshal(app.state)
+	infoJSON, err := json.Marshal(app.state)
 	if err != nil {
 		fmt.Println(err)
-		infoJson = []byte("{}")
+		infoJSON = []byte("{}")
 	}
 	return types.ResponseInfo{
-		Data:       string(infoJson),
+		Data:       string(infoJSON),
 		Version:    version.ABCIVersion,
 		AppVersion: ProtocolVersion.Uint64(),
 	}

@@ -81,6 +81,8 @@ func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 	session.Ch.Cancel(aggQueueIn, true)
 	defer session.Conn.Close()
 
+	fmt.Printf("Aggregation consists of %d items\n", len(msgStructSlice))
+
 	//new hashes from concatenated properties
 	hashSlice := make([][]byte, len(msgStructSlice))     // byte array
 	hashStructSlice := make([]Hash, len(msgStructSlice)) // keep record for building proof path

@@ -13,6 +13,7 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
+// DecodeTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
 func DecodeTx(incoming []byte) (Tx, error) {
 	decoded, err := base64.StdEncoding.DecodeString(string(incoming))
 	var calendar Tx
@@ -24,12 +25,13 @@ func DecodeTx(incoming []byte) (Tx, error) {
 	return calendar, nil
 }
 
+// Helper method to increment transaction integer
 func (app *AnchorApplication) incrementTx(tags []cmn.KVPair) []cmn.KVPair {
 	app.state.TxInt++ // no pre-increment :(
 	return append(tags, cmn.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
 }
 
-/* Updates state based on type of transaction received. Used by DeliverTx */
+// Updates state based on type of transaction received. Used by DeliverTx
 func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeliverTx {
 	tx, err := DecodeTx(rawTx)
 	tags := []cmn.KVPair{}
@@ -46,6 +48,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 		break
 	case "CAL":
 		tags := app.incrementTx(tags)
+		app.state.LatestCalTxInt = app.state.TxInt
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-A":
@@ -72,9 +75,9 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 	return resp
 }
 
-/* Get all TXs within a particular range*/
-func GetTxRange(tmServer string, tmPort string, minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
-	rpc := GetHTTPClient(tmServer, tmPort)
+// GetTxRange gets all TXs within a particular range
+func GetTxRange(tendermintRPC TendermintURI, minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
+	rpc := GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
 	Txs := []core_types.ResultTx{}
 	for i := minTxInt; i < maxTxInt; i++ {

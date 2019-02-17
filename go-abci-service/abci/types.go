@@ -6,6 +6,13 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
+// TendermintURI holds connection info for RPC
+type TendermintURI struct {
+	TMServer string
+	TMPort   string
+}
+
+// State holds Tendermint/ABCI application state. Persisted by ABCI app
 type State struct {
 	db               dbm.DB
 	TxInt            int64  `json:"tx_int"`
@@ -21,6 +28,7 @@ type State struct {
 	LatestBtccHeight int64  `json:"latest_btcc_height"`
 }
 
+// Tx holds custom transaction data and metadata for the Chainpoint Calendar
 type Tx struct {
 	TxType  []byte `json: "type"`
 	Data    []byte `json: "hash"`
@@ -28,11 +36,13 @@ type Tx struct {
 	Time    int64  `json: "time"`
 }
 
+// TxTm holds result of submitting a CAL transaction (needed in order to get Hash
 type TxTm struct {
 	Hash []byte
 	Data []byte
 }
 
+// NodeStatus rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
 type NodeStatus struct {
 	Jsonrpc string `json:"jsonrpc"`
 	ID      string `json:"id"`
@@ -56,6 +66,7 @@ type NodeStatus struct {
 	} `json:"result"`
 }
 
+// NodeInfo rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
 type NodeInfo struct {
 	ProtocolVersion struct {
 		P2P   string `json:"p2p"`
@@ -74,6 +85,7 @@ type NodeInfo struct {
 	} `json:"other"`
 }
 
+// NetInfo rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
 type NetInfo struct {
 	Jsonrpc string `json:"jsonrpc"`
 	ID      string `json:"id"`

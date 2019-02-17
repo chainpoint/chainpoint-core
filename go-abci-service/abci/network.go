@@ -12,9 +12,9 @@ import (
 	"github.com/tendermint/tendermint/rpc/client"
 )
 
-/* Retrieves status of our node from RPC*/
-func GetStatus(tmServer string, tmPort string) (NodeStatus, error) {
-	resp, err := http.Get(fmt.Sprintf("http://%s:%s/status", tmServer, tmPort))
+// GetStatus retrieves status of our node from RPC
+func GetStatus(tendermintRPC TendermintURI) (NodeStatus, error) {
+	resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tendermintRPC.TMServer, tendermintRPC.TMPort))
 	if err != nil {
 		return NodeStatus{}, err
 	}
@@ -25,9 +25,9 @@ func GetStatus(tmServer string, tmPort string) (NodeStatus, error) {
 	return status, nil
 }
 
-/*Retrieves known peer information via rpc*/
-func GetNetInfo(tmServer string, tmPort string) (NetInfo, error) {
-	resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tmServer, tmPort))
+// GetNetInfo retrieves known peer information via rpc
+func GetNetInfo(tendermintRPC TendermintURI) (NetInfo, error) {
+	resp, err := http.Get(fmt.Sprintf("http://%s:%s/status", tendermintRPC.TMServer, tendermintRPC.TMPort))
 	if err != nil {
 		return NetInfo{}, err
 	}
@@ -38,9 +38,9 @@ func GetNetInfo(tmServer string, tmPort string) (NetInfo, error) {
 	return info, nil
 }
 
-/* Retrieves custom ABCI status struct detailing the state of our application */
-func GetAbciInfo(tmServer string, tmPort string) (State, error) {
-	rpc := GetHTTPClient(tmServer, tmPort)
+// GetAbciInfo retrieves custom ABCI status struct detailing the state of our application
+func GetAbciInfo(tendermintRPC TendermintURI) (State, error) {
+	rpc := GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
 	resp, err := rpc.ABCIInfo()
 	if err != nil {
@@ -55,8 +55,8 @@ func GetAbciInfo(tmServer string, tmPort string) (State, error) {
 	return anchorState, nil
 }
 
-/* Deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index */
-func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string) {
+// ElectLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
+func ElectLeader(tendermintRPC TendermintURI) (isLeader bool, leader string) {
 	var status NodeStatus
 	var netInfo NetInfo
 	var err error
@@ -64,8 +64,8 @@ func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string) 
 
 	// Simple retry logic for obtaining self and peer info
 	for i := 0; i < 5; i++ {
-		status, err = GetStatus(tmServer, tmPort)
-		netInfo, err2 = GetNetInfo(tmServer, tmPort)
+		status, err = GetStatus(tendermintRPC)
+		netInfo, err2 = GetNetInfo(tendermintRPC)
 		if err != nil || err2 != nil {
 			time.Sleep(5 * time.Second)
 			continue
@@ -96,12 +96,11 @@ func ElectLeader(tmServer string, tmPort string) (isLeader bool, leader string) 
 			return leader.ID == currentNodeID, leader.ID
 		}
 		return false, ""
-	} else {
-		return true, currentNodeID
 	}
+	return true, currentNodeID
 }
 
-/* Creates an Tendermint RPC client from connection URI/Port details */
-func GetHTTPClient(tmServer string, tmPort string) *client.HTTP {
-	return client.NewHTTP(fmt.Sprintf("http://%s:%s", tmServer, tmPort), "/websocket")
+// GetHTTPClient creates an Tendermint RPC client from connection URI/Port details
+func GetHTTPClient(tendermintRPC TendermintURI) *client.HTTP {
+	return client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket")
 }
