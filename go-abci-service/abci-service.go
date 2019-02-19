@@ -128,7 +128,7 @@ func loopAnchor(tendermintRPC abci.TendermintURI, rabbitmqUri string) error {
 			var tx abci.TxTm
 			tx.Hash = result.Hash.Bytes()
 			tx.Data = result.Data.Bytes()
-			//calendar.queueBtcAStateDataMessage(rabbitmqUri, tx)
+			treeData.QueueBtcaStateDataMessage(rabbitmqUri)
 			return nil
 		}
 	}

@@ -316,8 +316,8 @@ async function writeAnchorBTCAggStateObjectsAsync (stateObjects) {
   let insertCmd = 'INSERT INTO chainpoint_proof_anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES '
 
   stateObjects = stateObjects.map((stateObj) => {
-    stateObj.cal_id = parseInt(stateObj.cal_id, 10)
-    if (isNaN(stateObj.cal_id)) throw new Error(`cal_id value '${stateObj.cal_id}' is not an integer`)
+    //stateObj.cal_id = parseInt(stateObj.cal_id, 10)
+    //if (isNaN(stateObj.cal_id)) throw new Error(`cal_id value '${stateObj.cal_id}' is not an integer`)
     stateObj.anchor_btc_agg_state = JSON.stringify(stateObj.anchor_btc_agg_state)
     return stateObj
   })

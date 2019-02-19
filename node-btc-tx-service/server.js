@@ -117,13 +117,13 @@ async function processIncomingAnchorBTCJobAsync (msg) {
       }
 
       // log the btc tx transaction
-      let newLogEntry
+  /*    let newLogEntry
       try {
         newLogEntry = await logBtcTxDataAsync(txResult)
         console.log(newLogEntry)
       } catch (error) {
         throw new Error(`Unable to log BTC transaction: ${error.message}`)
-      }
+      }*/
 
       // queue return message for calendar containing the new transaction information
       // adding btc transaction id and full transaction body to original message and returning
@@ -185,7 +185,7 @@ async function start () {
   if (env.NODE_ENV === 'test') return
   try {
     // init DB
-    await openStorageConnectionAsync()
+    //await openStorageConnectionAsync()
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     console.log('startup completed successfully')

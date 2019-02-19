@@ -85,12 +85,14 @@ func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 	fmt.Printf("Aggregation consists of %d items\n", len(msgStructSlice))
 
 	//new hashes from concatenated properties
-	hashSlice := make([][]byte, len(msgStructSlice))     // byte array
-	hashStructSlice := make([]Hash, len(msgStructSlice)) // keep record for building proof path
-	for i, msgHash := range msgStructSlice {
+	hashSlice := make([][]byte, 0)     // byte array
+	hashStructSlice := make([]Hash, 0) // keep record for building proof path
+	for _, msgHash := range msgStructSlice {
 		unPackedHash := Hash{}
-		json.Unmarshal(msgHash.Body, &unPackedHash)
-		hashStructSlice[i] = unPackedHash
+		if json.Unmarshal(msgHash.Body, &unPackedHash) != nil {
+			continue
+		}
+		hashStructSlice = append(hashStructSlice, unPackedHash)
 		var buffer bytes.Buffer
 		_, err := buffer.WriteString(fmt.Sprintf("core_id:%s%s", unPackedHash.HashID, unPackedHash.Hash))
 		rabbitmq.LogError(err, "failed to write hashes to byte buffer")
@@ -101,7 +103,7 @@ func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 			nistBuffer.Write(newHash[:])
 			newHash = sha256.Sum256(nistBuffer.Bytes())
 		}
-		hashSlice[i] = newHash[:]
+		hashSlice = append(hashSlice, newHash[:])
 	}
 
 	if len(msgStructSlice) == 0 {
@@ -118,7 +120,7 @@ func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 	agg.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 
 	//Create proof paths
-	proofSlice := make([]ProofData, len(hashStructSlice))
+	proofSlice := make([]ProofData, 0)
 	for i, unPackedHash := range hashStructSlice {
 		var proofData ProofData
 		proofData.HashID = unPackedHash.HashID

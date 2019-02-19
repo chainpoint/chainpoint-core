@@ -58,7 +58,7 @@ type Proof struct {
 	Op    string `json: "op"`
 }
 
-/* Generates the MerkleTree for the aggregation roots which will be committed to the calendar*/
+// GenerateCalendarTree creates the MerkleTree for the aggregation roots which will be committed to the calendar
 func (treeDataObj *CalAgg) GenerateCalendarTree(aggs []aggregator.Aggregation) {
 	var tree merkletools.MerkleTree
 	for _, agg := range aggs {
@@ -84,7 +84,7 @@ func (treeDataObj *CalAgg) GenerateCalendarTree(aggs []aggregator.Aggregation) {
 	}
 }
 
-/* Lets proof state service know about a cal anchoring via rabbitmq */
+// QueueCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
 func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx abci.TxTm) {
 	var calState CalState
 	base_uri := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "tendermint.chainpoint.org")
@@ -119,7 +119,7 @@ func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx ab
 	}
 }
 
-/* Takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop */
+// AggregateAndAnchorBTC takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop
 func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
 	calBytes := make([][]byte, 0)
 	calLeaves := make([]core_types.ResultTx, 0)
@@ -157,4 +157,56 @@ func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
 		treeData.ProofData[i] = proofDataItem
 	}
 	return treeData
+}
+
+// QueueBtcaStateDataMessage notifies proof and btc tx services of BTC-A anchoring
+func (anchorDataObj *BtcAgg) QueueBtcaStateDataMessage(rabbitmqUri string) error {
+	treeDataJSON, err := json.Marshal(anchorDataObj)
+	if util.LogError(err) != nil {
+		return err
+	}
+
+	proofSession, err := rabbitmq.Dial(rabbitmqUri, "work.proofstate")
+	if util.LogError(err) != nil {
+		rabbitmq.LogError(err, "failed to dial for btca proof queue")
+		return err
+	}
+	defer proofSession.Conn.Close()
+	defer proofSession.Ch.Close()
+	err = proofSession.Ch.Publish(
+		"",
+		proofSession.Queue.Name,
+		false,
+		false,
+		amqp.Publishing{
+			Type:         "anchor_btc_agg_batch",
+			Body:         treeDataJSON,
+			DeliveryMode: 2, //persistent
+			ContentType:  "application/json",
+		})
+	if err != nil {
+		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+	}
+
+	btcSession, err := rabbitmq.Dial(rabbitmqUri, "work.btctx")
+	if util.LogError(err) != nil {
+		rabbitmq.LogError(err, "failed to dial for btca proof queue")
+		return err
+	}
+	defer btcSession.Conn.Close()
+	defer btcSession.Ch.Close()
+	err = btcSession.Ch.Publish(
+		"",
+		btcSession.Queue.Name,
+		false,
+		false,
+		amqp.Publishing{
+			Body:         treeDataJSON,
+			DeliveryMode: 2, //persistent
+			ContentType:  "application/json",
+		})
+	if err != nil {
+		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+	}
+	return nil
 }

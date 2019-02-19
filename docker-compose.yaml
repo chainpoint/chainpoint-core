@@ -203,12 +203,14 @@ services:
     networks:
       - chainpoint
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
       BITCOIN_WIF: ${BITCOIN_WIF}
+      USE_BTCETH_TESTNET: "true"
+      REDIS_CONNECT_URIS: "redis://redis:6379"
 
-  # Bitcoin Transmit Monitor
+  # Bitcoin Transmit MonitorF
   # Monitor and report on the state of BTC transactions this app has submitted.
   #
   btc-mon:

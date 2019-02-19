@@ -25,7 +25,7 @@ const env = envalid.cleanEnv(process.env, {
 function defineFor (sqlz) {
   let CalState = sqlz.define(env.COCKROACH_CAL_STATE_TABLE_NAME, {
     agg_id: { type: Sequelize.UUID, primaryKey: true },
-    cal_id: { type: Sequelize.INTEGER },
+    cal_id: { type: Sequelize.STRING },
     cal_state: { type: Sequelize.TEXT }
   }, {
     indexes: [

@@ -86,7 +86,7 @@ async function ConsumeAggregationMessageAsync (msg) {
 */
 async function ConsumeCalendarBatchMessageAsync (msg) {
   let messageObj = JSON.parse(msg.content.toString())
-
+  //console.log(messageObj)
   // transform batch message data into cal_state objects ready for insertion
   let stateObjs = messageObj.proofData.map((proofDataItem) => {
     return {

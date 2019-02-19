@@ -24,7 +24,7 @@ const env = envalid.cleanEnv(process.env, {
 
 function defineFor (sqlz) {
   let AnchorBtcAggState = sqlz.define(env.COCKROACH_ANCHOR_BTC_AGG_STATE_TABLE_NAME, {
-    cal_id: { type: Sequelize.INTEGER, primaryKey: true },
+    cal_id: { type: Sequelize.STRING, primaryKey: true },
     anchor_btc_agg_id: { type: Sequelize.UUID },
     anchor_btc_agg_state: { type: Sequelize.TEXT }
   }, {
