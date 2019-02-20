@@ -20,7 +20,7 @@ func LogError(err error, msg string) {
 	}
 }
 
-/* Dial AMQP provider, create a channel, and declare a queue object*/
+// Dial AMQP provider, create a channel, and declare a queue object
 func Dial(amqpUrl string, queue string) (Session, error) {
 	var session Session
 	var err error
@@ -51,10 +51,13 @@ func Dial(amqpUrl string, queue string) (Session, error) {
 	}
 }
 
-/* Begins consumption of queue by returning a delivery channel via the session struct*/
+// ConnectAndConsume begins consumption of queue by returning a delivery channel via the session struct
 func ConnectAndConsume(rabbitmqConnectUri string, queue string) (session Session, err error) {
 	//Connect to Queue
 	session, err = Dial(rabbitmqConnectUri, queue)
+	if err != nil {
+		return Session{}, err
+	}
 	session.Msgs, err = session.Ch.Consume(
 		session.Queue.Name, // queue
 		"",                 // consumer
@@ -66,4 +69,41 @@ func ConnectAndConsume(rabbitmqConnectUri string, queue string) (session Session
 	)
 	LogError(err, "can't consume queue")
 	return
+}
+
+// Publish sends messages to a particular queue
+func Publish(rabbitmqConnectUri string, queue string, msgType string, msg []byte) error {
+	pubSession, err := Dial(rabbitmqConnectUri, queue)
+	if err != nil {
+		LogError(err, "failed to dial for publishing")
+		return err
+	}
+	defer pubSession.Conn.Close()
+	defer pubSession.Ch.Close()
+	var publish amqp.Publishing
+	if msgType != "" {
+		publish = amqp.Publishing{
+			Type:         msgType,
+			Body:         msg,
+			DeliveryMode: 2, //persistent
+			ContentType:  "application/json",
+		}
+	} else {
+		publish = amqp.Publishing{
+			Body:         msg,
+			DeliveryMode: 2, //persistent
+			ContentType:  "application/json",
+		}
+	}
+	err = pubSession.Ch.Publish(
+		"",
+		pubSession.Queue.Name,
+		false,
+		false,
+		publish)
+	if err != nil {
+		LogError(err, "rmq dial failure, is rmq connected?")
+		return err
+	}
+	return nil
 }

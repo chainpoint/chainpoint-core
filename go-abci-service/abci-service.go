@@ -1,21 +1,17 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/jasonlvhit/gocron"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
 	//"github.com/jasonlvhit/gocron"
 	"github.com/tendermint/tendermint/abci/server"
@@ -24,6 +20,7 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	cron "gopkg.in/robfig/cron.v3"
 )
 
 var proofDB *dbm.GoLevelDB
@@ -31,11 +28,12 @@ var nodeStatus abci.NodeStatus
 var netInfo *core_types.ResultNetInfo
 var currentCalTree merkletools.MerkleTree
 var tendermintRPC abci.TendermintURI
+var rabbitmqUri string
 
 func main() {
 	tmServer := util.GetEnv("TENDERMINT_HOST", "tendermint")
 	tmPort := util.GetEnv("TENDERMINT_PORT", "26657")
-	rabbitmqUri := util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
+	rabbitmqUri = util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 
@@ -70,21 +68,19 @@ func main() {
 		}
 	}
 
+	scheduler := cron.New()
+
 	// Begin scheduled methods
 	if doCalLoop {
-		go func() {
-			calThread := gocron.NewScheduler()
-			calThread.Every(1).Minutes().Do(loopCAL, tendermintRPC, rabbitmqUri)
-			<-calThread.Start()
-		}()
+		scheduler.AddFunc("0/1 0-23 * * *", func() { loopCAL() })
 	}
 
 	if doAnchorLoop {
-		go func() {
-			gocron.Every(3).Minutes().Do(loopAnchor, tendermintRPC, rabbitmqUri)
-			<-gocron.Start()
-		}()
+		scheduler.AddFunc("0/3 0-23 * * *", func() { loopAnchor() })
+		go calendar.ReceiveCalRMQ(rabbitmqUri, tendermintRPC)
 	}
+
+	scheduler.Start()
 
 	// Wait forever
 	cmn.TrapSignal(func() {
@@ -95,7 +91,7 @@ func main() {
 }
 
 /* Scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin */
-func loopAnchor(tendermintRPC abci.TendermintURI, rabbitmqUri string) error {
+func loopAnchor() error {
 	iAmLeader, _ := abci.ElectLeader(tendermintRPC)
 	if !iAmLeader {
 		return nil //bail if we aren't the leader
@@ -115,11 +111,7 @@ func loopAnchor(tendermintRPC abci.TendermintURI, rabbitmqUri string) error {
 	treeData := calendar.AggregateAndAnchorBTC(txLeaves)
 	fmt.Printf("treeData for current anchor: %v\n", treeData)
 	if treeData.AggRoot != "" {
-		btca := abci.Tx{TxType: []byte("BTC-A"), Data: []byte(treeData.AggRoot), Version: 2, Time: time.Now().Unix()}
-		txJSON, _ := json.Marshal(btca)
-		fmt.Printf("BTC-A: %s\n", string(txJSON))
-		params := base64.StdEncoding.EncodeToString(txJSON)
-		result, err := rpc.BroadcastTxSync([]byte(params))
+		result, err := abci.BroadcastTx(tendermintRPC, []byte("BTC-A"), []byte(treeData.AggRoot), 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			return err
 		}
@@ -136,7 +128,7 @@ func loopAnchor(tendermintRPC abci.TendermintURI, rabbitmqUri string) error {
 }
 
 /* Aggregate submitted hashes into a calendar transaction */
-func loopCAL(tendermintRPC abci.TendermintURI, rabbitmqUri string) error {
+func loopCAL() error {
 	fmt.Println("starting scheduled aggregation")
 	rpc := abci.GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
@@ -147,10 +139,7 @@ func loopCAL(tendermintRPC abci.TendermintURI, rabbitmqUri string) error {
 	calendar.GenerateCalendarTree([]aggregator.Aggregation{agg})
 	if agg.AggRoot != "" {
 		fmt.Printf("Root: %s\n", agg.AggRoot)
-		tx := abci.Tx{TxType: []byte("CAL"), Data: []byte(agg.AggRoot), Version: 2, Time: time.Now().Unix()}
-		txJSON, _ := json.Marshal(tx)
-		params := base64.StdEncoding.EncodeToString(txJSON)
-		result, err := rpc.BroadcastTxSync([]byte(params))
+		result, err := abci.BroadcastTx(tendermintRPC, []byte("CAL"), []byte(agg.AggRoot), 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			return err
 		}

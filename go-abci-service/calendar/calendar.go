@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
@@ -40,6 +42,33 @@ type CalState struct {
 	CalId     string      `json:"cal_id"`
 	Anchor    CalAnchor   `json:"anchor"`
 	ProofData []ProofData `json:"proofData"`
+}
+
+type BtcTxMsg struct {
+	AggId   string `json:"anchor_btc_agg_id"`
+	AggRoot string `json:"anchor_btc_agg_root"`
+	BtxId   string `json:"btctx_id"`
+	BtxBody string `json:"btctx_body"`
+}
+
+type BtcTxProofState struct {
+	AggId    string        `json:"anchor_btc_agg_id"`
+	BtcId    string        `json:"btctx_id"`
+	BtcState BtcTxOpsState `json:"btctx_state"`
+}
+
+type BtcTxOpsState struct {
+	Ops []Proof `json:"ops"`
+}
+
+type TxId struct {
+	TxID string `json:"tx_id"`
+}
+
+type BtcMonMsg struct {
+	BtcId         string `json:"btctx_id"`
+	BtcHeadHeight int64  `json:"btchead_height"`
+	BtcHeadRoot   string `json:"btchead_root"`
 }
 
 type CalAnchor struct {
@@ -97,23 +126,7 @@ func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx ab
 	calState.ProofData = treeDataObj.ProofData
 	calState.CalId = hex.EncodeToString(tx.Hash)
 	calStateJson, _ := json.Marshal(calState)
-	destSession, err := rabbitmq.Dial(rabbitmqConnectUri, "work.proofstate")
-	if err != nil {
-		rabbitmq.LogError(err, "failed to dial for cal queue")
-	}
-	defer destSession.Conn.Close()
-	defer destSession.Ch.Close()
-	err = destSession.Ch.Publish(
-		"",
-		destSession.Queue.Name,
-		false,
-		false,
-		amqp.Publishing{
-			Type:         "cal_batch",
-			Body:         calStateJson,
-			DeliveryMode: 2, //persistent
-			ContentType:  "application/json",
-		})
+	err := rabbitmq.Publish(rabbitmqConnectUri, "work.proofstate", "cal_batch", calStateJson)
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 	}
@@ -165,48 +178,97 @@ func (anchorDataObj *BtcAgg) QueueBtcaStateDataMessage(rabbitmqUri string) error
 	if util.LogError(err) != nil {
 		return err
 	}
-
-	proofSession, err := rabbitmq.Dial(rabbitmqUri, "work.proofstate")
-	if util.LogError(err) != nil {
-		rabbitmq.LogError(err, "failed to dial for btca proof queue")
-		return err
+	errBatch := rabbitmq.Publish(rabbitmqUri, "work.proofstate", "anchor_btc_agg_batch", treeDataJSON)
+	errBtcTx := rabbitmq.Publish(rabbitmqUri, "work.btctx", "", treeDataJSON)
+	if errBatch != nil {
+		return errBatch
 	}
-	defer proofSession.Conn.Close()
-	defer proofSession.Ch.Close()
-	err = proofSession.Ch.Publish(
-		"",
-		proofSession.Queue.Name,
-		false,
-		false,
-		amqp.Publishing{
-			Type:         "anchor_btc_agg_batch",
-			Body:         treeDataJSON,
-			DeliveryMode: 2, //persistent
-			ContentType:  "application/json",
-		})
-	if err != nil {
-		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
-	}
-
-	btcSession, err := rabbitmq.Dial(rabbitmqUri, "work.btctx")
-	if util.LogError(err) != nil {
-		rabbitmq.LogError(err, "failed to dial for btca proof queue")
-		return err
-	}
-	defer btcSession.Conn.Close()
-	defer btcSession.Ch.Close()
-	err = btcSession.Ch.Publish(
-		"",
-		btcSession.Queue.Name,
-		false,
-		false,
-		amqp.Publishing{
-			Body:         treeDataJSON,
-			DeliveryMode: 2, //persistent
-			ContentType:  "application/json",
-		})
-	if err != nil {
-		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+	if errBtcTx != nil {
+		return errBtcTx
 	}
 	return nil
+}
+
+func processMessage(rabbitmqUri string, rpcUri abci.TendermintURI, msg amqp.Delivery) error {
+	switch msg.Type {
+	case "btctx":
+		var btcTxObj BtcTxMsg
+		json.Unmarshal(msg.Body, &btcTxObj)
+		time.Sleep(30 * time.Second)
+		stateObj := BtcTxProofState{
+			AggId: btcTxObj.AggId,
+			BtcId: btcTxObj.BtxId,
+			BtcState: BtcTxOpsState{
+				Ops: []Proof{
+					Proof{
+						Left:  btcTxObj.BtxBody[:strings.Index(btcTxObj.BtxBody, btcTxObj.AggRoot)],
+						Right: btcTxObj.BtxBody[strings.Index(btcTxObj.BtxBody, btcTxObj.AggRoot)+len(btcTxObj.AggRoot):],
+						Op:    "sha-256-x2",
+					},
+				},
+			},
+		}
+		dataJSON, err := json.Marshal(stateObj)
+		if util.LogError(err) != nil {
+			msg.Nack(false, true)
+			return err
+		}
+		err = rabbitmq.Publish(rabbitmqUri, "work.proofstate", "btctx", dataJSON)
+		if err != nil {
+			rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+			msg.Nack(false, true)
+			return err
+		}
+		txIdBytes, err := json.Marshal(TxId{TxID: btcTxObj.BtxId})
+		err = rabbitmq.Publish(rabbitmqUri, "work.btcmon", "", txIdBytes)
+		if err != nil {
+			rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+			msg.Nack(false, true)
+			return err
+		}
+		msg.Ack(false)
+		break
+	case "btcmon":
+		var btcMonObj BtcMonMsg
+		json.Unmarshal(msg.Body, &btcMonObj)
+		_, err := abci.BroadcastTx(rpcUri, []byte("BTC-C"), []byte(btcMonObj.BtcHeadRoot), 2, time.Now().Unix())
+		if util.LogError(err) != nil {
+			return err
+		}
+		msg.Ack(false)
+		break
+	case "reward":
+		break
+	default:
+		msg.Ack(false)
+	}
+	return nil
+}
+
+func ReceiveCalRMQ(rabbitmqUri string, rpcUri abci.TendermintURI) error {
+	var session rabbitmq.Session
+	var err error
+	endConsume := false
+	for {
+		session, err = rabbitmq.ConnectAndConsume(rabbitmqUri, "work.cal")
+		if err != nil {
+			rabbitmq.LogError(err, "failed to dial for work.cal queue")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		for {
+			select {
+			case err = <-session.Notify:
+				if endConsume {
+					return err
+				}
+				time.Sleep(5 * time.Second)
+				break //reconnect
+			case msg := <-session.Msgs:
+				if len(msg.Body) > 0 {
+					go processMessage(rabbitmqUri, rpcUri, msg)
+				}
+			}
+		}
+	}
 }

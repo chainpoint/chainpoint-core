@@ -6,12 +6,11 @@ import (
 	"errors"
 	"fmt"
 
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 // DecodeTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
@@ -24,6 +23,22 @@ func DecodeTx(incoming []byte) (Tx, error) {
 	}
 	json.Unmarshal([]byte(decoded), &calendar)
 	return calendar, nil
+}
+
+func EncodeTx(outgoing Tx) string {
+	txJSON, _ := json.Marshal(outgoing)
+	return base64.StdEncoding.EncodeToString(txJSON)
+}
+
+func BroadcastTx(rpcUri TendermintURI, txType []byte, data []byte, version int64, time int64) (core_types.ResultBroadcastTx, error) {
+	rpc := GetHTTPClient(rpcUri)
+	defer rpc.Stop()
+	tx := Tx{TxType: txType, Data: data, Version: version, Time: time}
+	result, err := rpc.BroadcastTxSync([]byte(EncodeTx(tx)))
+	if util.LogError(err) != nil {
+		return *result, err
+	}
+	return *result, nil
 }
 
 // Helper method to increment transaction integer

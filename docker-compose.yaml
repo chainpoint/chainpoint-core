@@ -11,6 +11,8 @@ services:
       context: .
       dockerfile: docker/Dockerfile.abci
     image: abci
+    depends_on:
+    - rabbitmq
     environment:
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
@@ -42,6 +44,8 @@ services:
       context: .
       dockerfile: docker/Dockerfile.abci
     image: abci
+    depends_on:
+    - rabbitmq
     environment:
       TENDERMINT_HOST: tendermint-2
       TENDERMINT_PORT: 26657
