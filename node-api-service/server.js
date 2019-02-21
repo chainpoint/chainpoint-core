@@ -99,13 +99,15 @@ server.use(restify.bodyParser({
 // submit hash(es)
 server.post({ path: '/hashes', version: '1.0.0' }, hashes.postHashV1Async)
 // get the block objects for the calendar in the specified block range
-server.get({ path: '/calendar/blockrange/:index', version: '1.0.0' }, calendar.getCalBlockRangeV2Async)
-// get the block hash for the calendar at the specified height
-server.get({ path: '/calendar/:height/hash', version: '1.0.0' }, calendar.getCalBlockHashByHeightV1Async)
-// get the dataVal item for the calendar at the specified height
-server.get({ path: '/calendar/:height/data', version: '1.0.0' }, calendar.getCalBlockDataByHeightV1Async)
-// get the block object for the calendar at the specified height
-server.get({ path: '/calendar/:height', version: '1.0.0' }, calendar.getCalBlockByHeightV1Async)
+server.get({ path: '/calendar/:txid', version: '1.0.0' }, calendar.getCalTxAsync)
+// get the data value of a txId
+server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, calendar.getCalTxDataAsync)
+// get proofs from rocksdb
+server.get({ path: '/proofs', version: '1.0.0' }, calendar.getCoreProofsAsync)
+// get random core peers
+server.get({ path: '/cores/random', version: '1.0.0' }, cores.getCoresRandomAsync)
+
+
 // get random subset of nodes list
 server.get({ path: '/nodes/random', version: '1.0.0' }, nodes.getNodesRandomV1Async)
 // get nodes blacklist

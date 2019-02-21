@@ -143,7 +143,7 @@ func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
 			continue
 		}
 		if string(decodedTx.TxType) == "CAL" {
-			calBytes = append(calBytes, decodedTx.Data)
+			calBytes = append(calBytes, []byte(decodedTx.Data))
 			calLeaves = append(calLeaves, t)
 		}
 	}
@@ -231,7 +231,8 @@ func processMessage(rabbitmqUri string, rpcUri abci.TendermintURI, msg amqp.Deli
 	case "btcmon":
 		var btcMonObj BtcMonMsg
 		json.Unmarshal(msg.Body, &btcMonObj)
-		_, err := abci.BroadcastTx(rpcUri, []byte("BTC-C"), []byte(btcMonObj.BtcHeadRoot), 2, time.Now().Unix())
+		heightAndRoot := string(btcMonObj.BtcHeadHeight) + ":" + btcMonObj.BtcHeadRoot
+		_, err := abci.BroadcastTx(rpcUri, "BTC-C", heightAndRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			return err
 		}

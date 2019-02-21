@@ -16,11 +16,78 @@
 
 const _ = require('lodash')
 const restify = require('restify')
+const connections = require('./lib/connections.js')
 
-let CalendarBlock
-let sequelize
+/**
+ * GET /calendar/:txid handler
+ *
+ * Expects a path parameter 'txid' as a string
+ *
+ * Returns a calendar tx by tx hash
+ */
+async function getCalTxAsync (req, res, next) {
+    let txID = req.params.txid
+    if (!txID.includes("0x")){
+        txID = "0x" + txID
+    }
+    let tx
+    try {
+      rpc = connections.openTendermintConnection()
+      tx = await rpc.tx({hash: txID, prove: false})
+    }catch (error){
+      console.error('rpc error')
+      return next(new restify.InternalServerError('Could not query for tx by hash'))
+    }
+    if (!tx) {
+        res.status(404)
+        res.noCache()
+        res.send({ code: 'NotFoundError', message: '' })
+        return next()
+    }
+    res.contentType = 'application/json'
+    res.cache('public', { maxAge: 2592000 })
+    res.send(tx)
+    return next()
+}
 
-const BLOCKRANGE_SIZE = 100
+/**
+ * GET /calendar/:txid/data handler
+ *
+ * Expects a path parameter 'txid' as a string
+ *
+ * Returns a calendar tx by tx hash
+ */
+async function getCalTxDataAsync (req, res, next) {
+    let txID = req.params.txid
+    if (!txID.includes("0x")){
+        txID = "0x" + txID
+    }
+    let tx
+    try {
+        rpc = connections.openTendermintConnection()
+        tx = await rpc.tx({hash: txID, prove: false})
+    }catch (error){
+        console.error('rpc error')
+        return next(new restify.InternalServerError('Could not query for tx by hash'))
+    }
+    if (!tx) {
+        res.status(404)
+        res.noCache()
+        res.send({ code: 'NotFoundError', message: '' })
+        return next()
+    }
+    let txData = new Buffer(tx.tx, 'base64').toString('ascii')
+    jsonData = JSON.parse(txData)
+    res.contentType = 'application/json'
+    res.cache('public', { maxAge: 2592000 })
+    res.send(jsonData.Data)
+    return next()
+}
+
+async function getCoreProofsAsync (req, res, next) {
+    //TODO
+    return next()
+}
 
 /**
  * GET /calendar/:height handler
@@ -195,6 +262,9 @@ async function getCalBlockHashByHeightV1Async (req, res, next) {
 }
 
 module.exports = {
+  getCalTxAsync: getCalTxAsync,
+  getCalTxDataAsync: getCalTxDataAsync,
+  getCoreProofsAsync: getCoreProofsAsync,
   getCalBlockByHeightV1Async: getCalBlockByHeightV1Async,
   getCalBlockRangeV2Async: getCalBlockRangeV2Async,
   getCalBlockDataByHeightV1Async: getCalBlockDataByHeightV1Async,

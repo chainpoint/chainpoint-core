@@ -30,7 +30,7 @@ func EncodeTx(outgoing Tx) string {
 	return base64.StdEncoding.EncodeToString(txJSON)
 }
 
-func BroadcastTx(rpcUri TendermintURI, txType []byte, data []byte, version int64, time int64) (core_types.ResultBroadcastTx, error) {
+func BroadcastTx(rpcUri TendermintURI, txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
 	rpc := GetHTTPClient(rpcUri)
 	defer rpc.Stop()
 	tx := Tx{TxType: txType, Data: data, Version: version, Time: time}
@@ -58,8 +58,8 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 	switch string(tx.TxType) {
 	case "VAL":
 		tags := app.incrementTx(tags)
-		if isValidatorTx(tx.Data) {
-			resp = app.execValidatorTx(tx.Data, tags)
+		if isValidatorTx([]byte(tx.Data)) {
+			resp = app.execValidatorTx([]byte(tx.Data), tags)
 		}
 		break
 	case "CAL":

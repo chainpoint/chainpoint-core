@@ -68,7 +68,7 @@ func main() {
 		}
 	}
 
-	scheduler := cron.New()
+	scheduler := cron.New(cron.WithLocation(time.UTC))
 
 	// Begin scheduled methods
 	if doCalLoop {
@@ -111,15 +111,12 @@ func loopAnchor() error {
 	treeData := calendar.AggregateAndAnchorBTC(txLeaves)
 	fmt.Printf("treeData for current anchor: %v\n", treeData)
 	if treeData.AggRoot != "" {
-		result, err := abci.BroadcastTx(tendermintRPC, []byte("BTC-A"), []byte(treeData.AggRoot), 2, time.Now().Unix())
+		result, err := abci.BroadcastTx(tendermintRPC, "BTC-A", treeData.AggRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			return err
 		}
 		fmt.Printf("Anchor result: %v\n", result)
 		if result.Code == 0 {
-			var tx abci.TxTm
-			tx.Hash = result.Hash.Bytes()
-			tx.Data = result.Data.Bytes()
 			treeData.QueueBtcaStateDataMessage(rabbitmqUri)
 			return nil
 		}
@@ -139,7 +136,7 @@ func loopCAL() error {
 	calendar.GenerateCalendarTree([]aggregator.Aggregation{agg})
 	if agg.AggRoot != "" {
 		fmt.Printf("Root: %s\n", agg.AggRoot)
-		result, err := abci.BroadcastTx(tendermintRPC, []byte("CAL"), []byte(agg.AggRoot), 2, time.Now().Unix())
+		result, err := abci.BroadcastTx(tendermintRPC, "CAL", agg.AggRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			return err
 		}

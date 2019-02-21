@@ -2,6 +2,15 @@ const { URL } = require('url')
 const utils = require('./utils.js')
 
 /**
+ * Opens a Tendermint RPC connection
+ */
+function openTendermintConnection(){
+    let { RpcClient } = require('tendermint')
+    let client = RpcClient(env.TENDERMINT_URI)
+    return client
+}
+
+/**
  * Opens a Redis connection
  *
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
@@ -385,6 +394,7 @@ function logMessage (message, debug, msgType) {
 }
 
 module.exports = {
+  openTendermintConnection: openTendermintConnection,
   openRedisConnection: openRedisConnection,
   initResqueQueueAsync: initResqueQueueAsync,
   initResqueWorkerAsync: initResqueWorkerAsync,
