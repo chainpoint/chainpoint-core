@@ -4,9 +4,9 @@ const utils = require('./utils.js')
 /**
  * Opens a Tendermint RPC connection
  */
-function openTendermintConnection(){
+function openTendermintConnection(tendermintURI){
     let { RpcClient } = require('tendermint')
-    let client = RpcClient(env.TENDERMINT_URI)
+    let client = RpcClient(tendermintURI)
     return client
 }
 

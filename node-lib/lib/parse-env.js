@@ -175,7 +175,10 @@ let envDefinitions = {
   NIST_REQ_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://nist-beacon:3001', desc: 'The nist-beacon client Request ZeroMQ socket URI' }),
   NIST_RES_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://0.0.0.0:3001', desc: 'The nist-beacon server Response ZeroMQ socket URI' }),
   NIST_SUB_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://nist-beacon:3002', desc: 'The nist-beacon client Sub ZeroMQ socket URI' }),
-  NIST_PUB_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://0.0.0.0:3002', desc: 'The nist-beacon server Pub ZeroMQ socket URI' })
+  NIST_PUB_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://0.0.0.0:3002', desc: 'The nist-beacon server Pub ZeroMQ socket URI' }),
+
+  // Tendermint RPC URI
+  TENDERMINT_URI: envalid.str({ default: 'http://tendermint:26657', desc: 'Tendermint RPC URI' }),
 }
 
 module.exports = (service) => {

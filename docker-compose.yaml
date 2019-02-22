@@ -147,7 +147,7 @@ services:
       ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}    
       SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY}
       VIRTUAL_HOST: api.local
-      TENDERMINT: http://tendermint:26657
+      TENDERMINT_URI: http://tendermint:26657
 
   api-test:
     container_name: node-api-service-test
