@@ -74,6 +74,10 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types.ResponseDeli
 		app.state.LatestBtcaTxInt = app.state.TxInt
 		resp = types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
+	case "BTC-T":
+		ConsumeBtcTxMsg(app.rabbitmqUri, []byte(tx.Data))
+		resp = types.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		break
 	case "BTC-C":
 		app.state.LatestBtccTx = rawTx
 		app.state.LatestBtccHeight = app.state.Height + 1

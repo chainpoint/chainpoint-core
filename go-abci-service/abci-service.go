@@ -93,9 +93,6 @@ func main() {
 /* Scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin */
 func loopAnchor() error {
 	iAmLeader, _ := abci.ElectLeader(tendermintRPC)
-	if !iAmLeader {
-		return nil //bail if we aren't the leader
-	}
 	fmt.Println("starting scheduled anchor")
 	rpc := abci.GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
@@ -108,18 +105,18 @@ func loopAnchor() error {
 	if util.LogError(err) != nil {
 		return err
 	}
-	treeData := calendar.AggregateAndAnchorBTC(txLeaves)
+	treeData := calendar.AggregateAnchorTx(txLeaves)
 	fmt.Printf("treeData for current anchor: %v\n", treeData)
 	if treeData.AggRoot != "" {
-		result, err := abci.BroadcastTx(tendermintRPC, "BTC-A", treeData.AggRoot, 2, time.Now().Unix())
-		if util.LogError(err) != nil {
-			return err
+		if iAmLeader {
+			result, err := abci.BroadcastTx(tendermintRPC, "BTC-A", treeData.AggRoot, 2, time.Now().Unix())
+			if util.LogError(err) != nil {
+				return err
+			}
+			fmt.Printf("Anchor result: %v\n", result)
 		}
-		fmt.Printf("Anchor result: %v\n", result)
-		if result.Code == 0 {
-			treeData.QueueBtcaStateDataMessage(rabbitmqUri)
-			return nil
-		}
+		treeData.QueueBtcaStateDataMessage(rabbitmqUri, iAmLeader)
+		return nil
 	}
 	return errors.New("no transactions to aggregate")
 }

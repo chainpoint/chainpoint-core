@@ -25,7 +25,7 @@ async function getCoresRandomAsync (req, res, next) {
             return newBytes[0].toString(10) + "." + newBytes[1].toString(10) + "." + newBytes[2].toString(10) + "." + newBytes[3].toString(10)
         })
         res.contentType = 'application/json'
-        res.cache('public', { maxAge: 2592000 })
+        res.cache('public', { maxAge: 1000 })
         res.send(decodedPeers)
         return next()
     }

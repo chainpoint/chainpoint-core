@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
@@ -42,27 +41,6 @@ type CalState struct {
 	CalId     string      `json:"cal_id"`
 	Anchor    CalAnchor   `json:"anchor"`
 	ProofData []ProofData `json:"proofData"`
-}
-
-type BtcTxMsg struct {
-	AggId   string `json:"anchor_btc_agg_id"`
-	AggRoot string `json:"anchor_btc_agg_root"`
-	BtxId   string `json:"btctx_id"`
-	BtxBody string `json:"btctx_body"`
-}
-
-type BtcTxProofState struct {
-	AggId    string        `json:"anchor_btc_agg_id"`
-	BtcId    string        `json:"btctx_id"`
-	BtcState BtcTxOpsState `json:"btctx_state"`
-}
-
-type BtcTxOpsState struct {
-	Ops []Proof `json:"ops"`
-}
-
-type TxId struct {
-	TxID string `json:"tx_id"`
 }
 
 type BtcMonMsg struct {
@@ -132,8 +110,8 @@ func (treeDataObj *CalAgg) QueueCalStateMessage(rabbitmqConnectUri string, tx ab
 	}
 }
 
-// AggregateAndAnchorBTC takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop
-func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
+// AggregateAnchorTx takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop
+func AggregateAnchorTx(txLeaves []core_types.ResultTx) BtcAgg {
 	calBytes := make([][]byte, 0)
 	calLeaves := make([]core_types.ResultTx, 0)
 	for _, t := range txLeaves {
@@ -173,18 +151,20 @@ func AggregateAndAnchorBTC(txLeaves []core_types.ResultTx) BtcAgg {
 }
 
 // QueueBtcaStateDataMessage notifies proof and btc tx services of BTC-A anchoring
-func (anchorDataObj *BtcAgg) QueueBtcaStateDataMessage(rabbitmqUri string) error {
+func (anchorDataObj *BtcAgg) QueueBtcaStateDataMessage(rabbitmqUri string, isLeader bool) error {
 	treeDataJSON, err := json.Marshal(anchorDataObj)
 	if util.LogError(err) != nil {
 		return err
 	}
 	errBatch := rabbitmq.Publish(rabbitmqUri, "work.proofstate", "anchor_btc_agg_batch", treeDataJSON)
-	errBtcTx := rabbitmq.Publish(rabbitmqUri, "work.btctx", "", treeDataJSON)
 	if errBatch != nil {
 		return errBatch
 	}
-	if errBtcTx != nil {
-		return errBtcTx
+	if isLeader {
+		errBtcTx := rabbitmq.Publish(rabbitmqUri, "work.btctx", "", treeDataJSON)
+		if errBtcTx != nil {
+			return errBtcTx
+		}
 	}
 	return nil
 }
@@ -192,40 +172,8 @@ func (anchorDataObj *BtcAgg) QueueBtcaStateDataMessage(rabbitmqUri string) error
 func processMessage(rabbitmqUri string, rpcUri abci.TendermintURI, msg amqp.Delivery) error {
 	switch msg.Type {
 	case "btctx":
-		var btcTxObj BtcTxMsg
-		json.Unmarshal(msg.Body, &btcTxObj)
 		time.Sleep(30 * time.Second)
-		stateObj := BtcTxProofState{
-			AggId: btcTxObj.AggId,
-			BtcId: btcTxObj.BtxId,
-			BtcState: BtcTxOpsState{
-				Ops: []Proof{
-					Proof{
-						Left:  btcTxObj.BtxBody[:strings.Index(btcTxObj.BtxBody, btcTxObj.AggRoot)],
-						Right: btcTxObj.BtxBody[strings.Index(btcTxObj.BtxBody, btcTxObj.AggRoot)+len(btcTxObj.AggRoot):],
-						Op:    "sha-256-x2",
-					},
-				},
-			},
-		}
-		dataJSON, err := json.Marshal(stateObj)
-		if util.LogError(err) != nil {
-			msg.Nack(false, true)
-			return err
-		}
-		err = rabbitmq.Publish(rabbitmqUri, "work.proofstate", "btctx", dataJSON)
-		if err != nil {
-			rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
-			msg.Nack(false, true)
-			return err
-		}
-		txIdBytes, err := json.Marshal(TxId{TxID: btcTxObj.BtxId})
-		err = rabbitmq.Publish(rabbitmqUri, "work.btcmon", "", txIdBytes)
-		if err != nil {
-			rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
-			msg.Nack(false, true)
-			return err
-		}
+		abci.BroadcastTx(rpcUri, "BTC-T", string(msg.Body), 2, time.Now().Unix())
 		msg.Ack(false)
 		break
 	case "btcmon":

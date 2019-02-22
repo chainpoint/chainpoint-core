@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
@@ -48,8 +50,9 @@ var _ types.Application = (*AnchorApplication)(nil)
 
 type AnchorApplication struct {
 	types.BaseApplication
-	ValUpdates []types.ValidatorUpdate
-	state      State
+	ValUpdates  []types.ValidatorUpdate
+	state       State
+	rabbitmqUri string
 }
 
 func NewAnchorApplication() *AnchorApplication {
@@ -58,9 +61,9 @@ func NewAnchorApplication() *AnchorApplication {
 	if err != nil {
 		panic(err)
 	}
-
 	state := loadState(db)
-	return &AnchorApplication{state: state}
+	rabbitmqUri := util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
+	return &AnchorApplication{state: state, rabbitmqUri: rabbitmqUri}
 }
 
 func (app *AnchorApplication) SetOption(req types.RequestSetOption) (res types.ResponseSetOption) {
