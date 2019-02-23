@@ -16,11 +16,11 @@ import (
 )
 
 // Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
-func (app *AnchorApplication) Anchor() error {
+func (app *AnchorApplication) Anchor(startTxRange int64, endTxRange int64) error {
 	fmt.Println("starting scheduled anchor")
 	iAmLeader, _ := ElectLeader(app.tendermintURI)
 	/* Get CAL transactions between the latest BTCA tx and the current latest tx */
-	txLeaves, err := GetTxRange(app.tendermintURI, app.state.LatestBtcaTxInt, app.state.LatestCalTxInt)
+	txLeaves, err := GetTxRange(app.tendermintURI, startTxRange, endTxRange)
 	if util.LogError(err) != nil {
 		return err
 	}
@@ -28,8 +28,11 @@ func (app *AnchorApplication) Anchor() error {
 	fmt.Printf("treeData for current anchor: %v\n", treeData)
 	if treeData.AggRoot != "" {
 		if iAmLeader {
-			fmt.Println("I am Leader- queuing BTC-A for post-commit broadcast")
-			app.state.PendingBtcaTx = Tx{TxType: "BTC-A", Data: treeData.AggRoot, Version: 2, Time: time.Now().Unix()}
+			result, err := BroadcastTx(app.tendermintURI, "BTC-A", treeData.AggRoot, 2, time.Now().Unix())
+			if util.LogError(err) != nil {
+				return err
+			}
+			fmt.Printf("Anchor result: %v\n", result)
 		}
 		treeData.QueueBtcaStateDataMessage(app.rabbitmqUri, iAmLeader)
 		return nil

@@ -32,43 +32,43 @@ services:
     volumes:
     - ./config/node_1:/tendermint/config:Z
     - ./config/node_1/data:/tendermint/data:Z
-    command: sh -c "tendermint node --p2p.persistent_peers a9767c6b5dc36192d81d911aa4381955b80fd784@tendermint-2:26656,e5195303cb2150c38c1e429f90f898c0edb143f4@127.0.0.1:26656 --moniker=`hostname` --proxy_app=abci:26658"
+    command: sh -c "tendermint node --moniker=`hostname` --proxy_app=abci:26658"
     ports:
     - "26656"
     - "26657:26657"
     networks:
     - chainpoint
 
-  abci-2:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.abci
-    image: abci
-    depends_on:
-    - rabbitmq
-    environment:
-      TENDERMINT_HOST: tendermint-2
-      TENDERMINT_PORT: 26657
-    ports:
-    - "26658"
-    command: bash -c "abci-service"
-    networks:
-    - chainpoint
-
-  tendermint-2:
-    depends_on:
-    - abci
-    image: tierion/tendermint-cleveldb
-    entrypoint: ''
-    volumes:
-    - ./config/node_2:/tendermint/config:Z
-    - ./config/node_2/data:/tendermint/data:Z
-    command: sh -c "tendermint node --p2p.persistent_peers a9767c6b5dc36192d81d911aa4381955b80fd784@127.0.0.1:26656,e5195303cb2150c38c1e429f90f898c0edb143f4@tendermint:26656 --moniker=`hostname` --proxy_app=abci-2:26658"
-    ports:
-    - "26656"
-    - "26657"
-    networks:
-    - chainpoint
+#  abci-2:
+#    build:
+#      context: .
+#      dockerfile: docker/Dockerfile.abci
+#    image: abci
+#    depends_on:
+#    - rabbitmq
+#    environment:
+#      TENDERMINT_HOST: tendermint-2
+#      TENDERMINT_PORT: 26657
+#    ports:
+#    - "26658"
+#    command: bash -c "abci-service"
+#    networks:
+#    - chainpoint
+#
+#  tendermint-2:
+#    depends_on:
+#    - abci
+#    image: tierion/tendermint-cleveldb
+#    entrypoint: ''
+#    volumes:
+#    - ./config/node_2:/tendermint/config:Z
+#    - ./config/node_2/data:/tendermint/data:Z
+#    command: sh -c "tendermint node --p2p.persistent_peers a9767c6b5dc36192d81d911aa4381955b80fd784@127.0.0.1:26656,e5195303cb2150c38c1e429f90f898c0edb143f4@tendermint:26656 --moniker=`hostname` --proxy_app=abci-2:26658"
+#    ports:
+#    - "26656"
+#    - "26657"
+#    networks:
+#    - chainpoint
 
   # NGINX Proxy
   #

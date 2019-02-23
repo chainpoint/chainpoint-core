@@ -47,7 +47,7 @@ func main() {
 
 	/* Instantiate ABCI application */
 	var app types.Application
-	app = abci.NewAnchorApplication(rabbitmqUri, tendermintRPC, doAnchorLoop, 60)
+	app = abci.NewAnchorApplication(rabbitmqUri, tendermintRPC, doAnchorLoop, 3)
 
 	// Start the ABCI connection to the Tendermint Node
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)

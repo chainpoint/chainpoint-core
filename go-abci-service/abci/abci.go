@@ -4,9 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"time"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
@@ -114,12 +111,6 @@ func (app *AnchorApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 }
 
 func (app *AnchorApplication) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
-	if app.state.PendingBtcaTx != (Tx{}) {
-		result, err := BroadcastTx(app.tendermintURI, "BTC-A", app.state.PendingBtcaTx.Data, 2, time.Now().Unix())
-		util.LogError(err)
-		fmt.Printf("Anchor result: %v\n", result)
-		app.state.PendingBtcaTx = Tx{}
-	}
 	app.ValUpdates = make([]types.ValidatorUpdate, 0)
 	return types.ResponseBeginBlock{}
 }
@@ -135,8 +126,7 @@ func (app *AnchorApplication) Commit() types.ResponseCommit {
 	app.state.Height += 1
 	saveState(app.state)
 	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > app.anchorInterval {
-		err := app.Anchor()
-		util.LogError(err)
+		go app.Anchor(app.state.LatestBtcaTxInt, app.state.LatestCalTxInt)
 	}
 	return types.ResponseCommit{Data: appHash}
 }
