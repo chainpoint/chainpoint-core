@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
@@ -65,7 +66,13 @@ func NewAnchorApplication(rabbitmqUri string, tendermintRPC TendermintURI, doAnc
 		panic(err)
 	}
 	state := loadState(db)
-	return &AnchorApplication{state: state, rabbitmqUri: rabbitmqUri, tendermintURI: tendermintRPC, doAnchor: doAnchor, anchorInterval: anchorInterval}
+	return &AnchorApplication{
+		state:          state,
+		rabbitmqUri:    rabbitmqUri,
+		tendermintURI:  tendermintRPC,
+		doAnchor:       doAnchor,
+		anchorInterval: anchorInterval,
+	}
 }
 
 func (app *AnchorApplication) SetOption(req types.RequestSetOption) (res types.ResponseSetOption) {
@@ -107,6 +114,12 @@ func (app *AnchorApplication) CheckTx(tx []byte) types.ResponseCheckTx {
 }
 
 func (app *AnchorApplication) BeginBlock(req types.RequestBeginBlock) types.ResponseBeginBlock {
+	if app.state.PendingBtcaTx != (Tx{}) {
+		result, err := BroadcastTx(app.tendermintURI, "BTC-A", app.state.PendingBtcaTx.Data, 2, time.Now().Unix())
+		util.LogError(err)
+		fmt.Printf("Anchor result: %v\n", result)
+		app.state.PendingBtcaTx = Tx{}
+	}
 	app.ValUpdates = make([]types.ValidatorUpdate, 0)
 	return types.ResponseBeginBlock{}
 }

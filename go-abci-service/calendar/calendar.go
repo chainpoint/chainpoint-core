@@ -110,7 +110,7 @@ func processMessage(rabbitmqUri string, rpcUri abci.TendermintURI, msg amqp.Deli
 	switch msg.Type {
 	case "btctx":
 		time.Sleep(30 * time.Second)
-		abci.BroadcastTx(rpcUri, "BTC-T", string(msg.Body), 2, time.Now().Unix())
+		abci.BroadcastTx(rpcUri, "BTC-M", string(msg.Body), 2, time.Now().Unix())
 		msg.Ack(false)
 		break
 	case "btcmon":

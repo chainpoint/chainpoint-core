@@ -72,9 +72,12 @@ func main() {
 
 	// Begin scheduled methods
 	if doCalLoop {
-		scheduler.AddFunc("0/1 0-23 * * *", func() { loopCAL() })
+		scheduler.AddFunc("0/1 0-23 * * *", func() {
+			loopCAL()
+		})
 	}
 
+	// Infinite loop to process btctx and btcmon rabbitMQ messages
 	if doAnchorLoop {
 		go calendar.ReceiveCalRMQ(rabbitmqUri, tendermintRPC)
 	}
@@ -101,6 +104,7 @@ func loopCAL() error {
 	calendar.GenerateCalendarTree([]aggregator.Aggregation{agg})
 	if agg.AggRoot != "" {
 		fmt.Printf("Root: %s\n", agg.AggRoot)
+
 		result, err := abci.BroadcastTx(tendermintRPC, "CAL", agg.AggRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			return err
