@@ -8,33 +8,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
-type BtcTxMsg struct {
-	AggId   string `json:"anchor_btc_agg_id"`
-	AggRoot string `json:"anchor_btc_agg_root"`
-	BtxId   string `json:"btctx_id"`
-	BtxBody string `json:"btctx_body"`
-}
-
-type BtcTxProofState struct {
-	AggId    string        `json:"anchor_btc_agg_id"`
-	BtcId    string        `json:"btctx_id"`
-	BtcState BtcTxOpsState `json:"btctx_state"`
-}
-
-type BtcTxOpsState struct {
-	Ops []Proof `json:"ops"`
-}
-
-type TxId struct {
-	TxID string `json:"tx_id"`
-}
-
-type Proof struct {
-	Left  string `json:"l,omitempty"`
-	Right string `json:"r,omitempty"`
-	Op    string `json: "op"`
-}
-
 func ConsumeBtcTxMsg(rabbitmqUri string, msgBytes []byte) error {
 	var btcTxObj BtcTxMsg
 	if err := json.Unmarshal(msgBytes, &btcTxObj); err != nil {

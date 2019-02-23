@@ -42,6 +42,44 @@ type TxTm struct {
 	Data []byte
 }
 
+type BtcAgg struct {
+	AggId     string         `json:"anchor_btc_agg_id"`
+	AggRoot   string         `json:"anchor_btc_agg_root"`
+	ProofData []BtcProofData `json:"proofData"`
+}
+
+type BtcProofData struct {
+	CalId string  `json:"cal_id"`
+	Proof []Proof `json:"proof"`
+}
+
+type BtcTxMsg struct {
+	AggId   string `json:"anchor_btc_agg_id"`
+	AggRoot string `json:"anchor_btc_agg_root"`
+	BtxId   string `json:"btctx_id"`
+	BtxBody string `json:"btctx_body"`
+}
+
+type BtcTxProofState struct {
+	AggId    string        `json:"anchor_btc_agg_id"`
+	BtcId    string        `json:"btctx_id"`
+	BtcState BtcTxOpsState `json:"btctx_state"`
+}
+
+type BtcTxOpsState struct {
+	Ops []Proof `json:"ops"`
+}
+
+type TxId struct {
+	TxID string `json:"tx_id"`
+}
+
+type Proof struct {
+	Left  string `json:"l,omitempty"`
+	Right string `json:"r,omitempty"`
+	Op    string `json: "op"`
+}
+
 // NodeStatus rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
 type NodeStatus struct {
 	Jsonrpc string `json:"jsonrpc"`

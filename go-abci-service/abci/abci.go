@@ -50,20 +50,22 @@ var _ types.Application = (*AnchorApplication)(nil)
 
 type AnchorApplication struct {
 	types.BaseApplication
-	ValUpdates  []types.ValidatorUpdate
-	state       State
-	rabbitmqUri string
+	ValUpdates     []types.ValidatorUpdate
+	state          State
+	rabbitmqUri    string
+	tendermintURI  TendermintURI
+	doAnchor       bool
+	anchorInterval int64
 }
 
-func NewAnchorApplication() *AnchorApplication {
+func NewAnchorApplication(rabbitmqUri string, tendermintRPC TendermintURI, doAnchor bool, anchorInterval int64) *AnchorApplication {
 	name := "anchor"
 	db, err := dbm.NewGoLevelDB(name, "/tendermint/data")
 	if err != nil {
 		panic(err)
 	}
 	state := loadState(db)
-	rabbitmqUri := util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
-	return &AnchorApplication{state: state, rabbitmqUri: rabbitmqUri}
+	return &AnchorApplication{state: state, rabbitmqUri: rabbitmqUri, tendermintURI: tendermintRPC, doAnchor: doAnchor, anchorInterval: anchorInterval}
 }
 
 func (app *AnchorApplication) SetOption(req types.RequestSetOption) (res types.ResponseSetOption) {
@@ -119,6 +121,10 @@ func (app *AnchorApplication) Commit() types.ResponseCommit {
 	app.state.AppHash = appHash
 	app.state.Height += 1
 	saveState(app.state)
+	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > app.anchorInterval {
+		err := app.Anchor()
+		util.LogError(err)
+	}
 	return types.ResponseCommit{Data: appHash}
 }
 

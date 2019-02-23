@@ -47,7 +47,7 @@ func main() {
 
 	/* Instantiate ABCI application */
 	var app types.Application
-	app = abci.NewAnchorApplication()
+	app = abci.NewAnchorApplication(rabbitmqUri, tendermintRPC, doAnchorLoop, 60)
 
 	// Start the ABCI connection to the Tendermint Node
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
@@ -76,7 +76,6 @@ func main() {
 	}
 
 	if doAnchorLoop {
-		scheduler.AddFunc("0/3 0-23 * * *", func() { loopAnchor() })
 		go calendar.ReceiveCalRMQ(rabbitmqUri, tendermintRPC)
 	}
 
@@ -88,37 +87,6 @@ func main() {
 		srv.Stop()
 	})
 	return
-}
-
-/* Scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin */
-func loopAnchor() error {
-	iAmLeader, _ := abci.ElectLeader(tendermintRPC)
-	fmt.Println("starting scheduled anchor")
-	rpc := abci.GetHTTPClient(tendermintRPC)
-	defer rpc.Stop()
-	state, err := abci.GetAbciInfo(tendermintRPC)
-	if util.LogError(err) != nil {
-		return err
-	}
-	/* Get CAL transactions between the latest BTCA tx and the current latest tx */
-	txLeaves, err := abci.GetTxRange(tendermintRPC, state.LatestBtcaTxInt, state.LatestCalTxInt)
-	if util.LogError(err) != nil {
-		return err
-	}
-	treeData := calendar.AggregateAnchorTx(txLeaves)
-	fmt.Printf("treeData for current anchor: %v\n", treeData)
-	if treeData.AggRoot != "" {
-		if iAmLeader {
-			result, err := abci.BroadcastTx(tendermintRPC, "BTC-A", treeData.AggRoot, 2, time.Now().Unix())
-			if util.LogError(err) != nil {
-				return err
-			}
-			fmt.Printf("Anchor result: %v\n", result)
-		}
-		treeData.QueueBtcaStateDataMessage(rabbitmqUri, iAmLeader)
-		return nil
-	}
-	return errors.New("no transactions to aggregate")
 }
 
 /* Aggregate submitted hashes into a calendar transaction */
