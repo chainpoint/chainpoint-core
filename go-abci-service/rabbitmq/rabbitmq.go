@@ -20,6 +20,16 @@ func LogError(err error, msg string) {
 	}
 }
 
+func (session *Session) End() error {
+	if errCh := session.Ch.Close(); errCh != nil {
+		return errCh
+	}
+	if errConn := session.Conn.Close(); errConn != nil {
+		return errConn
+	}
+	return nil
+}
+
 // Dial AMQP provider, create a channel, and declare a queue object
 func Dial(amqpUrl string, queue string) (Session, error) {
 	var session Session

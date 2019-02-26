@@ -1,11 +1,15 @@
 package util
 
 import (
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
 	"strconv"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
 
 func LogError(err error) error {
@@ -37,4 +41,21 @@ func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	seed, _ := binary.Varint(eightByteHash)
 	rand.Seed(seed)
 	return rand.Intn(upperBound)
+}
+
+// DecodeTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
+func DecodeTx(incoming []byte) (types.Tx, error) {
+	decoded, err := base64.StdEncoding.DecodeString(string(incoming))
+	var calendar types.Tx
+	if err != nil {
+		fmt.Println(err)
+		return calendar, err
+	}
+	json.Unmarshal([]byte(decoded), &calendar)
+	return calendar, nil
+}
+
+func EncodeTx(outgoing types.Tx) string {
+	txJSON, _ := json.Marshal(outgoing)
+	return base64.StdEncoding.EncodeToString(txJSON)
 }

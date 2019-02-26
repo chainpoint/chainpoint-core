@@ -8,17 +8,19 @@ import (
 	"sort"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/rpc/client"
 )
 
 // GetStatus retrieves status of our node from RPC
-func GetStatus(tendermintRPC TendermintURI) (NodeStatus, error) {
+func GetStatus(tendermintRPC types.TendermintURI) (types.NodeStatus, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tendermintRPC.TMServer, tendermintRPC.TMPort))
 	if err != nil {
-		return NodeStatus{}, err
+		return types.NodeStatus{}, err
 	}
-	var status NodeStatus
+	var status types.NodeStatus
 	body, _ := ioutil.ReadAll(resp.Body)
 	json.Unmarshal(body, &status)
 	resp.Body.Close()
@@ -26,12 +28,12 @@ func GetStatus(tendermintRPC TendermintURI) (NodeStatus, error) {
 }
 
 // GetNetInfo retrieves known peer information via rpc
-func GetNetInfo(tendermintRPC TendermintURI) (NetInfo, error) {
+func GetNetInfo(tendermintRPC types.TendermintURI) (types.NetInfo, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%s/status", tendermintRPC.TMServer, tendermintRPC.TMPort))
 	if err != nil {
-		return NetInfo{}, err
+		return types.NetInfo{}, err
 	}
-	var info NetInfo
+	var info types.NetInfo
 	body, _ := ioutil.ReadAll(resp.Body)
 	json.Unmarshal(body, &info)
 	resp.Body.Close()
@@ -39,26 +41,26 @@ func GetNetInfo(tendermintRPC TendermintURI) (NetInfo, error) {
 }
 
 // GetAbciInfo retrieves custom ABCI status struct detailing the state of our application
-func GetAbciInfo(tendermintRPC TendermintURI) (State, error) {
+func GetAbciInfo(tendermintRPC types.TendermintURI) (types.State, error) {
 	rpc := GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
 	resp, err := rpc.ABCIInfo()
 	if err != nil {
-		return State{}, err
+		return types.State{}, err
 	}
-	var anchorState State
+	var anchorState types.State
 	err = json.Unmarshal([]byte(resp.Response.Data), &anchorState)
 	if err != nil {
 		fmt.Println(err)
-		return State{}, err
+		return types.State{}, err
 	}
 	return anchorState, nil
 }
 
 // ElectLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
-func ElectLeader(tendermintRPC TendermintURI) (isLeader bool, leader string) {
-	var status NodeStatus
-	var netInfo NetInfo
+func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leader string) {
+	var status types.NodeStatus
+	var netInfo types.NetInfo
 	var err error
 	var err2 error
 
@@ -81,7 +83,7 @@ func ElectLeader(tendermintRPC TendermintURI) (isLeader bool, leader string) {
 
 	currentNodeID := status.Result.NodeInfo.ID
 	if len(netInfo.Result.Peers) > 0 {
-		nodeArray := make([]NodeInfo, len(netInfo.Result.Peers)+1)
+		nodeArray := make([]types.NodeInfo, len(netInfo.Result.Peers)+1)
 		for i := 0; i < len(netInfo.Result.Peers); i++ {
 			nodeArray[i] = netInfo.Result.Peers[i].NodeInfo
 		}
@@ -101,6 +103,6 @@ func ElectLeader(tendermintRPC TendermintURI) (isLeader bool, leader string) {
 }
 
 // GetHTTPClient creates an Tendermint RPC client from connection URI/Port details
-func GetHTTPClient(tendermintRPC TendermintURI) *client.HTTP {
+func GetHTTPClient(tendermintRPC types.TendermintURI) *client.HTTP {
 	return client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket")
 }

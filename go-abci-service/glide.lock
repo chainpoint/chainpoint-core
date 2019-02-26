@@ -1,5 +1,5 @@
 hash: 0e16a5d763c70972ef40b73eb47fb0c0ef49239a7506d2cf1ab6aa8a43687424
-updated: 2019-02-19T12:18:01.759903283-08:00
+updated: 2019-02-25T14:07:37.953684921-08:00
 imports:
 - name: github.com/beorn7/perks
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
@@ -14,11 +14,11 @@ imports:
   subpackages:
   - spew
 - name: github.com/ethereum/go-ethereum
-  version: d3ccedc767372007e8b035c3d1f68218c3d59be5
+  version: badaf43019dce961d6562b81d34de214e9e8ac0f
   subpackages:
   - crypto/secp256k1
 - name: github.com/go-kit/kit
-  version: 10f464fb11741e507cbb5201eb889c37dd51dbab
+  version: a8cc1630e08ad79caf184b550589ded1a16b203d
   subpackages:
   - log
   - log/level
@@ -65,7 +65,7 @@ imports:
 - name: github.com/pkg/errors
   version: 856c240a51a2bf8fb8269ea7f3f9b046aadde36e
 - name: github.com/prometheus/client_golang
-  version: 4c99dd66303a54cbf8559dd6110d5c30b1819e4c
+  version: 2daed26f633ce23fab5efc02fb3f2e803b3526c3
   subpackages:
   - prometheus
   - prometheus/internal
@@ -75,13 +75,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: f866ba39776a736ba5d34760f5fae4ad74e63f2e
+  version: 7a3416fd1f41341905f138746c51a5092e7ddf7a
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: e4d4a2206da023361ed100d85c5f2cf9c8364e9f
+  version: 6ed1f7e1041181781dd2826d3001075d011a80cc
   subpackages:
   - internal/util
   - iostats
@@ -92,9 +92,9 @@ imports:
 - name: github.com/rs/cors
   version: 76f58f330d76a55c5badc74f6212e8a15e742c77
 - name: github.com/streadway/amqp
-  version: 884228600bc96c993ab12fb81ba78bf0c280e88a
+  version: f16568b23ee61c7d911a5b9d306b8fe2092c33b7
 - name: github.com/syndtr/goleveldb
-  version: 2f17a3356c6616cbfc4ae4c38147dc062a68fb0e
+  version: 9d007e481048296f09f59bd19bb7ae584563cd95
   subpackages:
   - leveldb
   - leveldb/cache
@@ -164,7 +164,7 @@ imports:
   - types/time
   - version
 - name: golang.org/x/crypto
-  version: a4c6cb3142f211c99e4bf4cd769535b29a9b616f
+  version: 7f87c0fbb88b590338857bcb720678c2583d4dea
   subpackages:
   - chacha20poly1305
   - curve25519
@@ -179,7 +179,7 @@ imports:
   - ripemd160
   - salsa20/salsa
 - name: golang.org/x/net
-  version: 3a22650c66bd7f4fb6d1e8072ffd7b75c8a27898
+  version: fe579d43d83210096a79b46dcca0e3721058393a
   subpackages:
   - context
   - http/httpguts
@@ -190,7 +190,7 @@ imports:
   - netutil
   - trace
 - name: golang.org/x/sys
-  version: 153ac476189d567564fda94622d7a8c0fb338f6b
+  version: cc5685c2db1239775905f3911f0067c0fa74762f
   subpackages:
   - cpu
   - unix
@@ -206,7 +206,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 29c406a5bd0ed61c5752d00c6aabd9fa036ed328
+  version: 871b88ce2e8b9d8e1304740aa55c568cde7641ee
   subpackages:
   - balancer
   - balancer/base

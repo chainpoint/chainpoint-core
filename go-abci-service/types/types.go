@@ -1,4 +1,4 @@
-package abci
+package types
 
 import (
 	"time"
@@ -14,11 +14,12 @@ type TendermintURI struct {
 
 // State holds Tendermint/ABCI application state. Persisted by ABCI app
 type State struct {
-	db               dbm.DB
+	Db               dbm.DB
 	TxInt            int64  `json:"tx_int"`
 	Size             int64  `json:"size"`
 	Height           int64  `json:"height"`
 	AppHash          []byte `json:"app_hash"`
+	PrevCalTxInt     int64  `json:"prev_cal_int"`
 	LatestCalTxInt   int64  `json:"latest_cal_int"`
 	LatestBtcaTx     []byte `json:"latest_btca"`
 	LatestBtcaTxInt  int64  `json:"latest_btca_int"`
@@ -72,6 +73,33 @@ type BtcTxOpsState struct {
 
 type TxId struct {
 	TxID string `json:"tx_id"`
+}
+
+type CalAgg struct {
+	CalRoot   string      `json:"cal_root"`
+	ProofData []ProofData `json:"proofData"`
+}
+
+type CalState struct {
+	CalId     string      `json:"cal_id"`
+	Anchor    CalAnchor   `json:"anchor"`
+	ProofData []ProofData `json:"proofData"`
+}
+
+type BtcMonMsg struct {
+	BtcId         string `json:"btctx_id"`
+	BtcHeadHeight int64  `json:"btchead_height"`
+	BtcHeadRoot   string `json:"btchead_root"`
+}
+
+type CalAnchor struct {
+	AnchorId string   `json:"anchor_id"`
+	Uris     []string `json:"uris"`
+}
+
+type ProofData struct {
+	AggId string  `json:"agg_id"`
+	Proof []Proof `json:"proof"`
 }
 
 type Proof struct {

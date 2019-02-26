@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/tendermint/tendermint/abci/example/code"
-	"github.com/tendermint/tendermint/abci/types"
 	"strconv"
 	"strings"
+
+	"github.com/tendermint/tendermint/abci/example/code"
+	"github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
@@ -19,7 +20,7 @@ func isValidatorTx(tx []byte) bool {
 	return strings.HasPrefix(string(tx), ValidatorSetChangePrefix)
 }
 
-func (app *AnchorApplication)execValidatorTx(tx []byte, tags []cmn.KVPair) types.ResponseDeliverTx {
+func (app *AnchorApplication) execValidatorTx(tx []byte, tags []cmn.KVPair) types.ResponseDeliverTx {
 	tx = tx[len(ValidatorSetChangePrefix):]
 	//get the pubkey and power
 	pubKeyAndPower := strings.Split(string(tx), "/")
@@ -51,16 +52,16 @@ func (app *AnchorApplication)execValidatorTx(tx []byte, tags []cmn.KVPair) types
 }
 
 // add, update, or remove a validator
-func(app *AnchorApplication) updateValidator(v types.ValidatorUpdate, tags []cmn.KVPair) types.ResponseDeliverTx {
+func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate, tags []cmn.KVPair) types.ResponseDeliverTx {
 	key := []byte("val:" + string(v.PubKey.Data))
 	if v.Power == 0 {
 		// remove validator
-		if !app.state.db.Has(key) {
+		if !app.state.Db.Has(key) {
 			return types.ResponseDeliverTx{
 				Code: code.CodeTypeUnauthorized,
 				Log:  fmt.Sprintf("Cannot remove non-existent validator %X", key)}
 		}
-		app.state.db.Delete(key)
+		app.state.Db.Delete(key)
 	} else {
 		// add or update validator
 		value := bytes.NewBuffer(make([]byte, 0))
@@ -69,7 +70,7 @@ func(app *AnchorApplication) updateValidator(v types.ValidatorUpdate, tags []cmn
 				Code: code.CodeTypeEncodingError,
 				Log:  fmt.Sprintf("Error encoding validator: %v", err)}
 		}
-		app.state.db.Set(key, value.Bytes())
+		app.state.Db.Set(key, value.Bytes())
 	}
 
 	// we only update the changes array if we successfully updated the tree

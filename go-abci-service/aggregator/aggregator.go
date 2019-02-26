@@ -6,14 +6,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
+	"github.com/google/uuid"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
 
-	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 )
 
@@ -47,46 +50,85 @@ const aggQueueOut = "work.agg"
 const proofStateQueueOut = "work.proofstate"
 
 /*Retrieves hash messages from rabbitmq, stores them, and creates a proof path for each*/
-func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
-
+func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 	var session rabbitmq.Session
 	var err error
-	//Consume queue in go function with output slice guarded by mutex
+	aggThreads, err := strconv.Atoi(util.GetEnv("AGGREGATION_THREAD", "4"))
+	if util.LogError(err) != nil {
+		aggThreads = 4
+	}
+	sleep := 60 / aggThreads
+
+	//Consume queue in goroutines with output slice guarded by mutex
+	aggStructSlice := make([]Aggregation, 0)
+	var wg sync.WaitGroup
 	var mux sync.Mutex
-	msgStructSlice := make([]amqp.Delivery, 0)
 	endConsume := false
-	go func() {
-		for i := 0; i < 5; i++ {
-			session, err = rabbitmq.ConnectAndConsume(rabbitmqConnectUri, aggQueueIn)
-			if err != nil {
-				continue
-			}
-			for {
-				select {
-				case err = <-session.Notify:
-					if endConsume {
-						return
+
+	session, err = rabbitmq.ConnectAndConsume(rabbitmqConnectUri, aggQueueIn)
+
+	for i := 0; i < aggThreads; i++ {
+
+		go func(index int) {
+			msgStructSlice := make([]amqp.Delivery, 0)
+			wg.Add(1)
+			defer wg.Done()
+
+			//outerloop reconnects unless we should stop consuming
+			for !endConsume {
+				if util.LogError(err) != nil {
+					continue
+				}
+
+				//inner loop consumes queue and appends to mutex protected data slice
+				for !endConsume {
+					select {
+					case err = <-session.Notify:
+						if endConsume {
+							return
+						}
+						util.LogError(err)
+						time.Sleep(1 * time.Second)
+						break //reconnect
+					case hash := <-session.Msgs:
+						fmt.Println(string(hash.Body))
+						msgStructSlice = append(msgStructSlice, hash)
+						//create new agg roots under heavy load
+						if len(msgStructSlice) > 200 {
+							if agg := ProcessAggregation(rabbitmqConnectUri, msgStructSlice); agg.AggRoot != "" {
+								mux.Lock()
+								aggStructSlice = append(aggStructSlice, agg)
+								mux.Unlock()
+								msgStructSlice = make([]amqp.Delivery, 0)
+							}
+						}
 					}
-					time.Sleep(5 * time.Second)
-					break //reconnect
-				case hash := <-session.Msgs:
-					mux.Lock()
-					msgStructSlice = append(msgStructSlice, hash)
-					mux.Unlock()
 				}
 			}
-		}
-	}()
-	time.Sleep(60 * time.Second)
+			if agg := ProcessAggregation(rabbitmqConnectUri, msgStructSlice); agg.AggRoot != "" {
+				mux.Lock()
+				aggStructSlice = append(aggStructSlice, agg)
+				mux.Unlock()
+			}
+		}(i)
+	}
+
+	time.Sleep(time.Duration(sleep) * time.Second)
 	endConsume = true
-	session.Ch.Cancel(aggQueueIn, true)
-	defer session.Conn.Close()
+	wg.Wait() //wait for queue consumption goroutines to exit
+	defer session.End()
+	fmt.Printf("Aggregation consists of %d items\n", len(aggStructSlice))
 
-	fmt.Printf("Aggregation consists of %d items\n", len(msgStructSlice))
+	return aggStructSlice
 
-	//new hashes from concatenated properties
+}
+
+// ProcessAggregation creates merkle trees of received hashes a la https://github.com/chainpoint/chainpoint-services/blob/develop/node-aggregator-service/server.js#L66
+func ProcessAggregation(rabbitmqConnectUri string, msgStructSlice []amqp.Delivery) Aggregation {
+	var agg Aggregation
 	hashSlice := make([][]byte, 0)     // byte array
 	hashStructSlice := make([]Hash, 0) // keep record for building proof path
+
 	for _, msgHash := range msgStructSlice {
 		unPackedHash := Hash{}
 		if json.Unmarshal(msgHash.Body, &unPackedHash) != nil {
@@ -107,7 +149,7 @@ func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 	}
 
 	if len(msgStructSlice) == 0 {
-		return
+		return Aggregation{}
 	}
 
 	//Merkle tree creation
@@ -143,29 +185,18 @@ func (agg *Aggregation) Aggregate(rabbitmqConnectUri string) {
 	agg.ProofData = proofSlice
 
 	aggJson, err := json.Marshal(agg)
-
-	destSession, err := rabbitmq.Dial(rabbitmqConnectUri, proofStateQueueOut)
-	defer destSession.Conn.Close()
-	defer destSession.Ch.Close()
-	err = destSession.Ch.Publish(
-		"",
-		destSession.Queue.Name,
-		false,
-		false,
-		amqp.Publishing{
-			Type:         msgType,
-			Body:         aggJson,
-			DeliveryMode: 2, //persistent
-			ContentType:  "application/json",
-		})
+	err = rabbitmq.Publish(rabbitmqConnectUri, proofStateQueueOut, msgType, aggJson)
 
 	if err != nil {
+		rabbitmq.LogError(err, "problem publishing aggJSON message to queue")
 		for _, msg := range msgStructSlice {
 			msg.Nack(false, true)
 		}
 	} else {
 		for _, msg := range msgStructSlice {
-			msg.Ack(false)
+			errAck := msg.Ack(false)
+			rabbitmq.LogError(errAck, "error acking queue item")
 		}
 	}
+	return agg
 }
