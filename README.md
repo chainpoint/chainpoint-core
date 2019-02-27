@@ -87,7 +87,7 @@ gcloud container builds submit --config cloudbuild.yaml --substitutions=REPO_NAM
 [GNU Affero General Public License v3.0](http://www.gnu.org/licenses/agpl-3.0.txt)
 
 ```text
-Copyright (C) 2018 Tierion
+Copyright (C) 2019 Tierion
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
