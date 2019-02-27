@@ -6,3 +6,4 @@ data
 **/priv_validator.json.bak
 **/priv_validator_key.json
 **/write-file-atomic-*
+**/vendor
