@@ -18,7 +18,6 @@
 const env = require('./lib/parse-env.js')('state')
 
 const amqp = require('amqplib')
-const leaderElection = require('exp-leader-election')
 const connections = require('./lib/connections.js')
 
 const aggState = require('./lib/models/AggState.js')
