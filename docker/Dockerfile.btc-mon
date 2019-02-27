@@ -1,4 +1,4 @@
-FROM gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-base
+FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base
 
 COPY node-lib/lib /home/node/app/lib
 
