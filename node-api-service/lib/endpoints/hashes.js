@@ -108,9 +108,7 @@ function generatePostHashResponse (hash, regNode) {
     timestampMS.toString(),
     timestampMS.toString().length,
     hash,
-    hash.length,
-    hashNIST,
-    hashNIST.length
+    hash.length
   ].join(':')
 
   h.update(Buffer.from(hashStr))
