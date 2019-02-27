@@ -127,7 +127,6 @@ async function openStorageConnectionAsync () {
   let cxObjects = await connections.openStorageConnectionAsync(sqlzModelArray)
   nodes.setDatabase(cxObjects.sequelize, cxObjects.models[0])
   hashes.setDatabase(cxObjects.sequelize, cxObjects.models[0])
-  config.setDatabase(cxObjects.sequelize, cxObjects.models[1])
   calendar.setDatabase(cxObjects.sequelize, cxObjects.models[1])
 }
 
