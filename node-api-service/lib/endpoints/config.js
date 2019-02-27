@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Tierion
+/* Copyright (C) 2019 Tierion
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -16,7 +16,6 @@
 
 const env = require('../parse-env.js')('api')
 
-const cachedAuditChallenge = require('../models/cachedAuditChallenge.js')
 const restify = require('restify')
 const crypto = require('crypto')
 
@@ -27,8 +26,6 @@ let CalendarBlock
 // see: https://github.com/dchest/tweetnacl-js#signatures
 const nacl = require('tweetnacl')
 nacl.util = require('tweetnacl-util')
-
-let NODE_AGGREGATION_INTERVAL_SECONDS
 
 // Pass SIGNING_SECRET_KEY as Base64 encoded bytes
 const signingSecretKeyBytes = nacl.util.decodeBase64(env.SIGNING_SECRET_KEY)
@@ -61,9 +58,6 @@ function getCorePublicKeyList () {
   return pubKeyList
 }
 
-// the minimum audit passing Node version for existing registered Nodes, set by consul
-let minNodeVersionExisting = null
-
 // get the first entry in the ETH_TNT_LISTEN_ADDRS CSV to publicize
 let coreEthAddress = env.ETH_TNT_LISTEN_ADDRS.split(',')[0]
 
@@ -78,19 +72,9 @@ async function getConfigInfoV1Async (req, res, next) {
     let topCoreBlock = await CalendarBlock.findOne({ attributes: ['id'], order: [['id', 'DESC']] })
     if (!topCoreBlock) throw new Error('no blocks found on calendar')
 
-    let mostRecentChallenge = await cachedAuditChallenge.getMostRecentChallengeDataSolutionRemovedAsync()
-    let node_aggregation_interval_seconds = NODE_AGGREGATION_INTERVAL_SECONDS // eslint-disable-line
-
     result = {
       chainpoint_core_base_uri: env.CHAINPOINT_CORE_BASE_URI,
-      public_keys: getCorePublicKeyList(),
-      calendar: {
-        height: parseInt(topCoreBlock.id),
-        audit_challenge: mostRecentChallenge || undefined
-      },
-      node_aggregation_interval_seconds: node_aggregation_interval_seconds,
-      core_eth_address: coreEthAddress,
-      node_min_version: minNodeVersionExisting
+      core_eth_address: coreEthAddress
     }
   } catch (error) {
     console.error(`getConfigInfoV1Async failed : Could not generate config object : ${error.message}`)
@@ -104,12 +88,5 @@ async function getConfigInfoV1Async (req, res, next) {
 
 module.exports = {
   getConfigInfoV1Async: getConfigInfoV1Async,
-  setRedis: (r) => { cachedAuditChallenge.setRedis(r) },
-  setConsul: async (c) => {
-    cachedAuditChallenge.setConsul(c)
-  },
-  setNodeAggregationInterval: (val) => { NODE_AGGREGATION_INTERVAL_SECONDS = val },
-  setMostRecentChallengeKey: (key) => { cachedAuditChallenge.setMostRecentChallengeKey(key) },
-  setMinNodeVersionExisting: (v) => { minNodeVersionExisting = v },
-  setDatabase: (sqlz, calBlock, auditChal) => { CalendarBlock = calBlock; cachedAuditChallenge.setDatabase(sqlz, auditChal) }
+  setDatabase: (sqlz, calBlock) => { CalendarBlock = calBlock }
 }

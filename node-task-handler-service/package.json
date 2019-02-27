@@ -12,7 +12,6 @@
     "amqplib": "^0.5.2",
     "async-retry": "^1.2.1",
     "chainpoint-parse": "^3.1.4",
-    "consul": "^0.30.0",
     "debug": "^3.1.0",
     "envalid": "^4.1.4",
     "exit-hook": "^1.1.1",

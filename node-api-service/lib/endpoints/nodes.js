@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Tierion
+/* Copyright (C) 2019 Tierion
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -40,12 +40,6 @@ const RANDOM_NODES_RESULT_LIMIT = 25
 
 // The minimium TNT grains required to operate a Node
 const minGrainsBalanceNeeded = env.MIN_TNT_GRAINS_BALANCE_FOR_REWARD
-
-// the minimum audit passing Node version for existing registered Nodes, set by consul
-let minNodeVersionExisting = null
-
-// the minimum audit passing Node version for newly registering Nodes, set by consul
-let minNodeVersionNew = null
 
 // The lifespan of balance pass redis entries
 const BALANCE_PASS_EXPIRE_MINUTES = 60 * 24 // 1 day
@@ -124,20 +118,6 @@ async function getNodesBlacklistV1Async (req, res, next) {
 async function postNodeV1Async (req, res, next) {
   if (req.contentType() !== 'application/json') {
     return next(new restify.InvalidArgumentError('invalid content type'))
-  }
-
-  let minNodeVersionOK = false
-  if (req.headers && req.headers['x-node-version']) {
-    let nodeVersion = req.headers['x-node-version']
-    try {
-      minNodeVersionOK = semver.satisfies(nodeVersion, `>=${minNodeVersionNew}`)
-    } catch (error) {
-      return next(new restify.UpgradeRequiredError(`Node version ${minNodeVersionNew} or greater required`))
-    }
-  }
-
-  if (!minNodeVersionOK) {
-    return next(new restify.UpgradeRequiredError(`Node version ${minNodeVersionNew} or greater required`))
   }
 
   if (!req.params.hasOwnProperty('tnt_addr')) {
@@ -258,19 +238,6 @@ async function postNodeV1Async (req, res, next) {
 async function putNodeV1Async (req, res, next) {
   if (req.contentType() !== 'application/json') {
     return next(new restify.InvalidArgumentError('invalid content type'))
-  }
-
-  let minNodeVersionOK = false
-  if (req.headers && req.headers['x-node-version']) {
-    let nodeVersion = req.headers['x-node-version']
-    try {
-      minNodeVersionOK = semver.satisfies(nodeVersion, `>=${minNodeVersionExisting}`)
-    } catch (error) {
-      return next(new restify.UpgradeRequiredError(`Node version ${minNodeVersionExisting} or greater required`))
-    }
-  }
-  if (!minNodeVersionOK) {
-    return next(new restify.UpgradeRequiredError(`Node version ${minNodeVersionExisting} or greater required`))
   }
 
   if (!req.params.hasOwnProperty('tnt_addr')) {
@@ -413,26 +380,6 @@ async function putNodeV1Async (req, res, next) {
   return next()
 }
 
-function updateMinNodeVersionNew (ver) {
-  try {
-    if (!semver.valid(ver) || ver === null) throw new Error(`Bad minNodeVersionNew semver value : ${ver}`)
-    minNodeVersionNew = ver
-    console.log(`Minimum Node version for *new* Nodes updated to ${ver}`)
-  } catch (error) {
-    console.error(`Could not update minNodeVersionNew : ${error.message}`)
-  }
-}
-
-function updateMinNodeVersionExisting (ver) {
-  try {
-    if (!semver.valid(ver) || ver === null) throw new Error(`Bad minNodeVersionExisting semver value : ${ver}`)
-    minNodeVersionExisting = ver
-    console.log(`Minimum Node version for *existing* Nodes updated to ${ver}`)
-  } catch (error) {
-    console.error(`Could not update minNodeVersionExisting : ${error.message}`)
-  }
-}
-
 let getTNTGrainsBalanceForAddressAsync = async (tntAddress) => {
   let options = {
     headers: [
@@ -488,8 +435,6 @@ module.exports = {
   postNodeV1Async: postNodeV1Async,
   putNodeV1Async: putNodeV1Async,
   overrideGetTNTGrainsBalanceForAddressAsync: (func) => { getTNTGrainsBalanceForAddressAsync = func },
-  setMinNodeVersionExisting: (ver) => { updateMinNodeVersionExisting(ver) },
-  setMinNodeVersionNew: (ver) => { updateMinNodeVersionNew(ver) },
   setRedis: (redisClient) => { redis = redisClient },
   setDatabase: (sqlz, regNode) => { sequelize = sqlz; RegisteredNode = regNode }
 }

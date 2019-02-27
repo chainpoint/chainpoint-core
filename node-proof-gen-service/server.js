@@ -22,15 +22,12 @@ const chainpointProofSchema = require('chainpoint-proof-json-schema')
 const uuidTime = require('uuid-time')
 const chpBinary = require('chainpoint-binary')
 const utils = require('./lib/utils.js')
-const cnsl = require('consul')
 const GCPStorage = require('@google-cloud/storage')
 const retry = require('async-retry')
 const crypto = require('crypto')
 const moment = require('moment')
 const connections = require('./lib/connections.js')
 const parallel = require('async-parallel')
-
-let consul = null
 
 const aggState = require('./lib/models/AggState.js')
 const calState = require('./lib/models/CalState.js')
@@ -331,24 +328,6 @@ function logGenerationEvent (submitDateString, batchType, batchId, proofIndex, b
   console.log(`Generation ${proofIndex === 1 ? 'starting' : 'complete'} for ${batchType} ${batchId} proof ${proofIndex} of ${batchSize} - ${durationString} after submission ${totalProcessingString}`)
 }
 
-// This initializes all the consul watches
-function startConsulWatches () {
-  let watches = [{
-    key: env.PROOF_STORAGE_METHOD_KEY,
-    onChange: (data, res) => {
-      // process only if a value has been returned
-      if (data && data.Value) {
-        proofStorageMethod = data.Value
-      }
-    },
-    onError: null
-  }]
-  let defaults = [
-    { key: env.PROOF_STORAGE_METHOD_KEY, value: 'resque' }
-  ]
-  connections.startConsulWatches(consul, watches, defaults)
-}
-
 /**
  * Opens a Redis connection
  *
@@ -413,16 +392,12 @@ async function initResqueQueueAsync () {
 async function start () {
   if (env.NODE_ENV === 'test') return
   try {
-    // init consul
-    consul = connections.initConsul(cnsl, env.CONSUL_HOST, env.CONSUL_PORT)
     // init DB
     await openStorageConnectionAsync()
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
-    // init consul watches
-    startConsulWatches()
     console.log('startup completed successfully')
   } catch (error) {
     console.error(`An error has occurred on startup: ${error.message}`)

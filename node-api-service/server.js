@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Tierion
+/* Copyright (C) 2019 Tierion
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -26,10 +26,8 @@ const calendar = require('./lib/endpoints/calendar.js')
 const cores = require('./lib/endpoints/cores.js')
 const config = require('./lib/endpoints/config.js')
 const root = require('./lib/endpoints/root.js')
-const cnsl = require('consul')
 const registeredNode = require('./lib/models/RegisteredNode.js')
 const calendarBlock = require('./lib/models/CalendarBlock.js')
-const auditChallenge = require('./lib/models/AuditChallenge.js')
 const zeromq = require('zeromq')
 const connections = require('./lib/connections.js')
 
@@ -57,8 +55,6 @@ let server = restify.createServer({
 //   request.log.info({ req: [request.url, request.method, request.rawHeaders] }, 'API-REQUEST')
 //   next()
 // })
-
-let consul = null
 
 // Clean up sloppy paths like //todo//////1//
 server.pre(restify.pre.sanitizePath())
@@ -131,13 +127,12 @@ server.get({ path: '/', version: '1.0.0' }, root.getV1)
 async function openStorageConnectionAsync () {
   let sqlzModelArray = [
     registeredNode,
-    calendarBlock,
-    auditChallenge
+    calendarBlock
   ]
   let cxObjects = await connections.openStorageConnectionAsync(sqlzModelArray)
   nodes.setDatabase(cxObjects.sequelize, cxObjects.models[0])
   hashes.setDatabase(cxObjects.sequelize, cxObjects.models[0])
-  config.setDatabase(cxObjects.sequelize, cxObjects.models[1], cxObjects.models[2])
+  config.setDatabase(cxObjects.sequelize, cxObjects.models[1])
   calendar.setDatabase(cxObjects.sequelize, cxObjects.models[1])
 }
 
@@ -213,84 +208,18 @@ function openRedisConnection (redisURIs) {
     })
 }
 
-// This initializes all the consul watches
-function startConsulWatches () {
-  let watches = [{
-    key: env.MIN_NODE_VERSION_EXISTING_KEY,
-    onChange: (data, res) => {
-      // process only if a value has been returned
-      if (data && data.Value) {
-        config.setMinNodeVersionExisting(data.Value)
-        nodes.setMinNodeVersionExisting(data.Value)
-      }
-    },
-    onError: null
-  }, {
-    key: env.MIN_NODE_VERSION_NEW_KEY,
-    onChange: (data, res) => {
-      // process only if a value has been returned
-      if (data && data.Value) {
-        nodes.setMinNodeVersionNew(data.Value)
-      }
-    },
-    onError: null
-  }, {
-    key: env.AUDIT_CHALLENGE_RECENT_KEY,
-    onChange: (data, res) => {
-      // process only if a value has been returned
-      if (data && data.Value) {
-        config.setMostRecentChallengeKey(data.Value)
-      }
-    },
-    onError: null
-  }, {
-    key: env.ENFORCE_PRIVATE_STAKE_KEY,
-    onChange: (data, res) => {
-      // process only if a value has been returned
-      if (data && data.Value) {
-        hashes.setEnforcePrivateStakeState(data.Value)
-      }
-    },
-    onError: null
-  },
-  {
-    key: env.NODE_AGGREGATION_INTERVAL_SECONDS_KEY,
-    onChange: (data, res) => {
-      // process only if a value has been returned
-      if (data && data.Value) {
-        let newVal = parseInt(data.Value, 10)
-        config.setNodeAggregationInterval(newVal)
-      }
-    },
-    onError: null
-  }]
-
-  let defaults = [
-    { key: env.MIN_NODE_VERSION_EXISTING_KEY, value: '0.0.1' },
-    { key: env.MIN_NODE_VERSION_NEW_KEY, value: '0.0.1' },
-    { key: env.ENFORCE_PRIVATE_STAKE_KEY, value: 'true' },
-    { key: env.NODE_AGGREGATION_INTERVAL_SECONDS_KEY, value: `${env.NODE_AGGREGATION_INTERVAL_SECONDS_DEFAULT}` }
-  ]
-  connections.startConsulWatches(consul, watches, defaults)
-}
-
 // process all steps need to start the application
 async function start () {
   if (env.NODE_ENV === 'test') return
   try {
     // init ZeroMQ sockets
     initNISTSockets()
-    // init consul
-    consul = connections.initConsul(cnsl, env.CONSUL_HOST, env.CONSUL_PORT)
-    await config.setConsul(consul)
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
     await openStorageConnectionAsync()
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
-    // init consul watches
-    startConsulWatches()
     // Init Restify
     await connections.listenRestifyAsync(server, 8080)
     console.log('startup completed successfully')
@@ -316,7 +245,5 @@ module.exports = {
   setNistLatest: (val) => { hashes.setNistLatest(val) },
   server: server,
   config: config,
-  setMinNodeVersionNew: (val) => { nodes.setMinNodeVersionNew(val) },
-  setMinNodeVersionExisting: (val) => { nodes.setMinNodeVersionExisting(val) },
   overrideGetTNTGrainsBalanceForAddressAsync: (func) => { nodes.overrideGetTNTGrainsBalanceForAddressAsync(func) }
 }

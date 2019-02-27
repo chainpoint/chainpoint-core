@@ -23,7 +23,6 @@ const semver = require('semver')
 const retry = require('async-retry')
 const rp = require('request-promise-native')
 const events = require('events')
-const cnsl = require('consul')
 const objectHash = require('object-hash')
 const crypto = require('crypto')
 const chp = require('chainpoint-parse')
@@ -52,8 +51,6 @@ nacl.util = require('tweetnacl-util')
 const signingSecretKeyBytes = nacl.util.decodeBase64(env.SIGNING_SECRET_KEY)
 const signingKeypair = nacl.sign.keyPair.fromSecretKey(signingSecretKeyBytes)
 
-let consul = null
-
 // The age of a running job, in milliseconds, for it to be considered stuck/timed out
 // This is necessary to allow resque to determine what is a valid running job, and what
 // has been 'stuck' due to service crash/restart. Jobs found in the state are added to the fail queue.
@@ -69,9 +66,6 @@ var debug = {
 // direct debug to output over STDOUT
 debugPkg.log = console.info.bind(console)
 
-// the minimum audit passing Node version for existing registered Nodes, set by consul
-let minNodeVersionExisting = null
-
 const aggState = require('./lib/models/AggState.js')
 const calState = require('./lib/models/CalState.js')
 const anchorBtcAggState = require('./lib/models/AnchorBtcAggState.js')
@@ -80,8 +74,6 @@ const btcHeadState = require('./lib/models/BtcHeadState.js')
 const cachedProofState = require('./lib/models/cachedProofState.js')
 const nodeAuditLog = require('./lib/models/NodeAuditLog.js')
 const e2eNodeAuditLog = require('./lib/models/E2ENodeAuditLog.js')
-const auditChallenge = require('./lib/models/AuditChallenge.js')
-const cachedAuditChallenge = require('./lib/models/cachedAuditChallenge.js')
 
 let sequelize
 let NodeAuditLog
@@ -129,9 +121,6 @@ const E2EAuditStatusEnum = (function () { // (pending|passed|submission_failure|
 // The acceptable time difference between Node and Core for a timestamp to be considered valid, in milliseconds
 const ACCEPTABLE_DELTA_MS = 5000 // 5 seconds
 
-// The maximum age of a node audit response to accept
-const MAX_NODE_RESPONSE_CHALLENGE_AGE_MIN = 75
-
 // The minimum credit balance to receive awards and be publicly advertised
 const MIN_PASSING_CREDIT_BALANCE = 10800
 
@@ -154,8 +143,6 @@ const pluginOptions = {
 }
 const primaryTaskJobs = {
   // tasks from the audit producer service
-  'audit_public_node': Object.assign({ perform: performAuditPublicAsync }, pluginOptions),
-  'audit_private_node': Object.assign({ perform: performAuditPrivateAsync }, pluginOptions),
   'e2e_audit_public_node': Object.assign({ perform: performE2EAuditPublicAsync }, pluginOptions),
   'e2e_audit_public_node_proof_retrieval': Object.assign({ perform: performE2EAuditPublicProofRetrievalAsync }, pluginOptions),
   'e2e_audit_public_node_proof_verification': Object.assign({ perform: performE2EAuditPublicProofVerificationAsync }, pluginOptions),
@@ -232,136 +219,6 @@ async function pruneBTCHeadStatesByIdsAsync (ids) {
 // ******************************************************
 // tasks from the audit producer service
 // ******************************************************
-
-async function performAuditPublicAsync (nodeData, activeNodeCount) {
-  let tntAddr = nodeData.tnt_addr
-  let publicUri = nodeData.public_uri
-  let currentCreditBalance = nodeData.tnt_credit
-
-  let publicIPPass = false
-  let nodeMSDelta = null
-  let timePass = false
-  let calStatePass = false
-  let minCreditsPass = false
-  let nodeVersion = null
-  let nodeVersionPass = false
-  let tntBalanceGrains = null
-  let tntBalancePass = false
-
-  try {
-    tntBalanceGrains = await getTNTBalance(tntAddr)
-    tntBalancePass = tntBalanceGrains >= minGrainsBalanceNeeded
-  } catch (error) {
-    console.error(`performAuditPublicAsync : getTNTBalance : Unable to query for TNT balance for ${tntAddr} : ${error.message}`)
-  }
-
-  // perform the minimum credit check
-  minCreditsPass = (currentCreditBalance >= MIN_PASSING_CREDIT_BALANCE)
-
-  // if there is no public_uri set for this Node, fail all remaining audit tests and continue to the next
-  if (!publicUri) {
-    await addAuditToLogAsync(tntAddr, null, Date.now(), publicIPPass, nodeMSDelta, timePass, calStatePass, minCreditsPass, nodeVersion, nodeVersionPass, tntBalanceGrains, tntBalancePass)
-    return `performAuditAsync : no publicUri defined for address ${tntAddr}`
-  }
-
-  // build the data object containing Node data and last audit data to be sent to
-  // the Node in the process of executing an audit on that Node
-  // this will be set to NULL if there is no audit history to deliver
-  let nodeDataPackage = buildNodeDataPackage(nodeData, activeNodeCount)
-
-  let configResultsBody
-  let configResultTime
-  try {
-    await retry(async bail => {
-      configResultsBody = await getNodeConfigObjectAsync(publicUri, nodeDataPackage)
-      configResultTime = Date.now()
-    }, {
-      retries: 3, // The maximum amount of times to retry the operation. Default is 10
-      factor: 2, // The exponential factor to use. Default is 2
-      minTimeout: 500, // The number of milliseconds before starting the first retry. Default is 1000
-      maxTimeout: 5000,
-      randomize: false
-    })
-  } catch (error) {
-    let resultText = `getNodeConfigObjectAsync : GET failed for ${publicUri}: ${error.message}`
-    if (error.statusCode) resultText = `getNodeConfigObjectAsync : GET failed with status code ${error.statusCode} for ${publicUri}: ${error.message}`
-    await addAuditToLogAsync(tntAddr, publicUri, Date.now(), publicIPPass, nodeMSDelta, timePass, calStatePass, minCreditsPass, nodeVersion, nodeVersionPass, tntBalanceGrains, tntBalancePass)
-    return resultText
-  }
-
-  if (!configResultsBody) {
-    await addAuditToLogAsync(tntAddr, publicUri, configResultTime, publicIPPass, nodeMSDelta, timePass, calStatePass, minCreditsPass, nodeVersion, nodeVersionPass, tntBalanceGrains, tntBalancePass)
-    return `getNodeConfigObjectAsync : GET failed with empty result for ${publicUri}`
-  }
-  if (!configResultsBody.calendar) {
-    await addAuditToLogAsync(tntAddr, publicUri, configResultTime, publicIPPass, nodeMSDelta, timePass, calStatePass, minCreditsPass, nodeVersion, nodeVersionPass, tntBalanceGrains, tntBalancePass)
-    return `getNodeConfigObjectAsync : GET failed with missing calendar data for ${publicUri}`
-  }
-  if (!configResultsBody.time) {
-    await addAuditToLogAsync(tntAddr, publicUri, configResultTime, publicIPPass, nodeMSDelta, timePass, calStatePass, minCreditsPass, nodeVersion, nodeVersionPass, tntBalanceGrains, tntBalancePass)
-    return `getNodeConfigObjectAsync : GET failed with missing time for ${publicUri}`
-  }
-  if (!configResultsBody.version) {
-    await addAuditToLogAsync(tntAddr, publicUri, configResultTime, publicIPPass, nodeMSDelta, timePass, calStatePass, minCreditsPass, nodeVersion, nodeVersionPass, tntBalanceGrains, tntBalancePass)
-    return `getNodeConfigObjectAsync : GET failed with missing version for ${publicUri}`
-  }
-
-  // We've gotten this far, so at least auditedPublicIPAt has passed
-  publicIPPass = true
-
-  // check if the Node timestamp is within the acceptable range
-  let nodeAuditTimestamp = Date.parse(configResultsBody.time)
-  nodeMSDelta = (nodeAuditTimestamp - configResultTime)
-  if (Math.abs(nodeMSDelta) <= ACCEPTABLE_DELTA_MS) {
-    timePass = true
-  }
-
-  // When a node first comes online, and is still syncing the calendar
-  // data, it will not have yet generated the challenge response, and
-  // audit_response will be null. In these cases, simply fail the calStatePass
-  // audit. If audit_response is not null, verify the cal state for the Node
-  if (configResultsBody.calendar.audit_response && configResultsBody.calendar.audit_response !== 'null') {
-    let nodeAuditResponse = configResultsBody.calendar.audit_response.split(':')
-    let nodeAuditResponseTimestamp = parseInt(nodeAuditResponse[0])
-    let nodeAuditResponseSolution = nodeAuditResponse[1]
-
-    // make sure the audit response is newer than MAX_CHALLENGE_AGE_MINUTES
-    let coreAuditChallenge = null
-    let minTimestamp = configResultTime - (MAX_NODE_RESPONSE_CHALLENGE_AGE_MIN * 60 * 1000)
-    if (nodeAuditResponseTimestamp >= minTimestamp) {
-      try {
-        coreAuditChallenge = await cachedAuditChallenge.getChallengeDataByTimeAsync(nodeAuditResponseTimestamp)
-      } catch (error) {
-        console.error(`getChallengeDataByTimeAsync : Could not query for audit challenge: ${nodeAuditResponseTimestamp}`)
-      }
-
-      // check if the Node challenge solution is correct
-      if (coreAuditChallenge) {
-        let coreAuditChallengeSolution = coreAuditChallenge.split(':')[4].toString()
-        let coreChallengeSolution = nacl.util.decodeUTF8(coreAuditChallengeSolution)
-        nodeAuditResponseSolution = nacl.util.decodeUTF8(nodeAuditResponseSolution)
-
-        if (nacl.verify(nodeAuditResponseSolution, coreChallengeSolution)) {
-          calStatePass = true
-        }
-      } else {
-        console.error(`getChallengeDataByTimeAsync : No audit challenge record found: ${configResultsBody.calendar.audit_response} | ${configResultTime}, ${minTimestamp}`)
-      }
-    }
-  }
-
-  // check if the Node version is acceptable, catch error if version value is invalid
-  nodeVersion = configResultsBody.version
-  try {
-    nodeVersionPass = semver.satisfies(nodeVersion, `>=${minNodeVersionExisting}`)
-  } catch (error) {
-    nodeVersionPass = false
-  }
-
-  await addAuditToLogAsync(tntAddr, publicUri, configResultTime, publicIPPass, nodeMSDelta, timePass, calStatePass, minCreditsPass, nodeVersion, nodeVersionPass, tntBalanceGrains, tntBalancePass)
-
-  return `Public Audit complete for ${tntAddr} at ${publicUri} : Pass = ${publicIPPass && timePass && calStatePass && minCreditsPass && nodeVersionPass && tntBalancePass}`
-}
 
 async function performE2EAuditPublicAsync (nodeData, retryCount, auditDate = null) {
   let tntAddr = nodeData.tnt_addr
@@ -640,32 +497,6 @@ async function performE2EAuditPublicProofVerificationAsync (tntAddr, publicUri, 
   }
 }
 
-async function performAuditPrivateAsync (nodeData) {
-  let tntAddr = nodeData.tnt_addr
-  let publicUri = null
-
-  let publicIPPass = false
-  let nodeMSDelta = null
-  let timePass = false
-  let calStatePass = false
-  let minCreditsPass = false
-  let nodeVersion = null
-  let nodeVersionPass = false
-  let tntBalanceGrains = null
-  let tntBalancePass = false
-
-  try {
-    tntBalanceGrains = await getTNTBalance(tntAddr)
-    tntBalancePass = tntBalanceGrains >= minGrainsBalanceNeeded
-  } catch (error) {
-    console.error(`performAuditPrivateAsync : getTNTBalance : Unable to query for TNT balance for ${tntAddr} : ${error.message}`)
-  }
-
-  await addAuditToLogAsync(tntAddr, publicUri, Date.now(), publicIPPass, nodeMSDelta, timePass, calStatePass, minCreditsPass, nodeVersion, nodeVersionPass, tntBalanceGrains, tntBalancePass)
-
-  return `Private Audit complete for ${tntAddr} : Balance = ${tntBalanceGrains} TNT grains, Pass = ${tntBalancePass ? 'True' : 'False'}`
-}
-
 async function pruneAuditLogsByIdsAsync (ids) {
   try {
     let delCount = await NodeAuditLog.destroy({ where: { id: { [sequelize.Op.in]: ids } } })
@@ -762,8 +593,6 @@ async function updateE2EAuditScoreItemsAsync (scoreUpdatesJSON) {
   // scoreUpdatesJSON is an array of JSON strings, convert to array of objects
   let scoreUpdateItems = scoreUpdatesJSON.map((item) => { return JSON.parse(item) })
   const getScoreAddend = item => {
-    if (env.E2E_AUDIT_SCORING_ENABLED === 'no') return 0
-
     return item.auditPass ? 0 : -96
   }
   try {
@@ -1075,7 +904,6 @@ async function openStorageConnectionAsync () {
   let sqlzModelArray = [
     nodeAuditLog,
     e2eNodeAuditLog,
-    auditChallenge,
     aggState,
     calState,
     anchorBtcAggState,
@@ -1086,8 +914,7 @@ async function openStorageConnectionAsync () {
   sequelize = cxObjects.sequelize
   NodeAuditLog = cxObjects.models[0]
   E2ENodeAuditLog = cxObjects.models[1]
-  cachedAuditChallenge.setDatabase(cxObjects.sequelize, cxObjects.models[2])
-  cachedProofState.setDatabase(cxObjects.sequelize, cxObjects.models[3], cxObjects.models[4], cxObjects.models[5], cxObjects.models[6], cxObjects.models[7])
+  cachedProofState.setDatabase(cxObjects.sequelize, cxObjects.models[2], cxObjects.models[3], cxObjects.models[4], cxObjects.models[5], cxObjects.models[6])
 }
 
 /**
@@ -1099,14 +926,12 @@ function openRedisConnection (redisURIs) {
   connections.openRedisConnection(redisURIs,
     (newRedis) => {
       redis = newRedis
-      cachedAuditChallenge.setRedis(redis)
       // init Resque & workers
       initResqueQueueAsync()
       initResqueWorkersAsync()
       initResqueSchedulerAsync()
     }, () => {
       redis = null
-      cachedAuditChallenge.setRedis(null)
       taskQueue = null
       setTimeout(() => { openRedisConnection(redisURIs) }, 5000)
     }, debug)
@@ -1209,34 +1034,17 @@ async function initResqueSchedulerAsync () {
   )
 }
 
-// This initializes all the consul watches
-function startConsulWatches () {
-  let watches = [{
-    key: env.MIN_NODE_VERSION_EXISTING_KEY,
-    onChange: (data, res) => {
-      // process only if a value has been returned
-      if (data && data.Value) {
-        minNodeVersionExisting = data.Value
-      }
-    },
-    onError: null
-  }]
-  connections.startConsulWatches(consul, watches, null, debug)
-}
+
 
 // process all steps need to start the application
 async function start () {
   try {
-    // init consul
-    consul = connections.initConsul(cnsl, env.CONSUL_HOST, env.CONSUL_PORT, debug)
     // init DB
     await openStorageConnectionAsync()
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
-    // init consul watches
-    startConsulWatches()
     debug.general('startup completed successfully')
   } catch (error) {
     console.error(`An error has occurred on startup: ${error.message}`)

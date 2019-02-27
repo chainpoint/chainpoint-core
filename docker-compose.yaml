@@ -136,7 +136,6 @@ services:
       - roach1
       - redis
       - rabbitmq
-      - consul
     networks:
       - chainpoint
     environment:
@@ -159,7 +158,6 @@ services:
       - roach1
       - redis
       - rabbitmq
-      - consul
     networks:
       - chainpoint
     environment:
@@ -246,7 +244,6 @@ services:
       - base
       - rabbitmq
       - roach1
-      - consul
     networks:
       - chainpoint
     environment:
@@ -316,22 +313,6 @@ services:
       - redis-server
       - /usr/local/etc/redis/redis.conf
 
-  # Consul
-  #
-  # Consul Admin UI: http://127.0.0.1:8500
-  #
-  consul:
-    restart: always
-    image: consul:1.1.0
-    container_name: consul-core
-    ports:
-      - "8300:8300"
-      - "8400:8400"
-      - "8500:8500"
-    volumes:
-      - ./data/consul:/consul/data
-    networks:
-      - chainpoint
 
   # CockroachDB
   #

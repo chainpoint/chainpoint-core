@@ -447,12 +447,3 @@ definitions:
         type: string
         format: date-time
         example: "2017-07-14T18:07:31Z"
-      calendar:
-        type: object
-        properties:
-          height:
-            type: integer
-            example: 43625
-          audit_challenge:
-            type: string
-            example: 1500476217578:42041:42625:548fd77a637681170f35639edc1c9fa14201aa7dab9e06f48224bfd96aed8486

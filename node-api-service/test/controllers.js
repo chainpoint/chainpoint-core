@@ -25,9 +25,6 @@ app.setRedis({
   set: (key) => { return null }
 })
 
-app.setMinNodeVersionNew('1.2.0')
-app.setMinNodeVersionExisting('1.2.0')
-
 describe('Home Controller', () => {
   describe('GET /', () => {
     it('should return teapot error', (done) => {
@@ -640,47 +637,6 @@ describe('Calendar Controller', () => {
     })
   })
 })
-
-/* TODO: Re-enable using cachedAuditChallenge
-describe('Config Controller', () => {
-  app.config.setAuditChallenge({
-    findOne: async () => {
-      return {
-        time: 1504898081430,
-        minBlock: 9661,
-        maxBlock: 10483,
-        nonce: 'd9a52b6e1e4cdc46d03b58c6b4b58a01e0eb7b252a83ee5346314a1240561c4d',
-        solution: '57d17352247cbbdd2551d5b2401c85c54cb47e92265ac034ada2577cb00f012d'
-      }
-    }
-  })
-  app.config.setCalendarBlock({
-    findOne: async () => {
-      return { id: 27272 }
-    }
-  })
-  describe('GET /config', () => {
-    it('should return proper config object', (done) => {
-      request(server)
-        .get('/config')
-        .set('Content-type', 'text/plain')
-        .expect('Content-type', /json/)
-        .expect(200)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body).to.have.property('chainpoint_core_base_uri').and.to.equal('http://test.chainpoint.org')
-          expect(res.body).to.have.property('anchor_btc')
-          expect(res.body).to.have.property('anchor_eth')
-          expect(res.body).to.have.property('public_keys')
-          expect(res.body).to.have.property('calendar')
-          expect(res.body.calendar).to.have.property('height')
-          expect(res.body.calendar).to.have.property('audit_challenge').and.to.equal('1504898081430:9661:10483:d9a52b6e1e4cdc46d03b58c6b4b58a01e0eb7b252a83ee5346314a1240561c4d')
-          expect(res.body).to.have.property('core_eth_address')
-          done()
-        })
-    })
-  })
-}) */
 
 describe('Nodes Controller', () => {
   describe('POST /nodes', () => {

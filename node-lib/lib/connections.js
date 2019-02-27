@@ -264,13 +264,6 @@ async function openStandardRMQConnectionAsync (amqpClient, connectURI, queues, p
   }
 }
 
-// Initializes and returns a consul client object
-function initConsul (consulClient, host, port, debug) {
-  let consul = consulClient({ host: host, port: port })
-  logMessage('Consul connection established', debug, 'general')
-  return consul
-}
-
 // Instruct REST server to begin listening for request
 async function listenRestifyAsync (server, port, debug) {
   return new Promise((resolve, reject) => {
@@ -280,71 +273,6 @@ async function listenRestifyAsync (server, port, debug) {
       return resolve()
     })
   })
-}
-
-// Performs a leader election across all instances using the given leader key
-function performLeaderElection (electorClient, leaderKey, host, port, id, onElect, onError, debug) {
-  const uuidv1 = require('uuid/v1')
-  let clientToken = uuidv1()
-  let leaderElectionConfig = {
-    key: leaderKey,
-    consul: {
-      host: host,
-      port: port,
-      ttl: 15,
-      lockDelay: 1,
-      token: clientToken
-    }
-  }
-
-  electorClient(leaderElectionConfig)
-    .on('gainedLeadership', () => {
-      logMessage(`leaderElection : elected : ${id || 'no id supplied'}`, debug, 'general')
-      onElect()
-    })
-    .on('error', (err) => {
-      console.error(`leaderElection : error : lock session invalidated : ${err}`)
-      onError()
-    })
-}
-
-// This initializes all the consul watches
-function startConsulWatches (consul, watches, defaults, debug) {
-  logMessage('starting watches', debug, 'general')
-
-  // Process any new watches to be initialized
-  if (watches !== null) {
-    watches.forEach((watchItem) => {
-      // Continuous watch on the consul key
-      let watch = consul.watch({ method: consul.kv.get, options: { key: watchItem.key } })
-      // When the value changes, handle appropriately
-      watch.on('change', (data, res) => { watchItem.onChange(data, res) })
-      // Handle and log any error events
-      watch.on('error', (err) => {
-        if (watchItem.onError !== null) watchItem.onError(err)
-        console.error(`consul watch error for key ${watchItem.key} : ${err.message}`)
-      })
-    })
-  }
-
-  // Process any new default values to be set
-  if (defaults) {
-    defaults.forEach((defaultItem) => {
-      consul.kv.get(defaultItem.key, function (err, result) {
-        if (err) {
-          console.error(err)
-        } else {
-          // Only create key if it doesn't exist or has no value
-          if (!result) {
-            consul.kv.set(defaultItem.key, defaultItem.value, function (err, result) {
-              if (err) throw err
-              logMessage(`created ${defaultItem.key} key with default value of ${defaultItem.value} `, debug, 'general')
-            })
-          }
-        }
-      })
-    })
-  }
 }
 
 function startIntervals (intervals, debug) {
@@ -401,9 +329,6 @@ module.exports = {
   initResqueSchedulerAsync: initResqueSchedulerAsync,
   openStorageConnectionAsync: openStorageConnectionAsync,
   openStandardRMQConnectionAsync: openStandardRMQConnectionAsync,
-  initConsul: initConsul,
   listenRestifyAsync: listenRestifyAsync,
-  performLeaderElection: performLeaderElection,
-  startConsulWatches: startConsulWatches,
   startIntervals: startIntervals
 }

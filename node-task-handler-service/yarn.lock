@@ -165,12 +165,6 @@ combined-stream@1.0.6, combined-stream@~1.0.5:
   dependencies:
     delayed-stream "~1.0.0"
 
-consul@^0.30.0:
-  version "0.30.0"
-  resolved "https://registry.yarnpkg.com/consul/-/consul-0.30.0.tgz#8ae6719b46674dd15a95b7614881bfc5b9e4eac3"
-  dependencies:
-    papi "^0.27.0"
-
 core-util-is@1.0.2, core-util-is@~1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/core-util-is/-/core-util-is-1.0.2.tgz#b5fd54220aa2bc5ab57aab7140c940754503c1a7"
@@ -601,10 +595,6 @@ packet-reader@0.3.1:
 pako@^1.0.5:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/pako/-/pako-1.0.6.tgz#0101211baa70c4bca4a0f63f2206e97b7dfaf258"
-
-papi@^0.27.0:
-  version "0.27.0"
-  resolved "https://registry.yarnpkg.com/papi/-/papi-0.27.0.tgz#7392a38ebefa7fb67e98b363bca3d136827caf28"
 
 performance-now@^2.1.0:
   version "2.1.0"

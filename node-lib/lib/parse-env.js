@@ -69,18 +69,6 @@ let envDefinitions = {
   ANCHOR_BTC: envalid.str({ choices: ['enabled', 'disabled'], default: 'disabled', desc: 'String flag for enabling and disabling BTC anchoring' }),
   ANCHOR_ETH: envalid.str({ choices: ['enabled', 'disabled'], default: 'disabled', desc: 'String flag for enabling and disabling ETH anchoring' }),
 
-  // Consul related variables and keys
-  CONSUL_HOST: envalid.str({ default: 'consul', desc: 'Consul server host' }),
-  CONSUL_PORT: envalid.num({ default: 8500, desc: 'Consul server port' }),
-  AUDIT_CHALLENGE_RECENT_KEY: envalid.str({ default: 'service/audit/mostrecentrediskey', desc: 'Key used for acquiring most recent audit challenge redis key' }),
-  MIN_NODE_VERSION_EXISTING_KEY: envalid.str({ default: 'service/api/minnodeversionexisting', desc: 'Key used for the minimum acceptable Node version for existing registrations and to pass audits' }),
-  MIN_NODE_VERSION_NEW_KEY: envalid.str({ default: 'service/api/minnodeversionnew', desc: 'Key used for the minimum acceptable Node version for new registrations' }),
-  ENFORCE_PRIVATE_STAKE_KEY: envalid.str({ default: 'service/api/enforceprivatestake', desc: 'Key used to toggle enforcement of the requirement that private Nodes have the minimum acceptable TNT balance' }),
-  NODE_AGGREGATION_INTERVAL_SECONDS_KEY: envalid.str({ default: 'service/api/nodeaggintervalseconds', desc: 'The Node Aggregation interval consul key used by nodes to determine how often they submit constructed merkle tree root to core' }),
-  PROOF_STORAGE_METHOD_KEY: envalid.str({ default: 'service/proofgen/proofstoragemethod', desc: 'Key used to determine method of proof storage' }),
-
-  NODE_AGGREGATION_INTERVAL_SECONDS_DEFAULT: envalid.num({ default: 5, desc: 'The Node Aggregation interval default value used by nodes to determine how often they submit constructed merkle tree root to core' }),
-
   // RabbitMQ related variables
   RABBITMQ_CONNECT_URI: envalid.url({ default: 'amqp://chainpoint:chainpoint@rabbitmq', desc: 'Connection string w/ credentials for RabbitMQ' }),
   RMQ_WORK_OUT_STATE_QUEUE: envalid.str({ default: 'work.proofstate', desc: 'The queue name for outgoing message to the proof state service' }),
@@ -129,7 +117,6 @@ let envDefinitions = {
   // Calendar service specific variables
   RMQ_PREFETCH_COUNT_CAL: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
   RMQ_WORK_IN_CAL_QUEUE: envalid.str({ default: 'work.cal', desc: 'The queue name for message consumption originating from the aggregator, btc-tx, and btc-mon services' }),
-  CALENDAR_LEADER_KEY: envalid.str({ default: 'service/calendar/leader/lock', desc: 'Key used for acquiring calendar process leadership locks' }),
 
   // NIST beacon service specific variables
   NIST_INTERVAL_MS: envalid.num({ default: 60000, desc: 'The frequency to get latest NIST beacon data, in milliseconds' }),
@@ -145,7 +132,6 @@ let envDefinitions = {
   RMQ_PREFETCH_COUNT_STATE: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
   RMQ_WORK_IN_STATE_QUEUE: envalid.str({ default: 'work.proofstate', desc: 'The queue name for message consumption originating from the aggregator, calendar, and proof state services' }),
   PRUNE_FREQUENCY_MINUTES: envalid.num({ default: 1, desc: 'The frequency that the proof state and hash tracker log tables have their old, unneeded data pruned, in minutes' }),
-  PROOF_STATE_LEADER_KEY: envalid.str({ default: 'service/proofstate/leader/lock', desc: 'Key used for acquiring proof state process leadership locks' }),
 
   // ETH TNT Listener / TNT TX services specific variables
   ETH_PROVIDER_URI: envalid.url({ default: 'http://ganache:8545', desc: 'URI to the ETH node provider.' }),
@@ -158,14 +144,6 @@ let envDefinitions = {
   // TNT Reward service specific variables
   REWARDS_PER_HOUR: validateFactorOfSixty({ default: 2, desc: 'The number of times per hour to calculate and distribute rewards, defaults to 2, must be a factor of 60, no greater than 20' }),
   MIN_TNT_GRAINS_BALANCE_FOR_REWARD: envalid.num({ default: 500000000000, desc: 'The minimum balance of TNT, in Grains, that an address must contain in order to be eligible for a reward' }),
-  REWARDS_LEADER_KEY: envalid.str({ default: 'service/reward/leader/lock', desc: 'Key used for acquiring reward process leadership locks' }),
-
-  // Audit services specific variables
-  NEW_AUDIT_CHALLENGES_PER_HOUR: validateFactorOfSixty({ default: 2, desc: 'The number of times per hour to generate new audit challenges, defaults to 2, must be a factor of 60, no greater than 20' }),
-  NODE_AUDIT_ROUNDS_PER_HOUR: validateFactorOfSixtyUpToSixty({ default: 2, desc: 'The number of times per hour to perform Node audit rounds, defaults to 60, must be a factor of 60' }),
-  AUDIT_PRODUCER_LEADER_KEY: envalid.str({ default: 'service/audit-producer/leader/lock', desc: 'Key used for acquiring audit producer process leadership locks' }),
-  E2E_AUDIT_ENABLED: envalid.str({ default: 'no', desc: 'E2E Audits enabled. Defaults to "no"' }),
-  E2E_AUDIT_SCORING_ENABLED: envalid.str({ default: 'no', desc: 'Determine whether E2E Audit scoring is enabled. If, set to "yes" E2E Audits will affect a nodes audit score. Defaults to "no"' }),
 
   // Task accumulator specific variables
   RMQ_PREFETCH_COUNT_TASK_ACC: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),

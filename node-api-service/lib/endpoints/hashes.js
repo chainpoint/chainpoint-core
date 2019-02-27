@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Tierion
+/* Copyright (C) 2019 Tierion
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -39,11 +39,6 @@ const uuidv1 = require('uuid/v1')
 // This value is set once the connection has been established
 let amqpChannel = null
 
-// The latest NIST data
-// This value is updated from consul events as changes are detected
-let nistLatest = null
-let nistLatestEpoch = null
-
 // The minimium TNT grains required to operate a Node
 const minGrainsBalanceNeeded = env.MIN_TNT_GRAINS_BALANCE_FOR_REWARD
 
@@ -56,19 +51,16 @@ let enforcePrivateNodeStake = false
  * return to HTTP clients.
  *
  * @param {string} hash - A hash string to process
- * @returns {Object} An Object with 'hash_id', 'hash', 'nist', 'submitted_at' and 'processing_hints' properties
+ * @returns {Object} An Object with 'hash_id', 'hash', 'submitted_at' and 'processing_hints' properties
  *
  */
 function generatePostHashResponse (hash, regNode) {
   hash = hash.toLowerCase()
 
-  let hashNIST = nistLatest || ''
-
   // Compute a five byte BLAKE2s hash of the
   // timestamp that will be embedded in the UUID.
   // This allows the UUID to verifiably reflect the
-  // combined NTP time, the hash submitted, and the current
-  // NIST Beacon value if available. Thus these values
+  // combined NTP time, and the hash submitted. Thus these values
   // are represented both in the BLAKE2s hash and in
   // the full timestamp embedded in the v1 UUID.
   //
@@ -86,8 +78,8 @@ function generatePostHashResponse (hash, regNode) {
   // by extracting the bytes of the last segment of the UUID.
   // e.g. If the UUID is 'b609358d-7979-11e7-ae31-01ba7816bf8f'
   // the Node ID hash is the six bytes shown in '01ba7816bf8f'.
-  // Any client that can access the timestamp in the UUID,
-  // the NIST Beacon value, and the original hash can recompute
+  // Any client that can access the timestamp in the UUID, 
+  // and the original hash can recompute
   // the verification hash and compare it.
   //
   // The UUID can also be verified for correct time by a
@@ -121,10 +113,8 @@ function generatePostHashResponse (hash, regNode) {
   let result = {}
   result.hash_id = hashId
   result.hash = hash
-  result.nist = hashNIST
   result.submitted_at = utils.formatDateISO8601NoMs(timestampDate)
   result.processing_hints = generateProcessingHints(timestampDate)
-  //result.tnt_credit_balance = parseFloat(regNode.tntCredit)
 
   return result
 }
@@ -186,16 +176,6 @@ async function postHashV1Async (req, res, next) {
     return next(new restify.InvalidArgumentError('invalid JSON body: bad hash submitted'))
   }
 
-  // if NIST value is present, ensure NTP time is >= latest NIST value
-  if (nistLatest) {
-    let NTPEpoch = Math.ceil(Date.now() / 1000) + 1 // round up and add 1 second forgiveness in time sync
-    if (NTPEpoch < nistLatestEpoch) {
-      // this should never occur, log and return error
-      console.error(`Bad NTP time generated in UUID: NTP ${NTPEpoch} < NIST ${nistLatestEpoch}`)
-      return next(new restify.InternalServerError('Bad NTP time'))
-    }
-  }
-
   // validate amqp channel has been established
   if (!amqpChannel) {
     return next(new restify.InternalServerError('Message could not be delivered'))
@@ -207,8 +187,7 @@ async function postHashV1Async (req, res, next) {
 
   let hashObj = {
     hash_id: responseObj.hash_id,
-    hash: responseObj.hash,
-    nist: responseObj.nist
+    hash: responseObj.hash
   }
 
   try {
@@ -223,31 +202,10 @@ async function postHashV1Async (req, res, next) {
   return next()
 }
 
-function updateNistVars (nistValue) {
-  try {
-    let nistTimestampString = nistValue.split(':')[0].toString()
-    // parse epoch as seconds or milliseconds
-    let nistTimestampInt = parseInt(nistTimestampString)
-    if (!nistTimestampInt) throw new Error('Bad NIST time encountered, skipping NTP/UUID > NIST validation')
-    // ensure final value represents seconds
-    if (nistTimestampInt > 1000000000000) nistTimestampInt = Math.floor(nistTimestampInt / 1000)
-    nistLatest = nistValue
-    nistLatestEpoch = nistTimestampInt
-  } catch (error) {
-    // the nist value being set must be bad, disable UUID / NIST validation until valid value is received
-    console.error(error.message)
-    nistLatest = null
-    nistLatestEpoch = null
-  }
-}
-
 module.exports = {
   postHashV1Async: postHashV1Async,
   generatePostHashResponse: generatePostHashResponse,
   setAMQPChannel: (chan) => { amqpChannel = chan },
-  getNistLatest: () => { return nistLatest },
-  setNistLatest: (val) => { updateNistVars(val) },
   setRedis: (redisClient) => { redis = redisClient },
-  setEnforcePrivateStakeState: (enabled) => { enforcePrivateNodeStake = (enabled === 'true') },
   setDatabase: (sqlz, regNode) => { RegisteredNode = regNode }
 }

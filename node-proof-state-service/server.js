@@ -32,9 +32,6 @@ const cachedProofState = require('./lib/models/cachedProofState.js')
 // This value is set once the connection has been established
 var amqpChannel = null
 
-// The leadership status for this instance of the proof state service
-let IS_LEADER = false
-
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
 let redis = null
@@ -335,15 +332,6 @@ function processMessage (msg) {
   }
 }
 
-async function performLeaderElection () {
-  IS_LEADER = false
-  connections.performLeaderElection(leaderElection,
-    env.PROOF_STATE_LEADER_KEY, env.CONSUL_HOST, env.CONSUL_PORT, env.CHAINPOINT_CORE_BASE_URI,
-    () => { IS_LEADER = true },
-    () => { IS_LEADER = false }
-  )
-}
-
 /**
  * Opens a storage connection
  **/
@@ -407,9 +395,7 @@ async function initResqueQueueAsync () {
 function startIntervals () {
   let intervals = [{
     function: () => {
-      if (IS_LEADER) {
-        PruneStateDataAsync()
-      }
+      PruneStateDataAsync()
     },
     ms: env.PRUNE_FREQUENCY_MINUTES * 60 * 1000
   }]
@@ -420,8 +406,6 @@ function startIntervals () {
 async function start () {
   if (env.NODE_ENV === 'test') return
   try {
-    // init consul and perform leader election
-    performLeaderElection()
     // init DB
     await openStorageConnectionAsync()
     // init Redis
