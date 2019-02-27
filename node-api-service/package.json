@@ -28,8 +28,6 @@
     "sequelize": "^4.22.6",
     "sequelize-cockroachdb": "^1.0.2",
     "tendermint": "^4.0.0",
-    "tweetnacl": "^1.0.0",
-    "tweetnacl-util": "^0.15.0",
     "url": "^0.11.0",
     "uuid": "^3.1.0",
     "uuid-time": "^1.0.0",

@@ -159,14 +159,12 @@ module.exports = (service) => {
     case 'api':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
       envDefinitions.ETH_TNT_LISTEN_ADDRS = validateETHAddressesCSV({ desc: 'The addresses used to listen for incoming TNT transfers.  If more that one, separate by commas.' })
-      envDefinitions.SIGNING_SECRET_KEY = envalid.str({ desc: 'A Base64 encoded NaCl secret signing key' })
       break
     case 'audit':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
       break
     case 'cal':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
-      envDefinitions.SIGNING_SECRET_KEY = envalid.str({ desc: 'A Base64 encoded NaCl secret signing key' })
       break
     case 'btc-mon':
       envDefinitions.INSIGHT_API_BASE_URI = envalid.url({ desc: 'The Bitcore Insight-API base URI' })
@@ -193,7 +191,6 @@ module.exports = (service) => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
       break
     case 'task-handler':
-      envDefinitions.SIGNING_SECRET_KEY = envalid.str({ desc: 'A Base64 encoded NaCl secret signing key' })
       envDefinitions.CORE_PROOF_POLLER_URL = envalid.str({ default: 'https://us-east1-chainpoint-services.cloudfunctions.net/chainpoint-monitor-coreproof-poller', desc: 'Endpoint to core proof poller that is part of Chainpoint-monitor service' })
       break
     case 'tnt-reward':

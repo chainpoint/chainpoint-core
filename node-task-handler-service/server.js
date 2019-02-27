@@ -41,16 +41,6 @@ const MAX_TASK_PROCESSORS_STATE_PRUNING = 5
 // and adjust defaultMaxListeners to allow for at least that amount
 events.EventEmitter.defaultMaxListeners = events.EventEmitter.defaultMaxListeners + MAX_TASK_PROCESSORS_PRIMARY + MAX_TASK_PROCESSORS_STATE_PRUNING
 
-// TweetNaCl.js
-// see: http://ed25519.cr.yp.to
-// see: https://github.com/dchest/tweetnacl-js#signatures
-const nacl = require('tweetnacl')
-nacl.util = require('tweetnacl-util')
-
-// Pass SIGNING_SECRET_KEY as Base64 encoded bytes
-const signingSecretKeyBytes = nacl.util.decodeBase64(env.SIGNING_SECRET_KEY)
-const signingKeypair = nacl.sign.keyPair.fromSecretKey(signingSecretKeyBytes)
-
 // The age of a running job, in milliseconds, for it to be considered stuck/timed out
 // This is necessary to allow resque to determine what is a valid running job, and what
 // has been 'stuck' due to service crash/restart. Jobs found in the state are added to the fail queue.
@@ -743,14 +733,7 @@ function buildNodeDataPackage (nodeData, activeNodeCount) {
   let dataHashHex = objectHash(result.data)
   let signingPubKeyHashHex = crypto.createHash('sha256').update(signingKeypair.publicKey).digest('hex')
 
-  result.sig = [signingPubKeyHashHex.slice(0, 12), calcSigB64(dataHashHex)].join(':')
-
   return result
-}
-
-// Calculate a base64 encoded signature over the provided hex string
-function calcSigB64 (hexData) {
-  return nacl.util.encodeBase64(nacl.sign.detached(nacl.util.decodeUTF8(hexData), signingKeypair.secretKey))
 }
 
 async function getNodeConfigObjectAsync (publicUri, nodeDataPackage) {

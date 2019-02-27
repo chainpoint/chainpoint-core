@@ -143,8 +143,7 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ANCHOR_BTC: ${ANCHOR_BTC}
       ANCHOR_ETH: ${ANCHOR_ETH}
-      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}    
-      SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY}
+      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}  
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
 
@@ -166,7 +165,6 @@ services:
       ANCHOR_BTC: ${ANCHOR_BTC}
       ANCHOR_ETH: ${ANCHOR_ETH}
       ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}   
-      SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY} 
       VIRTUAL_HOST: api.local
 
 
@@ -356,7 +354,6 @@ services:
       - chainpoint
     environment:
       NODE_ENV: development
-      SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY}
       DEBUG: "task-handler:*"
       DEBUG_HIDE_DATE: "false"
       # DEBUG_COLORS: "true"

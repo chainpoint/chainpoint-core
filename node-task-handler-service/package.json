@@ -25,8 +25,6 @@
     "semver": "^5.5.0",
     "sequelize": "^4.35.2",
     "sequelize-cockroachdb": "https://github.com/cockroachdb/sequelize-cockroachdb.git#f6b15cfaf23c17882e4b813a4dfc9758a77aa5a9",
-    "tweetnacl": "^1.0.0",
-    "tweetnacl-util": "^0.15.0",
     "uuid-time": "^1.0.0"
   }
 }
