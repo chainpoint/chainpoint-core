@@ -26,6 +26,7 @@ var (
 	ProtocolVersion version.Protocol = 0x1
 )
 
+//loadState loads the State struct from a database instance
 func loadState(db dbm.DB) types.State {
 	stateBytes := db.Get(stateKey)
 	var state types.State
@@ -39,6 +40,7 @@ func loadState(db dbm.DB) types.State {
 	return state
 }
 
+//loadState saves the State struct to disk
 func saveState(state types.State) {
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
@@ -61,7 +63,9 @@ type AnchorApplication struct {
 	anchorInterval int64
 }
 
+//NewAnchorApplication is ABCI app constructor
 func NewAnchorApplication(rabbitmqUri string, tendermintRPC types.TendermintURI, doAnchor bool, anchorInterval int64) *AnchorApplication {
+	// Load state from disk
 	name := "anchor"
 	db, err := dbm.NewGoLevelDB(name, "/tendermint/data")
 	if err != nil {
@@ -132,6 +136,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
 
+//Commit is called at the end of every block to finalize and save chain state
 func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Anchor every anchorInterval of blocks

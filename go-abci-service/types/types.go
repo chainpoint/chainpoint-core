@@ -105,7 +105,7 @@ type ProofData struct {
 type Proof struct {
 	Left  string `json:"l,omitempty"`
 	Right string `json:"r,omitempty"`
-	Op    string `json: "op"`
+	Op    string `json:"op,omitempty"`
 }
 
 // NodeStatus rpc endpoint results. Custom struct is needed for remote_ip encoding workaround

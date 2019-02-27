@@ -22,7 +22,10 @@ func GenerateCalendarTree(aggs []aggregator.Aggregation) types.CalAgg {
 	var treeDataObj types.CalAgg
 	var tree merkletools.MerkleTree
 	for _, agg := range aggs {
-		aggRootBytes := []byte(agg.AggRoot)
+		aggRootBytes, err := hex.DecodeString(agg.AggRoot)
+		if util.LogError(err) != nil {
+			continue
+		}
 		tree.AddLeaf(aggRootBytes)
 	}
 	tree.MakeTree()
@@ -32,13 +35,14 @@ func GenerateCalendarTree(aggs []aggregator.Aggregation) types.CalAgg {
 		var proofData types.ProofData
 		proofData.AggId = agg.AggId
 		proof := tree.GetProof(i)
-		proofData.Proof = make([]types.Proof, len(proof))
-		for j, p := range proof {
+		proofData.Proof = make([]types.Proof, 0)
+		for _, p := range proof {
 			if p.Left {
-				proofData.Proof[j] = types.Proof{Left: string(p.Value), Op: "sha-256"}
+				proofData.Proof = append(proofData.Proof, types.Proof{Left: hex.EncodeToString(p.Value)})
 			} else {
-				proofData.Proof[j] = types.Proof{Right: string(p.Value), Op: "sha-256"}
+				proofData.Proof = append(proofData.Proof, types.Proof{Right: hex.EncodeToString(p.Value)})
 			}
+			proofData.Proof = append(proofData.Proof, types.Proof{Op: "sha-256"})
 		}
 		treeDataObj.ProofData[i] = proofData
 	}
@@ -49,7 +53,7 @@ func GenerateCalendarTree(aggs []aggregator.Aggregation) types.CalAgg {
 func QueueCalStateMessage(rabbitmqConnectUri string, tx types.TxTm, treeDataObj types.CalAgg) {
 	var calState types.CalState
 	base_uri := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "tendermint.chainpoint.org")
-	uri := fmt.Sprintf("%s/calendar/%x/data", base_uri, tx.Hash)
+	uri := fmt.Sprintf("https://%s/calendar/%x/data", base_uri, tx.Hash)
 	anchor := types.CalAnchor{
 		AnchorId: hex.EncodeToString(tx.Hash),
 		Uris:     []string{uri},
@@ -75,7 +79,11 @@ func AggregateAnchorTx(txLeaves []core_types.ResultTx) types.BtcAgg {
 			continue
 		}
 		if string(decodedTx.TxType) == "CAL" {
-			calBytes = append(calBytes, []byte(decodedTx.Data))
+			decodedBytes, err := hex.DecodeString(decodedTx.Data)
+			if util.LogError(err) != nil {
+				continue
+			}
+			calBytes = append(calBytes, decodedBytes)
 			calLeaves = append(calLeaves, t)
 		}
 	}
@@ -91,13 +99,14 @@ func AggregateAnchorTx(txLeaves []core_types.ResultTx) types.BtcAgg {
 		var proofDataItem types.BtcProofData
 		proofDataItem.CalId = hex.EncodeToString(tx.Hash)
 		proofs := tree.GetProof(i)
-		proofDataItem.Proof = make([]types.Proof, len(proofs))
-		for j, p := range proofs {
+		proofDataItem.Proof = make([]types.Proof, 0)
+		for _, p := range proofs {
 			if p.Left {
-				proofDataItem.Proof[j] = types.Proof{Left: string(p.Value), Op: "sha-256"}
+				proofDataItem.Proof = append(proofDataItem.Proof, types.Proof{Left: hex.EncodeToString(p.Value)})
 			} else {
-				proofDataItem.Proof[j] = types.Proof{Right: string(p.Value), Op: "sha-256"}
+				proofDataItem.Proof = append(proofDataItem.Proof, types.Proof{Right: hex.EncodeToString(p.Value)})
 			}
+			proofDataItem.Proof = append(proofDataItem.Proof, types.Proof{Op: "sha-256"})
 		}
 		treeData.ProofData[i] = proofDataItem
 	}

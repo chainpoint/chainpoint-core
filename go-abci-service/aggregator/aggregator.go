@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,7 +42,7 @@ type ProofData struct {
 type Proof struct {
 	Left  string `json:"l,omitempty"`
 	Right string `json:"r,omitempty"`
-	Op    string `json: "op"`
+	Op    string `json:"op,omitempty"`
 }
 
 const msgType = "aggregator"
@@ -57,7 +58,7 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 	if util.LogError(err) != nil {
 		aggThreads = 4
 	}
-	sleep := 60 / aggThreads
+	sleep := int(60 / aggThreads)
 
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggStructSlice := make([]Aggregation, 0)
@@ -91,7 +92,7 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 						time.Sleep(1 * time.Second)
 						break //reconnect
 					case hash := <-session.Msgs:
-						fmt.Println(string(hash.Body))
+						//fmt.Println(string(hash.Body))
 						msgStructSlice = append(msgStructSlice, hash)
 						//create new agg roots under heavy load
 						if len(msgStructSlice) > 200 {
@@ -110,6 +111,7 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 				aggStructSlice = append(aggStructSlice, agg)
 				mux.Unlock()
 			}
+			fmt.Println("Ending aggregation")
 		}(i)
 	}
 
@@ -172,13 +174,18 @@ func ProcessAggregation(rabbitmqConnectUri string, msgStructSlice []amqp.Deliver
 			proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("nistv2:%s", unPackedHash.Nist))}}, proofs...)
 		}
 		proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("core_id:%s", unPackedHash.HashID))}}, proofs...)
-		proofData.Proof = make([]Proof, len(proofs))
-		for j, p := range proofs {
+		proofData.Proof = make([]Proof, 0)
+		for _, p := range proofs {
 			if p.Left {
-				proofData.Proof[j] = Proof{Left: string(p.Value), Op: "sha-256"}
+				if strings.Contains(string(p.Value), "nistv2") || strings.Contains(string(p.Value), "core_id") {
+					proofData.Proof = append(proofData.Proof, Proof{Left: string(p.Value)})
+				} else {
+					proofData.Proof = append(proofData.Proof, Proof{Left: hex.EncodeToString(p.Value)})
+				}
 			} else {
-				proofData.Proof[j] = Proof{Right: string(p.Value), Op: "sha-256"}
+				proofData.Proof = append(proofData.Proof, Proof{Right: hex.EncodeToString(p.Value)})
 			}
+			proofData.Proof = append(proofData.Proof, Proof{Op: "sha-256"})
 		}
 		proofSlice = append(proofSlice, proofData)
 	}
