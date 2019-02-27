@@ -3,13 +3,6 @@ steps:
   args: [ 'build', '-f', 'docker/Dockerfile.node-base', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:latest', '.' ]
   id: 'node-base'
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.aggregator', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-aggregator-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-aggregator-service:latest', '.' ]
-  waitFor: ['node-base']
-  id: 'node-aggregator'
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.aggregator-test', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-aggregator-service-test:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-aggregator-service-test:latest', '.' ]
-  waitFor: ['node-aggregator']
-- name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.api', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service:latest', '.' ]
   waitFor: ['node-base']
   id: 'node-api'
@@ -17,25 +10,10 @@ steps:
   args: [ 'build', '-f', 'docker/Dockerfile.api-test', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service-test:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service-test:latest', '.' ]
   waitFor: ['node-api']
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.audit-producer', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-audit-producer-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-audit-producer-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.btc-mon', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-mon-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-mon-service:latest', '.' ]
   waitFor: ['node-base']
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.btc-tx', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-tx-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-tx-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.calendar', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-calendar-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-calendar-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.eth-contracts', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-contracts:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-contracts:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.eth-tnt-listener', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-tnt-listener-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-tnt-listener-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.eth-tnt-tx', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-tnt-tx-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-tnt-tx-service:latest', '.' ]
   waitFor: ['node-base']
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.nist-beacon', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-nist-beacon-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-nist-beacon-service:latest', '.' ]
@@ -47,50 +25,26 @@ steps:
   args: [ 'build', '-f', 'docker/Dockerfile.proof-state', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:latest', '.' ]
   waitFor: ['node-base']
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.task-accumulator', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-accumulator-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-accumulator-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.task-handler', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.tnt-reward', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-tnt-reward-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-tnt-reward-service:latest', '.' ]
   waitFor: ['node-base']
 images:
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-aggregator-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-aggregator-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-aggregator-service-test:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-aggregator-service-test:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service-test:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service-test:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-audit-producer-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-audit-producer-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-mon-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-mon-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-tx-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-tx-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-calendar-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-calendar-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-contracts:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-contracts:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-tnt-listener-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-tnt-listener-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-tnt-tx-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-eth-tnt-tx-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-nist-beacon-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-nist-beacon-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-gen-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-gen-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-accumulator-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-accumulator-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-tnt-reward-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-tnt-reward-service:$COMMIT_SHA'
 options:
  machineType: 'N1_HIGHCPU_8'
