@@ -21,7 +21,6 @@ const amqp = require('amqplib')
 const restify = require('restify')
 const corsMiddleware = require('restify-cors-middleware')
 const hashes = require('./lib/endpoints/hashes.js')
-const nodes = require('./lib/endpoints/nodes.js')
 const calendar = require('./lib/endpoints/calendar.js')
 const cores = require('./lib/endpoints/cores.js')
 const config = require('./lib/endpoints/config.js')
@@ -101,14 +100,6 @@ server.get({ path: '/peers', version: '1.0.0' }, cores.getCoresRandomAsync)
 // get status
 server.get({ path: '/status', version: '1.0.0' }, cores.getCoreStatusAsync)
 
-// get random subset of nodes list
-server.get({ path: '/nodes/random', version: '1.0.0' }, nodes.getNodesRandomV1Async)
-// get nodes blacklist
-server.get({ path: '/nodes/blacklist', version: '1.0.0' }, nodes.getNodesBlacklistV1Async)
-// register a new node
-server.post({ path: '/nodes', version: '1.0.0' }, nodes.postNodeV1Async)
-// update an existing node
-server.put({ path: '/nodes/:tnt_addr', version: '1.0.0' }, nodes.putNodeV1Async)
 // get configuration information for this stack
 server.get({ path: '/config', version: '1.0.0' }, config.getConfigInfoV1Async)
 // get heartbeat
@@ -165,8 +156,5 @@ module.exports = {
     hashes.setAMQPChannel(chan)
   },
   server: server,
-  config: config,
-  overrideGetTNTGrainsBalanceForAddressAsync: func => {
-    nodes.overrideGetTNTGrainsBalanceForAddressAsync(func)
-  }
+  config: config
 }
