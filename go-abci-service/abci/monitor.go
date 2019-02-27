@@ -1,7 +1,9 @@
 package abci
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -60,8 +62,34 @@ func processMessage(rabbitmqUri string, rpcUri types.TendermintURI, msg amqp.Del
 		var btcMonObj types.BtcMonMsg
 		json.Unmarshal(msg.Body, &btcMonObj)
 		heightAndRoot := string(btcMonObj.BtcHeadHeight) + ":" + btcMonObj.BtcHeadRoot
-		_, err := BroadcastTx(rpcUri, "BTC-C", heightAndRoot, 2, time.Now().Unix())
+		result, err := BroadcastTx(rpcUri, "BTC-C", heightAndRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
+			return err
+		}
+		var btccStateObj types.BtccStateObj
+		btccStateObj.BtcId = btcMonObj.BtcId
+		btccStateObj.BtcHeadHeight = btcMonObj.BtcHeadHeight
+		btccStateObj.BtcState.Ops = make([]types.Proof, 0)
+		for _, p := range btcMonObj.Path {
+			if p.Left != "" {
+				btccStateObj.BtcState.Ops = append(btccStateObj.BtcState.Ops, types.Proof{Left: string(p.Left)})
+			}
+			if p.Right != "" {
+				btccStateObj.BtcState.Ops = append(btccStateObj.BtcState.Ops, types.Proof{Right: string(p.Right)})
+			}
+			btccStateObj.BtcState.Ops = append(btccStateObj.BtcState.Ops, types.Proof{Op: "sha-256-x2"})
+		}
+		base_uri := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "tendermint.chainpoint.org")
+		uri := fmt.Sprintf("https://%s/calendar/%x/data", base_uri, result.Hash)
+		btccStateObj.BtcState.Anchor = types.AnchorObj{
+			AnchorId: hex.EncodeToString(result.Hash),
+			Uris:     []string{uri},
+		}
+		stateObjBytes, err := json.Marshal(btccStateObj)
+
+		err = rabbitmq.Publish(rabbitmqUri, "work.proofstate", "btcmon", stateObjBytes)
+		if err != nil {
+			rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 			return err
 		}
 		msg.Ack(false)

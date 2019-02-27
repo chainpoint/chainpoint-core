@@ -54,7 +54,7 @@ func QueueCalStateMessage(rabbitmqConnectUri string, tx types.TxTm, treeDataObj 
 	var calState types.CalState
 	base_uri := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "tendermint.chainpoint.org")
 	uri := fmt.Sprintf("https://%s/calendar/%x/data", base_uri, tx.Hash)
-	anchor := types.CalAnchor{
+	anchor := types.AnchorObj{
 		AnchorId: hex.EncodeToString(tx.Hash),
 		Uris:     []string{uri},
 	}

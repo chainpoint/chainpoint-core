@@ -37,7 +37,7 @@ type Tx struct {
 	Time    int64  `json: "time"`
 }
 
-// TxTm holds result of submitting a CAL transaction (needed in order to get Hash
+// TxTm holds result of submitting a CAL transaction (needed in order to get Hash)
 type TxTm struct {
 	Hash []byte
 	Data []byte
@@ -71,6 +71,17 @@ type BtcTxOpsState struct {
 	Ops []Proof `json:"ops"`
 }
 
+type BtccStateObj struct {
+	BtcId         string       `json:"btctx_id"`
+	BtcHeadHeight int64        `json:"btchead_height"`
+	BtcState      BtccOpsState `json:"btchead_state"`
+}
+
+type BtccOpsState struct {
+	Ops    []Proof   `json:"ops"`
+	Anchor AnchorObj `json:"anchor"`
+}
+
 type TxId struct {
 	TxID string `json:"tx_id"`
 }
@@ -82,17 +93,18 @@ type CalAgg struct {
 
 type CalState struct {
 	CalId     string      `json:"cal_id"`
-	Anchor    CalAnchor   `json:"anchor"`
+	Anchor    AnchorObj   `json:"anchor"`
 	ProofData []ProofData `json:"proofData"`
 }
 
 type BtcMonMsg struct {
-	BtcId         string `json:"btctx_id"`
-	BtcHeadHeight int64  `json:"btchead_height"`
-	BtcHeadRoot   string `json:"btchead_root"`
+	BtcId         string    `json:"btctx_id"`
+	BtcHeadHeight int64     `json:"btchead_height"`
+	BtcHeadRoot   string    `json:"btchead_root"`
+	Path          []JSProof `json:"path"`
 }
 
-type CalAnchor struct {
+type AnchorObj struct {
 	AnchorId string   `json:"anchor_id"`
 	Uris     []string `json:"uris"`
 }
@@ -106,6 +118,11 @@ type Proof struct {
 	Left  string `json:"l,omitempty"`
 	Right string `json:"r,omitempty"`
 	Op    string `json:"op,omitempty"`
+}
+
+type JSProof struct {
+	Left  string `json:"left,omitempty"`
+	Right string `json:"right,omitempty"`
 }
 
 // NodeStatus rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
