@@ -31,18 +31,11 @@ const env = require('../parse-env.js')('api')
 let RegisteredNode
 let sequelize
 
-// The redis connection used for all redis communication
-// This value is set once the connection has been established
-let redis = null
-
 // The number of results to return when responding to a random nodes query
 const RANDOM_NODES_RESULT_LIMIT = 25
 
 // The minimium TNT grains required to operate a Node
 const minGrainsBalanceNeeded = env.MIN_TNT_GRAINS_BALANCE_FOR_REWARD
-
-// The lifespan of balance pass redis entries
-const BALANCE_PASS_EXPIRE_MINUTES = 60 * 24 // 1 day
 
 // validate eth address is well formed
 let isEthereumAddr = (address) => {
@@ -192,20 +185,6 @@ async function postNodeV1Async (req, res, next) {
     if (matches > 0) return next(new restify.ConflictError('a Node has already been registered from this IP'))
   }
 
-  // check to see if the Node has the min balance required for Node operation
-  try {
-    let nodeBalance = await getTNTGrainsBalanceForAddressAsync(lowerCasedTntAddrParam)
-    if (nodeBalance < minGrainsBalanceNeeded) {
-      let minTNTBalanceNeeded = tntUnits.grainsToTNT(minGrainsBalanceNeeded)
-      return next(new restify.ForbiddenError(`TNT address ${lowerCasedTntAddrParam} does not have the minimum balance of ${minTNTBalanceNeeded} TNT for Node operation`))
-    }
-    // create a balance check entry for this tnt address
-    await redis.set(`${env.BALANCE_CHECK_KEY_PREFIX}:${lowerCasedTntAddrParam}`, nodeBalance, 'EX', BALANCE_PASS_EXPIRE_MINUTES * 60)
-  } catch (error) {
-    console.error(`Unable to check address balance: ${error.message}`)
-    return next(new restify.InternalServerError(`Unable to check address balance`))
-  }
-
   let randHMACKey = crypto.randomBytes(32).toString('hex')
 
   let newNode
@@ -352,20 +331,6 @@ async function putNodeV1Async (req, res, next) {
     regNode.publicUri = lowerCasedPublicUri
   }
 
-  // check to see if the Node has the min balance required for Node operation
-  try {
-    let nodeBalance = await getTNTGrainsBalanceForAddressAsync(lowerCasedTntAddrParam)
-    if (nodeBalance < minGrainsBalanceNeeded) {
-      let minTNTBalanceNeeded = tntUnits.grainsToTNT(minGrainsBalanceNeeded)
-      return next(new restify.ForbiddenError(`TNT address ${lowerCasedTntAddrParam} does not have the minimum balance of ${minTNTBalanceNeeded} TNT for Node operation`))
-    }
-    // create a balance check entry for this tnt address
-    await redis.set(`${env.BALANCE_CHECK_KEY_PREFIX}:${lowerCasedTntAddrParam}`, nodeBalance, 'EX', BALANCE_PASS_EXPIRE_MINUTES * 60)
-  } catch (error) {
-    console.error(`Unable to check address balance: ${error.message}`)
-    return next(new restify.InternalServerError(`Unable to check address balance`))
-  }
-
   try {
     await regNode.save()
   } catch (error) {
@@ -435,6 +400,5 @@ module.exports = {
   postNodeV1Async: postNodeV1Async,
   putNodeV1Async: putNodeV1Async,
   overrideGetTNTGrainsBalanceForAddressAsync: (func) => { getTNTGrainsBalanceForAddressAsync = func },
-  setRedis: (redisClient) => { redis = redisClient },
   setDatabase: (sqlz, regNode) => { sequelize = sqlz; RegisteredNode = regNode }
 }

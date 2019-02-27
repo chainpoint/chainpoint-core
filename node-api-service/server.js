@@ -30,10 +30,6 @@ const registeredNode = require('./lib/models/RegisteredNode.js')
 const calendarBlock = require('./lib/models/CalendarBlock.js')
 const connections = require('./lib/connections.js')
 
-// The redis connection used for all redis communication
-// This value is set once the connection has been established
-let redis = null
-
 const bunyan = require('bunyan')
 
 var logger = bunyan.createLogger({
@@ -154,33 +150,10 @@ async function openRMQConnectionAsync (connectURI) {
   )
 }
 
-/**
- * Opens a Redis connection
- *
- * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
- */
-function openRedisConnection (redisURIs) {
-  connections.openRedisConnection(redisURIs,
-    (newRedis) => {
-      redis = newRedis
-      hashes.setRedis(redis)
-      config.setRedis(redis)
-      nodes.setRedis(redis)
-    }, () => {
-      redis = null
-      hashes.setRedis(null)
-      config.setRedis(null)
-      nodes.setRedis(null)
-      setTimeout(() => { openRedisConnection(redisURIs) }, 5000)
-    })
-}
-
 // process all steps need to start the application
 async function start () {
   if (env.NODE_ENV === 'test') return
   try {
-    // init Redis
-    openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
     await openStorageConnectionAsync()
     // init RabbitMQ
@@ -199,14 +172,9 @@ start()
 
 // export these functions for testing purposes
 module.exports = {
-  setRedis: (redisClient) => {
-    redis = redisClient
-    hashes.setRedis(redis)
-    nodes.setRedis(redis)
-  },
   setAMQPChannel: (chan) => {
     hashes.setAMQPChannel(chan)
-  }
+  },
   server: server,
   config: config,
   overrideGetTNTGrainsBalanceForAddressAsync: (func) => { nodes.overrideGetTNTGrainsBalanceForAddressAsync(func) }

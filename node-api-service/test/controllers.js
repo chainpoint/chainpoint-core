@@ -18,13 +18,6 @@ const app = require('../server')
 const server = app.server
 const hashes = require('../lib/endpoints/hashes')
 
-app.setRedis({
-  hgetall: (key) => { return null },
-  hmset: (key, value) => { return null },
-  expire: (key, ms) => { return null },
-  set: (key) => { return null }
-})
-
 describe('Home Controller', () => {
   describe('GET /', () => {
     it('should return teapot error', (done) => {

@@ -24,12 +24,6 @@ const tntUnits = require('../tntUnits.js')
 
 let RegisteredNode
 
-// Disable temporarily
-// const TNT_CREDIT_COST_POST_HASH = 1
-
-// The redis connection used for all redis communication
-// This value is set once the connection has been established
-let redis = null
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -206,6 +200,5 @@ module.exports = {
   postHashV1Async: postHashV1Async,
   generatePostHashResponse: generatePostHashResponse,
   setAMQPChannel: (chan) => { amqpChannel = chan },
-  setRedis: (redisClient) => { redis = redisClient },
   setDatabase: (sqlz, regNode) => { RegisteredNode = regNode }
 }
