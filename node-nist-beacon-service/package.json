@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "envalid": "^3.1.1",
-    "nist-randomness-beacon": "^2.0.4",
-    "zeromq": "^5.1.0"
+    "nist-randomness-beacon": "^2.0.4"
   }
 }

@@ -149,12 +149,6 @@ let envDefinitions = {
   RMQ_PREFETCH_COUNT_TASK_ACC: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
   RMQ_WORK_IN_TASK_ACC_QUEUE: envalid.str({ default: 'work.taskacc', desc: 'The queue name for message consumption originating from the other services' }),
 
-  // ZeroMQ socket settings
-  NIST_REQ_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://nist-beacon:3001', desc: 'The nist-beacon client Request ZeroMQ socket URI' }),
-  NIST_RES_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://0.0.0.0:3001', desc: 'The nist-beacon server Response ZeroMQ socket URI' }),
-  NIST_SUB_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://nist-beacon:3002', desc: 'The nist-beacon client Sub ZeroMQ socket URI' }),
-  NIST_PUB_ZEROMQ_SOCKET_URI: envalid.url({ default: 'tcp://0.0.0.0:3002', desc: 'The nist-beacon server Pub ZeroMQ socket URI' }),
-
   // Tendermint RPC URI
   TENDERMINT_URI: envalid.str({ default: 'http://tendermint:26657', desc: 'Tendermint RPC URI' }),
 }

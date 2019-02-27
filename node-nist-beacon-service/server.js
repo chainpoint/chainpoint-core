@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 Tierion
+/* Copyright (C) 2019 Tierion
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -17,7 +17,6 @@
 // load all environment variables into env object
 const env = require('./lib/parse-env.js')('nist')
 
-const zeromq = require('zeromq')
 const BEACON = require('nist-randomness-beacon')
 const connections = require('./lib/connections.js')
 const utils = require(`./lib/utils.js`)
@@ -40,7 +39,7 @@ async function getNistLatestAsync () {
     if (timeAndSeed !== nistLatest) {
       nistLatest = timeAndSeed
       console.log(`Broadcasting new NIST value : ${nistLatest}`)
-      publishSocket.send(['nist', nistLatest])
+      // TODO: Deliver new NIST value message
     }
   } catch (error) {
     console.error(`NIST beacon error : ${error.message}`)
@@ -62,19 +61,6 @@ function startIntervals () {
   connections.startIntervals(intervals)
 }
 
-function initNISTSockets () {
-  responseSocket = zeromq.socket(`rep`) // init response socket to handle direct NIST requests from other services on startup
-  publishSocket = zeromq.socket(`pub`) // init publish socket to handle broadcasting new NIST values
-
-  responseSocket.bindSync(env.NIST_RES_ZEROMQ_SOCKET_URI)
-  publishSocket.bindSync(env.NIST_PUB_ZEROMQ_SOCKET_URI)
-
-  responseSocket.on(`message`, function (msg) {
-    console.log(`Received NIST value request : ${nistLatest}`)
-    responseSocket.send(nistLatest)
-  })
-}
-
 async function start () {
   if (env.NODE_ENV === 'test') return
   try {
@@ -88,8 +74,6 @@ async function start () {
       currentNIST = nistLatest
     }
     console.log(`Initial NIST value : ${nistLatest}`)
-    // init ZeroMQ sockets
-    initNISTSockets()
     console.log('startup completed successfully')
   } catch (error) {
     console.error(`An error has occurred on startup: ${error.message}`)

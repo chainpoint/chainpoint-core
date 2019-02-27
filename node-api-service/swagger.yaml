@@ -268,9 +268,6 @@ definitions:
       hash: 
         type: string
         example: "1957db7fe23e4be1740ddeb941ddda7ae0a6b782e536a9e00b5aa82db1e84546"  
-      nist: 
-        type: string
-        example: "1400585240:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C"          
       submitted_at:
         type: string
         format: "date-time"

@@ -241,36 +241,11 @@ describe('Hashes Controller', () => {
         })
     })
 
-    it('should return proper error with NTP < NIST value', (done) => {
-      app.setAMQPChannel({
-        sendToQueue: function () { }
-      })
-      app.setNistLatest('3002759084:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C')
-      request(server)
-        .post('/hashes')
-        .set('Authorization', 'bearer ababab121212')
-        .set('tnt-address', '0x1234567890123456789012345678901234567890')
-        .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12' })
-        .expect('Content-type', /json/)
-        .expect(500)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body).to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InternalServerError')
-          expect(res.body).to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('Bad NTP time')
-          done()
-        })
-    })
-
     it('should return proper error with unknown tnt-address', (done) => {
       app.setAMQPChannel({
         sendToQueue: function () { }
       })
 
-      app.setNistLatest('1400585240:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C')
       app.setHashesRegisteredNode({
         findOne: (params) => {
           return null
@@ -306,7 +281,6 @@ describe('Hashes Controller', () => {
       let hash = crypto.createHmac('sha256', hmacKey)
       let hmac = hash.update('bad').digest('hex')
 
-      app.setNistLatest('1400585240:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C')
       app.setHashesRegisteredNode({
         findOne: (params) => {
           return {
@@ -347,7 +321,6 @@ describe('Hashes Controller', () => {
     //   let hash = crypto.createHmac('sha256', hmacKey)
     //   let hmac = hash.update(tntAddr).digest('hex')
 
-    //   app.setNistLatest('1400585240:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C')
     //   app.setHashesRegisteredNode({
     //     findOne: (params) => {
     //       return {
@@ -387,7 +360,6 @@ describe('Hashes Controller', () => {
       let hash = crypto.createHmac('sha256', hmacKey)
       let hmac = hash.update(tntAddr).digest('hex')
 
-      app.setNistLatest('1400585240:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C')
       app.setHashesRegisteredNode({
         findOne: (params) => {
           return {
@@ -427,7 +399,6 @@ describe('Hashes Controller', () => {
       let hash = crypto.createHmac('sha256', hmacKey)
       let hmac = hash.update(tntAddr).digest('hex')
 
-      app.setNistLatest('1400585240:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C')
       app.setHashesRegisteredNode({
         findOne: (params) => {
           return {
@@ -448,8 +419,8 @@ describe('Hashes Controller', () => {
         .end((err, res) => {
           expect(err).to.equal(null)
           expect(res.body).to.have.property('hash_id')
-          // Knowing the original hash, the timestamp from the UUID, the
-          // latest available NIST data, and the personalization bytes,
+          // Knowing the original hash, the timestamp from the UUID,
+          // and the personalization bytes,
           // you should be able to calculate whether the UUID 'Node ID'
           // data segment is the 5 byte BLAKE2s hash of the timestamp
           // embedded in the UUID and the hash submitted to get this UUID.
@@ -461,9 +432,7 @@ describe('Hashes Controller', () => {
             t.toString(),
             t.toString().length,
             res.body.hash,
-            res.body.hash.length,
-            res.body.nist,
-            res.body.nist.length
+            res.body.hash.length
           ].join(':')
 
           h.update(Buffer.from(hashStr))
@@ -485,7 +454,6 @@ describe('Hashes Controller', () => {
       let hash = crypto.createHmac('sha256', hmacKey)
       let hmac = hash.update(tntAddr).digest('hex')
 
-      app.setNistLatest('1400585240:8E00C0AF2B68E33CC453BF45A1689A6804700C083478FEB34E4694422999B6F745C2F837D7BA983F9D7BA52F7CC62965B8E1B7384CD8177003B5D3A0D099D93C')
       app.setHashesRegisteredNode({
         findOne: (params) => {
           return {
@@ -508,7 +476,6 @@ describe('Hashes Controller', () => {
           expect(res).to.have.property('body')
           expect(res.body).to.have.property('hash_id')
           expect(res.body).to.have.property('hash').and.to.equal('ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12')
-          expect(res.body).to.have.property('nist')
           expect(res.body).to.have.property('submitted_at')
           expect(res.body).to.have.property('processing_hints')
           expect(res.body.processing_hints).to.have.property('cal').and.to.be.a('string')

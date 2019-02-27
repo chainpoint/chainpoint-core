@@ -28,7 +28,6 @@ const config = require('./lib/endpoints/config.js')
 const root = require('./lib/endpoints/root.js')
 const registeredNode = require('./lib/models/RegisteredNode.js')
 const calendarBlock = require('./lib/models/CalendarBlock.js')
-const zeromq = require('zeromq')
 const connections = require('./lib/connections.js')
 
 // The redis connection used for all redis communication
@@ -156,38 +155,6 @@ async function openRMQConnectionAsync (connectURI) {
 }
 
 /**
- * Initializes ZeroMQ request and subscribe sockets
- * Requests the latest NIST value immediately
- * Receives NIST value updates when broadcasted
- *
- */
-function initNISTSockets () {
-  const requestSocket = zeromq.socket(`req`)
-  const subscribeSocket = zeromq.socket(`sub`)
-
-  requestSocket.connect(env.NIST_REQ_ZEROMQ_SOCKET_URI)
-  subscribeSocket.connect(env.NIST_SUB_ZEROMQ_SOCKET_URI)
-
-  requestSocket.on(`message`, function (msg) {
-    console.log(`Received initial NIST value : ${msg}`)
-    hashes.setNistLatest(String(msg || ''))
-  })
-
-  console.log(`Requesting initial NIST value`)
-  requestSocket.send('get nist')
-
-  subscribeSocket.subscribe(`nist`)
-
-  subscribeSocket.on(`message`, function (topic, msg) {
-    let newValue = String(msg || '')
-    if (msg && hashes.getNistLatest() !== newValue) {
-      console.log(`Received new NIST value : ${msg}`)
-      hashes.setNistLatest(newValue)
-    }
-  })
-}
-
-/**
  * Opens a Redis connection
  *
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
@@ -212,8 +179,6 @@ function openRedisConnection (redisURIs) {
 async function start () {
   if (env.NODE_ENV === 'test') return
   try {
-    // init ZeroMQ sockets
-    initNISTSockets()
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
@@ -241,8 +206,7 @@ module.exports = {
   },
   setAMQPChannel: (chan) => {
     hashes.setAMQPChannel(chan)
-  },
-  setNistLatest: (val) => { hashes.setNistLatest(val) },
+  }
   server: server,
   config: config,
   overrideGetTNTGrainsBalanceForAddressAsync: (func) => { nodes.overrideGetTNTGrainsBalanceForAddressAsync(func) }
