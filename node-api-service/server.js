@@ -99,11 +99,8 @@ server.get({ path: '/proofs', version: '1.0.0' }, calendar.getCoreProofsAsync)
 server.get({ path: '/peers', version: '1.0.0' }, cores.getCoresRandomAsync)
 // get status
 server.get({ path: '/status', version: '1.0.0' }, cores.getCoreStatusAsync)
-
 // get configuration information for this stack
 server.get({ path: '/config', version: '1.0.0' }, config.getConfigInfoV1Async)
-// get heartbeat
-server.get({ path: '/heartbeat', version: '1.0.0' }, root.getHeartbeatV1)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 

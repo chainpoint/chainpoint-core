@@ -15,7 +15,6 @@
  */
 
 const restify = require('restify')
-const utils = require('../utils.js')
 
 /**
  * GET / handler
@@ -27,19 +26,6 @@ function getV1(req, res, next) {
   return next(new restify.ImATeapotError('This is an API endpoint. Please consult https://chainpoint.org'))
 }
 
-/**
- * GET /heartbeat handler
- *
- * Ops heartbeat handler with timestamp.
- *
- */
-function getHeartbeatV1(req, res, next) {
-  res.noCache()
-  res.send({ code: 'heartbeat', timestamp: utils.formatDateISO8601NoMs(new Date()) })
-  return next()
-}
-
 module.exports = {
-  getV1: getV1,
-  getHeartbeatV1: getHeartbeatV1
+  getV1: getV1
 }
