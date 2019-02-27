@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
@@ -58,4 +60,20 @@ func DecodeTx(incoming []byte) (types.Tx, error) {
 func EncodeTx(outgoing types.Tx) string {
 	txJSON, _ := json.Marshal(outgoing)
 	return base64.StdEncoding.EncodeToString(txJSON)
+}
+
+// waitTimeout waits for the waitgroup for the specified max timeout.
+// Returns true if waiting timed out.
+func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
+	}
 }
