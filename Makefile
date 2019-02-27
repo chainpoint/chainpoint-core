@@ -70,6 +70,16 @@ up: build cockroachdb-setup
 up-no-build: cockroachdb-setup
 	docker-compose up -d --no-build
 
+## up                        : Build and start all
+.PHONY : dev
+dev: build cockroachdb-setup
+	docker-compose -f docker-compose-dev.yaml up -d --build
+
+## up-no-build               : Startup without performing builds, rely on pull of images.
+.PHONY : dev-no-build
+dev-no-build: cockroachdb-setup
+	docker-compose -f docker-compose-dev.yaml up -d --no-build
+
 ## down                      : Shutdown Application
 .PHONY : down
 down:
