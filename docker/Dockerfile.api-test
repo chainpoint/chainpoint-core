@@ -1,7 +1,7 @@
 # Mocha Test Runner for API test suite
 # See : https://dzone.com/articles/testing-nodejs-application-using-mocha-and-docker
 
-FROM gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-api-service
+FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service
 
 # Copy the test files
 COPY node-api-service/test test

@@ -42,6 +42,7 @@ func AggregateCalendar(tendermintRPC types.TendermintURI, rabbitmqUri string) er
 func AnchorBTC(tendermintURI types.TendermintURI, rabbitmqUri string, startTxRange *int64, endTxRange int64) error {
 	fmt.Println("starting scheduled anchor")
 	iAmLeader, _ := ElectLeader(tendermintURI)
+	fmt.Printf("Leader: %t", iAmLeader)
 	/* Get CAL transactions between the latest BTCA tx and the current latest tx */
 	txLeaves, err := getTxRange(tendermintURI, *startTxRange, endTxRange)
 	if util.LogError(err) != nil {

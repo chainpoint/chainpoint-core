@@ -67,6 +67,7 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 	endConsume := false
 
 	session, err = rabbitmq.ConnectAndConsume(rabbitmqConnectUri, aggQueueIn)
+	defer session.End()
 
 	for i := 0; i < aggThreads; i++ {
 
@@ -77,19 +78,18 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 
 			//outerloop reconnects unless we should stop consuming
 			for !endConsume {
-
 				//inner loop consumes queue and appends to mutex protected data slice
 				for !endConsume {
 					select {
 					case err = <-session.Notify:
 						if endConsume {
-							return
+							break
 						}
 						util.LogError(err)
 						time.Sleep(1 * time.Second)
 						break //reconnect
 					case hash := <-session.Msgs:
-						//fmt.Println(string(hash.Body))
+						fmt.Println(string(hash.Body))
 						msgStructSlice = append(msgStructSlice, hash)
 						//create new agg roots under heavy load
 						if len(msgStructSlice) > 200 {
@@ -114,8 +114,13 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 
 	time.Sleep(time.Duration(sleep) * time.Second)
 	endConsume = true
-	wg.Wait() //wait for queue consumption goroutines to exit
-	defer session.End()
+	session.Notify <- &amqp.Error{
+		Code:    int(0),
+		Reason:  "Ending Session",
+		Recover: false,
+		Server:  false,
+	}
+	util.WaitTimeout(&wg, 10*time.Second)
 	fmt.Printf("Aggregation consists of %d items\n", len(aggStructSlice))
 
 	return aggStructSlice
