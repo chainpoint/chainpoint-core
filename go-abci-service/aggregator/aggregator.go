@@ -77,9 +77,6 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 
 			//outerloop reconnects unless we should stop consuming
 			for !endConsume {
-				if util.LogError(err) != nil {
-					continue
-				}
 
 				//inner loop consumes queue and appends to mutex protected data slice
 				for !endConsume {
