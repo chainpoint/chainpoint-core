@@ -12,13 +12,12 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 // load all environment variables into env object
 const env = require('./lib/parse-env.js')('state')
 
 const amqp = require('amqplib')
-const leaderElection = require('exp-leader-election')
 const connections = require('./lib/connections.js')
 
 const aggState = require('./lib/models/AggState.js')
@@ -31,9 +30,6 @@ const cachedProofState = require('./lib/models/cachedProofState.js')
 // The channel used for all amqp communication
 // This value is set once the connection has been established
 var amqpChannel = null
-
-// The leadership status for this instance of the proof state service
-let IS_LEADER = false
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
@@ -48,14 +44,14 @@ const ANCHOR_BTC_STATE_WRITE_BATCH_SIZE = 200
 const BTC_PROOF_GEN_BATCH_SIZE = 2500
 
 /**
-* Writes the state data to persistent storage and logs aggregation event
-*
-* @param {amqp message object} msg - The AMQP message received from the queue
-*/
-async function ConsumeAggregationMessageAsync (msg) {
+ * Writes the state data to persistent storage and logs aggregation event
+ *
+ * @param {amqp message object} msg - The AMQP message received from the queue
+ */
+async function ConsumeAggregationMessageAsync(msg) {
   let messageObj = JSON.parse(msg.content.toString())
 
-  let stateObjects = messageObj.proofData.map((proofDataItem) => {
+  let stateObjects = messageObj.proofData.map(proofDataItem => {
     let stateObj = {}
     stateObj.hash_id = proofDataItem.hash_id
     stateObj.hash = proofDataItem.hash
@@ -80,15 +76,15 @@ async function ConsumeAggregationMessageAsync (msg) {
 }
 
 /**
-* Writes the state data to persistent storage and queues proof ready messages bound for the proof gen
-*
-* @param {amqp message object} msg - The AMQP message received from the queue
-*/
-async function ConsumeCalendarBatchMessageAsync (msg) {
+ * Writes the state data to persistent storage and queues proof ready messages bound for the proof gen
+ *
+ * @param {amqp message object} msg - The AMQP message received from the queue
+ */
+async function ConsumeCalendarBatchMessageAsync(msg) {
   let messageObj = JSON.parse(msg.content.toString())
   //console.log(messageObj)
   // transform batch message data into cal_state objects ready for insertion
-  let stateObjs = messageObj.proofData.map((proofDataItem) => {
+  let stateObjs = messageObj.proofData.map(proofDataItem => {
     return {
       agg_id: proofDataItem.agg_id,
       cal_id: messageObj.cal_id,
@@ -98,9 +94,9 @@ async function ConsumeCalendarBatchMessageAsync (msg) {
 
   try {
     // Get all the hash_ids for all the agg_ids part of this calendar block
-    let aggIds = stateObjs.map((item) => item.agg_id)
+    let aggIds = stateObjs.map(item => item.agg_id)
     let hashIdRows = await cachedProofState.getHashIdsByAggIdsAsync(aggIds)
-    let hashIds = hashIdRows.map((item) => item.hash_id)
+    let hashIds = hashIdRows.map(item => item.hash_id)
 
     // Write the cal state objects to the database
     // The writes are split into batches to limit the total insert query size
@@ -114,7 +110,10 @@ async function ConsumeCalendarBatchMessageAsync (msg) {
       let dataOutObj = {}
       dataOutObj.hash_ids = hashIds.splice(0, CAL_PROOF_GEN_BATCH_SIZE)
       try {
-        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_GEN_QUEUE, Buffer.from(JSON.stringify(dataOutObj)), { persistent: true, type: 'cal_batch' })
+        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_GEN_QUEUE, Buffer.from(JSON.stringify(dataOutObj)), {
+          persistent: true,
+          type: 'cal_batch'
+        })
       } catch (error) {
         console.error(env.RMQ_WORK_OUT_GEN_QUEUE, '[cal] publish message nacked')
         throw new Error(error.message)
@@ -133,15 +132,15 @@ async function ConsumeCalendarBatchMessageAsync (msg) {
 }
 
 /**
-* Writes the state data to persistent storage
-*
-* @param {amqp message object} msg - The AMQP message received from the queue
-*/
-async function ConsumeAnchorBTCAggBatchMessageAsync (msg) {
+ * Writes the state data to persistent storage
+ *
+ * @param {amqp message object} msg - The AMQP message received from the queue
+ */
+async function ConsumeAnchorBTCAggBatchMessageAsync(msg) {
   let messageObj = JSON.parse(msg.content.toString())
 
   // transform batch message data into cal_state objects ready for insertion
-  let stateObjs = messageObj.proofData.map((proofDataItem) => {
+  let stateObjs = messageObj.proofData.map(proofDataItem => {
     return {
       cal_id: proofDataItem.cal_id,
       anchor_btc_agg_id: messageObj.anchor_btc_agg_id,
@@ -167,11 +166,11 @@ async function ConsumeAnchorBTCAggBatchMessageAsync (msg) {
 }
 
 /**
-* Writes the state data to persistent storage
-*
-* @param {amqp message object} msg - The AMQP message received from the queue
-*/
-async function ConsumeBtcTxMessageAsync (msg) {
+ * Writes the state data to persistent storage
+ *
+ * @param {amqp message object} msg - The AMQP message received from the queue
+ */
+async function ConsumeBtcTxMessageAsync(msg) {
   let messageObj = JSON.parse(msg.content.toString())
   let stateObj = {}
   stateObj.anchor_btc_agg_id = messageObj.anchor_btc_agg_id
@@ -191,11 +190,11 @@ async function ConsumeBtcTxMessageAsync (msg) {
 }
 
 /**
-* Writes the state data to persistent storage and queues proof ready messages bound for the proof state service
-*
-* @param {amqp message object} msg - The AMQP message received from the queue
-*/
-async function ConsumeBtcMonMessageAsync (msg) {
+ * Writes the state data to persistent storage and queues proof ready messages bound for the proof state service
+ *
+ * @param {amqp message object} msg - The AMQP message received from the queue
+ */
+async function ConsumeBtcMonMessageAsync(msg) {
   let messageObj = JSON.parse(msg.content.toString())
   let stateObj = {}
   stateObj.btctx_id = messageObj.btctx_id
@@ -205,7 +204,7 @@ async function ConsumeBtcMonMessageAsync (msg) {
   try {
     // Get all the hash_ids included in this btc_tx
     let hashIdRows = await cachedProofState.getHashIdsByBtcTxIdAsync(stateObj.btctx_id)
-    let hashIds = hashIdRows.map((item) => item.hash_id)
+    let hashIds = hashIdRows.map(item => item.hash_id)
 
     await cachedProofState.writeBTCHeadStateObjectAsync(stateObj)
 
@@ -214,7 +213,10 @@ async function ConsumeBtcMonMessageAsync (msg) {
       let dataOutObj = {}
       dataOutObj.hash_ids = hashIds.splice(0, BTC_PROOF_GEN_BATCH_SIZE)
       try {
-        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_GEN_QUEUE, Buffer.from(JSON.stringify(dataOutObj)), { persistent: true, type: 'btc_batch' })
+        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_GEN_QUEUE, Buffer.from(JSON.stringify(dataOutObj)), {
+          persistent: true,
+          type: 'btc_batch'
+        })
       } catch (error) {
         console.error(env.RMQ_WORK_OUT_GEN_QUEUE, '[cal] publish message nacked')
         throw new Error(error.message)
@@ -233,35 +235,42 @@ async function ConsumeBtcMonMessageAsync (msg) {
 }
 
 /**
-* Prunes proof state data and hash tracker logs
-* All hashb data that is logged as complete will be removed from all relevant tables
-* This is required to be run regularly in order to keep the proof state database from growing too large
-*
-*/
-async function PruneStateDataAsync () {
+ * Prunes proof state data and hash tracker logs
+ * All hashb data that is logged as complete will be removed from all relevant tables
+ * This is required to be run regularly in order to keep the proof state database from growing too large
+ *
+ */
+async function PruneStateDataAsync() {
   try {
     // CRDB
     // remove all rows from agg_states that are older than the expiration age
     let results = await queueProofStatePruningTasks('agg_states')
-    if (results.rowCount) console.log(`Pruning agg_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
+    if (results.rowCount)
+      console.log(`Pruning agg_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
     // remove all rows from cal_states that are older than the expiration age
     results = await queueProofStatePruningTasks('cal_states')
-    if (results.rowCount) console.log(`Pruned cal_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
+    if (results.rowCount)
+      console.log(`Pruned cal_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
     // remove all rows from anchor_btc_agg_states that are older than the expiration age
     results = await queueProofStatePruningTasks('anchor_btc_agg_states')
-    if (results.rowCount) console.log(`Pruned anchor_btc_agg_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
+    if (results.rowCount)
+      console.log(
+        `Pruned anchor_btc_agg_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`
+      )
     // remove all rows from btctx_states that are older than the expiration age
     results = await queueProofStatePruningTasks('btctx_states')
-    if (results.rowCount) console.log(`Pruned btctx_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
+    if (results.rowCount)
+      console.log(`Pruned btctx_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
     // remove all rows from btchead_states that are older than the expiration age
     results = await queueProofStatePruningTasks('btchead_states')
-    if (results.rowCount) console.log(`Pruned btchead_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
+    if (results.rowCount)
+      console.log(`Pruned btchead_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
   } catch (error) {
     console.error(`Unable to complete pruning process: ${error.message}`)
   }
 }
 
-async function queueProofStatePruningTasks (modelName) {
+async function queueProofStatePruningTasks(modelName) {
   // determine the primary key ids for each batch
   let primaryKeyValues = await cachedProofState.getExpiredPKValuesForModel(modelName)
   let totalCount = primaryKeyValues.length
@@ -293,11 +302,11 @@ async function queueProofStatePruningTasks (modelName) {
 }
 
 /**
-* Parses a message and performs the required work for that message
-*
-* @param {amqp message object} msg - The AMQP message received from the queue
-*/
-function processMessage (msg) {
+ * Parses a message and performs the required work for that message
+ *
+ * @param {amqp message object} msg - The AMQP message received from the queue
+ */
+function processMessage(msg) {
   if (msg !== null) {
     // determine the source of the message and handle appropriately
     switch (msg.properties.type) {
@@ -335,28 +344,20 @@ function processMessage (msg) {
   }
 }
 
-async function performLeaderElection () {
-  IS_LEADER = false
-  connections.performLeaderElection(leaderElection,
-    env.PROOF_STATE_LEADER_KEY, env.CONSUL_HOST, env.CONSUL_PORT, env.CHAINPOINT_CORE_BASE_URI,
-    () => { IS_LEADER = true },
-    () => { IS_LEADER = false }
-  )
-}
-
 /**
  * Opens a storage connection
  **/
-async function openStorageConnectionAsync () {
-  let sqlzModelArray = [
-    aggState,
-    calState,
-    anchorBtcAggState,
-    btcTxState,
-    btcHeadState
-  ]
+async function openStorageConnectionAsync() {
+  let sqlzModelArray = [aggState, calState, anchorBtcAggState, btcTxState, btcHeadState]
   let cxObjects = await connections.openStorageConnectionAsync(sqlzModelArray)
-  cachedProofState.setDatabase(cxObjects.sequelize, cxObjects.models[0], cxObjects.models[1], cxObjects.models[2], cxObjects.models[3], cxObjects.models[4])
+  cachedProofState.setDatabase(
+    cxObjects.sequelize,
+    cxObjects.models[0],
+    cxObjects.models[1],
+    cxObjects.models[2],
+    cxObjects.models[3],
+    cxObjects.models[4]
+  )
 }
 
 /**
@@ -364,18 +365,23 @@ async function openStorageConnectionAsync () {
  *
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
  */
-function openRedisConnection (redisURIs) {
-  connections.openRedisConnection(redisURIs,
-    (newRedis) => {
+function openRedisConnection(redisURIs) {
+  connections.openRedisConnection(
+    redisURIs,
+    newRedis => {
       redis = newRedis
       cachedProofState.setRedis(redis)
       initResqueQueueAsync()
-    }, () => {
+    },
+    () => {
       redis = null
       cachedProofState.setRedis(null)
       taskQueue = null
-      setTimeout(() => { openRedisConnection(redisURIs) }, 5000)
-    })
+      setTimeout(() => {
+        openRedisConnection(redisURIs)
+      }, 5000)
+    }
+  )
 }
 
 /**
@@ -384,15 +390,26 @@ function openRedisConnection (redisURIs) {
  *
  * @param {string} connectURI - The connection URI for the RabbitMQ instance
  */
-async function openRMQConnectionAsync (connectURI) {
-  await connections.openStandardRMQConnectionAsync(amqp, connectURI,
+async function openRMQConnectionAsync(connectURI) {
+  await connections.openStandardRMQConnectionAsync(
+    amqp,
+    connectURI,
     [env.RMQ_WORK_IN_STATE_QUEUE, env.RMQ_WORK_OUT_GEN_QUEUE, env.RMQ_WORK_OUT_CAL_QUEUE],
     env.RMQ_PREFETCH_COUNT_STATE,
-    { queue: env.RMQ_WORK_IN_STATE_QUEUE, method: (msg) => { processMessage(msg) } },
-    (chan) => { amqpChannel = chan },
+    {
+      queue: env.RMQ_WORK_IN_STATE_QUEUE,
+      method: msg => {
+        processMessage(msg)
+      }
+    },
+    chan => {
+      amqpChannel = chan
+    },
     () => {
       amqpChannel = null
-      setTimeout(() => { openRMQConnectionAsync(connectURI) }, 5000)
+      setTimeout(() => {
+        openRMQConnectionAsync(connectURI)
+      }, 5000)
     }
   )
 }
@@ -400,28 +417,26 @@ async function openRMQConnectionAsync (connectURI) {
 /**
  * Initializes the connection to the Resque queue when Redis is ready
  */
-async function initResqueQueueAsync () {
+async function initResqueQueueAsync() {
   taskQueue = await connections.initResqueQueueAsync(redis, 'resque')
 }
 
-function startIntervals () {
-  let intervals = [{
-    function: () => {
-      if (IS_LEADER) {
+function startIntervals() {
+  let intervals = [
+    {
+      function: () => {
         PruneStateDataAsync()
-      }
-    },
-    ms: env.PRUNE_FREQUENCY_MINUTES * 60 * 1000
-  }]
+      },
+      ms: env.PRUNE_FREQUENCY_MINUTES * 60 * 1000
+    }
+  ]
   connections.startIntervals(intervals)
 }
 
 // process all steps need to start the application
-async function start () {
+async function start() {
   if (env.NODE_ENV === 'test') return
   try {
-    // init consul and perform leader election
-    performLeaderElection()
     // init DB
     await openStorageConnectionAsync()
     // init Redis

@@ -136,7 +136,6 @@ services:
       - roach1
       - redis
       - rabbitmq
-      - consul
     networks:
       - chainpoint
     environment:
@@ -144,8 +143,7 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ANCHOR_BTC: ${ANCHOR_BTC}
       ANCHOR_ETH: ${ANCHOR_ETH}
-      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}    
-      SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY}
+      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}  
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
 
@@ -159,7 +157,6 @@ services:
       - roach1
       - redis
       - rabbitmq
-      - consul
     networks:
       - chainpoint
     environment:
@@ -168,7 +165,6 @@ services:
       ANCHOR_BTC: ${ANCHOR_BTC}
       ANCHOR_ETH: ${ANCHOR_ETH}
       ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}   
-      SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY} 
       VIRTUAL_HOST: api.local
 
 
@@ -246,7 +242,6 @@ services:
       - base
       - rabbitmq
       - roach1
-      - consul
     networks:
       - chainpoint
     environment:
@@ -316,22 +311,6 @@ services:
       - redis-server
       - /usr/local/etc/redis/redis.conf
 
-  # Consul
-  #
-  # Consul Admin UI: http://127.0.0.1:8500
-  #
-  consul:
-    restart: always
-    image: consul:1.1.0
-    container_name: consul-core
-    ports:
-      - "8300:8300"
-      - "8400:8400"
-      - "8500:8500"
-    volumes:
-      - ./data/consul:/consul/data
-    networks:
-      - chainpoint
 
   # CockroachDB
   #
@@ -375,7 +354,6 @@ services:
       - chainpoint
     environment:
       NODE_ENV: development
-      SIGNING_SECRET_KEY: ${SIGNING_SECRET_KEY}
       DEBUG: "task-handler:*"
       DEBUG_HIDE_DATE: "false"
       # DEBUG_COLORS: "true"

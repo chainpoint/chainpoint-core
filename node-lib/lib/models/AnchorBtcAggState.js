@@ -12,38 +12,45 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const Sequelize = require('sequelize-cockroachdb')
 
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  COCKROACH_ANCHOR_BTC_AGG_STATE_TABLE_NAME: envalid.str({ default: 'chainpoint_proof_anchor_btc_agg_states', desc: 'CockroachDB table name' })
+  COCKROACH_ANCHOR_BTC_AGG_STATE_TABLE_NAME: envalid.str({
+    default: 'chainpoint_proof_anchor_btc_agg_states',
+    desc: 'CockroachDB table name'
+  })
 })
 
-function defineFor (sqlz) {
-  let AnchorBtcAggState = sqlz.define(env.COCKROACH_ANCHOR_BTC_AGG_STATE_TABLE_NAME, {
-    cal_id: { type: Sequelize.STRING, primaryKey: true },
-    anchor_btc_agg_id: { type: Sequelize.UUID },
-    anchor_btc_agg_state: { type: Sequelize.TEXT }
-  }, {
-    indexes: [
-      {
-        unique: false,
-        fields: ['anchor_btc_agg_id']
-      },
-      {
-        unique: false,
-        fields: ['created_at']
-      }
-    ],
-    // enable timestamps
-    timestamps: true,
-    // don't use camelcase for automatically added attributes but underscore style
-    // so updatedAt will be updated_at
-    underscored: true
-  })
+function defineFor(sqlz) {
+  let AnchorBtcAggState = sqlz.define(
+    env.COCKROACH_ANCHOR_BTC_AGG_STATE_TABLE_NAME,
+    {
+      cal_id: { type: Sequelize.STRING, primaryKey: true },
+      anchor_btc_agg_id: { type: Sequelize.UUID },
+      anchor_btc_agg_state: { type: Sequelize.TEXT }
+    },
+    {
+      indexes: [
+        {
+          unique: false,
+          fields: ['anchor_btc_agg_id']
+        },
+        {
+          unique: false,
+          fields: ['created_at']
+        }
+      ],
+      // enable timestamps
+      timestamps: true,
+      // don't use camelcase for automatically added attributes but underscore style
+      // so updatedAt will be updated_at
+      underscored: true
+    }
+  )
 
   return AnchorBtcAggState
 }
