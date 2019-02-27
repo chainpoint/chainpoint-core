@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 // load all environment variables into env object
 const env = require('./lib/parse-env.js')('nist')
@@ -21,12 +21,9 @@ const BEACON = require('nist-randomness-beacon')
 const connections = require('./lib/connections.js')
 const utils = require(`./lib/utils.js`)
 
-let responseSocket
-let publishSocket
-
 let nistLatest = null
 
-async function getNistLatestAsync () {
+async function getNistLatestAsync() {
   try {
     let result = await BEACON.getMostRecentPulse()
 
@@ -46,22 +43,24 @@ async function getNistLatestAsync () {
   }
 }
 
-function startIntervals () {
-  let intervals = [{
-    function: async () => {
-      try {
-        await getNistLatestAsync()
-      } catch (error) {
-        console.error(`getNistLatest : caught err : ${error.message}`)
-      }
-    },
-    immediate: true, // run this once immediately
-    ms: env.NIST_INTERVAL_MS
-  }]
+function startIntervals() {
+  let intervals = [
+    {
+      function: async () => {
+        try {
+          await getNistLatestAsync()
+        } catch (error) {
+          console.error(`getNistLatest : caught err : ${error.message}`)
+        }
+      },
+      immediate: true, // run this once immediately
+      ms: env.NIST_INTERVAL_MS
+    }
+  ]
   connections.startIntervals(intervals)
 }
 
-async function start () {
+async function start() {
   if (env.NODE_ENV === 'test') return
   try {
     // init interval functions
@@ -70,7 +69,7 @@ async function start () {
     let currentNIST = nistLatest
     while (currentNIST === null) {
       console.log(`Waiting for initial NIST value`)
-      await utils.sleep(1000)
+      await utils.sleepAsync(1000)
       currentNIST = nistLatest
     }
     console.log(`Initial NIST value : ${nistLatest}`)

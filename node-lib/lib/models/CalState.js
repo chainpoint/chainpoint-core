@@ -12,38 +12,45 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const Sequelize = require('sequelize-cockroachdb')
 
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  COCKROACH_CAL_STATE_TABLE_NAME: envalid.str({ default: 'chainpoint_proof_cal_states', desc: 'CockroachDB table name' })
+  COCKROACH_CAL_STATE_TABLE_NAME: envalid.str({
+    default: 'chainpoint_proof_cal_states',
+    desc: 'CockroachDB table name'
+  })
 })
 
-function defineFor (sqlz) {
-  let CalState = sqlz.define(env.COCKROACH_CAL_STATE_TABLE_NAME, {
-    agg_id: { type: Sequelize.UUID, primaryKey: true },
-    cal_id: { type: Sequelize.STRING },
-    cal_state: { type: Sequelize.TEXT }
-  }, {
-    indexes: [
-      {
-        unique: false,
-        fields: ['cal_id']
-      },
-      {
-        unique: false,
-        fields: ['created_at']
-      }
-    ],
-    // enable timestamps
-    timestamps: true,
-    // don't use camelcase for automatically added attributes but underscore style
-    // so updatedAt will be updated_at
-    underscored: true
-  })
+function defineFor(sqlz) {
+  let CalState = sqlz.define(
+    env.COCKROACH_CAL_STATE_TABLE_NAME,
+    {
+      agg_id: { type: Sequelize.UUID, primaryKey: true },
+      cal_id: { type: Sequelize.STRING },
+      cal_state: { type: Sequelize.TEXT }
+    },
+    {
+      indexes: [
+        {
+          unique: false,
+          fields: ['cal_id']
+        },
+        {
+          unique: false,
+          fields: ['created_at']
+        }
+      ],
+      // enable timestamps
+      timestamps: true,
+      // don't use camelcase for automatically added attributes but underscore style
+      // so updatedAt will be updated_at
+      underscored: true
+    }
+  )
 
   return CalState
 }

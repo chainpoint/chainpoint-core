@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const restify = require('restify')
 const utils = require('../utils.js')
@@ -23,7 +23,7 @@ const utils = require('../utils.js')
  * Root path handler with default message.
  *
  */
-function getV1 (req, res, next) {
+function getV1(req, res, next) {
   return next(new restify.ImATeapotError('This is an API endpoint. Please consult https://chainpoint.org'))
 }
 
@@ -33,7 +33,7 @@ function getV1 (req, res, next) {
  * Ops heartbeat handler with timestamp.
  *
  */
-function getHeartbeatV1 (req, res, next) {
+function getHeartbeatV1(req, res, next) {
   res.noCache()
   res.send({ code: 'heartbeat', timestamp: utils.formatDateISO8601NoMs(new Date()) })
   return next()

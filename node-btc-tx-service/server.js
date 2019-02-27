@@ -12,17 +12,14 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 // load all environment variables into env object
 const env = require('./lib/parse-env.js')('btc-tx')
 
 const amqp = require('amqplib')
 const BlockchainAnchor = require('blockchain-anchor')
-const btcTxLog = require('./lib/models/BtcTxLog.js')
 const connections = require('./lib/connections.js')
-
-let BtcTxLog
 
 // The channel used for all amqp communication
 // This value is set once the connection has been established
@@ -36,32 +33,13 @@ let anchor = new BlockchainAnchor({
   insightFallback: true
 })
 
-// The write function used write all btc tx log events
-let logBtcTxDataAsync = async (txResult) => {
-  let row = {}
-  row.txId = txResult.txId
-  row.publishDate = txResult.publishDate
-  row.rawTx = txResult.rawTx
-  row.feeSatoshiPerByte = parseInt(txResult.feeSatoshiPerByte)
-  row.feePaidSatoshi = parseInt(txResult.feePaidSatoshi)
-  row.stackId = env.CHAINPOINT_CORE_BASE_URI
-
-  try {
-    let newRow = await BtcTxLog.create(row)
-    console.log(`$BTC log: tx_id: ${newRow.get({ plain: true }).txId}`)
-    return newRow.get({ plain: true })
-  } catch (error) {
-    throw new Error(`BTC log create error: ${error.message}: ${error.stack}`)
-  }
-}
-
 /**
-* Send a POST request to /wallet/:id/send with a POST body
-* containing an OP_RETURN TX
-*
-* @param {string} hash - The hash to embed in an OP_RETURN
-*/
-const sendTxToBTCAsync = async (hash) => {
+ * Send a POST request to /wallet/:id/send with a POST body
+ * containing an OP_RETURN TX
+ *
+ * @param {string} hash - The hash to embed in an OP_RETURN
+ */
+const sendTxToBTCAsync = async hash => {
   let privateKeyWIF = env.BITCOIN_WIF
 
   let feeSatPerByte
@@ -70,7 +48,9 @@ const sendTxToBTCAsync = async (hash) => {
     feeSatPerByte = await anchor.btcGetEstimatedFeeRateSatPerByteAsync()
     // if the fee exceeds the maximum, revert to BTC_MAX_FEE_SAT_PER_BYTE for the fee
     if (feeSatPerByte > env.BTC_MAX_FEE_SAT_PER_BYTE) {
-      console.error(`Fee of ${feeSatPerByte} sat per byte exceeded BTC_MAX_FEE_SAT_PER_BYTE of ${env.BTC_MAX_FEE_SAT_PER_BYTE}`)
+      console.error(
+        `Fee of ${feeSatPerByte} sat per byte exceeded BTC_MAX_FEE_SAT_PER_BYTE of ${env.BTC_MAX_FEE_SAT_PER_BYTE}`
+      )
       feeSatPerByte = env.BTC_MAX_FEE_SAT_PER_BYTE
     }
     let feeExtra = 1.1 // the factor to use to increase the final transaction fee in order to better position this transaction for fast confirmation
@@ -94,11 +74,11 @@ const sendTxToBTCAsync = async (hash) => {
 }
 
 /**
-* Parses a message and performs the required work for that message
-*
-* @param {amqp message object} msg - The AMQP message received from the queue
-*/
-async function processIncomingAnchorBTCJobAsync (msg) {
+ * Parses a message and performs the required work for that message
+ *
+ * @param {amqp message object} msg - The AMQP message received from the queue
+ */
+async function processIncomingAnchorBTCJobAsync(msg) {
   if (msg !== null) {
     let messageObj = JSON.parse(msg.content.toString())
     // the value to be anchored, likely a merkle root hex string
@@ -116,21 +96,15 @@ async function processIncomingAnchorBTCJobAsync (msg) {
         throw new Error(`Unable to publish BTC transaction: ${error.message}`)
       }
 
-      // log the btc tx transaction
-  /*    let newLogEntry
-      try {
-        newLogEntry = await logBtcTxDataAsync(txResult)
-        console.log(newLogEntry)
-      } catch (error) {
-        throw new Error(`Unable to log BTC transaction: ${error.message}`)
-      }*/
-
       // queue return message for calendar containing the new transaction information
       // adding btc transaction id and full transaction body to original message and returning
       messageObj.btctx_id = txResult.txId
       messageObj.btctx_body = txResult.rawTx
       try {
-        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), { persistent: true, type: 'btctx' })
+        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
+          persistent: true,
+          type: 'btctx'
+        })
         console.log(env.RMQ_WORK_OUT_CAL_QUEUE, '[btctx] publish message acked', messageObj.btctx_id)
       } catch (error) {
         console.error(env.RMQ_WORK_OUT_CAL_QUEUE, '[btctx] publish message nacked', messageObj.btctx_id)
@@ -151,41 +125,39 @@ async function processIncomingAnchorBTCJobAsync (msg) {
 }
 
 /**
- * Opens a storage connection
- **/
-async function openStorageConnectionAsync () {
-  let sqlzModelArray = [
-    btcTxLog
-  ]
-  let cxObjects = await connections.openStorageConnectionAsync(sqlzModelArray)
-  BtcTxLog = cxObjects.models[0]
-}
-
-/**
  * Opens an AMPQ connection and channel
  * Retry logic is included to handle losses of connection
  *
  * @param {string} connectURI - The connection URI for the RabbitMQ instance
  */
-async function openRMQConnectionAsync (connectURI) {
-  await connections.openStandardRMQConnectionAsync(amqp, connectURI,
+async function openRMQConnectionAsync(connectURI) {
+  await connections.openStandardRMQConnectionAsync(
+    amqp,
+    connectURI,
     [env.RMQ_WORK_IN_BTCTX_QUEUE, env.RMQ_WORK_OUT_CAL_QUEUE],
     env.RMQ_PREFETCH_COUNT_BTCTX,
-    { queue: env.RMQ_WORK_IN_BTCTX_QUEUE, method: (msg) => { processIncomingAnchorBTCJobAsync(msg) } },
-    (chan) => { amqpChannel = chan },
+    {
+      queue: env.RMQ_WORK_IN_BTCTX_QUEUE,
+      method: msg => {
+        processIncomingAnchorBTCJobAsync(msg)
+      }
+    },
+    chan => {
+      amqpChannel = chan
+    },
     () => {
       amqpChannel = null
-      setTimeout(() => { openRMQConnectionAsync(connectURI) }, 5000)
+      setTimeout(() => {
+        openRMQConnectionAsync(connectURI)
+      }, 5000)
     }
   )
 }
 
 // process all steps need to start the application
-async function start () {
+async function start() {
   if (env.NODE_ENV === 'test') return
   try {
-    // init DB
-    //await openStorageConnectionAsync()
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     console.log('startup completed successfully')

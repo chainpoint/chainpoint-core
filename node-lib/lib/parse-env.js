@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const envalid = require('envalid')
 
@@ -35,10 +35,6 @@ const validateMinConfirmRange = envalid.makeValidator(x => {
 const validateFactorOfSixty = envalid.makeValidator(x => {
   if (x > 0 && x <= 20 && 60 % x === 0) return x
   else throw new Error('Value must be a factor of 60, and no greater than 20')
-})
-const validateFactorOfSixtyUpToSixty = envalid.makeValidator(x => {
-  if (x > 0 && x <= 60 && 60 % x === 0) return x
-  else throw new Error('Value must be a factor of 60')
 })
 const validateETHAddress = envalid.makeValidator(x => {
   if (/^0x[0-9a-f]{40}$/i.test(x)) return x.toLowerCase()
@@ -66,45 +62,119 @@ let envDefinitions = {
 
   // Anchor to external blockchains toggle variables
   // Using string values in place of a Bool due to issues with storing bool values in K8s secrets
-  ANCHOR_BTC: envalid.str({ choices: ['enabled', 'disabled'], default: 'disabled', desc: 'String flag for enabling and disabling BTC anchoring' }),
-  ANCHOR_ETH: envalid.str({ choices: ['enabled', 'disabled'], default: 'disabled', desc: 'String flag for enabling and disabling ETH anchoring' }),
+  ANCHOR_BTC: envalid.str({
+    choices: ['enabled', 'disabled'],
+    default: 'disabled',
+    desc: 'String flag for enabling and disabling BTC anchoring'
+  }),
+  ANCHOR_ETH: envalid.str({
+    choices: ['enabled', 'disabled'],
+    default: 'disabled',
+    desc: 'String flag for enabling and disabling ETH anchoring'
+  }),
 
   // RabbitMQ related variables
-  RABBITMQ_CONNECT_URI: envalid.url({ default: 'amqp://chainpoint:chainpoint@rabbitmq', desc: 'Connection string w/ credentials for RabbitMQ' }),
-  RMQ_WORK_OUT_STATE_QUEUE: envalid.str({ default: 'work.proofstate', desc: 'The queue name for outgoing message to the proof state service' }),
-  RMQ_WORK_OUT_CAL_QUEUE: envalid.str({ default: 'work.cal', desc: 'The queue name for outgoing message to the calendar service' }),
-  RMQ_WORK_OUT_AGG_QUEUE: envalid.str({ default: 'work.agg', desc: 'The queue name for outgoing message to the aggregator service' }),
-  RMQ_WORK_OUT_BTCTX_QUEUE: envalid.str({ default: 'work.btctx', desc: 'The queue name for outgoing message to the btc tx service' }),
-  RMQ_WORK_OUT_BTCMON_QUEUE: envalid.str({ default: 'work.btcmon', desc: 'The queue name for outgoing message to the btc mon service' }),
-  RMQ_WORK_OUT_GEN_QUEUE: envalid.str({ default: 'work.gen', desc: 'The queue name for outgoing message to the proof gen service' }),
-  RMQ_WORK_OUT_API_QUEUE: envalid.str({ default: 'work.api', desc: 'The queue name for outgoing message to the api service' }),
-  RMQ_WORK_OUT_TASK_ACC_QUEUE: envalid.str({ default: 'work.taskacc', desc: 'The queue name for outgoing message to the task accumulator service' }),
+  RABBITMQ_CONNECT_URI: envalid.url({
+    default: 'amqp://chainpoint:chainpoint@rabbitmq',
+    desc: 'Connection string w/ credentials for RabbitMQ'
+  }),
+  RMQ_WORK_OUT_STATE_QUEUE: envalid.str({
+    default: 'work.proofstate',
+    desc: 'The queue name for outgoing message to the proof state service'
+  }),
+  RMQ_WORK_OUT_CAL_QUEUE: envalid.str({
+    default: 'work.cal',
+    desc: 'The queue name for outgoing message to the calendar service'
+  }),
+  RMQ_WORK_OUT_AGG_QUEUE: envalid.str({
+    default: 'work.agg',
+    desc: 'The queue name for outgoing message to the aggregator service'
+  }),
+  RMQ_WORK_OUT_BTCTX_QUEUE: envalid.str({
+    default: 'work.btctx',
+    desc: 'The queue name for outgoing message to the btc tx service'
+  }),
+  RMQ_WORK_OUT_BTCMON_QUEUE: envalid.str({
+    default: 'work.btcmon',
+    desc: 'The queue name for outgoing message to the btc mon service'
+  }),
+  RMQ_WORK_OUT_GEN_QUEUE: envalid.str({
+    default: 'work.gen',
+    desc: 'The queue name for outgoing message to the proof gen service'
+  }),
+  RMQ_WORK_OUT_API_QUEUE: envalid.str({
+    default: 'work.api',
+    desc: 'The queue name for outgoing message to the api service'
+  }),
+  RMQ_WORK_OUT_TASK_ACC_QUEUE: envalid.str({
+    default: 'work.taskacc',
+    desc: 'The queue name for outgoing message to the task accumulator service'
+  }),
 
   // Redis related variables
-  REDIS_CONNECT_URIS: envalid.str({ devDefault: 'redis://redis:6379', desc: 'The Redis server connection URI, or a comma separated list of Sentinel URIs' }),
-  BALANCE_CHECK_KEY_PREFIX: envalid.str({ default: 'API:NodeBalance', desc: 'The prefix for the Redis key containing Node balance information' }),
+  REDIS_CONNECT_URIS: envalid.str({
+    devDefault: 'redis://redis:6379',
+    desc: 'The Redis server connection URI, or a comma separated list of Sentinel URIs'
+  }),
+  BALANCE_CHECK_KEY_PREFIX: envalid.str({
+    default: 'API:NodeBalance',
+    desc: 'The prefix for the Redis key containing Node balance information'
+  }),
 
   // Service Specific Variables
 
   // Aggregator service specific variables
-  RMQ_PREFETCH_COUNT_AGG: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
-  RMQ_WORK_IN_AGG_QUEUE: envalid.str({ default: 'work.agg', desc: 'The queue name for message consumption originating from the api service' }),
-  AGGREGATION_INTERVAL: validateAggInterval({ default: 1000, desc: 'The frequency of the aggregation process, in milliseconds' }),
-  HASHES_PER_MERKLE_TREE: validateMaxHashes({ default: 25000, desc: 'The maximum number of hashes to be used when constructing an aggregation tree' }),
+  RMQ_PREFETCH_COUNT_AGG: envalid.num({
+    default: 0,
+    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
+  }),
+  RMQ_WORK_IN_AGG_QUEUE: envalid.str({
+    default: 'work.agg',
+    desc: 'The queue name for message consumption originating from the api service'
+  }),
+  AGGREGATION_INTERVAL: validateAggInterval({
+    default: 1000,
+    desc: 'The frequency of the aggregation process, in milliseconds'
+  }),
+  HASHES_PER_MERKLE_TREE: validateMaxHashes({
+    default: 25000,
+    desc: 'The maximum number of hashes to be used when constructing an aggregation tree'
+  }),
 
   // API service specific variables
-  RMQ_PREFETCH_COUNT_API: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
+  RMQ_PREFETCH_COUNT_API: envalid.num({
+    default: 0,
+    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
+  }),
   MAX_BODY_SIZE: envalid.num({ default: 131072, desc: 'Max body size in bytes for incoming requests' }),
 
   // BTC Mon service specific variables
-  RMQ_PREFETCH_COUNT_BTCMON: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
-  RMQ_WORK_IN_BTCMON_QUEUE: envalid.str({ default: 'work.btcmon', desc: 'The queue name for message consumption originating from the calendar service' }),
-  MONITOR_INTERVAL_SECONDS: validateMonitorRange({ default: 30, desc: 'The frequency that transactions are monitored for new confirmations, in seconds' }),
-  MIN_BTC_CONFIRMS: validateMinConfirmRange({ default: 6, desc: 'The number of confirmations needed before the transaction is considered ready for proof delivery' }),
+  RMQ_PREFETCH_COUNT_BTCMON: envalid.num({
+    default: 0,
+    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
+  }),
+  RMQ_WORK_IN_BTCMON_QUEUE: envalid.str({
+    default: 'work.btcmon',
+    desc: 'The queue name for message consumption originating from the calendar service'
+  }),
+  MONITOR_INTERVAL_SECONDS: validateMonitorRange({
+    default: 30,
+    desc: 'The frequency that transactions are monitored for new confirmations, in seconds'
+  }),
+  MIN_BTC_CONFIRMS: validateMinConfirmRange({
+    default: 6,
+    desc: 'The number of confirmations needed before the transaction is considered ready for proof delivery'
+  }),
 
   // BTC Tx service specific variables
-  RMQ_PREFETCH_COUNT_BTCTX: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
-  RMQ_WORK_IN_BTCTX_QUEUE: envalid.str({ default: 'work.btctx', desc: 'The queue name for message consumption originating from the calendar service' }),
+  RMQ_PREFETCH_COUNT_BTCTX: envalid.num({
+    default: 0,
+    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
+  }),
+  RMQ_WORK_IN_BTCTX_QUEUE: envalid.str({
+    default: 'work.btctx',
+    desc: 'The queue name for message consumption originating from the calendar service'
+  }),
   // This is to safeguard against the service returning a very high value in error
   // and to impose a common sense limit on the highest fee per byte to allow.
   // MAX BTC to spend = AverageTxSizeBytes * BTC_MAX_FEE_SAT_PER_BYTE / 100000000
@@ -115,62 +185,124 @@ let envDefinitions = {
   BTC_MAX_FEE_SAT_PER_BYTE: envalid.num({ default: 600, desc: 'The maximum feeRateSatPerByte value accepted' }),
 
   // Calendar service specific variables
-  RMQ_PREFETCH_COUNT_CAL: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
-  RMQ_WORK_IN_CAL_QUEUE: envalid.str({ default: 'work.cal', desc: 'The queue name for message consumption originating from the aggregator, btc-tx, and btc-mon services' }),
+  RMQ_PREFETCH_COUNT_CAL: envalid.num({
+    default: 0,
+    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
+  }),
+  RMQ_WORK_IN_CAL_QUEUE: envalid.str({
+    default: 'work.cal',
+    desc: 'The queue name for message consumption originating from the aggregator, btc-tx, and btc-mon services'
+  }),
 
   // NIST beacon service specific variables
-  NIST_INTERVAL_MS: envalid.num({ default: 60000, desc: 'The frequency to get latest NIST beacon data, in milliseconds' }),
+  NIST_INTERVAL_MS: envalid.num({
+    default: 60000,
+    desc: 'The frequency to get latest NIST beacon data, in milliseconds'
+  }),
 
   // Proof Gen service specific variables
-  RMQ_PREFETCH_COUNT_GEN: envalid.num({ default: 1, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
-  RMQ_WORK_IN_GEN_QUEUE: envalid.str({ default: 'work.gen', desc: 'The queue name for message consumption originating from the proof state service' }),
+  RMQ_PREFETCH_COUNT_GEN: envalid.num({
+    default: 1,
+    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
+  }),
+  RMQ_WORK_IN_GEN_QUEUE: envalid.str({
+    default: 'work.gen',
+    desc: 'The queue name for message consumption originating from the proof state service'
+  }),
   GCP_STORAGE_PROJECTID: envalid.str({ default: 'proof-proxy-core', desc: 'The project Id for GCP storage' }),
-  GCP_STORAGE_BUCKET: envalid.str({ default: 'proof-proxy-core', desc: 'Name of the Google Cloud Storage Bucket for Core proofs (short term ephemeral).' }),
-  SAVE_CONCURRENCY_COUNT: envalid.num({ default: 100, desc: 'The number of concurrent requests made when saving proofs' }),
+  GCP_STORAGE_BUCKET: envalid.str({
+    default: 'proof-proxy-core',
+    desc: 'Name of the Google Cloud Storage Bucket for Core proofs (short term ephemeral).'
+  }),
+  SAVE_CONCURRENCY_COUNT: envalid.num({
+    default: 100,
+    desc: 'The number of concurrent requests made when saving proofs'
+  }),
 
   // Proof State service specific variables
-  RMQ_PREFETCH_COUNT_STATE: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
-  RMQ_WORK_IN_STATE_QUEUE: envalid.str({ default: 'work.proofstate', desc: 'The queue name for message consumption originating from the aggregator, calendar, and proof state services' }),
-  PRUNE_FREQUENCY_MINUTES: envalid.num({ default: 1, desc: 'The frequency that the proof state and hash tracker log tables have their old, unneeded data pruned, in minutes' }),
+  RMQ_PREFETCH_COUNT_STATE: envalid.num({
+    default: 0,
+    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
+  }),
+  RMQ_WORK_IN_STATE_QUEUE: envalid.str({
+    default: 'work.proofstate',
+    desc: 'The queue name for message consumption originating from the aggregator, calendar, and proof state services'
+  }),
+  PRUNE_FREQUENCY_MINUTES: envalid.num({
+    default: 1,
+    desc:
+      'The frequency that the proof state and hash tracker log tables have their old, unneeded data pruned, in minutes'
+  }),
 
   // ETH TNT Listener / TNT TX services specific variables
   ETH_PROVIDER_URI: envalid.url({ default: 'http://ganache:8545', desc: 'URI to the ETH node provider.' }),
   LISTEN_TX_PORT: envalid.num({ default: 8085, desc: 'Port of the ETH provider.' }),
-  TNT_TO_CREDIT_RATE: envalid.num({ default: 200, desc: 'Exchange rate for TNT tokens to Credits. Default is give 200 credits for each TNT token.' }),
-  ETH_TNT_TX_CONNECT_URI: envalid.url({ default: 'http://eth-tnt-tx-service:8085', desc: 'The eth-tnt-tx-service REST connection URI' }),
-  ETH_WALLET: envalid.str({ default: '', desc: 'The JSON wallet file. Leave empty to not use a wallet for transactions.' }),
-  ETH_WALLET_PASSWORD: envalid.str({ default: '', desc: 'The password to unlock the ETH wallet. Leave blank if no wallet is used.' }),
+  TNT_TO_CREDIT_RATE: envalid.num({
+    default: 200,
+    desc: 'Exchange rate for TNT tokens to Credits. Default is give 200 credits for each TNT token.'
+  }),
+  ETH_TNT_TX_CONNECT_URI: envalid.url({
+    default: 'http://eth-tnt-tx-service:8085',
+    desc: 'The eth-tnt-tx-service REST connection URI'
+  }),
+  ETH_WALLET: envalid.str({
+    default: '',
+    desc: 'The JSON wallet file. Leave empty to not use a wallet for transactions.'
+  }),
+  ETH_WALLET_PASSWORD: envalid.str({
+    default: '',
+    desc: 'The password to unlock the ETH wallet. Leave blank if no wallet is used.'
+  }),
 
   // TNT Reward service specific variables
-  REWARDS_PER_HOUR: validateFactorOfSixty({ default: 2, desc: 'The number of times per hour to calculate and distribute rewards, defaults to 2, must be a factor of 60, no greater than 20' }),
-  MIN_TNT_GRAINS_BALANCE_FOR_REWARD: envalid.num({ default: 500000000000, desc: 'The minimum balance of TNT, in Grains, that an address must contain in order to be eligible for a reward' }),
+  REWARDS_PER_HOUR: validateFactorOfSixty({
+    default: 2,
+    desc:
+      'The number of times per hour to calculate and distribute rewards, defaults to 2, must be a factor of 60, no greater than 20'
+  }),
 
   // Task accumulator specific variables
-  RMQ_PREFETCH_COUNT_TASK_ACC: envalid.num({ default: 0, desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit' }),
-  RMQ_WORK_IN_TASK_ACC_QUEUE: envalid.str({ default: 'work.taskacc', desc: 'The queue name for message consumption originating from the other services' }),
+  RMQ_PREFETCH_COUNT_TASK_ACC: envalid.num({
+    default: 0,
+    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
+  }),
+  RMQ_WORK_IN_TASK_ACC_QUEUE: envalid.str({
+    default: 'work.taskacc',
+    desc: 'The queue name for message consumption originating from the other services'
+  }),
 
   // Tendermint RPC URI
-  TENDERMINT_URI: envalid.str({ default: 'http://tendermint:26657', desc: 'Tendermint RPC URI' }),
+  TENDERMINT_URI: envalid.str({ default: 'http://tendermint:26657', desc: 'Tendermint RPC URI' })
 }
 
-module.exports = (service) => {
+module.exports = service => {
   // Load and validate service specific require variables as needed
   switch (service) {
     case 'api':
-      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
-      envDefinitions.ETH_TNT_LISTEN_ADDRS = validateETHAddressesCSV({ desc: 'The addresses used to listen for incoming TNT transfers.  If more that one, separate by commas.' })
+      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
+        desc: 'Base URI for this Chainpoint Core stack of services'
+      })
+      envDefinitions.ETH_TNT_LISTEN_ADDRS = validateETHAddressesCSV({
+        desc: 'The addresses used to listen for incoming TNT transfers.  If more that one, separate by commas.'
+      })
       break
     case 'audit':
-      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
+      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
+        desc: 'Base URI for this Chainpoint Core stack of services'
+      })
       break
     case 'cal':
-      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
+      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
+        desc: 'Base URI for this Chainpoint Core stack of services'
+      })
       break
     case 'btc-mon':
       envDefinitions.INSIGHT_API_BASE_URI = envalid.url({ desc: 'The Bitcore Insight-API base URI' })
       break
     case 'btc-tx':
-      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
+      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
+        desc: 'Base URI for this Chainpoint Core stack of services'
+      })
       envDefinitions.INSIGHT_API_BASE_URI = envalid.url({ desc: 'The Bitcore Insight-API base URI' })
       envDefinitions.BITCOIN_WIF = envalid.str({ desc: 'The Bitcoin private key WIF used for transaction creation' })
       break
@@ -181,22 +313,39 @@ module.exports = (service) => {
       envDefinitions.ETH_JSON_RPC_URI = envalid.str({ desc: 'The Parity/Geth JSON-RPC URI for the JsonRpc provoider' })
       break
     case 'eth-contracts':
-      envDefinitions.ETH_TNT_TOKEN_ADDR = validateETHAddress({ desc: 'The address where the contract is on the blockchain.' })
+      envDefinitions.ETH_TNT_TOKEN_ADDR = validateETHAddress({
+        desc: 'The address where the contract is on the blockchain.'
+      })
       break
     case 'eth-tnt-listener':
-      envDefinitions.ETH_TNT_LISTEN_ADDRS = validateETHAddressesCSV({ desc: 'The addresses used to listen for incoming TNT transfers.  If more that one, separate by commas.' })
-      envDefinitions.ETH_TNT_TOKEN_ADDR = validateETHAddress({ desc: 'The address where the contract is on the blockchain.' })
+      envDefinitions.ETH_TNT_LISTEN_ADDRS = validateETHAddressesCSV({
+        desc: 'The addresses used to listen for incoming TNT transfers.  If more that one, separate by commas.'
+      })
+      envDefinitions.ETH_TNT_TOKEN_ADDR = validateETHAddress({
+        desc: 'The address where the contract is on the blockchain.'
+      })
       break
     case 'state':
-      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
+      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
+        desc: 'Base URI for this Chainpoint Core stack of services'
+      })
       break
     case 'task-handler':
-      envDefinitions.CORE_PROOF_POLLER_URL = envalid.str({ default: 'https://us-east1-chainpoint-services.cloudfunctions.net/chainpoint-monitor-coreproof-poller', desc: 'Endpoint to core proof poller that is part of Chainpoint-monitor service' })
+      envDefinitions.CORE_PROOF_POLLER_URL = envalid.str({
+        default: 'https://us-east1-chainpoint-services.cloudfunctions.net/chainpoint-monitor-coreproof-poller',
+        desc: 'Endpoint to core proof poller that is part of Chainpoint-monitor service'
+      })
       break
     case 'tnt-reward':
-      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({ desc: 'Base URI for this Chainpoint Core stack of services' })
-      envDefinitions.CORE_REWARD_ETH_ADDR = validateETHAddress({ desc: 'A valid Ethereum address that the Core may receive Core rewards with' })
-      envDefinitions.CORE_REWARD_ELIGIBLE = envalid.bool({ desc: 'Boolean indicating if this Core may receive Core TNT rewards' })
+      envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
+        desc: 'Base URI for this Chainpoint Core stack of services'
+      })
+      envDefinitions.CORE_REWARD_ETH_ADDR = validateETHAddress({
+        desc: 'A valid Ethereum address that the Core may receive Core rewards with'
+      })
+      envDefinitions.CORE_REWARD_ELIGIBLE = envalid.bool({
+        desc: 'Boolean indicating if this Core may receive Core TNT rewards'
+      })
       break
   }
   return envalid.cleanEnv(process.env, envDefinitions, {

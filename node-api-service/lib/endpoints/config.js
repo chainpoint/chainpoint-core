@@ -12,7 +12,8 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
+const env = require('../parse-env.js')('api')
 
 // get the first entry in the ETH_TNT_LISTEN_ADDRS CSV to publicize
 let coreEthAddress = env.ETH_TNT_LISTEN_ADDRS.split(',')[0]
@@ -22,7 +23,7 @@ let coreEthAddress = env.ETH_TNT_LISTEN_ADDRS.split(',')[0]
  *
  * Returns a configuration information object
  */
-async function getConfigInfoV1Async (req, res, next) {
+async function getConfigInfoV1Async(req, res, next) {
   let result = {
     chainpoint_core_base_uri: env.CHAINPOINT_CORE_BASE_URI,
     core_eth_address: coreEthAddress

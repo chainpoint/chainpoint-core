@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 // load all environment variables into env object
 const env = require('./lib/parse-env.js')('btc-mon')
@@ -45,7 +45,7 @@ let anchor = new BlockchainAnchor({
   insightFallback: true
 })
 
-async function consumeBtcTxIdMessageAsync (msg) {
+async function consumeBtcTxIdMessageAsync(msg) {
   if (msg !== null) {
     let btcTxIdObjJSON = msg.content.toString()
 
@@ -98,7 +98,12 @@ let monitorTransactionsAsync = async () => {
       let txIndex = blockStats.txIds.indexOf(txStats.id)
       if (txIndex === -1) throw new Error(`transaction ${txStats.id} not found in block ${txStats.blockHeight}`)
       // adjusting for endieness, reverse txids for further processing
-      blockStats.txIds = blockStats.txIds.map((txId) => txId.match(/.{2}/g).reverse().join(''))
+      blockStats.txIds = blockStats.txIds.map(txId =>
+        txId
+          .match(/.{2}/g)
+          .reverse()
+          .join('')
+      )
 
       if (blockStats.txIds.length === 0) throw new Error(`No transactions found in block ${txStats.blockHeight}`)
 
@@ -108,8 +113,17 @@ let monitorTransactionsAsync = async () => {
       merkleTools.makeBTCTree(true)
       let rootValueBuffer = merkleTools.getMerkleRoot()
       // re-adjust for endieness, reverse and convert back to hex
-      let rootValueHex = rootValueBuffer.toString('hex').match(/.{2}/g).reverse().join('')
-      if (rootValueHex !== blockStats.merkleRoot) throw new Error(`calculated merkle root (${rootValueHex}) does not match block merkle root (${blockStats.merkleRoot}) for tx ${txStats.id}`)
+      let rootValueHex = rootValueBuffer
+        .toString('hex')
+        .match(/.{2}/g)
+        .reverse()
+        .join('')
+      if (rootValueHex !== blockStats.merkleRoot)
+        throw new Error(
+          `calculated merkle root (${rootValueHex}) does not match block merkle root (${
+            blockStats.merkleRoot
+          }) for tx ${txStats.id}`
+        )
       // get proof path from tx to block root
       let proofPath = merkleTools.getProof(txIndex)
       // send data back to calendar
@@ -119,7 +133,10 @@ let monitorTransactionsAsync = async () => {
       messageObj.btchead_root = rootValueHex
       messageObj.path = proofPath
       try {
-        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), { persistent: true, type: 'btcmon' })
+        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
+          persistent: true,
+          type: 'btcmon'
+        })
         console.log(env.RMQ_WORK_OUT_CAL_QUEUE, '[btcmon] publish message acked', messageObj.btctx_id)
       } catch (error) {
         console.error(env.RMQ_WORK_OUT_CAL_QUEUE, '[btcmon] publish message nacked', messageObj.btctx_id)
@@ -143,14 +160,19 @@ let monitorTransactionsAsync = async () => {
  *
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
  */
-function openRedisConnection (redisURIs) {
-  connections.openRedisConnection(redisURIs,
-    (newRedis) => {
+function openRedisConnection(redisURIs) {
+  connections.openRedisConnection(
+    redisURIs,
+    newRedis => {
       redis = newRedis
-    }, () => {
+    },
+    () => {
       redis = null
-      setTimeout(() => { openRedisConnection(redisURIs) }, 5000)
-    })
+      setTimeout(() => {
+        openRedisConnection(redisURIs)
+      }, 5000)
+    }
+  )
 }
 
 /**
@@ -159,31 +181,44 @@ function openRedisConnection (redisURIs) {
  *
  * @param {string} connectURI - The connection URI for the RabbitMQ instance
  */
-async function openRMQConnectionAsync (connectURI) {
-  await connections.openStandardRMQConnectionAsync(amqp, connectURI,
+async function openRMQConnectionAsync(connectURI) {
+  await connections.openStandardRMQConnectionAsync(
+    amqp,
+    connectURI,
     [env.RMQ_WORK_IN_BTCMON_QUEUE, env.RMQ_WORK_OUT_CAL_QUEUE],
     env.RMQ_PREFETCH_COUNT_BTCMON,
-    { queue: env.RMQ_WORK_IN_BTCMON_QUEUE, method: (msg) => { consumeBtcTxIdMessageAsync(msg) } },
-    (chan) => { amqpChannel = chan },
+    {
+      queue: env.RMQ_WORK_IN_BTCMON_QUEUE,
+      method: msg => {
+        consumeBtcTxIdMessageAsync(msg)
+      }
+    },
+    chan => {
+      amqpChannel = chan
+    },
     () => {
       amqpChannel = null
-      setTimeout(() => { openRMQConnectionAsync(connectURI) }, 5000)
+      setTimeout(() => {
+        openRMQConnectionAsync(connectURI)
+      }, 5000)
     }
   )
 }
 
-function startIntervals () {
-  let intervals = [{
-    function: () => {
-      if (!CHECKS_IN_PROGRESS) monitorTransactionsAsync()
-    },
-    ms: env.MONITOR_INTERVAL_SECONDS * 1000
-  }]
+function startIntervals() {
+  let intervals = [
+    {
+      function: () => {
+        if (!CHECKS_IN_PROGRESS) monitorTransactionsAsync()
+      },
+      ms: env.MONITOR_INTERVAL_SECONDS * 1000
+    }
+  ]
   connections.startIntervals(intervals)
 }
 
 // process all steps need to start the application
-async function start () {
+async function start() {
   if (env.NODE_ENV === 'test') return
   try {
     // init Redis
@@ -204,8 +239,12 @@ start()
 
 // export these functions for unit tests
 module.exports = {
-  getAMQPChannel: function () { return amqpChannel },
-  setAMQPChannel: (chan) => { amqpChannel = chan },
+  getAMQPChannel: function() {
+    return amqpChannel
+  },
+  setAMQPChannel: chan => {
+    amqpChannel = chan
+  },
   openRMQConnectionAsync: openRMQConnectionAsync,
   consumeBtcTxIdMessageAsync: consumeBtcTxIdMessageAsync,
   monitorTransactionsAsync: monitorTransactionsAsync

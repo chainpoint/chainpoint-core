@@ -12,18 +12,13 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const restify = require('restify')
 const env = require('../parse-env.js')('api')
 const utils = require('../utils.js')
 const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
-const crypto = require('crypto')
-const tntUnits = require('../tntUnits.js')
-
-let RegisteredNode
-
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -33,13 +28,6 @@ const uuidv1 = require('uuid/v1')
 // This value is set once the connection has been established
 let amqpChannel = null
 
-// The minimium TNT grains required to operate a Node
-const minGrainsBalanceNeeded = env.MIN_TNT_GRAINS_BALANCE_FOR_REWARD
-
-// toggle the enforcement of minimum TNT balance for private Nodes
-// when enabled, a private Node must have the minimum TNT balance before Core accepts hashes from it
-let enforcePrivateNodeStake = false
-
 /**
  * Converts an array of hash strings to a object suitable to
  * return to HTTP clients.
@@ -48,7 +36,7 @@ let enforcePrivateNodeStake = false
  * @returns {Object} An Object with 'hash_id', 'hash', 'submitted_at' and 'processing_hints' properties
  *
  */
-function generatePostHashResponse (hash, regNode) {
+function generatePostHashResponse(hash) {
   hash = hash.toLowerCase()
 
   // Compute a five byte BLAKE2s hash of the
@@ -72,7 +60,7 @@ function generatePostHashResponse (hash, regNode) {
   // by extracting the bytes of the last segment of the UUID.
   // e.g. If the UUID is 'b609358d-7979-11e7-ae31-01ba7816bf8f'
   // the Node ID hash is the six bytes shown in '01ba7816bf8f'.
-  // Any client that can access the timestamp in the UUID, 
+  // Any client that can access the timestamp in the UUID,
   // and the original hash can recompute
   // the verification hash and compare it.
   //
@@ -90,12 +78,7 @@ function generatePostHashResponse (hash, regNode) {
   let timestampMS = timestampDate.getTime()
   // 5 byte length BLAKE2s hash w/ personalization
   let h = new BLAKE2s(5, { personalization: Buffer.from('CHAINPNT') })
-  let hashStr = [
-    timestampMS.toString(),
-    timestampMS.toString().length,
-    hash,
-    hash.length
-  ].join(':')
+  let hashStr = [timestampMS.toString(), timestampMS.toString().length, hash, hash.length].join(':')
 
   h.update(Buffer.from(hashStr))
 
@@ -120,7 +103,7 @@ function generatePostHashResponse (hash, regNode) {
  * @returns {Object} An Object with 'cal', 'eth', and 'btc' properties
  *
  */
-function generateProcessingHints (timestampDate) {
+function generateProcessingHints(timestampDate) {
   let twoHoursFromTimestamp = utils.addMinutes(timestampDate, 120)
   let oneHourFromTopOfTheHour = new Date(twoHoursFromTimestamp.setHours(twoHoursFromTimestamp.getHours(), 0, 0, 0))
   let calHint = utils.formatDateISO8601NoMs(utils.addSeconds(timestampDate, 10))
@@ -148,7 +131,7 @@ function generateProcessingHints (timestampDate) {
  * - maximum 128 chars long (e.g. 64 byte SHA512)
  * - an even length string
  */
-async function postHashV1Async (req, res, next) {
+async function postHashV1Async(req, res, next) {
   // validate content-type sent was 'application/json'
   if (req.contentType() !== 'application/json') {
     return next(new restify.InvalidArgumentError('invalid content type'))
@@ -175,9 +158,7 @@ async function postHashV1Async (req, res, next) {
     return next(new restify.InternalServerError('Message could not be delivered'))
   }
 
-  // Validate the calculated HMAC
-  let regNode = null
-  let responseObj = generatePostHashResponse(req.params.hash, regNode)
+  let responseObj = generatePostHashResponse(req.params.hash)
 
   let hashObj = {
     hash_id: responseObj.hash_id,
@@ -185,7 +166,9 @@ async function postHashV1Async (req, res, next) {
   }
 
   try {
-    await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_AGG_QUEUE, Buffer.from(JSON.stringify(hashObj)), { persistent: true })
+    await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_AGG_QUEUE, Buffer.from(JSON.stringify(hashObj)), {
+      persistent: true
+    })
   } catch (error) {
     console.error(env.RMQ_WORK_OUT_AGG_QUEUE, 'publish message nacked')
     return next(new restify.InternalServerError('Message could not be delivered'))
@@ -199,6 +182,7 @@ async function postHashV1Async (req, res, next) {
 module.exports = {
   postHashV1Async: postHashV1Async,
   generatePostHashResponse: generatePostHashResponse,
-  setAMQPChannel: (chan) => { amqpChannel = chan },
-  setDatabase: (sqlz, regNode) => { RegisteredNode = regNode }
+  setAMQPChannel: chan => {
+    amqpChannel = chan
+  }
 }

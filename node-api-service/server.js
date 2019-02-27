@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 // load all environment variables into env object
 const env = require('./lib/parse-env.js')('api')
@@ -26,8 +26,6 @@ const calendar = require('./lib/endpoints/calendar.js')
 const cores = require('./lib/endpoints/cores.js')
 const config = require('./lib/endpoints/config.js')
 const root = require('./lib/endpoints/root.js')
-const registeredNode = require('./lib/models/RegisteredNode.js')
-const calendarBlock = require('./lib/models/CalendarBlock.js')
 const connections = require('./lib/connections.js')
 
 const bunyan = require('bunyan')
@@ -82,9 +80,11 @@ server.use(cors.actual)
 
 server.use(restify.gzipResponse())
 server.use(restify.queryParser())
-server.use(restify.bodyParser({
-  maxBodySize: env.MAX_BODY_SIZE
-}))
+server.use(
+  restify.bodyParser({
+    maxBodySize: env.MAX_BODY_SIZE
+  })
+)
 
 // API RESOURCES
 
@@ -117,44 +117,34 @@ server.get({ path: '/heartbeat', version: '1.0.0' }, root.getHeartbeatV1)
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
 /**
- * Opens a storage connection
- **/
-async function openStorageConnectionAsync () {
-  let sqlzModelArray = [
-    registeredNode,
-    calendarBlock
-  ]
-  let cxObjects = await connections.openStorageConnectionAsync(sqlzModelArray)
-  nodes.setDatabase(cxObjects.sequelize, cxObjects.models[0])
-  hashes.setDatabase(cxObjects.sequelize, cxObjects.models[0])
-  calendar.setDatabase(cxObjects.sequelize, cxObjects.models[1])
-}
-
-/**
  * Opens an AMPQ connection and channel
  * Retry logic is included to handle losses of connection
  *
  * @param {string} connectURI - The connection URI for the RabbitMQ instance
  */
-async function openRMQConnectionAsync (connectURI) {
-  await connections.openStandardRMQConnectionAsync(amqp, connectURI,
+async function openRMQConnectionAsync(connectURI) {
+  await connections.openStandardRMQConnectionAsync(
+    amqp,
+    connectURI,
     [env.RMQ_WORK_OUT_AGG_QUEUE],
     null,
     null,
-    (chan) => { hashes.setAMQPChannel(chan) },
+    chan => {
+      hashes.setAMQPChannel(chan)
+    },
     () => {
       hashes.setAMQPChannel(null)
-      setTimeout(() => { openRMQConnectionAsync(connectURI) }, 5000)
+      setTimeout(() => {
+        openRMQConnectionAsync(connectURI)
+      }, 5000)
     }
   )
 }
 
 // process all steps need to start the application
-async function start () {
+async function start() {
   if (env.NODE_ENV === 'test') return
   try {
-    // init DB
-    await openStorageConnectionAsync()
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
@@ -171,10 +161,12 @@ start()
 
 // export these functions for testing purposes
 module.exports = {
-  setAMQPChannel: (chan) => {
+  setAMQPChannel: chan => {
     hashes.setAMQPChannel(chan)
   },
   server: server,
   config: config,
-  overrideGetTNTGrainsBalanceForAddressAsync: (func) => { nodes.overrideGetTNTGrainsBalanceForAddressAsync(func) }
+  overrideGetTNTGrainsBalanceForAddressAsync: func => {
+    nodes.overrideGetTNTGrainsBalanceForAddressAsync(func)
+  }
 }

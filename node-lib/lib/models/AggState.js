@@ -12,40 +12,47 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const Sequelize = require('sequelize-cockroachdb')
 
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  COCKROACH_AGG_STATE_TABLE_NAME: envalid.str({ default: 'chainpoint_proof_agg_states', desc: 'CockroachDB table name' })
+  COCKROACH_AGG_STATE_TABLE_NAME: envalid.str({
+    default: 'chainpoint_proof_agg_states',
+    desc: 'CockroachDB table name'
+  })
 })
 
-function defineFor (sqlz) {
-  let AggState = sqlz.define(env.COCKROACH_AGG_STATE_TABLE_NAME, {
-    hash_id: { type: Sequelize.UUID, primaryKey: true },
-    hash: { type: Sequelize.STRING },
-    agg_id: { type: Sequelize.UUID },
-    agg_state: { type: Sequelize.TEXT },
-    agg_root: { type: Sequelize.STRING, allowNull: true }
-  }, {
-    indexes: [
-      {
-        unique: false,
-        fields: ['agg_id']
-      },
-      {
-        unique: false,
-        fields: ['created_at', 'agg_id', 'agg_root']
-      }
-    ],
-    // enable timestamps
-    timestamps: true,
-    // don't use camelcase for automatically added attributes but underscore style
-    // so updatedAt will be updated_at
-    underscored: true
-  })
+function defineFor(sqlz) {
+  let AggState = sqlz.define(
+    env.COCKROACH_AGG_STATE_TABLE_NAME,
+    {
+      hash_id: { type: Sequelize.UUID, primaryKey: true },
+      hash: { type: Sequelize.STRING },
+      agg_id: { type: Sequelize.UUID },
+      agg_state: { type: Sequelize.TEXT },
+      agg_root: { type: Sequelize.STRING, allowNull: true }
+    },
+    {
+      indexes: [
+        {
+          unique: false,
+          fields: ['agg_id']
+        },
+        {
+          unique: false,
+          fields: ['created_at', 'agg_id', 'agg_root']
+        }
+      ],
+      // enable timestamps
+      timestamps: true,
+      // don't use camelcase for automatically added attributes but underscore style
+      // so updatedAt will be updated_at
+      underscored: true
+    }
+  )
 
   return AggState
 }

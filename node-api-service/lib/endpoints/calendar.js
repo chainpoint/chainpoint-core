@@ -12,9 +12,8 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 const env = require('../parse-env.js')('api')
-const _ = require('lodash')
 const restify = require('restify')
 const connections = require('../connections.js')
 
@@ -25,29 +24,29 @@ const connections = require('../connections.js')
  *
  * Returns a calendar tx by tx hash
  */
-async function getCalTxAsync (req, res, next) {
-    let txID = req.params.txid
-    if (!txID.includes("0x")){
-        txID = "0x" + txID
-    }
-    let tx
-    try {
-      rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
-      tx = await rpc.tx({hash: txID, prove: false})
-    }catch (error){
-      console.error('rpc error')
-      return next(new restify.InternalServerError('Could not query for tx by hash'))
-    }
-    if (!tx) {
-        res.status(404)
-        res.noCache()
-        res.send({ code: 'NotFoundError', message: '' })
-        return next()
-    }
-    res.contentType = 'application/json'
-    res.cache('public', { maxAge: 2592000 })
-    res.send(tx)
+async function getCalTxAsync(req, res, next) {
+  let txID = req.params.txid
+  if (!txID.includes('0x')) {
+    txID = '0x' + txID
+  }
+  let tx
+  try {
+    let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
+    tx = await rpc.tx({ hash: txID, prove: false })
+  } catch (error) {
+    console.error('rpc error')
+    return next(new restify.InternalServerError('Could not query for tx by hash'))
+  }
+  if (!tx) {
+    res.status(404)
+    res.noCache()
+    res.send({ code: 'NotFoundError', message: '' })
     return next()
+  }
+  res.contentType = 'application/json'
+  res.cache('public', { maxAge: 2592000 })
+  res.send(tx)
+  return next()
 }
 
 /**
@@ -57,41 +56,40 @@ async function getCalTxAsync (req, res, next) {
  *
  * Returns a calendar tx by tx hash
  */
-async function getCalTxDataAsync (req, res, next) {
-    let txID = req.params.txid
-    if (!txID.includes("0x")){
-        txID = "0x" + txID
-    }
-    let tx
-    try {
-        rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
-        tx = await rpc.tx({hash: txID, prove: false})
-    }catch (error){
-        console.error('rpc error')
-        return next(new restify.InternalServerError('Could not query for tx by hash'))
-    }
-    if (!tx) {
-        res.status(404)
-        res.noCache()
-        res.send({ code: 'NotFoundError', message: '' })
-        return next()
-    }
-    let txData = new Buffer(tx.tx, 'base64').toString('ascii')
-    jsonData = JSON.parse(txData)
-    res.contentType = 'application/json'
-    res.cache('public', { maxAge: 2592000 })
-    res.send(jsonData.Data)
+async function getCalTxDataAsync(req, res, next) {
+  let txID = req.params.txid
+  if (!txID.includes('0x')) {
+    txID = '0x' + txID
+  }
+  let tx
+  try {
+    let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
+    tx = await rpc.tx({ hash: txID, prove: false })
+  } catch (error) {
+    console.error('rpc error')
+    return next(new restify.InternalServerError('Could not query for tx by hash'))
+  }
+  if (!tx) {
+    res.status(404)
+    res.noCache()
+    res.send({ code: 'NotFoundError', message: '' })
     return next()
+  }
+  let txData = new Buffer(tx.tx, 'base64').toString('ascii')
+  let jsonData = JSON.parse(txData)
+  res.contentType = 'application/json'
+  res.cache('public', { maxAge: 2592000 })
+  res.send(jsonData.Data)
+  return next()
 }
 
-async function getCoreProofsAsync (req, res, next) {
-    //TODO
-    return next()
+async function getCoreProofsAsync(req, res, next) {
+  //TODO
+  return next()
 }
 
 module.exports = {
   getCalTxAsync: getCalTxAsync,
   getCalTxDataAsync: getCalTxDataAsync,
-  getCoreProofsAsync: getCoreProofsAsync,
-  setDatabase: (sqlz, calBlock) => { sequelize = sqlz; CalendarBlock = calBlock }
+  getCoreProofsAsync: getCoreProofsAsync
 }

@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const CAL_STATE_KEY_PREFIX = 'CalState'
 const ANCHOR_BTC_AGG_STATE_KEY_PREFIX = 'AnchorBTCAggState'
@@ -37,7 +37,7 @@ const PROOF_STATE_EXPIRE_HOURS = 6
 // How many hours any piece of proof state data is cached
 const PROOF_STATE_CACHE_EXPIRE_MINUTES = PROOF_STATE_EXPIRE_HOURS * 60
 
-async function getHashIdsByAggIdAsync (aggId) {
+async function getHashIdsByAggIdAsync(aggId) {
   let results = await AggState.findAll({
     attributes: ['hash_id'],
     where: {
@@ -48,7 +48,7 @@ async function getHashIdsByAggIdAsync (aggId) {
   return results
 }
 
-async function getHashIdsByAggIdsAsync (aggIds) {
+async function getHashIdsByAggIdsAsync(aggIds) {
   let results = await AggState.findAll({
     attributes: ['hash_id'],
     where: {
@@ -59,16 +59,19 @@ async function getHashIdsByAggIdsAsync (aggIds) {
   return results
 }
 
-async function getHashIdsByBtcTxIdAsync (btcTxId) {
-  let results = await sequelize.query(`SELECT a.hash_id FROM chainpoint_proof_agg_states a
+async function getHashIdsByBtcTxIdAsync(btcTxId) {
+  let results = await sequelize.query(
+    `SELECT a.hash_id FROM chainpoint_proof_agg_states a
     INNER JOIN chainpoint_proof_cal_states c ON c.agg_id = a.agg_id
     INNER JOIN chainpoint_proof_anchor_btc_agg_states aa ON aa.cal_id = c.cal_id
     INNER JOIN chainpoint_proof_btctx_states tx ON tx.anchor_btc_agg_id = aa.anchor_btc_agg_id
-    WHERE tx.btctx_id = '${btcTxId}'`, { type: sequelize.QueryTypes.SELECT })
+    WHERE tx.btctx_id = '${btcTxId}'`,
+    { type: sequelize.QueryTypes.SELECT }
+  )
   return results
 }
 
-async function getAggStateObjectsByHashIdsAsync (hashIds) {
+async function getAggStateObjectsByHashIdsAsync(hashIds) {
   let results = await AggState.findAll({
     where: {
       hash_id: { [sequelize.Op.in]: hashIds }
@@ -78,41 +81,49 @@ async function getAggStateObjectsByHashIdsAsync (hashIds) {
   return results
 }
 
-async function getAggStateInfoSinceTimestampAsync (timestamp) {
-  let results = await sequelize.query(`SELECT DISTINCT agg_id, agg_root, created_at
+async function getAggStateInfoSinceTimestampAsync(timestamp) {
+  let results = await sequelize.query(
+    `SELECT DISTINCT agg_id, agg_root, created_at
   FROM chainpoint_proof_agg_states
   WHERE created_at > '${new Date(timestamp).toISOString()}'
-  ORDER BY created_at`, { type: sequelize.QueryTypes.SELECT })
+  ORDER BY created_at`,
+    { type: sequelize.QueryTypes.SELECT }
+  )
   return results
 }
 
-async function getCalStateObjectsByAggIdsAsync (aggIds) {
-  let aggIdData = aggIds.map((aggId) => { return { aggId: aggId, data: null } })
+async function getCalStateObjectsByAggIdsAsync(aggIds) {
+  let aggIdData = aggIds.map(aggId => {
+    return { aggId: aggId, data: null }
+  })
 
   if (redis) {
     let multi = redis.multi()
 
-    aggIdData.forEach((aggIdDataItem) => {
+    aggIdData.forEach(aggIdDataItem => {
       multi.get(`${CAL_STATE_KEY_PREFIX}:${aggIdDataItem.aggId}`)
     })
 
     let redisResults
     try {
-      redisResults = await multi.exec().map((result) => result[1])
+      redisResults = await multi.exec().map(result => result[1])
     } catch (error) {
       console.error(`Redis read error : getCalStateObjectsByAggIdsAsync : ${error.message}`)
     }
 
     // assign the redis results to the corresponding item in aggIdData
-    aggIdData = aggIdData.map((item, index) => { item.data = redisResults[index]; return item })
+    aggIdData = aggIdData.map((item, index) => {
+      item.data = redisResults[index]
+      return item
+    })
 
-    let nullDataCount = aggIdData.reduce((total, item) => item.data === null ? ++total : total, 0)
+    let nullDataCount = aggIdData.reduce((total, item) => (item.data === null ? ++total : total), 0)
     // if all data was retrieved from redis, we are done, return it
-    if (nullDataCount === 0) return aggIdData.map((item) => JSON.parse(item.data))
+    if (nullDataCount === 0) return aggIdData.map(item => JSON.parse(item.data))
   }
 
   // get an array of aggIds that we need cal state data for
-  let aggIdsNullData = aggIdData.filter((item) => item.data === null).map((item) => item.aggId)
+  let aggIdsNullData = aggIdData.filter(item => item.data === null).map(item => item.aggId)
   let dbResult = await CalState.findAll({
     where: {
       agg_id: { [sequelize.Op.in]: aggIdsNullData }
@@ -120,7 +131,7 @@ async function getCalStateObjectsByAggIdsAsync (aggIds) {
     raw: true
   })
   // construct a final result array from the aggIdData data and from dbResult
-  let cachedData = aggIdData.filter((item) => item.data != null).map((item) => JSON.parse(item.data))
+  let cachedData = aggIdData.filter(item => item.data != null).map(item => JSON.parse(item.data))
 
   let finalResult = [...dbResult, ...cachedData]
 
@@ -130,8 +141,13 @@ async function getCalStateObjectsByAggIdsAsync (aggIds) {
   if (redis) {
     let multi = redis.multi()
 
-    dbResult.forEach((dbRow) => {
-      multi.set(`${CAL_STATE_KEY_PREFIX}:${dbRow.agg_id}`, JSON.stringify(dbRow), 'EX', PROOF_STATE_CACHE_EXPIRE_MINUTES * 60)
+    dbResult.forEach(dbRow => {
+      multi.set(
+        `${CAL_STATE_KEY_PREFIX}:${dbRow.agg_id}`,
+        JSON.stringify(dbRow),
+        'EX',
+        PROOF_STATE_CACHE_EXPIRE_MINUTES * 60
+      )
     })
 
     try {
@@ -143,33 +159,38 @@ async function getCalStateObjectsByAggIdsAsync (aggIds) {
   return finalResult
 }
 
-async function getAnchorBTCAggStateObjectsByCalIdsAsync (calIds) {
-  let calIdData = calIds.map((calId) => { return { calId: calId, data: null } })
+async function getAnchorBTCAggStateObjectsByCalIdsAsync(calIds) {
+  let calIdData = calIds.map(calId => {
+    return { calId: calId, data: null }
+  })
 
   if (redis) {
     let multi = redis.multi()
 
-    calIdData.forEach((calIdDataItem) => {
+    calIdData.forEach(calIdDataItem => {
       multi.get(`${ANCHOR_BTC_AGG_STATE_KEY_PREFIX}:${calIdDataItem.calId}`)
     })
 
     let redisResults
     try {
-      redisResults = await multi.exec().map((result) => result[1])
+      redisResults = await multi.exec().map(result => result[1])
     } catch (error) {
       console.error(`Redis read error : getAnchorBTCAggStateObjectsByCalIdsAsync : ${error.message}`)
     }
 
     // assign the redis results to the corresponding item in calIdData
-    calIdData = calIdData.map((item, index) => { item.data = redisResults[index]; return item })
+    calIdData = calIdData.map((item, index) => {
+      item.data = redisResults[index]
+      return item
+    })
 
-    let nullDataCount = calIdData.reduce((total, item) => item.data === null ? ++total : total, 0)
+    let nullDataCount = calIdData.reduce((total, item) => (item.data === null ? ++total : total), 0)
     // if all data was retrieved from redis, we are done, return it
-    if (nullDataCount === 0) return calIdData.map((item) => JSON.parse(item.data))
+    if (nullDataCount === 0) return calIdData.map(item => JSON.parse(item.data))
   }
 
   // get an array of calIds that we need anchor_btc_agg state data for
-  let calIdsNullData = calIdData.filter((item) => item.data === null).map((item) => item.calId)
+  let calIdsNullData = calIdData.filter(item => item.data === null).map(item => item.calId)
   let dbResult = await AnchorBtcAggState.findAll({
     where: {
       cal_id: { [sequelize.Op.in]: calIdsNullData }
@@ -177,7 +198,7 @@ async function getAnchorBTCAggStateObjectsByCalIdsAsync (calIds) {
     raw: true
   })
   // construct a final result array from the calIdData data and from dbResult
-  let cachedData = calIdData.filter((item) => item.data != null).map((item) => JSON.parse(item.data))
+  let cachedData = calIdData.filter(item => item.data != null).map(item => JSON.parse(item.data))
 
   let finalResult = [...dbResult, ...cachedData]
 
@@ -187,8 +208,13 @@ async function getAnchorBTCAggStateObjectsByCalIdsAsync (calIds) {
   if (redis) {
     let multi = redis.multi()
 
-    dbResult.forEach((dbRow) => {
-      multi.set(`${ANCHOR_BTC_AGG_STATE_KEY_PREFIX}:${dbRow.cal_id}`, JSON.stringify(dbRow), 'EX', PROOF_STATE_CACHE_EXPIRE_MINUTES * 60)
+    dbResult.forEach(dbRow => {
+      multi.set(
+        `${ANCHOR_BTC_AGG_STATE_KEY_PREFIX}:${dbRow.cal_id}`,
+        JSON.stringify(dbRow),
+        'EX',
+        PROOF_STATE_CACHE_EXPIRE_MINUTES * 60
+      )
     })
 
     try {
@@ -200,7 +226,7 @@ async function getAnchorBTCAggStateObjectsByCalIdsAsync (calIds) {
   return finalResult
 }
 
-async function getBTCTxStateObjectByAnchorBTCAggIdAsync (anchorBTCAggId) {
+async function getBTCTxStateObjectByAnchorBTCAggIdAsync(anchorBTCAggId) {
   if (anchorBTCAggId === null) return null
   let redisKey = `${BTC_TX_STATE_KEY_PREFIX}:${anchorBTCAggId}`
   if (redis) {
@@ -230,7 +256,7 @@ async function getBTCTxStateObjectByAnchorBTCAggIdAsync (anchorBTCAggId) {
   return result
 }
 
-async function getBTCHeadStateObjectByBTCTxIdAsync (btcTxId) {
+async function getBTCHeadStateObjectByBTCTxIdAsync(btcTxId) {
   if (btcTxId === null) return null
   let redisKey = `${BTC_HEAD_STATE_KEY_PREFIX}:${btcTxId}`
   if (redis) {
@@ -260,10 +286,11 @@ async function getBTCHeadStateObjectByBTCTxIdAsync (btcTxId) {
   return result
 }
 
-async function writeAggStateObjectsBulkAsync (stateObjects) {
-  let insertCmd = 'INSERT INTO chainpoint_proof_agg_states (hash_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES '
+async function writeAggStateObjectsBulkAsync(stateObjects) {
+  let insertCmd =
+    'INSERT INTO chainpoint_proof_agg_states (hash_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES '
 
-  let insertValues = stateObjects.map((stateObject) => {
+  let insertValues = stateObjects.map(stateObject => {
     // use sequelize.escape() to sanitize input values just to be safe
     let hashId = sequelize.escape(stateObject.hash_id)
     let hash = sequelize.escape(stateObject.hash)
@@ -279,11 +306,14 @@ async function writeAggStateObjectsBulkAsync (stateObjects) {
   return true
 }
 
-async function writeCalStateObjectsBulkAsync (stateObjects) {
+async function writeCalStateObjectsBulkAsync(stateObjects) {
   let insertCmd = 'INSERT INTO chainpoint_proof_cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES '
 
-  stateObjects = stateObjects.map((stateObj) => { stateObj.cal_state = JSON.stringify(stateObj.cal_state); return stateObj })
-  let insertValues = stateObjects.map((stateObject) => {
+  stateObjects = stateObjects.map(stateObj => {
+    stateObj.cal_state = JSON.stringify(stateObj.cal_state)
+    return stateObj
+  })
+  let insertValues = stateObjects.map(stateObject => {
     // use sequelize.escape() to sanitize input values just to be safe
     let aggId = sequelize.escape(stateObject.agg_id)
     let calId = sequelize.escape(stateObject.cal_id)
@@ -299,8 +329,14 @@ async function writeCalStateObjectsBulkAsync (stateObjects) {
   if (redis) {
     let multi = redis.multi()
 
-    stateObjects.forEach((stateObj) => {
-      multi.set(`${CAL_STATE_KEY_PREFIX}:${stateObj.agg_id}`, JSON.stringify(stateObj), 'EX', PROOF_STATE_CACHE_EXPIRE_MINUTES * 60, 'NX')
+    stateObjects.forEach(stateObj => {
+      multi.set(
+        `${CAL_STATE_KEY_PREFIX}:${stateObj.agg_id}`,
+        JSON.stringify(stateObj),
+        'EX',
+        PROOF_STATE_CACHE_EXPIRE_MINUTES * 60,
+        'NX'
+      )
     })
 
     try {
@@ -312,16 +348,17 @@ async function writeCalStateObjectsBulkAsync (stateObjects) {
   return true
 }
 
-async function writeAnchorBTCAggStateObjectsAsync (stateObjects) {
-  let insertCmd = 'INSERT INTO chainpoint_proof_anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES '
+async function writeAnchorBTCAggStateObjectsAsync(stateObjects) {
+  let insertCmd =
+    'INSERT INTO chainpoint_proof_anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES '
 
-  stateObjects = stateObjects.map((stateObj) => {
+  stateObjects = stateObjects.map(stateObj => {
     //stateObj.cal_id = parseInt(stateObj.cal_id, 10)
     //if (isNaN(stateObj.cal_id)) throw new Error(`cal_id value '${stateObj.cal_id}' is not an integer`)
     stateObj.anchor_btc_agg_state = JSON.stringify(stateObj.anchor_btc_agg_state)
     return stateObj
   })
-  let insertValues = stateObjects.map((stateObject) => {
+  let insertValues = stateObjects.map(stateObject => {
     // use sequelize.escape() to sanitize input values just to be safe
     let calId = sequelize.escape(stateObject.cal_id)
     let anchorBtcAggId = sequelize.escape(stateObject.anchor_btc_agg_id)
@@ -337,8 +374,14 @@ async function writeAnchorBTCAggStateObjectsAsync (stateObjects) {
   if (redis) {
     let multi = redis.multi()
 
-    stateObjects.forEach((stateObj) => {
-      multi.set(`${ANCHOR_BTC_AGG_STATE_KEY_PREFIX}:${stateObj.cal_id}`, JSON.stringify(stateObj), 'EX', PROOF_STATE_CACHE_EXPIRE_MINUTES * 60, 'NX')
+    stateObjects.forEach(stateObj => {
+      multi.set(
+        `${ANCHOR_BTC_AGG_STATE_KEY_PREFIX}:${stateObj.cal_id}`,
+        JSON.stringify(stateObj),
+        'EX',
+        PROOF_STATE_CACHE_EXPIRE_MINUTES * 60,
+        'NX'
+      )
     })
 
     try {
@@ -350,7 +393,7 @@ async function writeAnchorBTCAggStateObjectsAsync (stateObjects) {
   return true
 }
 
-async function writeBTCTxStateObjectAsync (stateObject) {
+async function writeBTCTxStateObjectAsync(stateObject) {
   let btcTxStateObject = {
     anchor_btc_agg_id: stateObject.anchor_btc_agg_id,
     btctx_id: stateObject.btctx_id,
@@ -369,7 +412,7 @@ async function writeBTCTxStateObjectAsync (stateObject) {
   return true
 }
 
-async function writeBTCHeadStateObjectAsync (stateObject) {
+async function writeBTCHeadStateObjectAsync(stateObject) {
   let btcHeadHeight = parseInt(stateObject.btchead_height, 10)
   if (isNaN(btcHeadHeight)) throw new Error(`btchead_height value '${stateObject.cal_id}' is not an integer`)
   let btcHeadStateObject = {
@@ -390,7 +433,7 @@ async function writeBTCHeadStateObjectAsync (stateObject) {
   return true
 }
 
-async function pruneProofStateTableByIdsAsync (model, pkColumnName, ids) {
+async function pruneProofStateTableByIdsAsync(model, pkColumnName, ids) {
   // create whereClause object to allow for dynamic column assignment in WHERE
   let whereClause = {}
   whereClause[pkColumnName] = { [sequelize.Op.in]: ids }
@@ -398,27 +441,27 @@ async function pruneProofStateTableByIdsAsync (model, pkColumnName, ids) {
   return pruneCount
 }
 
-async function pruneAggStatesByIdsAsync (ids) {
+async function pruneAggStatesByIdsAsync(ids) {
   return pruneProofStateTableByIdsAsync(AggState, 'hash_id', ids)
 }
 
-async function pruneCalStatesByIdsAsync (ids) {
+async function pruneCalStatesByIdsAsync(ids) {
   return pruneProofStateTableByIdsAsync(CalState, 'agg_id', ids)
 }
 
-async function pruneAnchorBTCAggStatesByIdsAsync (ids) {
+async function pruneAnchorBTCAggStatesByIdsAsync(ids) {
   return pruneProofStateTableByIdsAsync(AnchorBtcAggState, 'cal_id', ids)
 }
 
-async function pruneBTCTxStatesByIdsAsync (ids) {
+async function pruneBTCTxStatesByIdsAsync(ids) {
   return pruneProofStateTableByIdsAsync(BtcTxState, 'anchor_btc_agg_id', ids)
 }
 
-async function pruneBTCHeadStatesByIdsAsync (ids) {
+async function pruneBTCHeadStatesByIdsAsync(ids) {
   return pruneProofStateTableByIdsAsync(BtcHeadState, 'btctx_id', ids)
 }
 
-async function getExpiredPKValuesForModel (modelName) {
+async function getExpiredPKValuesForModel(modelName) {
   let model = null
   let pkColName = null
   switch (modelName) {
@@ -445,8 +488,14 @@ async function getExpiredPKValuesForModel (modelName) {
   }
   if (model === null) throw new Error(`Unknown modelName : ${modelName}`)
   let pruneCutoffDate = new Date(Date.now() - PROOF_STATE_EXPIRE_HOURS * 60 * 60 * 1000)
-  let primaryKeyVals = await model.findAll({ where: { created_at: { [sequelize.Op.lte]: pruneCutoffDate } }, raw: true, attributes: [pkColName] })
-  primaryKeyVals = primaryKeyVals.map((item) => { return item[pkColName] })
+  let primaryKeyVals = await model.findAll({
+    where: { created_at: { [sequelize.Op.lte]: pruneCutoffDate } },
+    raw: true,
+    attributes: [pkColName]
+  })
+  primaryKeyVals = primaryKeyVals.map(item => {
+    return item[pkColName]
+  })
   return primaryKeyVals
 }
 
@@ -471,6 +520,15 @@ module.exports = {
   pruneBTCTxStatesByIdsAsync: pruneBTCTxStatesByIdsAsync,
   pruneBTCHeadStatesByIdsAsync: pruneBTCHeadStatesByIdsAsync,
   getExpiredPKValuesForModel: getExpiredPKValuesForModel,
-  setRedis: (r) => { redis = r },
-  setDatabase: (sqlz, agg, cal, anchorBtc, btcTx, btcHead) => { sequelize = sqlz; AggState = agg; CalState = cal; AnchorBtcAggState = anchorBtc; BtcTxState = btcTx; BtcHeadState = btcHead }
+  setRedis: r => {
+    redis = r
+  },
+  setDatabase: (sqlz, agg, cal, anchorBtc, btcTx, btcHead) => {
+    sequelize = sqlz
+    AggState = agg
+    CalState = cal
+    AnchorBtcAggState = anchorBtc
+    BtcTxState = btcTx
+    BtcHeadState = btcHead
+  }
 }

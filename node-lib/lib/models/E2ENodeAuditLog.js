@@ -12,18 +12,22 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const Sequelize = require('sequelize-cockroachdb')
 
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  COCKROACH_E2E_AUDIT_TABLE_NAME: envalid.str({ default: 'chainpoint_node_e2e_audit_log', desc: 'CockroachDB table name' })
+  COCKROACH_E2E_AUDIT_TABLE_NAME: envalid.str({
+    default: 'chainpoint_node_e2e_audit_log',
+    desc: 'CockroachDB table name'
+  })
 })
 
-function defineFor (sqlz) {
-  let E2ENodeAuditLog = sqlz.define(env.COCKROACH_E2E_AUDIT_TABLE_NAME,
+function defineFor(sqlz) {
+  let E2ENodeAuditLog = sqlz.define(
+    env.COCKROACH_E2E_AUDIT_TABLE_NAME,
     {
       tntAddr: {
         comment: 'A seemingly valid Ethereum address that the Node will send TNT from, or receive rewards with.',
@@ -50,7 +54,8 @@ function defineFor (sqlz) {
         allowNull: true
       },
       stage: {
-        comment: 'Enum-like field with the following possible values ("hash_submission", "proof_retrieval", "proof_verification").',
+        comment:
+          'Enum-like field with the following possible values ("hash_submission", "proof_retrieval", "proof_verification").',
         type: Sequelize.STRING,
         validate: {
           is: ['(hash_submission|proof_retrieval|proof_verification)']
@@ -59,10 +64,13 @@ function defineFor (sqlz) {
         allowNull: false
       },
       status: {
-        comment: 'Enum-like field with the following possible values ("pending", "passed", "submission_failure", "hash_mismatch_failure", "hash_id_node_validation_failure", "null_proof_failure", "invalid_cal_branch_failure").',
+        comment:
+          'Enum-like field with the following possible values ("pending", "passed", "submission_failure", "hash_mismatch_failure", "hash_id_node_validation_failure", "null_proof_failure", "invalid_cal_branch_failure").',
         type: Sequelize.STRING,
         validate: {
-          is: ['(pending|passed|submission_failure|retrieval_failure|verification_failure|hash_mismatch_failure|hash_id_node_validation_failure|null_proof_failure|invalid_cal_branch_failure)']
+          is: [
+            '(pending|passed|submission_failure|retrieval_failure|verification_failure|hash_mismatch_failure|hash_id_node_validation_failure|null_proof_failure|invalid_cal_branch_failure)'
+          ]
         },
         field: 'status',
         allowNull: false

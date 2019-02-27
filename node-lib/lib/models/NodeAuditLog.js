@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 const Sequelize = require('sequelize-cockroachdb')
 
@@ -22,8 +22,9 @@ const env = envalid.cleanEnv(process.env, {
   COCKROACH_AUDIT_TABLE_NAME: envalid.str({ default: 'chainpoint_node_audit_log', desc: 'CockroachDB table name' })
 })
 
-function defineFor (sqlz) {
-  let NodeAuditLog = sqlz.define(env.COCKROACH_AUDIT_TABLE_NAME,
+function defineFor(sqlz) {
+  let NodeAuditLog = sqlz.define(
+    env.COCKROACH_AUDIT_TABLE_NAME,
     {
       tntAddr: {
         comment: 'A seemingly valid Ethereum address that the Node will send TNT from, or receive rewards with.',
@@ -111,7 +112,7 @@ function defineFor (sqlz) {
       }
     },
     {
-    // No automatic timestamp fields, we add our own 'audit_at'
+      // No automatic timestamp fields, we add our own 'audit_at'
       timestamps: false,
       // Disable the modification of table names; By default, sequelize will automatically
       // transform all passed model names (first parameter of define) into plural.

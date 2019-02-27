@@ -12,14 +12,14 @@
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 /**
  * Sleep for a specified number of milliseconds
  *
  * @param {number} ms - The number of milliseconds to sleep
  */
-function sleep (ms) {
+function sleepAsync(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
@@ -30,8 +30,8 @@ function sleep (ms) {
  * @param {number} seconds - The seconds of seconds to add to the date
  * @returns {Date}
  */
-function addSeconds (date, seconds) {
-  return new Date(date.getTime() + (seconds * 1000))
+function addSeconds(date, seconds) {
+  return new Date(date.getTime() + seconds * 1000)
 }
 
 /**
@@ -41,8 +41,8 @@ function addSeconds (date, seconds) {
  * @param {number} minutes - The number of minutes to add to the date
  * @returns {Date}
  */
-function addMinutes (date, minutes) {
-  return new Date(date.getTime() + (minutes * 60000))
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60000)
 }
 
 /**
@@ -52,7 +52,7 @@ function addMinutes (date, minutes) {
  * @param {Date} date - The date to convert
  * @returns {string} An ISO8601 formatted time string
  */
-function formatDateISO8601NoMs (date) {
+function formatDateISO8601NoMs(date) {
   return date.toISOString().slice(0, 19) + 'Z'
 }
 
@@ -62,7 +62,7 @@ function formatDateISO8601NoMs (date) {
  * @param {string} value - The value to check
  * @returns {bool} true if value is a hexadecimal string, otherwise false
  */
-function isHex (value) {
+function isHex(value) {
   var hexRegex = /^[0-9a-f]{2,}$/i
   var isHex = hexRegex.test(value) && !(value.length % 2)
   return isHex
@@ -74,7 +74,7 @@ function isHex (value) {
  * @param {string} value - The value to check
  * @returns {bool} true if value is a valid IP, otherwise false
  */
-function isIP (value) {
+function isIP(value) {
   var ipRegex = /\b(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\b/
   var isIP = ipRegex.test(value)
   return isIP
@@ -88,7 +88,7 @@ function isIP (value) {
  * @param {string} op - The hash type performed throughout merkle tree construction (sha-256, sha-512, sha-256-x2, etc.)
  * @returns {ops object array}
  */
-function formatAsChainpointV3Ops (proof, op) {
+function formatAsChainpointV3Ops(proof, op) {
   let ChainpointV3Ops = proof.reduce((result, item) => {
     if (item.left) {
       item = { l: item.left }
@@ -103,7 +103,7 @@ function formatAsChainpointV3Ops (proof, op) {
 }
 
 module.exports = {
-  sleep: sleep,
+  sleepAsync: sleepAsync,
   addMinutes: addMinutes,
   addSeconds: addSeconds,
   formatDateISO8601NoMs: formatDateISO8601NoMs,
