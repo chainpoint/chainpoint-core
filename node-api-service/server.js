@@ -22,7 +22,8 @@ const restify = require('restify')
 const corsMiddleware = require('restify-cors-middleware')
 const hashes = require('./lib/endpoints/hashes.js')
 const calendar = require('./lib/endpoints/calendar.js')
-const cores = require('./lib/endpoints/cores.js')
+const peers = require('./lib/endpoints/peers.js')
+const status = require('./lib/endpoints/status.js')
 const config = require('./lib/endpoints/config.js')
 const root = require('./lib/endpoints/root.js')
 const connections = require('./lib/connections.js')
@@ -96,9 +97,9 @@ server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, calendar.getCalTx
 // get proofs from rocksdb
 server.get({ path: '/proofs', version: '1.0.0' }, calendar.getCoreProofsAsync)
 // get random core peers
-server.get({ path: '/peers', version: '1.0.0' }, cores.getCoresRandomAsync)
+server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
 // get status
-server.get({ path: '/status', version: '1.0.0' }, cores.getCoreStatusAsync)
+server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
 // get configuration information for this stack
 server.get({ path: '/config', version: '1.0.0' }, config.getConfigInfoV1Async)
 // teapot
