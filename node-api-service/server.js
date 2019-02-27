@@ -23,6 +23,7 @@ const corsMiddleware = require('restify-cors-middleware')
 const hashes = require('./lib/endpoints/hashes.js')
 const calendar = require('./lib/endpoints/calendar.js')
 const peers = require('./lib/endpoints/peers.js')
+const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const config = require('./lib/endpoints/config.js')
 const root = require('./lib/endpoints/root.js')
@@ -95,7 +96,7 @@ server.get({ path: '/calendar/:txid', version: '1.0.0' }, calendar.getCalTxAsync
 // get the data value of a txId
 server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, calendar.getCalTxDataAsync)
 // get proofs from rocksdb
-server.get({ path: '/proofs', version: '1.0.0' }, calendar.getCoreProofsAsync)
+server.get({ path: '/proofs', version: '1.0.0' }, proofs.getCoreProofsAsync)
 // get random core peers
 server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
 // get status

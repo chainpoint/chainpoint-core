@@ -83,13 +83,7 @@ async function getCalTxDataAsync(req, res, next) {
   return next()
 }
 
-async function getCoreProofsAsync(req, res, next) {
-  //TODO
-  return next()
-}
-
 module.exports = {
   getCalTxAsync: getCalTxAsync,
-  getCalTxDataAsync: getCalTxDataAsync,
-  getCoreProofsAsync: getCoreProofsAsync
+  getCalTxDataAsync: getCalTxDataAsync
 }
