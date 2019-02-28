@@ -63,19 +63,14 @@ test: test-api test-aggregator
 ## up                        : Build and start all
 .PHONY : up
 up: build cockroachdb-setup
-	docker-compose up -d --build
+	docker-compose up -d
 
-## up-no-build               : Startup without performing builds, rely on pull of images.
-.PHONY : up-no-build
-up-no-build: cockroachdb-setup
-	docker-compose up -d --no-build
-
-## up                        : Build and start all
+## dev                       : Build and start all
 .PHONY : dev
 dev: build cockroachdb-setup
 	docker-compose -f docker-compose-dev.yaml up -d --build
 
-## up-no-build               : Startup without performing builds, rely on pull of images.
+## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build
 dev-no-build: cockroachdb-setup
 	docker-compose -f docker-compose-dev.yaml up -d --no-build

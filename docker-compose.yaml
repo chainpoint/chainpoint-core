@@ -7,10 +7,7 @@ networks:
 services:
 
   abci:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.abci
-    image: abci
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG}
     depends_on:
     - rabbitmq
     environment:
@@ -38,37 +35,6 @@ services:
     - "26657:26657"
     networks:
     - chainpoint
-
-#  abci-2:
-#    build:
-#      context: .
-#      dockerfile: docker/Dockerfile.abci
-#    image: abci
-#    depends_on:
-#    - rabbitmq
-#    environment:
-#      TENDERMINT_HOST: tendermint-2
-#      TENDERMINT_PORT: 26657
-#    ports:
-#    - "26658"
-#    command: bash -c "abci-service"
-#    networks:
-#    - chainpoint
-#
-#  tendermint-2:
-#    depends_on:
-#    - abci
-#    image: tierion/tendermint-cleveldb
-#    entrypoint: ''
-#    volumes:
-#    - ./config/node_2:/tendermint/config:Z
-#    - ./config/node_2/data:/tendermint/data:Z
-#    command: sh -c "tendermint node --p2p.persistent_peers a9767c6b5dc36192d81d911aa4381955b80fd784@127.0.0.1:26656,e5195303cb2150c38c1e429f90f898c0edb143f4@tendermint:26656 --moniker=`hostname` --proxy_app=abci-2:26658"
-#    ports:
-#    - "26656"
-#    - "26657"
-#    networks:
-#    - chainpoint
 
   # NGINX Proxy
   #
@@ -103,9 +69,7 @@ services:
   # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
   #
   base:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.node-base
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base:${DOCKER_TAG}
 
   # HTTP API
   # Restify Node public web API service.
@@ -128,9 +92,7 @@ services:
   #
   api:
     restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG}
     depends_on:
       - base
       - roach1
@@ -149,9 +111,7 @@ services:
 
   api-test:
     container_name: node-api-service-test
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api-test
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service-test:${DOCKER_TAG}
     depends_on:
       - base
       - roach1
@@ -168,34 +128,12 @@ services:
       VIRTUAL_HOST: api.local
 
 
-  # NIST Beacon
-  # Retrieve and store current NIST Beacon records
-  #
-  # SCALED: false
-  #
-  # PORTS : none
-  #
-  nist-beacon:
-    restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.nist-beacon
-    container_name: nist-beacon-core
-    depends_on:
-      - base
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
   #
   btc-tx:
     restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.btc-tx
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG}
     container_name: btc-tx-core
     depends_on:
       - base
@@ -216,9 +154,7 @@ services:
   #
   btc-mon:
     restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.btc-mon
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-mon-service:${DOCKER_TAG}
     container_name: btc-mon-core
     depends_on:
       - base
@@ -235,9 +171,7 @@ services:
   #
   proof-state:
     restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.proof-state
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG}
     depends_on:
       - base
       - rabbitmq
@@ -256,9 +190,7 @@ services:
   #
   proof-gen:
     restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.proof-gen
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG}
     volumes:
       - ./data/gcp:/gcp
     depends_on:
@@ -342,9 +274,7 @@ services:
   #
   task-handler:
     restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.task-handler
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-task-handler-service:${DOCKER_TAG}
     depends_on:
       - base
       - roach1

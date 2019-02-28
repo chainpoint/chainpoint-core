@@ -110,27 +110,6 @@ services:
       ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}   
       VIRTUAL_HOST: api.local
 
-
-  # NIST Beacon
-  # Retrieve and store current NIST Beacon records
-  #
-  # SCALED: false
-  #
-  # PORTS : none
-  #
-  nist-beacon:
-    restart: always
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.nist-beacon
-    container_name: nist-beacon-core
-    depends_on:
-      - base
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: development
-
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
   #
