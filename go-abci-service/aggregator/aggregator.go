@@ -77,30 +77,23 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 			wg.Add(1)
 			defer wg.Done()
 
-			//outerloop reconnects unless we should stop consuming
+			//loop consumes queue and appends to mutex protected data slice
 			for !endConsume {
-				//inner loop consumes queue and appends to mutex protected data slice
-				for !endConsume {
-					select {
-					//if we close the shutdown channel, we exit. Otherwise we process incoming messages
-					case <-shutdown:
-						if endConsume {
-							break
-						}
-						util.LogError(err)
-						time.Sleep(1 * time.Second)
-						break //reconnect
-					case hash := <-session.Msgs:
-						fmt.Println(string(hash.Body))
-						msgStructSlice = append(msgStructSlice, hash)
-						//create new agg roots under heavy load
-						if len(msgStructSlice) > 200 {
-							if agg := ProcessAggregation(rabbitmqConnectUri, msgStructSlice); agg.AggRoot != "" {
-								mux.Lock()
-								aggStructSlice = append(aggStructSlice, agg)
-								mux.Unlock()
-								msgStructSlice = make([]amqp.Delivery, 0)
-							}
+				select {
+				//if we close the shutdown channel, we exit. Otherwise we process incoming messages
+				case <-shutdown:
+					endConsume = true
+					break //exit
+				case hash := <-session.Msgs:
+					fmt.Println(string(hash.Body))
+					msgStructSlice = append(msgStructSlice, hash)
+					//create new agg roots under heavy load
+					if len(msgStructSlice) > 200 {
+						if agg := ProcessAggregation(rabbitmqConnectUri, msgStructSlice); agg.AggRoot != "" {
+							mux.Lock()
+							aggStructSlice = append(aggStructSlice, agg)
+							mux.Unlock()
+							msgStructSlice = make([]amqp.Delivery, 0)
 						}
 					}
 				}
@@ -115,7 +108,6 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 	}
 
 	time.Sleep(time.Duration(sleep) * time.Second)
-	endConsume = true
 	close(shutdown)
 	wg.Wait()
 	fmt.Printf("Aggregation consists of %d items\n", len(aggStructSlice))
