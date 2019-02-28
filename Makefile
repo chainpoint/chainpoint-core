@@ -90,7 +90,7 @@ down:
 ps:
 	docker-compose ps
 
-## ps                        : View running processes
+## restart                        : Restart a dev mode container
 .PHONY : restart
 restart:
 	docker-compose -f docker-compose-dev.yaml up -d --build $(app)
