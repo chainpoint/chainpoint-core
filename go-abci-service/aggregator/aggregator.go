@@ -62,6 +62,7 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggStructSlice := make([]Aggregation, 0)
+	shutdown := make(chan struct{})
 	var wg sync.WaitGroup
 	var mux sync.Mutex
 	endConsume := false
@@ -81,7 +82,8 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 				//inner loop consumes queue and appends to mutex protected data slice
 				for !endConsume {
 					select {
-					case err = <-session.Notify:
+					//if we close the shutdown channel, we exit. Otherwise we process incoming messages
+					case <-shutdown:
 						if endConsume {
 							break
 						}
@@ -114,13 +116,8 @@ func Aggregate(rabbitmqConnectUri string) (agg []Aggregation) {
 
 	time.Sleep(time.Duration(sleep) * time.Second)
 	endConsume = true
-	session.Notify <- &amqp.Error{
-		Code:    int(0),
-		Reason:  "Ending Session",
-		Recover: false,
-		Server:  false,
-	}
-	util.WaitTimeout(&wg, 10*time.Second)
+	close(shutdown)
+	wg.Wait()
 	fmt.Printf("Aggregation consists of %d items\n", len(aggStructSlice))
 
 	return aggStructSlice
