@@ -90,6 +90,11 @@ down:
 ps:
 	docker-compose ps
 
+## ps                        : View running processes
+.PHONY : restart
+restart:
+	docker-compose -f docker-compose-dev.yaml up -d --build $(app)
+
 ## logs                      : Tail application logs
 .PHONY : logs
 logs:
