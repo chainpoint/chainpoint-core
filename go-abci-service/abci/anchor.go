@@ -9,15 +9,16 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	beacon "github.com/chainpoint/go-nist-beacon"
 )
 
 /* Aggregate submitted hashes into a calendar transaction */
-func AggregateCalendar(tendermintRPC types.TendermintURI, rabbitmqUri string) error {
+func AggregateCalendar(tendermintRPC types.TendermintURI, rabbitmqUri string, nist *beacon.Record) error {
 	fmt.Println("starting scheduled aggregation")
 	rpc := GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
-	aggs := aggregator.Aggregate(rabbitmqUri)
-	// Because there is a 1 : 1 calendar/aggregation interval, there is only one  root here
+	aggs := aggregator.Aggregate(rabbitmqUri, *nist)
+	// Because there is a 1 : 1 calendar/aggregation interval, th, ere is only one  root here
 	calAgg := calendar.GenerateCalendarTree(aggs)
 	if calAgg.CalRoot != "" {
 		fmt.Printf("Root: %s\n", calAgg.CalRoot)

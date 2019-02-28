@@ -1,5 +1,5 @@
 hash: 0e16a5d763c70972ef40b73eb47fb0c0ef49239a7506d2cf1ab6aa8a43687424
-updated: 2019-02-25T14:07:37.953684921-08:00
+updated: 2019-02-28T14:56:43.525581655-08:00
 imports:
 - name: github.com/beorn7/perks
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
@@ -9,12 +9,14 @@ imports:
   version: 306aecffea325e97f513b3ff0cf7895a5310651d
   subpackages:
   - btcec
+- name: github.com/chainpoint/go-nist-beacon
+  version: 76edef23d8f4cca67e2bcde90778d8c6d216a7ce
 - name: github.com/davecgh/go-spew
   version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/ethereum/go-ethereum
-  version: badaf43019dce961d6562b81d34de214e9e8ac0f
+  version: 994326ba00bc5783a8935c8428d97131d72a4654
   subpackages:
   - crypto/secp256k1
 - name: github.com/go-kit/kit
@@ -39,7 +41,7 @@ imports:
   - sortkeys
   - types
 - name: github.com/golang/protobuf
-  version: c823c79ea1570fb5ff454033735a8e68575d1d0f
+  version: b5d812f8a3706043e23a9cd5babf2e5423744d30
   subpackages:
   - proto
   - ptypes
@@ -49,13 +51,13 @@ imports:
 - name: github.com/golang/snappy
   version: 2a8bb927dd31d8daada140a5d09578521ce5c36a
 - name: github.com/google/uuid
-  version: 9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8
+  version: 0cd6bf5da1e1c83f8b45653022c74f71af0538a4
 - name: github.com/gorilla/websocket
   version: 7c8e298727d149d7c329b4dec7e94e1932ac5c11
 - name: github.com/jasonlvhit/gocron
   version: 6771d4b492ba2d5f57919c04b4cddb3735365120
 - name: github.com/jmhodges/levigo
-  version: c42d9e0ca023e2198120196f842701bb4c55d7b9
+  version: 853d788c5c416eaaee5b044570784a96c7a26975
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -63,7 +65,7 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/pkg/errors
-  version: 856c240a51a2bf8fb8269ea7f3f9b046aadde36e
+  version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/prometheus/client_golang
   version: 2daed26f633ce23fab5efc02fb3f2e803b3526c3
   subpackages:
@@ -81,7 +83,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: 6ed1f7e1041181781dd2826d3001075d011a80cc
+  version: bbced9601137e764853b2fad7ec3e2dc4c504e02
   subpackages:
   - internal/util
   - iostats
@@ -92,9 +94,9 @@ imports:
 - name: github.com/rs/cors
   version: 76f58f330d76a55c5badc74f6212e8a15e742c77
 - name: github.com/streadway/amqp
-  version: f16568b23ee61c7d911a5b9d306b8fe2092c33b7
+  version: 30f8ed68076eedf14990dafc696f469f58fc1342
 - name: github.com/syndtr/goleveldb
-  version: 9d007e481048296f09f59bd19bb7ae584563cd95
+  version: 4217c9f31f5816db02addc94e56061da77f288d8
   subpackages:
   - leveldb
   - leveldb/cache
@@ -164,7 +166,7 @@ imports:
   - types/time
   - version
 - name: golang.org/x/crypto
-  version: 7f87c0fbb88b590338857bcb720678c2583d4dea
+  version: 8dd112bcdc25174059e45e07517d9fc663123347
   subpackages:
   - chacha20poly1305
   - curve25519
@@ -179,7 +181,7 @@ imports:
   - ripemd160
   - salsa20/salsa
 - name: golang.org/x/net
-  version: fe579d43d83210096a79b46dcca0e3721058393a
+  version: 92fc7df08ae7536330f5a21328292abfa70520a8
   subpackages:
   - context
   - http/httpguts
@@ -190,23 +192,23 @@ imports:
   - netutil
   - trace
 - name: golang.org/x/sys
-  version: cc5685c2db1239775905f3911f0067c0fa74762f
+  version: a34e9553db1e492c9a76e60db2296ae7e5fbb772
   subpackages:
   - cpu
   - unix
 - name: golang.org/x/text
-  version: 6c92c7dc7f53607809182301b96e4cc1975143f1
+  version: d14c52b222ee852cdba8b07206ca0c614b389876
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 082222b4a5c572e33e82ee9162d1352c7cf38682
+  version: 4f5b463f9597cbe0dd13a6a2cd4f85e788d27508
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 871b88ce2e8b9d8e1304740aa55c568cde7641ee
+  version: 9ecb6116ff8b19e6f9627f339177681034a6c568
   subpackages:
   - balancer
   - balancer/base

@@ -27,6 +27,9 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.task-handler', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:latest', '.' ]
   waitFor: ['node-base']
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-f', 'docker/Dockerfile.abci', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:latest', '.' ]
+  waitFor: ['node-base']
 images:
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:$COMMIT_SHA'
@@ -46,5 +49,7 @@ images:
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:$COMMIT_SHA'
+- 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:latest'
+- 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:$COMMIT_SHA'
 options:
  machineType: 'N1_HIGHCPU_8'

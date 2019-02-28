@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"time"
 
-	cron "gopkg.in/robfig/cron.v3"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
-	types2 "github.com/tendermint/tendermint/abci/types"
+	beacon "github.com/chainpoint/go-nist-beacon"
+
+	cron "gopkg.in/robfig/cron.v3"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/tendermint/tendermint/abci/example/code"
+	types2 "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/version"
@@ -73,10 +76,19 @@ func NewAnchorApplication(rabbitmqUri string, tendermintRPC types.TendermintURI,
 	}
 	state := loadState(db)
 
-	// start calendar aggregation loop
+	// create cron scheduler
 	scheduler := cron.New(cron.WithLocation(time.UTC))
+
+	// Update nist object every minute
+	nistRecord := beacon.Record{}
 	scheduler.AddFunc("0/1 0-23 * * *", func() {
-		AggregateCalendar(tendermintRPC, rabbitmqUri)
+		nistRecord, err = beacon.LastRecord()
+		util.LogError(err)
+	})
+
+	// Run calendar aggregation every minute with pointer to nist object
+	scheduler.AddFunc("0/1 0-23 * * *", func() {
+		AggregateCalendar(tendermintRPC, rabbitmqUri, &nistRecord)
 	})
 	scheduler.Start()
 
