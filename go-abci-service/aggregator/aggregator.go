@@ -112,19 +112,20 @@ func ProcessAggregation(rabbitmqConnectURI string, msgStructSlice []amqp.Deliver
 		_, err := buffer.WriteString(fmt.Sprintf("core_id:%s", unPackedHashItem.HashID))
 		hashBytes, _ := hex.DecodeString(unPackedHashItem.Hash)
 		_, err = buffer.Write(hashBytes)
-		//fmt.Println(unPackedHashItem.HashID)
-		//fmt.Println(unPackedHashItem.Hash)
-		//fmt.Println(hex.Dump(buffer.Bytes()))
+		fmt.Println(unPackedHashItem.HashID)
+		fmt.Println(unPackedHashItem.Hash)
+		fmt.Println(hex.Dump(buffer.Bytes()))
 		rabbitmq.LogError(err, "failed to write hashes to byte buffer")
 		sha := sha256.New()
 		sha.Write(buffer.Bytes())
 		newHash := sha.Sum(nil)
-		//fmt.Println(fmt.Sprintf("%s", hex.EncodeToString(newHash)))
+		fmt.Println(fmt.Sprintf("%s", hex.EncodeToString(newHash)))
 		if nist != "" {
 			var nistBuffer bytes.Buffer
 			nistBuffer.WriteString(fmt.Sprintf("nistv2:%s", nist))
 			nistBuffer.Write(newHash[:])
-			newHash = sha256.Sum256(nistBuffer.Bytes())[:]
+			hash := sha256.Sum256(nistBuffer.Bytes())
+			newHash = hash[:]
 		}
 		hashSlice = append(hashSlice, newHash[:])
 	}
