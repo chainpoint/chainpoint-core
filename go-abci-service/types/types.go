@@ -109,7 +109,7 @@ type CalState struct {
 
 // BtcMonMsg : TODO: Describe this
 type BtcMonMsg struct {
-	BtcID         string    `json:"btctx_id"`
+	BtcTxID         string    `json:"btctx_id"`
 	BtcHeadHeight int64     `json:"btchead_height"`
 	BtcHeadRoot   string    `json:"btchead_root"`
 	Path          []JSProof `json:"path"`
