@@ -13,8 +13,9 @@ import (
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
-func BroadcastTx(rpcUri types.TendermintURI, txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
-	rpc := GetHTTPClient(rpcUri)
+// BroadcastTx : TODO: describe this
+func BroadcastTx(rpcURI types.TendermintURI, txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
+	rpc := GetHTTPClient(rpcURI)
 	defer rpc.Stop()
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time}
 	result, err := rpc.BroadcastTxSync([]byte(util.EncodeTx(tx)))
@@ -59,7 +60,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		break
 	case "BTC-M":
 		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
-		ConsumeBtcTxMsg(app.rabbitmqUri, []byte(tx.Data))
+		ConsumeBtcTxMsg(app.rabbitmqURI, []byte(tx.Data))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "BTC-C":

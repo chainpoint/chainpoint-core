@@ -12,6 +12,7 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
+// MakeValSetChangeTx : TODO: describe this
 func MakeValSetChangeTx(pubkey types.PubKey, power int64) []byte {
 	return []byte(fmt.Sprintf("val:%X/%d", pubkey.Data, power))
 }

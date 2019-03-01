@@ -21,12 +21,12 @@ var nodeStatus types.NodeStatus
 var netInfo *core_types.ResultNetInfo
 var currentCalTree merkletools.MerkleTree
 var tendermintRPC types.TendermintURI
-var rabbitmqUri string
+var rabbitmqURI string
 
 func main() {
 	tmServer := util.GetEnv("TENDERMINT_HOST", "tendermint")
 	tmPort := util.GetEnv("TENDERMINT_PORT", "26657")
-	rabbitmqUri = util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
+	rabbitmqURI = util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
@@ -40,7 +40,7 @@ func main() {
 	logger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
 	/* Instantiate ABCI application */
-	app := abci.NewAnchorApplication(rabbitmqUri, tendermintRPC, doCalLoop, doAnchorLoop, anchorInterval)
+	app := abci.NewAnchorApplication(rabbitmqURI, tendermintRPC, doCalLoop, doAnchorLoop, anchorInterval)
 
 	// Start the ABCI connection to the Tendermint Node
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)

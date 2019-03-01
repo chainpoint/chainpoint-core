@@ -20,16 +20,18 @@ import (
 	"github.com/tendermint/tendermint/version"
 )
 
+// TODO: Describe this
 const (
 	ValidatorSetChangePrefix string = "val:"
 )
 
+// TODO: Describe this
 var (
 	stateKey                         = []byte("chainpoint")
 	ProtocolVersion version.Protocol = 0x1
 )
 
-//loadState loads the State struct from a database instance
+// loadState loads the State struct from a database instance
 func loadState(db dbm.DB) types.State {
 	stateBytes := db.Get(stateKey)
 	var state types.State
@@ -56,18 +58,19 @@ func saveState(state types.State) {
 
 var _ types2.Application = (*AnchorApplication)(nil)
 
+// AnchorApplication : TODO: describe this
 type AnchorApplication struct {
 	types2.BaseApplication
 	ValUpdates     []types2.ValidatorUpdate
 	state          types.State
-	rabbitmqUri    string
+	rabbitmqURI    string
 	tendermintURI  types.TendermintURI
 	doAnchor       bool
 	anchorInterval int
 }
 
 //NewAnchorApplication is ABCI app constructor
-func NewAnchorApplication(rabbitmqUri string, tendermintRPC types.TendermintURI, doCal bool, doAnchor bool, anchorInterval int) *AnchorApplication {
+func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI, doCal bool, doAnchor bool, anchorInterval int) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
 	db, err := dbm.NewGoLevelDB(name, "/tendermint/data")
@@ -89,30 +92,31 @@ func NewAnchorApplication(rabbitmqUri string, tendermintRPC types.TendermintURI,
 
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
-			AggregateCalendar(tendermintRPC, rabbitmqUri, &nistRecord)
+			AggregateCalendar(tendermintRPC, rabbitmqURI, &nistRecord)
 		})
 		scheduler.Start()
 	}
 
 	// Infinite loop to process btctx and btcmon rabbitMQ messages
 	if doAnchor {
-		go ReceiveCalRMQ(rabbitmqUri, tendermintRPC)
+		go ReceiveCalRMQ(rabbitmqURI, tendermintRPC)
 	}
 
 	return &AnchorApplication{
 		state:          state,
-		rabbitmqUri:    rabbitmqUri,
+		rabbitmqURI:    rabbitmqURI,
 		tendermintURI:  tendermintRPC,
 		doAnchor:       doAnchor,
 		anchorInterval: anchorInterval,
 	}
 }
 
+// SetOption : TODO: describe this
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
 	return
 }
 
-// Save the validators in the merkle tree
+// InitChain : Save the validators in the merkle tree
 func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.ResponseInitChain {
 	for _, v := range req.Validators {
 		r := app.updateValidator(v, []cmn.KVPair{})
@@ -123,6 +127,7 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 	return types2.ResponseInitChain{}
 }
 
+// Info : TODO: describe this
 func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.ResponseInfo) {
 	infoJSON, err := json.Marshal(app.state)
 	if err != nil {
@@ -136,21 +141,24 @@ func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.Respo
 	}
 }
 
-// tx is url encoded json
+// DeliverTx : tx is url encoded json
 func (app *AnchorApplication) DeliverTx(tx []byte) types2.ResponseDeliverTx {
 	resp := app.updateStateFromTx(tx)
 	return resp
 }
 
+// CheckTx : TODO: describe this
 func (app *AnchorApplication) CheckTx(tx []byte) types2.ResponseCheckTx {
 	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
 }
 
+// BeginBlock : TODO: describe this
 func (app *AnchorApplication) BeginBlock(req types2.RequestBeginBlock) types2.ResponseBeginBlock {
 	app.ValUpdates = make([]types2.ValidatorUpdate, 0)
 	return types2.ResponseBeginBlock{}
 }
 
+// EndBlock : TODO: describe this
 func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.ResponseEndBlock {
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
@@ -160,19 +168,20 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Anchor every anchorInterval of blocks
 	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
-		go AnchorBTC(app.tendermintURI, app.rabbitmqUri, &app.state.PrevCalTxInt, app.state.LatestCalTxInt)
+		go AnchorBTC(app.tendermintURI, app.rabbitmqURI, &app.state.PrevCalTxInt, app.state.LatestCalTxInt)
 	}
 
 	// Finalize new block by calculating appHash and incrementing height
 	appHash := make([]byte, 8)
 	binary.PutVarint(appHash, app.state.Size)
 	app.state.AppHash = appHash
-	app.state.Height += 1
+	app.state.Height++
 	saveState(app.state)
 
 	return types2.ResponseCommit{Data: appHash}
 }
 
+// Query : TODO: describe this
 func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery types2.ResponseQuery) {
 	return
 }

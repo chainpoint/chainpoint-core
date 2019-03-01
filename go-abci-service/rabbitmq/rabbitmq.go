@@ -6,6 +6,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Session : TODO: describe this
 type Session struct {
 	Conn   *amqp.Connection
 	Ch     *amqp.Channel
@@ -14,12 +15,14 @@ type Session struct {
 	Notify chan *amqp.Error
 }
 
+// LogError : TODO: describe this
 func LogError(err error, msg string) {
 	if err != nil {
 		log.Printf("%s: %s", msg, err)
 	}
 }
 
+// End : TODO: describe this
 func (session *Session) End() error {
 	if errCh := session.Ch.Close(); errCh != nil {
 		return errCh
@@ -31,10 +34,10 @@ func (session *Session) End() error {
 }
 
 // Dial AMQP provider, create a channel, and declare a queue object
-func Dial(amqpUrl string, queue string) (Session, error) {
+func Dial(amqpURL string, queue string) (Session, error) {
 	var session Session
 	var err error
-	session.Conn, err = amqp.Dial(amqpUrl)
+	session.Conn, err = amqp.Dial(amqpURL)
 	if err != nil {
 		LogError(err, "dialing connection error")
 		return session, err
@@ -56,15 +59,15 @@ func Dial(amqpUrl string, queue string) (Session, error) {
 	if err != nil {
 		LogError(err, "Problem with queue declare")
 		return session, err
-	} else {
-		return session, nil
 	}
+
+	return session, nil
 }
 
 // ConnectAndConsume begins consumption of queue by returning a delivery channel via the session struct
-func ConnectAndConsume(rabbitmqConnectUri string, queue string) (session Session, err error) {
+func ConnectAndConsume(rabbitmqConnectURI string, queue string) (session Session, err error) {
 	//Connect to Queue
-	session, err = Dial(rabbitmqConnectUri, queue)
+	session, err = Dial(rabbitmqConnectURI, queue)
 	if err != nil {
 		return Session{}, err
 	}
@@ -82,8 +85,8 @@ func ConnectAndConsume(rabbitmqConnectUri string, queue string) (session Session
 }
 
 // Publish sends messages to a particular queue
-func Publish(rabbitmqConnectUri string, queue string, msgType string, msg []byte) error {
-	pubSession, err := Dial(rabbitmqConnectUri, queue)
+func Publish(rabbitmqConnectURI string, queue string, msgType string, msg []byte) error {
+	pubSession, err := Dial(rabbitmqConnectURI, queue)
 	if err != nil {
 		LogError(err, "failed to dial for publishing")
 		return err

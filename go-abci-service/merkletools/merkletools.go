@@ -156,9 +156,9 @@ func makeTree(mt *MerkleTree, useOddNodeDuplication bool, performHashesTwice boo
 				// if we are making a btc style tree, identify any lone odd nodes
 				// and add a duplicate to be paired with
 				if useOddNodeDuplication {
-					if len(currentNodeSet) % 2 == 1 {
+					if len(currentNodeSet)%2 == 1 {
 						// create a copy of the entire Node structure
-						duplicateNode := *(currentNodeSet[len(currentNodeSet) - 1])
+						duplicateNode := *(currentNodeSet[len(currentNodeSet)-1])
 						// add the duplicate Node address to currentNodeSet
 						currentNodeSet = append(currentNodeSet, &duplicateNode)
 						// add the duplicate Node to mt.Nodes master list
@@ -166,7 +166,7 @@ func makeTree(mt *MerkleTree, useOddNodeDuplication bool, performHashesTwice boo
 					}
 				}
 				go hashNodePair(&currentNodeSet, i, useOddNodeDuplication, performHashesTwice, &wg, &c)
-				newNodeSet = append(newNodeSet, <- c)
+				newNodeSet = append(newNodeSet, <-c)
 			}
 			// Wait for all tasks to complete
 			wg.Wait()
@@ -189,8 +189,8 @@ func hashNodePair(nodes *[]*Node, index int, useOddNodeDuplication bool, perform
 	// Initialize the hash pair nodes we will be working with
 	var hashPair []*Node
 	hashPair = append(hashPair, (*nodes)[index])
-	if index + 1 < len(*nodes) {
-		hashPair = append(hashPair, (*nodes)[index + 1])
+	if index+1 < len(*nodes) {
+		hashPair = append(hashPair, (*nodes)[index+1])
 	}
 	var newParentNode Node
 	if len(hashPair) > 1 {
