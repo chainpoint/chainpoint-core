@@ -141,7 +141,7 @@ type AnchorObj struct {
 	Uris     []string `json:"uris"`
 }
 
-// ProofData : Represents a step in a cal proof
+// CalProofData : Represents a step in a cal proof
 type CalProofData struct {
 	AggID string          `json:"agg_id"`
 	Proof []ProofLineItem `json:"proof"`
