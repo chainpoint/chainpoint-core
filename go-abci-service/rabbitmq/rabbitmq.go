@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"errors"
 	"log"
 
 	"github.com/streadway/amqp"
@@ -24,13 +25,16 @@ func LogError(err error, msg string) {
 
 // End : Closes and ends an RMQ session
 func (session *Session) End() error {
-	if errCh := session.Ch.Close(); errCh != nil {
-		return errCh
+	if session.Ch != nil && session.Conn != nil {
+		if errCh := session.Ch.Close(); errCh != nil {
+			return errCh
+		}
+		if errConn := session.Conn.Close(); errConn != nil {
+			return errConn
+		}
+		return nil
 	}
-	if errConn := session.Conn.Close(); errConn != nil {
-		return errConn
-	}
-	return nil
+	return errors.New("RabbitMQ: Either channel or connection is nil")
 }
 
 // Dial AMQP provider, create a channel, and declare a queue object

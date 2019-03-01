@@ -82,7 +82,7 @@ async function getCalTxDataAsync(req, res, next) {
   let jsonData = JSON.parse(txData)
   res.contentType = 'application/json'
   res.cache('public', { maxAge: 2592000 })
-  res.send(jsonData.Data)
+  res.send(jsonData.hash)
   return next()
 }
 

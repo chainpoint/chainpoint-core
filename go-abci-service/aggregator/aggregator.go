@@ -162,17 +162,19 @@ func ProcessAggregation(rabbitmqConnectURI string, msgStructSlice []amqp.Deliver
 
 	//Publish to proof-state service
 	aggJSON, err := json.Marshal(agg)
-	err = rabbitmq.Publish(rabbitmqConnectURI, proofStateQueueOut, msgType, aggJSON)
+	if rabbitmqConnectURI != "" {
+		err = rabbitmq.Publish(rabbitmqConnectURI, proofStateQueueOut, msgType, aggJSON)
 
-	if err != nil {
-		rabbitmq.LogError(err, "problem publishing aggJSON message to queue")
-		for _, msg := range msgStructSlice {
-			msg.Nack(false, true)
-		}
-	} else {
-		for _, msg := range msgStructSlice {
-			errAck := msg.Ack(false)
-			rabbitmq.LogError(errAck, "error acking queue item")
+		if err != nil {
+			rabbitmq.LogError(err, "problem publishing aggJSON message to queue")
+			for _, msg := range msgStructSlice {
+				msg.Nack(false, true)
+			}
+		} else {
+			for _, msg := range msgStructSlice {
+				errAck := msg.Ack(false)
+				rabbitmq.LogError(errAck, "error acking queue item")
+			}
 		}
 	}
 	return agg
