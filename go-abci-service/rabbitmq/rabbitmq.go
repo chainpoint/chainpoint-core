@@ -6,7 +6,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Session : TODO: describe this
+// Session : Session contains all data necessary to describe an RMQ connection, including the queue
 type Session struct {
 	Conn   *amqp.Connection
 	Ch     *amqp.Channel
@@ -15,14 +15,14 @@ type Session struct {
 	Notify chan *amqp.Error
 }
 
-// LogError : TODO: describe this
+// LogError : Describes an RMQ error
 func LogError(err error, msg string) {
 	if err != nil {
-		log.Printf("%s: %s", msg, err)
+		log.Printf("RabbitMQ Error: %s; %s", msg, err)
 	}
 }
 
-// End : TODO: describe this
+// End : Closes and ends an RMQ session
 func (session *Session) End() error {
 	if errCh := session.Ch.Close(); errCh != nil {
 		return errCh

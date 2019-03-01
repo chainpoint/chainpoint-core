@@ -14,7 +14,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
 
-// LogError : TODO: describe this
+// LogError : Log error if it exists
 func LogError(err error) error {
 	if err != nil {
 		fmt.Println(err)
@@ -22,18 +22,18 @@ func LogError(err error) error {
 	return err
 }
 
-// Int64ToByte : TODO: describe this
+// Int64ToByte : Convert an int64 to a byte for use in the Tendermint tagging system
 func Int64ToByte(num int64) []byte {
 	return []byte(strconv.FormatInt(num, binary.MaxVarintLen64))
 }
 
-// ByteToInt64 : TODO: describe this
+// ByteToInt64 : Convert a byte array from tendermint back into an int64
 func ByteToInt64(arr string) int64 {
 	n, _ := strconv.ParseInt(arr, 10, 64)
 	return n
 }
 
-// GetEnv : TODO: describe this
+// GetEnv : Get an env var but with a default. Untyped, defaults to string.
 func GetEnv(key string, def string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
@@ -42,7 +42,7 @@ func GetEnv(key string, def string) string {
 	return value
 }
 
-// GetSeededRandInt : TODO: describe this
+// GetSeededRandInt : Given a seed and a maximum size, generates a random int between 0 and upperBound
 func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	eightByteHash := seedBytes[0:7]
 	seed, _ := binary.Varint(eightByteHash)
@@ -62,7 +62,7 @@ func DecodeTx(incoming []byte) (types.Tx, error) {
 	return calendar, nil
 }
 
-// EncodeTx : TODO: describe this
+// EncodeTx : Encodes a Tendermint transaction to base64
 func EncodeTx(outgoing types.Tx) string {
 	txJSON, _ := json.Marshal(outgoing)
 	return base64.StdEncoding.EncodeToString(txJSON)

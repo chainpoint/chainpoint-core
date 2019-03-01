@@ -13,12 +13,11 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 )
 
 // GenerateCalendarTree creates the MerkleTree for the aggregation roots which will be committed to the calendar
-func GenerateCalendarTree(aggs []aggregator.Aggregation) types.CalAgg {
+func GenerateCalendarTree(aggs []types.Aggregation) types.CalAgg {
 	var treeDataObj types.CalAgg
 	var tree merkletools.MerkleTree
 	for _, agg := range aggs {
@@ -30,9 +29,9 @@ func GenerateCalendarTree(aggs []aggregator.Aggregation) types.CalAgg {
 	}
 	tree.MakeTree()
 	treeDataObj.CalRoot = hex.EncodeToString(tree.GetMerkleRoot())
-	treeDataObj.ProofData = make([]types.ProofData, len(aggs))
+	treeDataObj.ProofData = make([]types.CalProofData, len(aggs))
 	for i, agg := range aggs {
-		var proofData types.ProofData
+		var proofData types.CalProofData
 		proofData.AggID = agg.AggID
 		proof := tree.GetProof(i)
 		proofData.Proof = make([]types.ProofLineItem, 0)

@@ -13,7 +13,7 @@ import (
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
-// BroadcastTx : TODO: describe this
+// BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
 func BroadcastTx(rpcURI types.TendermintURI, txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
 	rpc := GetHTTPClient(rpcURI)
 	defer rpc.Stop()
@@ -25,13 +25,13 @@ func BroadcastTx(rpcURI types.TendermintURI, txType string, data string, version
 	return *result, nil
 }
 
-// Helper method to increment transaction integer
+// incrementTxInt: Helper method to increment transaction integer
 func (app *AnchorApplication) incrementTxInt(tags []cmn.KVPair) []cmn.KVPair {
 	app.state.TxInt++ // no pre-increment :(
 	return append(tags, cmn.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
 }
 
-// Updates state based on type of transaction received. Used by DeliverTx
+// updateStateFromTx: Updates state based on type of transaction received. Used by DeliverTx
 func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
 	tx, err := util.DecodeTx(rawTx)
 	tags := []cmn.KVPair{}

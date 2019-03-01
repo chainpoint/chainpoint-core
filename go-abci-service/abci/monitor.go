@@ -15,7 +15,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
-// ConsumeBtcTxMsg : TODO: describe this
+// ConsumeBtcTxMsg : Consumes a btctx RMQ message to initiate monitoring on all nodes
 func ConsumeBtcTxMsg(rabbitmqURI string, msgBytes []byte) error {
 	var btcTxObj types.BtcTxMsg
 	if err := json.Unmarshal(msgBytes, &btcTxObj); err != nil {

@@ -43,6 +43,26 @@ type TxTm struct {
 	Data []byte
 }
 
+// Aggregation : An object containing all the relevant data for an aggregation event
+type Aggregation struct {
+	AggID     string      `json:"agg_id"`
+	AggRoot   string      `json:"agg_root"`
+	ProofData []ProofData `json:"proofData"`
+}
+
+// HashItem : An object contains the Core ID and value for a hash
+type HashItem struct {
+	HashID string `json:"hash_id"`
+	Hash   string `json:"hash"`
+}
+
+// ProofData : The proof data for a given hash within an aggregation
+type ProofData struct {
+	HashID string          `json:"hash_id"`
+	Hash   string          `json:"hash"`
+	Proof  []ProofLineItem `json:"proof"`
+}
+
 // BtcAgg : An object containing BTC anchoring aggregation data
 type BtcAgg struct {
 	AnchorBtcAggID   string         `json:"anchor_btc_agg_id"`
@@ -71,43 +91,43 @@ type BtcTxProofState struct {
 	BtcTxState     BtcTxOpsState `json:"btctx_state"`
 }
 
-// BtcTxOpsState : TODO: Describe this
+// BtcTxOpsState : An RMQ message generated as part of the monitoring proof object
 type BtcTxOpsState struct {
 	Ops []ProofLineItem `json:"ops"`
 }
 
-// BtccStateObj : TODO: Describe this
+// BtccStateObj :  An RMQ message object issued to generate proofs after BTCC confirmation
 type BtccStateObj struct {
 	BtcTxID       string       `json:"btctx_id"`
 	BtcHeadHeight int64        `json:"btchead_height"`
 	BtcHeadState  BtccOpsState `json:"btchead_state"`
 }
 
-// BtccOpsState : TODO: Describe this
+// BtccOpsState : Part of the RMQ message for btc anchoring post-confirmation
 type BtccOpsState struct {
 	Ops    []ProofLineItem `json:"ops"`
 	Anchor AnchorObj       `json:"anchor"`
 }
 
-// TxID : TODO: Describe this
+// TxID : RMQ message dispatched to initiate monitoring
 type TxID struct {
 	TxID string `json:"tx_id"`
 }
 
-// CalAgg : TODO: Describe this
+// CalAgg : An RMQ message representing an intermediate aggregation object to be fed into the Cal anchor tree
 type CalAgg struct {
-	CalRoot   string      `json:"cal_root"`
-	ProofData []ProofData `json:"proofData"`
+	CalRoot   string         `json:"cal_root"`
+	ProofData []CalProofData `json:"proofData"`
 }
 
-// CalState : TODO: Describe this
+// CalState : An RMQ message confirming a CAL anchor, sent to the proof service to generate/store the proof
 type CalState struct {
-	CalID     string      `json:"cal_id"`
-	Anchor    AnchorObj   `json:"anchor"`
-	ProofData []ProofData `json:"proofData"`
+	CalID     string         `json:"cal_id"`
+	Anchor    AnchorObj      `json:"anchor"`
+	ProofData []CalProofData `json:"proofData"`
 }
 
-// BtcMonMsg : TODO: Describe this
+// BtcMonMsg : An RMQ message sent by the monitoring service to confirm a BTC transaction has occurred
 type BtcMonMsg struct {
 	BtcTxID       string    `json:"btctx_id"`
 	BtcHeadHeight int64     `json:"btchead_height"`
@@ -115,26 +135,26 @@ type BtcMonMsg struct {
 	Path          []JSProof `json:"path"`
 }
 
-// AnchorObj : TODO: Describe this
+// AnchorObj : Utilized by the proof spec to represent an anchoring proof step
 type AnchorObj struct {
 	AnchorID string   `json:"anchor_id"`
 	Uris     []string `json:"uris"`
 }
 
-// ProofData : TODO: Describe this
-type ProofData struct {
+// ProofData : Represents a step in a cal proof
+type CalProofData struct {
 	AggID string          `json:"agg_id"`
 	Proof []ProofLineItem `json:"proof"`
 }
 
-// ProofLineItem : TODO: Describe this
+// ProofLineItem : A step in a Chainpoint proof
 type ProofLineItem struct {
 	Left  string `json:"l,omitempty"`
 	Right string `json:"r,omitempty"`
 	Op    string `json:"op,omitempty"`
 }
 
-// JSProof : TODO: Describe this
+// JSProof : Used to unmarshall the Javascript MerkleTools proofs. The library generates a different proof structure than the go version.
 type JSProof struct {
 	Left  string `json:"left,omitempty"`
 	Right string `json:"right,omitempty"`

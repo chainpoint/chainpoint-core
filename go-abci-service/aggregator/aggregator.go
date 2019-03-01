@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/google/uuid"
 
@@ -20,47 +22,20 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Aggregation : An object containing all the relevant data for an aggregation event
-type Aggregation struct {
-	AggID     string      `json:"agg_id"`
-	AggRoot   string      `json:"agg_root"`
-	ProofData []ProofData `json:"proofData"`
-}
-
-// HashItem : An object contains the Core ID and value for a hash
-type HashItem struct {
-	HashID string `json:"hash_id"`
-	Hash   string `json:"hash"`
-}
-
-// ProofData : The proof data for a given hash within an aggregation
-type ProofData struct {
-	HashID string          `json:"hash_id"`
-	Hash   string          `json:"hash"`
-	Proof  []ProofLineItem `json:"proof"`
-}
-
-// ProofLineItem : An individual operation within a Proof calculation
-type ProofLineItem struct {
-	Left  string `json:"l,omitempty"`
-	Right string `json:"r,omitempty"`
-	Op    string `json:"op,omitempty"`
-}
-
 const msgType = "aggregator"
 const aggQueueIn = "work.agg"
 const aggQueueOut = "work.agg"
 const proofStateQueueOut = "work.proofstate"
 
 // Aggregate retrieves hash messages from rabbitmq, stores them, and creates a proof path for each
-func Aggregate(rabbitmqConnectURI string, nist beacon.Record) (agg []Aggregation) {
+func Aggregate(rabbitmqConnectURI string, nist beacon.Record) (agg []types.Aggregation) {
 	var session rabbitmq.Session
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "200"))
 	sleep := int(60 / aggThreads)
 
 	//Consume queue in goroutines with output slice guarded by mutex
-	aggStructSlice := make([]Aggregation, 0)
+	aggStructSlice := make([]types.Aggregation, 0)
 	shutdown := make(chan struct{})
 	var wg sync.WaitGroup
 	var mux sync.Mutex
@@ -119,13 +94,13 @@ func Aggregate(rabbitmqConnectURI string, nist beacon.Record) (agg []Aggregation
 }
 
 // ProcessAggregation creates merkle trees of received hashes a la https://github.com/chainpoint/chainpoint-services/blob/develop/node-aggregator-service/server.js#L66
-func ProcessAggregation(rabbitmqConnectURI string, msgStructSlice []amqp.Delivery, nist string) Aggregation {
-	var agg Aggregation
-	hashSlice := make([][]byte, 0)         // byte array
-	hashStructSlice := make([]HashItem, 0) // keep record for building proof path
+func ProcessAggregation(rabbitmqConnectURI string, msgStructSlice []amqp.Delivery, nist string) types.Aggregation {
+	var agg types.Aggregation
+	hashSlice := make([][]byte, 0)               // byte array
+	hashStructSlice := make([]types.HashItem, 0) // keep record for building proof path
 
 	for _, msgHash := range msgStructSlice {
-		unPackedHashItem := HashItem{}
+		unPackedHashItem := types.HashItem{}
 		if err := json.Unmarshal(msgHash.Body, &unPackedHashItem); err != nil || len(msgHash.Body) == 0 {
 			util.LogError(err)
 			continue
@@ -145,7 +120,7 @@ func ProcessAggregation(rabbitmqConnectURI string, msgStructSlice []amqp.Deliver
 	}
 
 	if len(msgStructSlice) == 0 || len(hashSlice) == 0 {
-		return Aggregation{}
+		return types.Aggregation{}
 	}
 
 	//Merkle tree creation
@@ -158,9 +133,9 @@ func ProcessAggregation(rabbitmqConnectURI string, msgStructSlice []amqp.Deliver
 	agg.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 
 	//Create proof paths
-	proofSlice := make([]ProofData, 0)
+	proofSlice := make([]types.ProofData, 0)
 	for i, unPackedHash := range hashStructSlice {
-		var proofData ProofData
+		var proofData types.ProofData
 		proofData.HashID = unPackedHash.HashID
 		proofData.Hash = unPackedHash.Hash
 		proofs := tree.GetProof(i)
@@ -168,18 +143,18 @@ func ProcessAggregation(rabbitmqConnectURI string, msgStructSlice []amqp.Deliver
 			proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("nistv2:%s", nist))}}, proofs...)
 		}
 		proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("core_id:%s", unPackedHash.HashID))}}, proofs...)
-		proofData.Proof = make([]ProofLineItem, 0)
+		proofData.Proof = make([]types.ProofLineItem, 0)
 		for _, p := range proofs {
 			if p.Left {
 				if strings.Contains(string(p.Value), "nistv2") || strings.Contains(string(p.Value), "core_id") {
-					proofData.Proof = append(proofData.Proof, ProofLineItem{Left: string(p.Value)})
+					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: string(p.Value)})
 				} else {
-					proofData.Proof = append(proofData.Proof, ProofLineItem{Left: hex.EncodeToString(p.Value)})
+					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: hex.EncodeToString(p.Value)})
 				}
 			} else {
-				proofData.Proof = append(proofData.Proof, ProofLineItem{Right: hex.EncodeToString(p.Value)})
+				proofData.Proof = append(proofData.Proof, types.ProofLineItem{Right: hex.EncodeToString(p.Value)})
 			}
-			proofData.Proof = append(proofData.Proof, ProofLineItem{Op: "sha-256"})
+			proofData.Proof = append(proofData.Proof, types.ProofLineItem{Op: "sha-256"})
 		}
 		proofSlice = append(proofSlice, proofData)
 	}
