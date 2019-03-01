@@ -43,6 +43,9 @@ async function getCalTxAsync(req, res, next) {
     res.send({ code: 'NotFoundError', message: '' })
     return next()
   }
+  // Txs are double-encoded in base64 when returned from this RPC client
+  let txData = JSON.parse(new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii'))
+  tx.tx = txData
   res.contentType = 'application/json'
   res.cache('public', { maxAge: 2592000 })
   res.send(tx)
@@ -75,7 +78,7 @@ async function getCalTxDataAsync(req, res, next) {
     res.send({ code: 'NotFoundError', message: '' })
     return next()
   }
-  let txData = new Buffer(tx.tx, 'base64').toString('ascii')
+  let txData = new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii')
   let jsonData = JSON.parse(txData)
   res.contentType = 'application/json'
   res.cache('public', { maxAge: 2592000 })

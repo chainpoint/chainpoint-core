@@ -17,8 +17,11 @@ func AggregateCalendar(tendermintRPC types.TendermintURI, rabbitmqUri string, ni
 	fmt.Println("starting scheduled aggregation")
 	rpc := GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
+
+	// Get agg objects
 	aggs := aggregator.Aggregate(rabbitmqUri, *nist)
-	// Because there is a 1 : 1 calendar/aggregation interval, th, ere is only one  root here
+
+	// Pass the agg objects to generate a calendar tree
 	calAgg := calendar.GenerateCalendarTree(aggs)
 	if calAgg.CalRoot != "" {
 		fmt.Printf("Root: %s\n", calAgg.CalRoot)

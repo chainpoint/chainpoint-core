@@ -144,6 +144,7 @@ async function consumeProofReadyMessageAsync(msg) {
               console.error(`Proof ${aggStateRow.hash_id} has an invalid JSON schema`)
               return null
             }
+            console.log(JSON.stringify(proof))
             return proof
           })
           .filter(proof => proof !== null)

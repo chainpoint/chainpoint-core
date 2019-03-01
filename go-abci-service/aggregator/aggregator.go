@@ -113,7 +113,6 @@ func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation
 	fmt.Printf("Aggregation consists of %d items\n", len(aggStructSlice))
 
 	return aggStructSlice
-
 }
 
 // ProcessAggregation creates merkle trees of received hashes a la https://github.com/chainpoint/chainpoint-services/blob/develop/node-aggregator-service/server.js#L66
