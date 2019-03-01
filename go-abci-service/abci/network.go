@@ -14,7 +14,7 @@ import (
 	"github.com/tendermint/tendermint/rpc/client"
 )
 
-// GetStatus retrieves status of our node from RPC
+// GetStatus retrieves status of our node. Can't use RPC because remote_ip has buggy encoding.
 func GetStatus(tendermintRPC types.TendermintURI) (types.NodeStatus, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tendermintRPC.TMServer, tendermintRPC.TMPort))
 	if err != nil {
@@ -27,7 +27,7 @@ func GetStatus(tendermintRPC types.TendermintURI) (types.NodeStatus, error) {
 	return status, nil
 }
 
-// GetNetInfo retrieves known peer information via rpc
+// GetNetInfo retrieves known peer information. Can't use RPC because remote_ip has buggy encoding.
 func GetNetInfo(tendermintRPC types.TendermintURI) (types.NetInfo, error) {
 	resp, err := http.Get(fmt.Sprintf("http://%s:%s/status", tendermintRPC.TMServer, tendermintRPC.TMPort))
 	if err != nil {

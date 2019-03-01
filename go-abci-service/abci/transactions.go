@@ -25,7 +25,7 @@ func BroadcastTx(rpcUri types.TendermintURI, txType string, data string, version
 }
 
 // Helper method to increment transaction integer
-func (app *AnchorApplication) incrementTx(tags []cmn.KVPair) []cmn.KVPair {
+func (app *AnchorApplication) incrementTxInt(tags []cmn.KVPair) []cmn.KVPair {
 	app.state.TxInt++ // no pre-increment :(
 	return append(tags, cmn.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
 }
@@ -40,36 +40,37 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	var resp types2.ResponseDeliverTx
 	switch string(tx.TxType) {
 	case "VAL":
-		tags := app.incrementTx(tags)
+		tags := app.incrementTxInt(tags)
 		if isValidatorTx([]byte(tx.Data)) {
 			resp = app.execValidatorTx([]byte(tx.Data), tags)
 		}
 		break
 	case "CAL":
-		tags := app.incrementTx(tags)
+		tags := app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-A":
 		app.state.LatestBtcaTx = rawTx
 		app.state.LatestBtcaHeight = app.state.Height + 1
-		tags := app.incrementTx(tags)
+		tags := app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-M":
+		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
 		ConsumeBtcTxMsg(app.rabbitmqUri, []byte(tx.Data))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "BTC-C":
 		app.state.LatestBtccTx = rawTx
 		app.state.LatestBtccHeight = app.state.Height + 1
-		tags := app.incrementTx(tags)
+		tags := app.incrementTxInt(tags)
 		app.state.LatestBtccTxInt = app.state.TxInt
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "NIST":
-		tags := app.incrementTx(tags)
+		tags := app.incrementTxInt(tags)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	default:
