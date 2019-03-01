@@ -20,25 +20,28 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Aggregation : An object containing all the relevant data for an aggregation event
 type Aggregation struct {
-	AggId     string      `json:"agg_id"`
+	AggID     string      `json:"agg_id"`
 	AggRoot   string      `json:"agg_root"`
 	ProofData []ProofData `json:"proofData"`
 }
 
-type Hash struct {
+// HashItem : An object contains the Core ID and value for a hash
+type HashItem struct {
 	HashID string `json:"hash_id"`
 	Hash   string `json:"hash"`
-	Nist   string `json:"nist"`
 }
 
+// ProofData : The proof data for a given hash within an aggregation
 type ProofData struct {
-	HashID string  `json:"hash_id"`
-	Hash   string  `json:"hash"`
-	Proof  []Proof `json:"proof"`
+	HashID string          `json:"hash_id"`
+	Hash   string          `json:"hash"`
+	Proof  []ProofLineItem `json:"proof"`
 }
 
-type Proof struct {
+// ProofLineItem : An individual operation within a Proof calculation
+type ProofLineItem struct {
 	Left  string `json:"l,omitempty"`
 	Right string `json:"r,omitempty"`
 	Op    string `json:"op,omitempty"`
@@ -50,7 +53,7 @@ const aggQueueOut = "work.agg"
 const proofStateQueueOut = "work.proofstate"
 
 // Aggregate retrieves hash messages from rabbitmq, stores them, and creates a proof path for each
-func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation) {
+func Aggregate(rabbitmqConnectURI string, nist beacon.Record) (agg []Aggregation) {
 	var session rabbitmq.Session
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "200"))
@@ -63,7 +66,7 @@ func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation
 	var mux sync.Mutex
 	endConsume := false
 
-	session, err := rabbitmq.ConnectAndConsume(rabbitmqConnectUri, aggQueueIn)
+	session, err := rabbitmq.ConnectAndConsume(rabbitmqConnectURI, aggQueueIn)
 	rabbitmq.LogError(err, "RabbitMQ connection failed")
 	defer session.End()
 
@@ -87,7 +90,7 @@ func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation
 					msgStructSlice = append(msgStructSlice, hash)
 					//create new agg roots under heavy load
 					if len(msgStructSlice) > hashBatchSize {
-						if agg := ProcessAggregation(rabbitmqConnectUri, msgStructSlice, nist.ChainpointFormat()); agg.AggRoot != "" {
+						if agg := ProcessAggregation(rabbitmqConnectURI, msgStructSlice, nist.ChainpointFormat()); agg.AggRoot != "" {
 							mux.Lock()
 							aggStructSlice = append(aggStructSlice, agg)
 							mux.Unlock()
@@ -97,7 +100,7 @@ func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation
 				}
 			}
 			if len(msgStructSlice) > 0 {
-				if agg := ProcessAggregation(rabbitmqConnectUri, msgStructSlice, nist.ChainpointFormat()); agg.AggRoot != "" {
+				if agg := ProcessAggregation(rabbitmqConnectURI, msgStructSlice, nist.ChainpointFormat()); agg.AggRoot != "" {
 					mux.Lock()
 					aggStructSlice = append(aggStructSlice, agg)
 					mux.Unlock()
@@ -116,28 +119,25 @@ func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation
 }
 
 // ProcessAggregation creates merkle trees of received hashes a la https://github.com/chainpoint/chainpoint-services/blob/develop/node-aggregator-service/server.js#L66
-func ProcessAggregation(rabbitmqConnectUri string, msgStructSlice []amqp.Delivery, nist string) Aggregation {
+func ProcessAggregation(rabbitmqConnectURI string, msgStructSlice []amqp.Delivery, nist string) Aggregation {
 	var agg Aggregation
-	hashSlice := make([][]byte, 0)     // byte array
-	hashStructSlice := make([]Hash, 0) // keep record for building proof path
+	hashSlice := make([][]byte, 0)         // byte array
+	hashStructSlice := make([]HashItem, 0) // keep record for building proof path
 
 	for _, msgHash := range msgStructSlice {
-		unPackedHash := Hash{}
-		if err := json.Unmarshal(msgHash.Body, &unPackedHash); err != nil || len(msgHash.Body) == 0 {
+		unPackedHashItem := HashItem{}
+		if err := json.Unmarshal(msgHash.Body, &unPackedHashItem); err != nil || len(msgHash.Body) == 0 {
 			util.LogError(err)
 			continue
 		}
-		if nist != "" {
-			unPackedHash.Nist = nist
-		}
-		hashStructSlice = append(hashStructSlice, unPackedHash)
+		hashStructSlice = append(hashStructSlice, unPackedHashItem)
 		var buffer bytes.Buffer
-		_, err := buffer.WriteString(fmt.Sprintf("core_id:%s%s", unPackedHash.HashID, unPackedHash.Hash))
+		_, err := buffer.WriteString(fmt.Sprintf("core_id:%s%s", unPackedHashItem.HashID, unPackedHashItem.Hash))
 		rabbitmq.LogError(err, "failed to write hashes to byte buffer")
 		newHash := sha256.Sum256(buffer.Bytes())
-		if unPackedHash.Nist != "" {
+		if nist != "" {
 			var nistBuffer bytes.Buffer
-			nistBuffer.WriteString(fmt.Sprintf("nistv2:%s", unPackedHash.Nist))
+			nistBuffer.WriteString(fmt.Sprintf("nistv2:%s", nist))
 			nistBuffer.Write(newHash[:])
 			newHash = sha256.Sum256(nistBuffer.Bytes())
 		}
@@ -154,7 +154,7 @@ func ProcessAggregation(rabbitmqConnectUri string, msgStructSlice []amqp.Deliver
 	tree.MakeTree()
 	uuid, err := uuid.NewUUID()
 	rabbitmq.LogError(err, "can't generate uuid")
-	agg.AggId = uuid.String()
+	agg.AggID = uuid.String()
 	agg.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 
 	//Create proof paths
@@ -164,30 +164,30 @@ func ProcessAggregation(rabbitmqConnectUri string, msgStructSlice []amqp.Deliver
 		proofData.HashID = unPackedHash.HashID
 		proofData.Hash = unPackedHash.Hash
 		proofs := tree.GetProof(i)
-		if unPackedHash.Nist != "" {
-			proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("nistv2:%s", unPackedHash.Nist))}}, proofs...)
+		if nist != "" {
+			proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("nistv2:%s", nist))}}, proofs...)
 		}
 		proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("core_id:%s", unPackedHash.HashID))}}, proofs...)
-		proofData.Proof = make([]Proof, 0)
+		proofData.Proof = make([]ProofLineItem, 0)
 		for _, p := range proofs {
 			if p.Left {
 				if strings.Contains(string(p.Value), "nistv2") || strings.Contains(string(p.Value), "core_id") {
-					proofData.Proof = append(proofData.Proof, Proof{Left: string(p.Value)})
+					proofData.Proof = append(proofData.Proof, ProofLineItem{Left: string(p.Value)})
 				} else {
-					proofData.Proof = append(proofData.Proof, Proof{Left: hex.EncodeToString(p.Value)})
+					proofData.Proof = append(proofData.Proof, ProofLineItem{Left: hex.EncodeToString(p.Value)})
 				}
 			} else {
-				proofData.Proof = append(proofData.Proof, Proof{Right: hex.EncodeToString(p.Value)})
+				proofData.Proof = append(proofData.Proof, ProofLineItem{Right: hex.EncodeToString(p.Value)})
 			}
-			proofData.Proof = append(proofData.Proof, Proof{Op: "sha-256"})
+			proofData.Proof = append(proofData.Proof, ProofLineItem{Op: "sha-256"})
 		}
 		proofSlice = append(proofSlice, proofData)
 	}
 	agg.ProofData = proofSlice
 
 	//Publish to proof-state service
-	aggJson, err := json.Marshal(agg)
-	err = rabbitmq.Publish(rabbitmqConnectUri, proofStateQueueOut, msgType, aggJson)
+	aggJSON, err := json.Marshal(agg)
+	err = rabbitmq.Publish(rabbitmqConnectURI, proofStateQueueOut, msgType, aggJSON)
 
 	if err != nil {
 		rabbitmq.LogError(err, "problem publishing aggJSON message to queue")
