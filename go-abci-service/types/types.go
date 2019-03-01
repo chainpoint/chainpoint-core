@@ -31,10 +31,10 @@ type State struct {
 
 // Tx holds custom transaction data and metadata for the Chainpoint Calendar
 type Tx struct {
-	TxType  string `json: "type"`
-	Data    string `json: "hash"`
-	Version int64  `json: "version"`
-	Time    int64  `json: "time"`
+	TxType  string `json:"type"`
+	Data    string `json:"hash"`
+	Version int64  `json:"version"`
+	Time    int64  `json:"time"`
 }
 
 // TxTm holds result of submitting a CAL transaction (needed in order to get Hash)
@@ -43,89 +43,104 @@ type TxTm struct {
 	Data []byte
 }
 
+// BtcAgg : An object containing BTC anchoring aggregation data
 type BtcAgg struct {
-	AggId     string         `json:"anchor_btc_agg_id"`
-	AggRoot   string         `json:"anchor_btc_agg_root"`
-	ProofData []BtcProofData `json:"proofData"`
+	AnchorBtcAggID   string         `json:"anchor_btc_agg_id"`
+	AnchorBtcAggRoot string         `json:"anchor_btc_agg_root"`
+	ProofData        []BtcProofData `json:"proofData"`
 }
 
+// BtcProofData : An individual proof object within a Btc aggregation set
 type BtcProofData struct {
-	CalId string  `json:"cal_id"`
-	Proof []Proof `json:"proof"`
+	CalID string          `json:"cal_id"`
+	Proof []ProofLineItem `json:"proof"`
 }
 
+// BtcTxMsg : An RMQ message object
 type BtcTxMsg struct {
-	AggId   string `json:"anchor_btc_agg_id"`
-	AggRoot string `json:"anchor_btc_agg_root"`
-	BtxId   string `json:"btctx_id"`
-	BtxBody string `json:"btctx_body"`
+	AnchorBtcAggID   string `json:"anchor_btc_agg_id"`
+	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
+	BtcTxID          string `json:"btctx_id"`
+	BtcTxBody        string `json:"btctx_body"`
 }
 
+// BtcTxProofState : An RMQ message object bound for proofstate service
 type BtcTxProofState struct {
-	AggId    string        `json:"anchor_btc_agg_id"`
-	BtcId    string        `json:"btctx_id"`
-	BtcState BtcTxOpsState `json:"btctx_state"`
+	AnchorBtcAggID string        `json:"anchor_btc_agg_id"`
+	BtcTxID        string        `json:"btctx_id"`
+	BtcTxState     BtcTxOpsState `json:"btctx_state"`
 }
 
+// BtcTxOpsState : TODO: Describe this
 type BtcTxOpsState struct {
-	Ops []Proof `json:"ops"`
+	Ops []ProofLineItem `json:"ops"`
 }
 
+// BtccStateObj : TODO: Describe this
 type BtccStateObj struct {
-	BtcId         string       `json:"btctx_id"`
+	BtcTxID       string       `json:"btctx_id"`
 	BtcHeadHeight int64        `json:"btchead_height"`
-	BtcState      BtccOpsState `json:"btchead_state"`
+	BtcHeadState  BtccOpsState `json:"btchead_state"`
 }
 
+// BtccOpsState : TODO: Describe this
 type BtccOpsState struct {
-	Ops    []Proof   `json:"ops"`
-	Anchor AnchorObj `json:"anchor"`
+	Ops    []ProofLineItem `json:"ops"`
+	Anchor AnchorObj       `json:"anchor"`
 }
 
-type TxId struct {
+// TxID : TODO: Describe this
+type TxID struct {
 	TxID string `json:"tx_id"`
 }
 
+// CalAgg : TODO: Describe this
 type CalAgg struct {
 	CalRoot   string      `json:"cal_root"`
 	ProofData []ProofData `json:"proofData"`
 }
 
+// CalState : TODO: Describe this
 type CalState struct {
-	CalId     string      `json:"cal_id"`
+	CalID     string      `json:"cal_id"`
 	Anchor    AnchorObj   `json:"anchor"`
 	ProofData []ProofData `json:"proofData"`
 }
 
+// BtcMonMsg : TODO: Describe this
 type BtcMonMsg struct {
-	BtcId         string    `json:"btctx_id"`
+	BtcID         string    `json:"btctx_id"`
 	BtcHeadHeight int64     `json:"btchead_height"`
 	BtcHeadRoot   string    `json:"btchead_root"`
 	Path          []JSProof `json:"path"`
 }
 
+// AnchorObj : TODO: Describe this
 type AnchorObj struct {
-	AnchorId string   `json:"anchor_id"`
+	AnchorID string   `json:"anchor_id"`
 	Uris     []string `json:"uris"`
 }
 
+// ProofData : TODO: Describe this
 type ProofData struct {
-	AggId string  `json:"agg_id"`
-	Proof []Proof `json:"proof"`
+	AggID string          `json:"agg_id"`
+	Proof []ProofLineItem `json:"proof"`
 }
 
-type Proof struct {
+// ProofLineItem : TODO: Describe this
+type ProofLineItem struct {
 	Left  string `json:"l,omitempty"`
 	Right string `json:"r,omitempty"`
 	Op    string `json:"op,omitempty"`
 }
 
+// JSProof : TODO: Describe this
 type JSProof struct {
 	Left  string `json:"left,omitempty"`
 	Right string `json:"right,omitempty"`
 }
 
-// NodeStatus rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
+// NodeStatus : rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
 type NodeStatus struct {
 	Jsonrpc string `json:"jsonrpc"`
 	ID      string `json:"id"`
@@ -149,7 +164,7 @@ type NodeStatus struct {
 	} `json:"result"`
 }
 
-// NodeInfo rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
+// NodeInfo  : rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
 type NodeInfo struct {
 	ProtocolVersion struct {
 		P2P   string `json:"p2p"`
@@ -168,7 +183,7 @@ type NodeInfo struct {
 	} `json:"other"`
 }
 
-// NetInfo rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
+// NetInfo  : rpc endpoint results. Custom struct is needed for remote_ip encoding workaround
 type NetInfo struct {
 	Jsonrpc string `json:"jsonrpc"`
 	ID      string `json:"id"`
