@@ -15,7 +15,7 @@ func TestHashResult(t *testing.T) {
 		"ed10960ccc613e4ad0533a813e2027924afd051f5065bb5379a80337c69afcb4",
 	}
 	item2 := types.HashItem{
-		"6d627180-1883-11e7-a8f9-edb8c212ef23",
+		"a0627180-1883-11e7-a8f9-edb8c212ef23",
 		"aa10960ccc613e4ad0533a813e2027924afd051f5065bb5379a80337c69afcb4",
 	}
 	itemBytes, _ := json.Marshal(item)
