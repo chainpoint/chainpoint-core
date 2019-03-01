@@ -49,14 +49,11 @@ const aggQueueIn = "work.agg"
 const aggQueueOut = "work.agg"
 const proofStateQueueOut = "work.proofstate"
 
-/*Retrieves hash messages from rabbitmq, stores them, and creates a proof path for each*/
+// Aggregate retrieves hash messages from rabbitmq, stores them, and creates a proof path for each
 func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation) {
 	var session rabbitmq.Session
-	var err error
-	aggThreads, err := strconv.Atoi(util.GetEnv("AGGREGATION_THREAD", "4"))
-	if util.LogError(err) != nil {
-		aggThreads = 4
-	}
+	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
+	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "200"))
 	sleep := int(60 / aggThreads)
 
 	//Consume queue in goroutines with output slice guarded by mutex
@@ -66,7 +63,8 @@ func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation
 	var mux sync.Mutex
 	endConsume := false
 
-	session, err = rabbitmq.ConnectAndConsume(rabbitmqConnectUri, aggQueueIn)
+	session, err := rabbitmq.ConnectAndConsume(rabbitmqConnectUri, aggQueueIn)
+	rabbitmq.LogError(err, "RabbitMQ connection failed")
 	defer session.End()
 
 	// Spin up {aggThreads} number of threads to process incoming hashes from the API
@@ -88,7 +86,7 @@ func Aggregate(rabbitmqConnectUri string, nist beacon.Record) (agg []Aggregation
 					fmt.Println(string(hash.Body))
 					msgStructSlice = append(msgStructSlice, hash)
 					//create new agg roots under heavy load
-					if len(msgStructSlice) > 200 {
+					if len(msgStructSlice) > hashBatchSize {
 						if agg := ProcessAggregation(rabbitmqConnectUri, msgStructSlice, nist.ChainpointFormat()); agg.AggRoot != "" {
 							mux.Lock()
 							aggStructSlice = append(aggStructSlice, agg)

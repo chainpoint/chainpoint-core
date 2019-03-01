@@ -27,8 +27,9 @@ func main() {
 	tmServer := util.GetEnv("TENDERMINT_HOST", "tendermint")
 	tmPort := util.GetEnv("TENDERMINT_PORT", "26657")
 	rabbitmqUri = util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
-	//doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
+	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
+	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
 
 	tendermintRPC = types.TendermintURI{
 		TMServer: tmServer,
@@ -39,7 +40,7 @@ func main() {
 	logger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
 	/* Instantiate ABCI application */
-	app := abci.NewAnchorApplication(rabbitmqUri, tendermintRPC, doAnchorLoop, 3)
+	app := abci.NewAnchorApplication(rabbitmqUri, tendermintRPC, doCalLoop, doAnchorLoop, anchorInterval)
 
 	// Start the ABCI connection to the Tendermint Node
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
@@ -49,20 +50,6 @@ func main() {
 	srv.SetLogger(logger.With("module", "abci-server"))
 	if err := srv.Start(); err != nil {
 		return
-	}
-
-	for {
-		var err error
-		if nodeStatus, err = abci.GetStatus(tendermintRPC); err != nil {
-			continue
-		} else {
-			break
-		}
-	}
-
-	// Infinite loop to process btctx and btcmon rabbitMQ messages
-	if doAnchorLoop {
-		go abci.ReceiveCalRMQ(rabbitmqUri, tendermintRPC)
 	}
 
 	// Wait forever

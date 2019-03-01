@@ -39,7 +39,7 @@ build-config:
 .PHONY : build
 build:
 	docker container prune -f
-	docker-compose build
+	docker-compose -f docker-compose-dev.yaml build
 
 ## pull                      : Pull Docker images
 .PHONY : pull
@@ -62,13 +62,13 @@ test: test-api test-aggregator
 
 ## up                        : Build and start all
 .PHONY : up
-up: build cockroachdb-setup
+up: pull cockroachdb-setup
 	docker-compose up -d
 
 ## dev                       : Build and start all
 .PHONY : dev
 dev: build cockroachdb-setup
-	docker-compose -f docker-compose-dev.yaml up -d --build
+	docker-compose -f docker-compose-dev.yaml up -d
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build

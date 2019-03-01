@@ -63,11 +63,11 @@ type AnchorApplication struct {
 	rabbitmqUri    string
 	tendermintURI  types.TendermintURI
 	doAnchor       bool
-	anchorInterval int64
+	anchorInterval int
 }
 
 //NewAnchorApplication is ABCI app constructor
-func NewAnchorApplication(rabbitmqUri string, tendermintRPC types.TendermintURI, doAnchor bool, anchorInterval int64) *AnchorApplication {
+func NewAnchorApplication(rabbitmqUri string, tendermintRPC types.TendermintURI, doCal bool, doAnchor bool, anchorInterval int) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
 	db, err := dbm.NewGoLevelDB(name, "/tendermint/data")
@@ -76,21 +76,28 @@ func NewAnchorApplication(rabbitmqUri string, tendermintRPC types.TendermintURI,
 	}
 	state := loadState(db)
 
-	// create cron scheduler
-	scheduler := cron.New(cron.WithLocation(time.UTC))
+	if doCal {
+		// Create cron scheduler
+		scheduler := cron.New(cron.WithLocation(time.UTC))
 
-	// Update nist object every minute
-	nistRecord := beacon.Record{}
-	scheduler.AddFunc("0/1 0-23 * * *", func() {
-		nistRecord, err = beacon.LastRecord()
-		util.LogError(err)
-	})
+		// Update nist object every minute
+		nistRecord := beacon.Record{}
+		scheduler.AddFunc("0/1 0-23 * * *", func() {
+			nistRecord, err = beacon.LastRecord()
+			util.LogError(err)
+		})
 
-	// Run calendar aggregation every minute with pointer to nist object
-	scheduler.AddFunc("0/1 0-23 * * *", func() {
-		AggregateCalendar(tendermintRPC, rabbitmqUri, &nistRecord)
-	})
-	scheduler.Start()
+		// Run calendar aggregation every minute with pointer to nist object
+		scheduler.AddFunc("0/1 0-23 * * *", func() {
+			AggregateCalendar(tendermintRPC, rabbitmqUri, &nistRecord)
+		})
+		scheduler.Start()
+	}
+
+	// Infinite loop to process btctx and btcmon rabbitMQ messages
+	if doAnchor {
+		go ReceiveCalRMQ(rabbitmqUri, tendermintRPC)
+	}
 
 	return &AnchorApplication{
 		state:          state,
@@ -152,7 +159,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Anchor every anchorInterval of blocks
-	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > app.anchorInterval {
+	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
 		go AnchorBTC(app.tendermintURI, app.rabbitmqUri, &app.state.PrevCalTxInt, app.state.LatestCalTxInt)
 	}
 
