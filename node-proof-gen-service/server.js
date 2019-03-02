@@ -20,14 +20,10 @@ const env = require('./lib/parse-env.js')('gen')
 const amqp = require('amqplib')
 const chainpointProofSchema = require('chainpoint-proof-json-schema')
 const uuidTime = require('uuid-time')
-const chpBinary = require('chainpoint-binary')
 const utils = require('./lib/utils.js')
-const GCPStorage = require('@google-cloud/storage')
-const retry = require('async-retry')
 const crypto = require('crypto')
 const moment = require('moment')
 const connections = require('./lib/connections.js')
-const parallel = require('async-parallel')
 
 const aggState = require('./lib/models/AggState.js')
 const calState = require('./lib/models/CalState.js')
@@ -36,14 +32,6 @@ const btcTxState = require('./lib/models/BtcTxState.js')
 const btcHeadState = require('./lib/models/BtcHeadState.js')
 const cachedProofState = require('./lib/models/cachedProofState.js')
 
-// Variable indicating what proof storage flow to use
-// Acceptable values are:
-// 'resque' for the Resque queue to proof proxy flow
-// 'direct' to write directly to GCP from proof-gen
-// 'both' to do both
-// Any other value will default to 'resque'
-let proofStorageMethod = 'resque'
-
 // The channel used for all amqp communication
 // This value is set once the connection has been established
 let amqpChannel = null
@@ -51,13 +39,6 @@ let amqpChannel = null
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
 let redis = null
-
-// This value is set once the connection has been established
-let taskQueue = null
-
-// Google Cloud Storage client
-const gcpStorage = new GCPStorage({ projectId: env.GCP_STORAGE_PROJECTID })
-const gcpBucket = gcpStorage.bucket(env.GCP_STORAGE_BUCKET)
 
 function addChainpointHeader(proof, hash, hashId) {
   proof['@context'] = 'https://w3id.org/chainpoint/v3'
@@ -149,12 +130,6 @@ async function consumeProofReadyMessageAsync(msg) {
           })
           .filter(proof => proof !== null)
 
-        // if taskQueue is null (redis outage), wait one second for recovery,
-        // throw error to initiate nack and retry
-        if (taskQueue === null) {
-          await utils.sleepAsync(1000)
-          throw new Error(`Unable to queue up cal storeProofs jobs, taskQueue is null`)
-        }
         await storeProofsAsync(proofs, 'cal_batch')
 
         // Proof ready message has been consumed, ack consumption of original message
@@ -233,12 +208,6 @@ async function consumeProofReadyMessageAsync(msg) {
           })
           .filter(proof => proof !== null)
 
-        // if taskQueue is null (redis outage), wait one second for recovery,
-        // throw error to initiate nack and retry
-        if (taskQueue === null) {
-          await utils.sleepAsync(1000)
-          throw new Error(`Unable to queue up btc storeProofs jobs, taskQueue is null`)
-        }
         await storeProofsAsync(proofs, 'btc_batch')
 
         // Proof ready message has been consumed, ack consumption of original message
@@ -269,68 +238,14 @@ async function storeProofsAsync(proofs, batchType) {
   let batchId = crypto.randomBytes(4).toString('hex')
   // log information about the first item in the batch
   logGenerationEvent(proofs[0].hash_submitted_node_at, batchType, batchId, 1, proofs.length)
-  switch (proofStorageMethod) {
-    case 'direct':
-      // save proof directly to GCP
-      await parallel.each(
-        proofs,
-        async proof => {
-          try {
-            await saveProofToGCPAsync(proof)
-          } catch (error) {
-            console.error(`Could not save proof to GCP : ${error.message}`)
-          }
-        },
-        env.SAVE_CONCURRENCY_COUNT
-      )
-      break
-    case 'both':
-      // save proof directly to GCP
-      await parallel.each(
-        proofs,
-        async proof => {
-          try {
-            await saveProofToGCPAsync(proof)
-          } catch (error) {
-            console.error(`Could not save proof to GCP : ${error.message}`)
-          }
-        },
-        env.SAVE_CONCURRENCY_COUNT
-      )
-      // save proof to proof proxy
-      await parallel.each(
-        proofs,
-        async proof => {
-          try {
-            await taskQueue.enqueue('task-handler-queue', `send_to_proof_proxy`, [
-              proof.hash_id_core,
-              chpBinary.objectToBase64Sync(proof)
-            ])
-          } catch (error) {
-            console.error(`Could not enqueue send_to_proof_proxy task : ${error.message}`)
-          }
-        },
-        env.SAVE_CONCURRENCY_COUNT
-      )
-      break
-    case 'resque':
-    default:
-      // save proof to proof proxy
-      await parallel.each(
-        proofs,
-        async proof => {
-          try {
-            await taskQueue.enqueue('task-handler-queue', `send_to_proof_proxy`, [
-              proof.hash_id_core,
-              chpBinary.objectToBase64Sync(proof)
-            ])
-          } catch (error) {
-            console.error(`Could not enqueue send_to_proof_proxy task : ${error.message}`)
-          }
-        },
-        env.SAVE_CONCURRENCY_COUNT
-      )
+
+  // save proof Rocks
+  try {
+    // TODO: save proof Rocks
+  } catch (error) {
+    console.error(`Could not save proofs to local database : ${error.message}`)
   }
+
   if (proofs.length > 1) {
     let batchEndTimestamp = Date.now()
     let batchTotalProcessingMS = batchEndTimestamp - batchStartTimestamp
@@ -344,26 +259,6 @@ async function storeProofsAsync(proofs, batchType) {
       batchTotalProcessingMS
     )
   }
-}
-
-async function saveProofToGCPAsync(proof) {
-  let proofFilename = `${proof.hash_id_core}.chp`
-  let proofGCPFile = gcpBucket.file(proofFilename)
-
-  await retry(
-    async () => {
-      await proofGCPFile.save(chpBinary.objectToBinarySync(proof), { resumable: false })
-    },
-    {
-      retries: 3,
-      minTimeout: 50,
-      maxTimeout: 300,
-      factor: 1,
-      onRetry: error => {
-        console.log(`saveProofToGCPAsync : retrying : ${proofFilename} : ${error.message}`)
-      }
-    }
-  )
 }
 
 // use the time difference between now and the time embedded in the hash_id_node UUID
@@ -402,12 +297,10 @@ function openRedisConnection(redisURIs) {
     newRedis => {
       redis = newRedis
       cachedProofState.setRedis(redis)
-      initResqueQueueAsync()
     },
     () => {
       redis = null
       cachedProofState.setRedis(null)
-      taskQueue = null
       setTimeout(() => {
         openRedisConnection(redisURIs)
       }, 5000)
@@ -459,13 +352,6 @@ async function openStorageConnectionAsync() {
     cxObjects.models[3],
     cxObjects.models[4]
   )
-}
-
-/**
- * Initializes the connection to the Resque queue when Redis is ready
- */
-async function initResqueQueueAsync() {
-  taskQueue = await connections.initResqueQueueAsync(redis, 'resque')
 }
 
 // process all steps need to start the application

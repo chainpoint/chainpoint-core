@@ -27,11 +27,7 @@
     }
   },
   "dependencies": {
-    "@google-cloud/storage": "^1.7.0",
     "amqplib": "^0.5.2",
-    "async-parallel": "^1.2.3",
-    "async-retry": "^1.2.1",
-    "chainpoint-binary": "^4.0.2",
     "chainpoint-proof-json-schema": "^1.0.2",
     "envalid": "^3.1.1",
     "exit-hook": "^1.1.1",
