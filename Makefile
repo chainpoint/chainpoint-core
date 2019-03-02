@@ -41,6 +41,11 @@ build:
 	docker container prune -f
 	docker-compose -f docker-compose-dev.yaml build
 
+## build-rocksdb   : Ensure the RocksDB data dir exists
+.PHONY : build-rocksdb
+build-rocksdb:
+	mkdir -p ./data/rocksdb && chmod 777 ./data/rocksdb
+
 ## pull                      : Pull Docker images
 .PHONY : pull
 pull:
@@ -62,12 +67,12 @@ test: test-api test-aggregator
 
 ## up                        : Build and start all
 .PHONY : up
-up: pull cockroachdb-setup
+up: pull cockroachdb-setup build-rocksdb
 	docker-compose up -d
 
 ## dev                       : Build and start all
 .PHONY : dev
-dev: build cockroachdb-setup
+dev: build cockroachdb-setup build-rocksdb
 	docker-compose -f docker-compose-dev.yaml up -d
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
