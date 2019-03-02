@@ -103,6 +103,8 @@ services:
       - rabbitmq
     networks:
       - chainpoint
+    volumes:
+      - ./data/rocksdb:/home/node/app/rocksdb
     environment:
       NODE_ENV: development
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -122,6 +124,8 @@ services:
       - rabbitmq
     networks:
       - chainpoint
+    volumes:
+      - ./data/rocksdb:/home/node/app/rocksdb
     environment:
       NODE_ENV: test
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
@@ -202,6 +206,8 @@ services:
       - roach1
     networks:
       - chainpoint
+    volumes:
+      - ./data/rocksdb:/home/node/app/rocksdb
     environment:
       NODE_ENV: development
       GOOGLE_APPLICATION_CREDENTIALS: /gcp/proof-proxy-544fdab72f21.json
