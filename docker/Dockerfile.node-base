@@ -29,7 +29,7 @@ RUN apk add bash nano vim htop curl wget jq --no-cache
 
 # Needed to load native node modules
 # See : https://github.com/grpc/grpc/issues/8528
-RUN apk add libc6-compat --no-cache
+RUN apk add libc6-compat linux-headers --no-cache
 
 # Needed for ETH libs
 RUN apk add git make gcc g++ python --no-cache
