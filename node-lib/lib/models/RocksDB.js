@@ -12,26 +12,7 @@
  */
 
 let env = require('../parse-env.js').env
-const level = require('level-rocksdb')
 const crypto = require('crypto')
-const path = require('path')
-
-// See Options: https://github.com/level/leveldown#options
-// Setup with options, all default except:
-//   cacheSize : which was increased from 8MB to 32MB
-let options = {
-  createIfMissing: true,
-  errorIfExists: false,
-  compression: true,
-  cacheSize: 32 * 1024 * 1024,
-  writeBufferSize: 4 * 1024 * 1024,
-  blockSize: 4096,
-  maxOpenFiles: 1000,
-  blockRestartInterval: 16,
-  maxFileSize: 2 * 1024 * 1024,
-  keyEncoding: 'binary',
-  valueEncoding: 'binary'
-}
 
 const prefixBuffers = {
   PROOF_TIME_INDEX: Buffer.from('b1a1', 'hex'),
@@ -43,20 +24,6 @@ const PRUNE_INTERVAL_SECONDS = 10
 let PRUNE_IN_PROGRESS = false
 
 let db = null
-
-async function openConnectionAsync(dir = '../../data/rocksdb') {
-  return new Promise(resolve => {
-    level(path.resolve(dir), options, (err, conn) => {
-      if (err) {
-        console.error(`ERROR : Unable to open database : ${err.message}`)
-        process.exit(0)
-      } else {
-        db = conn
-        resolve(db)
-      }
-    })
-  })
-}
 
 // #endregion SCHEMAS
 
@@ -200,10 +167,14 @@ function startPruningInterval() {
 
 // #endregion SET AUTOMATIC PRUNING INTERVALS
 
+function setConnection(rocksConn) {
+  db = rocksConn
+}
+
 module.exports = {
-  openConnectionAsync: openConnectionAsync,
   getProofBatchByHashIdsAsync: getProofBatchByHashIdsAsync,
   saveProofBatchAsync: saveProofBatchAsync,
   startPruningInterval: startPruningInterval,
-  pruneOldProofsAsync: pruneOldProofsAsync
+  pruneOldProofsAsync: pruneOldProofsAsync,
+  setConnection: setConnection
 }

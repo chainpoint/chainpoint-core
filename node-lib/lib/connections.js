@@ -1,5 +1,6 @@
 const { URL } = require('url')
 const utils = require('./utils.js')
+const path = require('path')
 
 /**
  * Opens a Tendermint RPC connection
@@ -298,6 +299,43 @@ async function listenRestifyAsync(server, port, debug) {
   })
 }
 
+/**
+ * Opens a connection to RocksDB
+ **/
+async function openRocksDBConnectionAsync(dir = '/home/node/app/rocksdb', debug) {
+  const level = require('level-rocksdb')
+
+  // See Options: https://github.com/level/leveldown#options
+  // Setup with options, all default except:
+  //   cacheSize : which was increased from 8MB to 32MB
+  let options = {
+    createIfMissing: true,
+    errorIfExists: false,
+    compression: true,
+    cacheSize: 32 * 1024 * 1024,
+    writeBufferSize: 4 * 1024 * 1024,
+    blockSize: 4096,
+    maxOpenFiles: 1000,
+    blockRestartInterval: 16,
+    maxFileSize: 2 * 1024 * 1024,
+    keyEncoding: 'binary',
+    valueEncoding: 'binary'
+  }
+
+  return new Promise(resolve => {
+    level(path.resolve(dir), options, async (err, conn) => {
+      if (err) {
+        // catch errors when attempting to establish connection
+        console.error(`Cannot establish RocksDB connection : ${err}`)
+        process.exit(0)
+      } else {
+        logMessage('RocksDB connection established', debug, 'general')
+        resolve(conn)
+      }
+    })
+  })
+}
+
 function startIntervals(intervals, debug) {
   logMessage('starting intervals', debug, 'general')
 
@@ -355,6 +393,7 @@ module.exports = {
   initResqueWorkerAsync: initResqueWorkerAsync,
   initResqueSchedulerAsync: initResqueSchedulerAsync,
   openStorageConnectionAsync: openStorageConnectionAsync,
+  openRocksDBConnectionAsync: openRocksDBConnectionAsync,
   openStandardRMQConnectionAsync: openStandardRMQConnectionAsync,
   listenRestifyAsync: listenRestifyAsync,
   startIntervals: startIntervals

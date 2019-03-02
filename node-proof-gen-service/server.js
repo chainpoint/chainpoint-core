@@ -25,6 +25,7 @@ const crypto = require('crypto')
 const moment = require('moment')
 const connections = require('./lib/connections.js')
 
+const rocksDB = require('./lib/models/RocksDB.js')
 const aggState = require('./lib/models/AggState.js')
 const calState = require('./lib/models/CalState.js')
 const anchorBtcAggState = require('./lib/models/AnchorBtcAggState.js')
@@ -241,7 +242,7 @@ async function storeProofsAsync(proofs, batchType) {
 
   // save proof Rocks
   try {
-    // TODO: save proof Rocks
+    // await rocksDB.saveProofBatchAsync(proofs)
   } catch (error) {
     console.error(`Could not save proofs to local database : ${error.message}`)
   }
@@ -354,12 +355,22 @@ async function openStorageConnectionAsync() {
   )
 }
 
+/**
+ * Opens a RocksDB connection
+ **/
+async function openRocksDBConnectionAsync() {
+  let rocksConn = await connections.openRocksDBConnectionAsync()
+  rocksDB.setConnection(rocksConn)
+}
+
 // process all steps need to start the application
 async function start() {
   if (env.NODE_ENV === 'test') return
   try {
     // init DB
     await openStorageConnectionAsync()
+    // init RocksDB
+    // await openRocksDBConnectionAsync()
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init RabbitMQ
