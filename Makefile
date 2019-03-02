@@ -103,10 +103,6 @@ clean: down
 	@sudo chmod 777 ./config/node_1
 	@sudo chmod 777 ./config/node_1/*
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
-	@sudo rm -rf ./config/node_2/data/*
-	@sudo chmod 777 ./config/node_2
-	@sudo chmod 777 ./config/node_2/*
-	@cp config/node_2/priv_validator_key.json config/node_2/priv_validator.json
 	@sudo docker system prune --volumes -f
 
 ## prune                     : Shutdown and destroy all docker assets
