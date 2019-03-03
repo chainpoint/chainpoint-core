@@ -13,21 +13,6 @@ $(foreach bin,$(REQUIRED_BINS),\
 help : Makefile
 	@sed -n 's/^##//p' $<
 
-## cockroach                 : Local CockroachDB console
-.PHONY : cockroachdb
-cockroach:
-	./bin/cockroach -d chainpoint sql
-
-## cockroachdb-reset         : Bring the system down, delete CockroachDB data, setup DB as needed, and start cluster
-.PHONY : cockroachdb-reset
-cockroachdb-reset: down
-	./bin/cockroach-setup -d
-
-## cockroachdb-setup         : Initialize CockroachDB
-.PHONY : cockroachdb-setup
-cockroachdb-setup:
-	./bin/cockroach-setup
-
 ## build-config              : Copy the .env config from sample if not present
 .PHONY : build-config
 build-config:
@@ -48,7 +33,7 @@ pull:
 
 ## test-api                  : Run API test suite with Mocha
 .PHONY : test-api
-test-api: cockroachdb-setup
+test-api: 
 	docker-compose up --build api-test
 
 ## test-aggregator           : Run aggregator test suite with Mocha
@@ -62,22 +47,22 @@ test: test-api test-aggregator
 
 ## up                        : Build and start all
 .PHONY : up
-up: pull cockroachdb-setup
+up: pull 
 	docker-compose up -d
 
 ## up-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : up-no-build
-up-no-build: cockroachdb-setup
+up-no-build: 
 	docker-compose up -d --no-build
 
 ## dev                       : Build and start all
 .PHONY : dev
-dev: build cockroachdb-setup
+dev: build 
 	docker-compose up -d
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build
-dev-no-build: cockroachdb-setup
+dev-no-build: 
 	docker-compose up -d --no-build
 
 ## down                      : Shutdown Application

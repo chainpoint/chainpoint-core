@@ -1,3 +1,19 @@
+/* Copyright (C) 2019 Tierion
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 const { URL } = require('url')
 const utils = require('./utils.js')
 
@@ -146,69 +162,27 @@ async function initResqueSchedulerAsync(redisClient, setSchedulerHandlers, debug
 }
 
 /**
- * Opens a storage connection
+ * Opens the Postgres connection
  **/
-async function openStorageConnectionAsync(modelSqlzArray, debug) {
-  const Sequelize = require('sequelize-cockroachdb')
+async function openPostgresConnectionAsync(modelSqlzArray, debug) {
+  const Sequelize = require('sequelize')
   const envalid = require('envalid')
-  const pg = require('pg')
 
   const env = envalid.cleanEnv(process.env, {
-    COCKROACH_HOST: envalid.str({ devDefault: 'roach1', desc: 'CockroachDB host or IP' }),
-    COCKROACH_PORT: envalid.num({ default: 26257, desc: 'CockroachDB port' }),
-    COCKROACH_DB_NAME: envalid.str({ default: 'chainpoint', desc: 'CockroachDB name' }),
-    COCKROACH_DB_USER: envalid.str({ default: 'chainpoint', desc: 'CockroachDB user' }),
-    COCKROACH_DB_PASS: envalid.str({ default: '', desc: 'CockroachDB password' }),
-    COCKROACH_TLS_CA_CRT: envalid.str({ devDefault: '', desc: 'CockroachDB TLS CA Cert' }),
-    COCKROACH_TLS_CLIENT_KEY: envalid.str({ devDefault: '', desc: 'CockroachDB TLS Client Key' }),
-    COCKROACH_TLS_CLIENT_CRT: envalid.str({ devDefault: '', desc: 'CockroachDB TLS Client Cert' })
+    POSTGRES_CONNECT_PROTOCOL: envalid.str({ default: 'postgres:', desc: 'Postgres server connection protocol' }),
+    POSTGRES_CONNECT_USER: envalid.str({ default: 'chainpoint', desc: 'Postgres server connection user name' }),
+    POSTGRES_CONNECT_PW: envalid.str({ default: 'chainpoint', desc: 'Postgres server connection password' }),
+    POSTGRES_CONNECT_HOST: envalid.str({ default: 'postgres', desc: 'Postgres server connection host' }),
+    POSTGRES_CONNECT_PORT: envalid.num({ default: 5432, desc: 'Postgres server connection port' }),
+    POSTGRES_CONNECT_DB: envalid.str({ default: 'chainpoint', desc: 'Postgres server connection database name' })
   })
 
-  let pgConfig = {
-    user: env.COCKROACH_DB_USER,
-    host: env.COCKROACH_HOST,
-    database: env.COCKROACH_DB_NAME,
-    port: env.COCKROACH_PORT,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000
-  }
+  // Connection URI for Postgres
+  const POSTGRES_CONNECT_URI = `${env.POSTGRES_CONNECT_PROTOCOL}//${env.POSTGRES_CONNECT_USER}:${
+    env.POSTGRES_CONNECT_PW
+  }@${env.POSTGRES_CONNECT_HOST}:${env.POSTGRES_CONNECT_PORT}/${env.POSTGRES_CONNECT_DB}`
 
-  // Connect to CockroachDB through Sequelize.
-  let sequelizeOptions = {
-    dialect: 'postgres',
-    host: env.COCKROACH_HOST,
-    port: env.COCKROACH_PORT,
-    logging: false,
-    operatorsAliases: false,
-    pool: {
-      max: 20,
-      min: 0,
-      idle: 10000,
-      acquire: 10000,
-      evict: 10000
-    }
-  }
-
-  // Present TLS client certificate to production cluster
-  if (env.isProduction) {
-    sequelizeOptions.dialectOptions = {
-      ssl: {
-        rejectUnauthorized: false,
-        ca: env.COCKROACH_TLS_CA_CRT,
-        key: env.COCKROACH_TLS_CLIENT_KEY,
-        cert: env.COCKROACH_TLS_CLIENT_CRT
-      }
-    }
-    pgConfig.ssl = {
-      rejectUnauthorized: false,
-      ca: env.COCKROACH_TLS_CA_CRT,
-      key: env.COCKROACH_TLS_CLIENT_KEY,
-      cert: env.COCKROACH_TLS_CLIENT_CRT
-    }
-  }
-
-  let pgClientPool = new pg.Pool(pgConfig)
-  let sequelize = new Sequelize(env.COCKROACH_DB_NAME, env.COCKROACH_DB_USER, env.COCKROACH_DB_PASS, sequelizeOptions)
+  const sequelize = new Sequelize(POSTGRES_CONNECT_URI, { logging: null, operatorsAliases: false })
 
   let dbConnected = false
   let synchedModels = []
@@ -218,18 +192,17 @@ async function openStorageConnectionAsync(modelSqlzArray, debug) {
         synchedModels.push(model.defineFor(sequelize))
       }
       await sequelize.sync({ logging: false })
-      logMessage('Sequelize connection established', debug, 'general')
+      logMessage('Postgres connection established', debug, 'general')
       dbConnected = true
     } catch (error) {
       // catch errors when attempting to establish connection
-      console.error('Cannot establish Sequelize connection. Attempting in 5 seconds...')
+      console.error('Cannot establish Postgres connection. Attempting in 5 seconds...')
       await utils.sleepAsync(5000)
     }
   }
 
   return {
     sequelize: sequelize,
-    pgClientPool: pgClientPool,
     models: synchedModels
   }
 }
@@ -354,7 +327,7 @@ module.exports = {
   initResqueQueueAsync: initResqueQueueAsync,
   initResqueWorkerAsync: initResqueWorkerAsync,
   initResqueSchedulerAsync: initResqueSchedulerAsync,
-  openStorageConnectionAsync: openStorageConnectionAsync,
+  openPostgresConnectionAsync: openPostgresConnectionAsync,
   openStandardRMQConnectionAsync: openStandardRMQConnectionAsync,
   listenRestifyAsync: listenRestifyAsync,
   startIntervals: startIntervals

@@ -339,11 +339,11 @@ async function openRMQConnectionAsync(connectURI) {
 }
 
 /**
- * Opens a storage connection
+ * Opens a Postgres connection
  **/
-async function openStorageConnectionAsync() {
+async function openPostgresConnectionAsync() {
   let sqlzModelArray = [aggState, calState, anchorBtcAggState, btcTxState, btcHeadState]
-  let cxObjects = await connections.openStorageConnectionAsync(sqlzModelArray)
+  let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   cachedProofState.setDatabase(
     cxObjects.sequelize,
     cxObjects.models[0],
@@ -359,7 +359,7 @@ async function start() {
   if (env.NODE_ENV === 'test') return
   try {
     // init DB
-    await openStorageConnectionAsync()
+    await openPostgresConnectionAsync()
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init RabbitMQ

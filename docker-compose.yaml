@@ -80,7 +80,6 @@ services:
       dockerfile: docker/Dockerfile.api
     depends_on:
       - base
-      - roach1
       - redis
       - rabbitmq
       - postgres
@@ -105,7 +104,6 @@ services:
       dockerfile: docker/Dockerfile.api-test
     depends_on:
       - base
-      - roach1
       - redis
       - rabbitmq
       - postgres
@@ -174,7 +172,6 @@ services:
     depends_on:
       - base
       - rabbitmq
-      - roach1
       - postgres
     networks:
       - chainpoint
@@ -197,7 +194,6 @@ services:
     depends_on:
       - base
       - rabbitmq
-      - roach1
       - postgres
     networks:
       - chainpoint
@@ -244,31 +240,6 @@ services:
       - redis-server
       - /usr/local/etc/redis/redis.conf
 
-  # CockroachDB
-  #
-  # CockroachDB Admin UI: http://127.0.0.1:8080
-  #
-  # Enable slow query logging with COCKROACH_TRACE_SQL and:
-  #   SET CLUSTER SETTING sql.trace.log_statement_execute = true;
-  #
-  roach1:
-    restart: always
-    image: cockroachdb/cockroach:v2.1.2
-    container_name: roach1-core
-    ports:
-      - "26257:26257"
-      - "8081:8080"
-    volumes:
-      - ./data/roach1:/cockroach/cockroach-data:Z
-    command:
-      - start
-      - --insecure
-    networks:
-      - chainpoint
-    environment:
-      COCKROACH_TRACE_SQL: "1000ms"
-
-
   # Task Handler
   # node-resque job processing queue
   #
@@ -280,9 +251,9 @@ services:
       dockerfile: docker/Dockerfile.task-handler
     depends_on:
       - base
-      - roach1
       - redis
       - rabbitmq
+      - postgres
     networks:
       - chainpoint
     environment:
@@ -336,7 +307,7 @@ services:
       POSTGRES_USER: chainpoint
       POSTGRES_PASSWORD: chainpoint
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - chainpoint
 

@@ -14,17 +14,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Sequelize = require('sequelize-cockroachdb')
+const Sequelize = require('sequelize')
 
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  COCKROACH_AUDIT_TABLE_NAME: envalid.str({ default: 'chainpoint_node_audit_log', desc: 'CockroachDB table name' })
+  AUDIT_TABLE_NAME: envalid.str({ default: 'node_audit_log' })
 })
 
 function defineFor(sqlz) {
   let NodeAuditLog = sqlz.define(
-    env.COCKROACH_AUDIT_TABLE_NAME,
+    env.AUDIT_TABLE_NAME,
     {
       tntAddr: {
         comment: 'A seemingly valid Ethereum address that the Node will send TNT from, or receive rewards with.',
@@ -46,7 +46,7 @@ function defineFor(sqlz) {
       },
       auditAt: {
         comment: 'The time the audit was performed, in MS since EPOCH.',
-        type: Sequelize.INTEGER, // is 64 bit in CockroachDB
+        type: Sequelize.INTEGER,
         validate: {
           isInt: true
         },
@@ -61,7 +61,7 @@ function defineFor(sqlz) {
       },
       nodeMSDelta: {
         comment: 'The number of milliseconds difference between Node time and Core time.',
-        type: Sequelize.INTEGER, // is 64 bit in CockroachDB
+        type: Sequelize.INTEGER,
         validate: {
           isInt: true
         },

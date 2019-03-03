@@ -19,25 +19,21 @@ const Sequelize = require('sequelize')
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  ANCHOR_BTC_AGG_STATE_TABLE_NAME: envalid.str({
-    default: 'anchor_btc_agg_states'
+  PROOFS_TABLE_NAME: envalid.str({
+    default: 'proofs',
+    desc: 'Table name for stored proof data'
   })
 })
 
 function defineFor(sqlz) {
-  let AnchorBtcAggState = sqlz.define(
-    env.ANCHOR_BTC_AGG_STATE_TABLE_NAME,
+  let Proof = sqlz.define(
+    env.PROOFS_TABLE_NAME,
     {
-      cal_id: { type: Sequelize.STRING, primaryKey: true },
-      anchor_btc_agg_id: { type: Sequelize.UUID },
-      anchor_btc_agg_state: { type: Sequelize.TEXT }
+      hash_id: { type: Sequelize.UUID, primaryKey: true },
+      proof: { type: Sequelize.TEXT }
     },
     {
       indexes: [
-        {
-          unique: false,
-          fields: ['anchor_btc_agg_id']
-        },
         {
           unique: false,
           fields: ['created_at']
@@ -51,7 +47,7 @@ function defineFor(sqlz) {
     }
   )
 
-  return AnchorBtcAggState
+  return Proof
 }
 
 module.exports = {

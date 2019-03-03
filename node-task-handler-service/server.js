@@ -904,11 +904,11 @@ async function proofProxyPostAsync(hashIdCore, proofBase64) {
 // ****************************************************
 
 /**
- * Opens a storage connection
+ * Opens a Postgres connection
  **/
-async function openStorageConnectionAsync() {
+async function openPostgresConnectionAsync() {
   let sqlzModelArray = [nodeAuditLog, e2eNodeAuditLog, aggState, calState, anchorBtcAggState, btcTxState, btcHeadState]
-  let cxObjects = await connections.openStorageConnectionAsync(sqlzModelArray)
+  let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   sequelize = cxObjects.sequelize
   NodeAuditLog = cxObjects.models[0]
   E2ENodeAuditLog = cxObjects.models[1]
@@ -1101,7 +1101,7 @@ async function initResqueSchedulerAsync() {
 async function start() {
   try {
     // init DB
-    await openStorageConnectionAsync()
+    await openPostgresConnectionAsync()
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init RabbitMQ

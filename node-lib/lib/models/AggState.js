@@ -14,20 +14,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Sequelize = require('sequelize-cockroachdb')
+const Sequelize = require('sequelize')
 
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  COCKROACH_AGG_STATE_TABLE_NAME: envalid.str({
-    default: 'chainpoint_proof_agg_states',
-    desc: 'CockroachDB table name'
+  AGG_STATE_TABLE_NAME: envalid.str({
+    default: 'agg_states'
   })
 })
 
 function defineFor(sqlz) {
   let AggState = sqlz.define(
-    env.COCKROACH_AGG_STATE_TABLE_NAME,
+    env.AGG_STATE_TABLE_NAME,
     {
       hash_id: { type: Sequelize.UUID, primaryKey: true },
       hash: { type: Sequelize.STRING },

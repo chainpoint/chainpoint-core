@@ -14,20 +14,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Sequelize = require('sequelize-cockroachdb')
+const Sequelize = require('sequelize')
 
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  COCKROACH_E2E_AUDIT_TABLE_NAME: envalid.str({
-    default: 'chainpoint_node_e2e_audit_log',
-    desc: 'CockroachDB table name'
+  E2E_AUDIT_TABLE_NAME: envalid.str({
+    default: 'node_e2e_audit_log'
   })
 })
 
 function defineFor(sqlz) {
   let E2ENodeAuditLog = sqlz.define(
-    env.COCKROACH_E2E_AUDIT_TABLE_NAME,
+    env.E2E_AUDIT_TABLE_NAME,
     {
       tntAddr: {
         comment: 'A seemingly valid Ethereum address that the Node will send TNT from, or receive rewards with.',

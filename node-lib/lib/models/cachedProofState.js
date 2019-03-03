@@ -61,10 +61,10 @@ async function getHashIdsByAggIdsAsync(aggIds) {
 
 async function getHashIdsByBtcTxIdAsync(btcTxId) {
   let results = await sequelize.query(
-    `SELECT a.hash_id FROM chainpoint_proof_agg_states a
-    INNER JOIN chainpoint_proof_cal_states c ON c.agg_id = a.agg_id
-    INNER JOIN chainpoint_proof_anchor_btc_agg_states aa ON aa.cal_id = c.cal_id
-    INNER JOIN chainpoint_proof_btctx_states tx ON tx.anchor_btc_agg_id = aa.anchor_btc_agg_id
+    `SELECT a.hash_id FROM agg_states a
+    INNER JOIN cal_states c ON c.agg_id = a.agg_id
+    INNER JOIN anchor_btc_agg_states aa ON aa.cal_id = c.cal_id
+    INNER JOIN btctx_states tx ON tx.anchor_btc_agg_id = aa.anchor_btc_agg_id
     WHERE tx.btctx_id = '${btcTxId}'`,
     { type: sequelize.QueryTypes.SELECT }
   )
@@ -84,7 +84,7 @@ async function getAggStateObjectsByHashIdsAsync(hashIds) {
 async function getAggStateInfoSinceTimestampAsync(timestamp) {
   let results = await sequelize.query(
     `SELECT DISTINCT agg_id, agg_root, created_at
-  FROM chainpoint_proof_agg_states
+  FROM agg_states
   WHERE created_at > '${new Date(timestamp).toISOString()}'
   ORDER BY created_at`,
     { type: sequelize.QueryTypes.SELECT }
@@ -287,8 +287,7 @@ async function getBTCHeadStateObjectByBTCTxIdAsync(btcTxId) {
 }
 
 async function writeAggStateObjectsBulkAsync(stateObjects) {
-  let insertCmd =
-    'INSERT INTO chainpoint_proof_agg_states (hash_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES '
+  let insertCmd = 'INSERT INTO agg_states (hash_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES '
 
   let insertValues = stateObjects.map(stateObject => {
     // use sequelize.escape() to sanitize input values just to be safe
@@ -297,7 +296,7 @@ async function writeAggStateObjectsBulkAsync(stateObjects) {
     let aggId = sequelize.escape(stateObject.agg_id)
     let aggStateData = sequelize.escape(JSON.stringify(stateObject.agg_state))
     let aggRoot = sequelize.escape(stateObject.agg_root)
-    return `(${hashId}, ${hash}, ${aggId}, ${aggStateData}, ${aggRoot}, now(), now())`
+    return `(${hashId}, ${hash}, ${aggId}, ${aggStateData}, ${aggRoot}, clock_timestamp(), clock_timestamp())`
   })
 
   insertCmd = insertCmd + insertValues.join(', ') + ' ON CONFLICT (hash_id) DO NOTHING'
@@ -307,7 +306,7 @@ async function writeAggStateObjectsBulkAsync(stateObjects) {
 }
 
 async function writeCalStateObjectsBulkAsync(stateObjects) {
-  let insertCmd = 'INSERT INTO chainpoint_proof_cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES '
+  let insertCmd = 'INSERT INTO cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES '
 
   stateObjects = stateObjects.map(stateObj => {
     stateObj.cal_state = JSON.stringify(stateObj.cal_state)
@@ -318,7 +317,7 @@ async function writeCalStateObjectsBulkAsync(stateObjects) {
     let aggId = sequelize.escape(stateObject.agg_id)
     let calId = sequelize.escape(stateObject.cal_id)
     let calStateData = sequelize.escape(stateObject.cal_state)
-    return `(${aggId}, ${calId}, ${calStateData}, now(), now())`
+    return `(${aggId}, ${calId}, ${calStateData}, clock_timestamp(), clock_timestamp())`
   })
 
   insertCmd = insertCmd + insertValues.join(', ') + ' ON CONFLICT (agg_id) DO NOTHING'
@@ -350,7 +349,7 @@ async function writeCalStateObjectsBulkAsync(stateObjects) {
 
 async function writeAnchorBTCAggStateObjectsAsync(stateObjects) {
   let insertCmd =
-    'INSERT INTO chainpoint_proof_anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES '
+    'INSERT INTO anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES '
 
   stateObjects = stateObjects.map(stateObj => {
     //stateObj.cal_id = parseInt(stateObj.cal_id, 10)
@@ -363,7 +362,7 @@ async function writeAnchorBTCAggStateObjectsAsync(stateObjects) {
     let calId = sequelize.escape(stateObject.cal_id)
     let anchorBtcAggId = sequelize.escape(stateObject.anchor_btc_agg_id)
     let anchorBtcAggStateData = sequelize.escape(stateObject.anchor_btc_agg_state)
-    return `(${calId}, ${anchorBtcAggId}, ${anchorBtcAggStateData}, now(), now())`
+    return `(${calId}, ${anchorBtcAggId}, ${anchorBtcAggStateData}, clock_timestamp(), clock_timestamp())`
   })
 
   insertCmd = insertCmd + insertValues.join(', ') + ' ON CONFLICT (cal_id) DO NOTHING'

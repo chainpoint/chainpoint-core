@@ -37,10 +37,11 @@
     "lodash": "^4.17.11",
     "moment": "^2.22.2",
     "node-resque": "^5.4.1",
+    "pg": "^7.8.1",
+    "pg-hstore": "^2.3.2",
     "request": "^2.85.0",
     "request-promise-native": "^1.0.5",
-    "sequelize": "^4.35.2",
-    "sequelize-cockroachdb": "https://github.com/cockroachdb/sequelize-cockroachdb.git#f6b15cfaf23c17882e4b813a4dfc9758a77aa5a9",
+    "sequelize": "^4.42.1",
     "uuid-time": "^1.0.0"
   },
   "devDependencies": {

@@ -14,20 +14,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Sequelize = require('sequelize-cockroachdb')
+const Sequelize = require('sequelize')
 
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  COCKROACH_BTC_HEAD_STATE_TABLE_NAME: envalid.str({
-    default: 'chainpoint_proof_btchead_states',
-    desc: 'CockroachDB table name'
+  BTC_HEAD_STATE_TABLE_NAME: envalid.str({
+    default: 'btchead_states'
   })
 })
 
 function defineFor(sqlz) {
   let BtcHeadState = sqlz.define(
-    env.COCKROACH_BTC_HEAD_STATE_TABLE_NAME,
+    env.BTC_HEAD_STATE_TABLE_NAME,
     {
       btctx_id: { type: Sequelize.STRING, primaryKey: true },
       btchead_height: { type: Sequelize.INTEGER },
