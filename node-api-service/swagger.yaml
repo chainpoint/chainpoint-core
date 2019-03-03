@@ -425,21 +425,6 @@ definitions:
       chainpoint_core_base_uri:
         type: string
         example: https://a.prod.server.com
-      anchor_btc:
-        type: string
-        example: enabled
-      anchor_eth:
-        type: string
-        example: disabled
-      proof_expire_minutes:
-        type: integer
-        example: 1440
-      get_proofs_max_rest:
-        type: integer
-        example: 250
-      post_verify_proofs_max:
-        type: integer
-        example: 1000
       time:
         type: string
         format: date-time

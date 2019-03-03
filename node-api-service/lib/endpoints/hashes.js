@@ -173,7 +173,6 @@ async function postHashV1Async(req, res, next) {
     console.error(env.RMQ_WORK_OUT_AGG_QUEUE, 'publish message nacked')
     return next(new restify.InternalServerError('Message could not be delivered'))
   }
-  // console.log(env.RMQ_WORK_OUT_AGG_QUEUE, 'publish message acked')
 
   res.send(responseObj)
   return next()
