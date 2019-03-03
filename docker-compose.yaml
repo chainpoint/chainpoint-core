@@ -8,6 +8,10 @@ services:
 
   abci:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.abci
+    image: abci
     depends_on:
     - rabbitmq
     environment:
@@ -17,7 +21,7 @@ services:
       AGGREGATE: "true"
       AGGREGATION_THREADS: "4"
       HASHES_PER_MERKLE_TREE: "200"
-      ANCHOR_BLOCK_INTERVAL: "60"
+      ANCHOR_BLOCK_INTERVAL: "3"
     ports:
     - "26658"
     command: bash -c "abci-service"
@@ -34,45 +38,20 @@ services:
     - ./config/node_1/data:/tendermint/data:Z
     command: sh -c "tendermint node --moniker=`hostname` --proxy_app=abci:26658"
     ports:
-    - "26656:26656"
+    - "26656"
     - "26657:26657"
     networks:
     - chainpoint
 
-  # NGINX Proxy
-  #
-  # An auto-scaling reverse proxy that reconfigures
-  # itself based on which API services are available
-  # for requests.
-  #
-  # See : https://github.com/jwilder/nginx-proxy
-  #
-  # SCALED : false
-  #
-  # PORTS:
-  # http : 80
-  #
-  nginx-proxy:
-    restart: always
-    image: jwilder/nginx-proxy
-    container_name: nginx-proxy-core
-    ports:
-      - "80:80"
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-    environment:
-      NODE_ENV: development
-      DEFAULT_HOST: api.local
-    depends_on:
-      - api
-    networks:
-      - chainpoint
 
   # Node.js Base Image
   # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
   #
   base:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node-base
 
   # HTTP API
   # Restify Node public web API service.
@@ -96,11 +75,16 @@ services:
   api:
     restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
     depends_on:
       - base
       - roach1
       - redis
       - rabbitmq
+    ports:
+      - "8080:8080"
     networks:
       - chainpoint
     volumes:
@@ -110,13 +94,16 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ANCHOR_BTC: ${ANCHOR_BTC}
       ANCHOR_ETH: ${ANCHOR_ETH}
-      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}  
+      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}    
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
 
   api-test:
     container_name: node-api-service-test
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service-test:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api-test
     depends_on:
       - base
       - roach1
@@ -134,13 +121,15 @@ services:
       ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}   
       VIRTUAL_HOST: api.local
 
-
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
   #
   btc-tx:
     restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.btc-tx
     container_name: btc-tx-core
     depends_on:
       - base
@@ -162,6 +151,9 @@ services:
   btc-mon:
     restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-mon-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.btc-mon
     container_name: btc-mon-core
     depends_on:
       - base
@@ -179,6 +171,9 @@ services:
   proof-state:
     restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.proof-state
     depends_on:
       - base
       - rabbitmq
@@ -198,6 +193,9 @@ services:
   proof-gen:
     restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.proof-gen
     volumes:
       - ./data/gcp:/gcp
     depends_on:
@@ -252,7 +250,6 @@ services:
       - redis-server
       - /usr/local/etc/redis/redis.conf
 
-
   # CockroachDB
   #
   # CockroachDB Admin UI: http://127.0.0.1:8080
@@ -266,7 +263,7 @@ services:
     container_name: roach1-core
     ports:
       - "26257:26257"
-      - "8080:8080"
+      - "8081:8080"
     volumes:
       - ./data/roach1:/cockroach/cockroach-data:Z
     command:
@@ -284,6 +281,9 @@ services:
   task-handler:
     restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-task-handler-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.task-handler
     depends_on:
       - base
       - roach1

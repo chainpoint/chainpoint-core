@@ -1,7 +1,5 @@
 FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base
 
-RUN apk add linux-headers
-
 COPY node-lib/lib /home/node/app/lib
 
 COPY node-proof-gen-service/package.json node-proof-gen-service/yarn.lock /home/node/app/

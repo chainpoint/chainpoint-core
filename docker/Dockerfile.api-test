@@ -3,8 +3,6 @@
 
 FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service
 
-RUN apk add linux-headers
-
 # Copy the test files
 COPY node-api-service/test test
 

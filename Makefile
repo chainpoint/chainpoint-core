@@ -39,7 +39,7 @@ build-config:
 .PHONY : build
 build:
 	docker container prune -f
-	docker-compose -f docker-compose-dev.yaml build
+	docker-compose build
 
 ## build-rocksdb   : Ensure the RocksDB data dir exists
 .PHONY : build-rocksdb
@@ -70,15 +70,20 @@ test: test-api test-aggregator
 up: pull cockroachdb-setup build-rocksdb
 	docker-compose up -d
 
+## up-no-build              : Startup without performing builds, rely on pull of images.
+.PHONY : up-no-build
+up-no-build: cockroachdb-setup
+	docker-compose up -d --no-build
+
 ## dev                       : Build and start all
 .PHONY : dev
 dev: build cockroachdb-setup build-rocksdb
-	docker-compose -f docker-compose-dev.yaml up -d
+	docker-compose up -d
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build
 dev-no-build: cockroachdb-setup
-	docker-compose -f docker-compose-dev.yaml up -d --no-build
+	docker-compose up -d --no-build
 
 ## down                      : Shutdown Application
 .PHONY : down
@@ -93,7 +98,7 @@ ps:
 ## restart                        : Restart a dev mode container
 .PHONY : restart
 restart:
-	docker-compose -f docker-compose-dev.yaml up -d --build $(app)
+	docker-compose up -d --build $(app)
 
 ## logs                      : Tail application logs
 .PHONY : logs
