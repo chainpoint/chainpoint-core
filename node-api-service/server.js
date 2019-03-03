@@ -28,6 +28,7 @@ const status = require('./lib/endpoints/status.js')
 const config = require('./lib/endpoints/config.js')
 const root = require('./lib/endpoints/root.js')
 const connections = require('./lib/connections.js')
+const proof = require('./lib/models/Proof.js')
 
 const bunyan = require('bunyan')
 
@@ -96,7 +97,7 @@ server.get({ path: '/calendar/:txid', version: '1.0.0' }, calendar.getCalTxAsync
 // get the data value of a txId
 server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, calendar.getCalTxDataAsync)
 // get proofs from storage
-server.get({ path: '/proofs', version: '1.0.0' }, proofs.getCoreProofsAsync)
+server.get({ path: '/proofs', version: '1.0.0' }, proofs.getProofsByIDsAsync)
 // get random core peers
 server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
 // get status
@@ -105,6 +106,15 @@ server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
 server.get({ path: '/config', version: '1.0.0' }, config.getConfigInfoV1Async)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
+
+/**
+ * Opens a Postgres connection
+ **/
+async function openPostgresConnectionAsync() {
+  let sqlzModelArray = [proof]
+  let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
+  proof.setDatabase(cxObjects.sequelize, cxObjects.models[0])
+}
 
 /**
  * Opens an AMPQ connection and channel
@@ -135,6 +145,8 @@ async function openRMQConnectionAsync(connectURI) {
 async function start() {
   if (env.NODE_ENV === 'test') return
   try {
+    // init DB
+    await openPostgresConnectionAsync()
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
