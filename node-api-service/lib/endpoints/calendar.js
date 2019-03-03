@@ -24,13 +24,21 @@ async function getTransactionAsync(txID) {
     let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
     tx = await rpc.tx({ hash: txID, prove: false })
   } catch (error) {
-    // check for 404
+    // check for transaction not found
     if (error.code === -32603) {
       return {
         tx: null,
         error: new restify.NotFoundError(`Could not find transaction with id = '${txID}'`)
       }
     }
+    // check for invalid parameters
+    if (error.code === -32602) {
+      return {
+        tx: null,
+        error: new restify.InvalidArgumentError(error.data)
+      }
+    }
+    console.log(error.code)
     console.error(`RPC error communicating with Tendermint : ${error.data}`)
     return {
       tx: null,
