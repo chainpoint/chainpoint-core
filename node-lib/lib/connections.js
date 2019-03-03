@@ -84,84 +84,6 @@ function openRedisConnection(redisURIs, onReady, onError, debug) {
 }
 
 /**
- * Initializes the connection to the Resque queue when Redis is ready
- */
-async function initResqueQueueAsync(redisClient, namespace, debug) {
-  const nodeResque = require('node-resque')
-  const exitHook = require('exit-hook')
-  var connectionDetails = { redis: redisClient }
-
-  const queue = new nodeResque.Queue({ connection: connectionDetails })
-  queue.on('error', function(error) {
-    console.error(error.message)
-  })
-  await queue.connect()
-
-  exitHook(async () => {
-    await queue.end()
-  })
-
-  logMessage('Resque queue connection established', debug, 'general')
-
-  return queue
-}
-
-/**
- * Initializes and configures the connection to the Resque worker when Redis is ready
- */
-async function initResqueWorkerAsync(
-  redisClient,
-  namespace,
-  queues,
-  minTasks,
-  maxTasks,
-  taskTimeout,
-  jobs,
-  setMWHandlers,
-  debug
-) {
-  const nodeResque = require('node-resque')
-  const exitHook = require('exit-hook')
-  var connectionDetails = { redis: redisClient }
-
-  var multiWorkerConfig = {
-    connection: connectionDetails,
-    queues: queues,
-    minTaskProcessors: minTasks,
-    maxTaskProcessors: maxTasks
-  }
-
-  await cleanUpWorkersAndRequequeJobsAsync(nodeResque, connectionDetails, taskTimeout)
-
-  let multiWorker = new nodeResque.MultiWorker(multiWorkerConfig, jobs, debug)
-
-  setMWHandlers(multiWorker)
-
-  multiWorker.start()
-
-  exitHook(async () => {
-    await multiWorker.end()
-  })
-
-  logMessage(`Resque worker connection established for queues ${JSON.stringify(queues)}`, debug, 'general')
-}
-
-async function initResqueSchedulerAsync(redisClient, setSchedulerHandlers, debug) {
-  const nodeResque = require('node-resque')
-  let connectionDetails = { redis: redisClient }
-
-  // Start Resqueue Scheduler for delayed Jobs
-  const scheduler = new nodeResque.Scheduler({ connection: connectionDetails })
-  await scheduler.connect()
-
-  setSchedulerHandlers(scheduler)
-
-  scheduler.start()
-
-  logMessage(`Resque Scheduler connection established for queue(s)`, debug, 'general')
-}
-
-/**
  * Opens the Postgres connection
  **/
 async function openPostgresConnectionAsync(modelSqlzArray, debug) {
@@ -282,37 +204,6 @@ function startIntervals(intervals, debug) {
 
 // SUPPORT FUNCTIONS ****************
 
-async function cleanUpWorkersAndRequequeJobsAsync(nodeResque, connectionDetails, taskTimeout, debug) {
-  const queue = new nodeResque.Queue({ connection: connectionDetails })
-  await queue.connect()
-  // Delete stuck workers and move their stuck job to the failed queue
-  await queue.cleanOldWorkers(taskTimeout)
-  // Get the count of jobs in the failed queue
-  let failedCount = await queue.failedCount()
-  // Retrieve failed jobs in batches of 100
-  // First, determine the batch ranges to retrieve
-  let batchSize = 100
-  let failedBatches = []
-  for (let x = 0; x < failedCount; x += batchSize) {
-    failedBatches.push({ start: x, end: x + batchSize - 1 })
-  }
-  // Retrieve the failed jobs for each batch and collect in 'failedJobs' array
-  let failedJobs = []
-  for (let failedBatch of failedBatches) {
-    let failedJobSet = await queue.failed(failedBatch.start, failedBatch.end)
-    failedJobs = failedJobs.concat(failedJobSet)
-  }
-  // For each job, remove the job from the failed queue and requeue to its original queue
-  for (let failedJob of failedJobs) {
-    logMessage(
-      `Requeuing job: ${failedJob.payload.queue} : ${failedJob.payload.class} : ${failedJob.error} `,
-      debug,
-      'worker'
-    )
-    await queue.retryAndRemoveFailed(failedJob)
-  }
-}
-
 function logMessage(message, debug, msgType) {
   if (debug && debug[msgType]) {
     debug[msgType](message)
@@ -324,9 +215,6 @@ function logMessage(message, debug, msgType) {
 module.exports = {
   openTendermintConnection: openTendermintConnection,
   openRedisConnection: openRedisConnection,
-  initResqueQueueAsync: initResqueQueueAsync,
-  initResqueWorkerAsync: initResqueWorkerAsync,
-  initResqueSchedulerAsync: initResqueSchedulerAsync,
   openPostgresConnectionAsync: openPostgresConnectionAsync,
   openStandardRMQConnectionAsync: openStandardRMQConnectionAsync,
   listenRestifyAsync: listenRestifyAsync,

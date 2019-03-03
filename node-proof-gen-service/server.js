@@ -319,7 +319,7 @@ async function openRMQConnectionAsync(connectURI) {
   await connections.openStandardRMQConnectionAsync(
     amqp,
     connectURI,
-    [env.RMQ_WORK_IN_GEN_QUEUE, env.RMQ_WORK_OUT_TASK_ACC_QUEUE],
+    [env.RMQ_WORK_IN_GEN_QUEUE],
     env.RMQ_PREFETCH_COUNT_GEN,
     {
       queue: env.RMQ_WORK_IN_GEN_QUEUE,

@@ -106,10 +106,6 @@ let envDefinitions = {
     default: 'work.api',
     desc: 'The queue name for outgoing message to the api service'
   }),
-  RMQ_WORK_OUT_TASK_ACC_QUEUE: envalid.str({
-    default: 'work.taskacc',
-    desc: 'The queue name for outgoing message to the task accumulator service'
-  }),
 
   // Redis related variables
   REDIS_CONNECT_URIS: envalid.str({
@@ -252,16 +248,6 @@ let envDefinitions = {
       'The number of times per hour to calculate and distribute rewards, defaults to 2, must be a factor of 60, no greater than 20'
   }),
 
-  // Task accumulator specific variables
-  RMQ_PREFETCH_COUNT_TASK_ACC: envalid.num({
-    default: 0,
-    desc: 'The maximum number of messages sent over the channel that can be awaiting acknowledgement, 0 = no limit'
-  }),
-  RMQ_WORK_IN_TASK_ACC_QUEUE: envalid.str({
-    default: 'work.taskacc',
-    desc: 'The queue name for message consumption originating from the other services'
-  }),
-
   // Tendermint RPC URI
   TENDERMINT_URI: envalid.str({ default: 'http://tendermint:26657', desc: 'Tendermint RPC URI' })
 }
@@ -319,12 +305,6 @@ module.exports = service => {
     case 'state':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
-      })
-      break
-    case 'task-handler':
-      envDefinitions.CORE_PROOF_POLLER_URL = envalid.str({
-        default: 'https://us-east1-chainpoint-services.cloudfunctions.net/chainpoint-monitor-coreproof-poller',
-        desc: 'Endpoint to core proof poller that is part of Chainpoint-monitor service'
       })
       break
     case 'tnt-reward':

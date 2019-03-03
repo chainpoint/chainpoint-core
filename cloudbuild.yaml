@@ -22,9 +22,6 @@ steps:
   args: [ 'build', '-f', 'docker/Dockerfile.proof-state', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:latest', '.' ]
   waitFor: ['node-base']
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.task-handler', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.abci', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:latest', '.' ]
   waitFor: ['node-base']
 timeout: 1000s
@@ -43,8 +40,6 @@ images:
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-gen-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-task-handler-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:$COMMIT_SHA'
 options:
