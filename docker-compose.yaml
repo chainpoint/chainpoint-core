@@ -83,6 +83,7 @@ services:
       - roach1
       - redis
       - rabbitmq
+      - postgres
     ports:
       - "8080:8080"
     networks:
@@ -107,6 +108,7 @@ services:
       - roach1
       - redis
       - rabbitmq
+      - postgres
     networks:
       - chainpoint
     environment:
@@ -129,7 +131,6 @@ services:
     container_name: btc-tx-core
     depends_on:
       - base
-      - roach1
       - rabbitmq
     networks:
       - chainpoint
@@ -174,6 +175,7 @@ services:
       - base
       - rabbitmq
       - roach1
+      - postgres
     networks:
       - chainpoint
     environment:
@@ -196,6 +198,7 @@ services:
       - base
       - rabbitmq
       - roach1
+      - postgres
     networks:
       - chainpoint
     environment:
@@ -311,3 +314,29 @@ services:
       REDIS_PORT: 6379
       REDIS_DB: 0
       REDIS_NAMESPACE: resque
+
+  # Postgres	
+  #
+  # See : https://hub.docker.com/_/postgres/
+  # Note: Connect locally on OS X:
+  #
+  # Installs local client 'psql'
+  #   brew install postgres
+  #
+  # Connect (uname/pass chainpoint/chainpoint):
+  #   psql -h 127.0.0.1 -U chainpoint
+  #
+  postgres:
+    restart: always
+    image: postgres:11.2-alpine
+    container_name: postgres-core
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: chainpoint
+      POSTGRES_PASSWORD: chainpoint
+    ports:
+      - "5432:5432"
+    networks:
+      - chainpoint
+

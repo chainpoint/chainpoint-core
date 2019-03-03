@@ -136,6 +136,13 @@ burn: clean prune
 yarn:
 	docker run -it --rm --volume "$(PWD)":/usr/src/app --volume /var/run/docker.sock:/var/run/docker.sock --volume ~/.docker:/root/.docker --volume "$(PWD)":/wd --workdir /wd gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-base:latest yarn
 
+## postgres                  : Connect to the local PostgreSQL with `psql`	
+	.PHONY : postgres
+	postgres:
+	@docker-compose up -d postgres
+	@sleep 6
+	@docker exec -it postgres-core psql -U chainpoint
+
 ## redis                     : Connect to the local Redis with `redis-cli`
 .PHONY : redis
 redis:

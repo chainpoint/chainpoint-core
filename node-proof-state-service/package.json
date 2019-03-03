@@ -32,7 +32,9 @@
     "exit-hook": "^1.1.1",
     "ioredis": "^3.2.2",
     "node-resque": "^5.4.1",
-    "sequelize": "^4.33.3",
+    "pg": "^7.8.1",
+    "pg-hstore": "^2.3.2",
+    "sequelize": "^4.42.1",
     "sequelize-cockroachdb": "https://github.com/cockroachdb/sequelize-cockroachdb.git#f6b15cfaf23c17882e4b813a4dfc9758a77aa5a9"
   },
   "devDependencies": {
