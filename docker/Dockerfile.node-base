@@ -43,9 +43,6 @@ RUN mkdir /home/node/app
 # will be run in the context of this directory.
 WORKDIR /home/node/app
 
-# Needed for API and proof packages bc of https://github.com/yarnpkg/yarn/issues/932
-RUN yarn add level-rocksdb@github:chainpoint/level-rocksdb#rocksdb-3-0-3-depend
-
 # Set required environment variables
 ENV NODE_ENV production
 

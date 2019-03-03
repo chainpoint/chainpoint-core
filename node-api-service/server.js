@@ -95,7 +95,7 @@ server.post({ path: '/hashes', version: '1.0.0' }, hashes.postHashV1Async)
 server.get({ path: '/calendar/:txid', version: '1.0.0' }, calendar.getCalTxAsync)
 // get the data value of a txId
 server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, calendar.getCalTxDataAsync)
-// get proofs from rocksdb
+// get proofs from storage
 server.get({ path: '/proofs', version: '1.0.0' }, proofs.getCoreProofsAsync)
 // get random core peers
 server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
