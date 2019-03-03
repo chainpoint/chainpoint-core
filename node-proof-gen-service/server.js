@@ -288,6 +288,21 @@ function logGenerationEvent(submitDateString, batchType, batchId, proofIndex, ba
 }
 
 /**
+ * Prunes proof data
+ * This is required to be run regularly in order to keep the proof database from growing too large
+ *
+ */
+async function PruneProofsAsync() {
+  try {
+    // remove all rows from proofs that are older than the expiration age
+    let deleteCount = await proof.pruneExpiredProofsAsync()
+    if (deleteCount > 0) console.log(`Pruning proofs - ${deleteCount} row(s) deleted`)
+  } catch (error) {
+    console.error(`Unable to complete pruning process: ${error.message}`)
+  }
+}
+
+/**
  * Opens a Redis connection
  *
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
@@ -356,6 +371,18 @@ async function openPostgresConnectionAsync() {
   proof.setDatabase(cxObjects.sequelize, cxObjects.models[5])
 }
 
+function startIntervals() {
+  let intervals = [
+    {
+      function: () => {
+        PruneProofsAsync()
+      },
+      ms: env.PRUNE_FREQUENCY_MINUTES * 60 * 1000
+    }
+  ]
+  connections.startIntervals(intervals)
+}
+
 // process all steps need to start the application
 async function start() {
   if (env.NODE_ENV === 'test') return
@@ -366,6 +393,8 @@ async function start() {
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
+    // Init intervals
+    startIntervals()
     console.log('startup completed successfully')
   } catch (error) {
     console.error(`An error has occurred on startup: ${error.message}`)
