@@ -17,6 +17,29 @@ const env = require('../parse-env.js')('api')
 const restify = require('restify')
 const connections = require('../connections.js')
 
+async function getTransactionAsync(txID) {
+  if (!txID.startsWith('0x')) txID = `0x${txID}`
+  let tx
+  try {
+    let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
+    tx = await rpc.tx({ hash: txID, prove: false })
+  } catch (error) {
+    // TODO: check for 404
+    console.error(`RPC error communicating with Tendermint : ${error.message}`)
+    return {
+      tx: null,
+      error: new restify.InternalServerError('Could not query for tx by hash')
+    }
+  }
+  // Txs are double-encoded in base64 when returned from this RPC client
+  tx.tx = JSON.parse(new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii'))
+
+  return {
+    tx: tx,
+    error: null
+  }
+}
+
 /**
  * GET /calendar/:txid handler
  *
@@ -25,30 +48,11 @@ const connections = require('../connections.js')
  * Returns a calendar tx by tx hash
  */
 async function getCalTxAsync(req, res, next) {
-  let txID = req.params.txid
-  if (!txID.includes('0x')) {
-    txID = '0x' + txID
-  }
-  let tx
-  try {
-    let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
-    tx = await rpc.tx({ hash: txID, prove: false })
-  } catch (error) {
-    console.error('rpc error')
-    return next(new restify.InternalServerError('Could not query for tx by hash'))
-  }
-  if (!tx) {
-    res.status(404)
-    res.noCache()
-    res.send({ code: 'NotFoundError', message: '' })
-    return next()
-  }
-  // Txs are double-encoded in base64 when returned from this RPC client
-  let txData = JSON.parse(new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii'))
-  tx.tx = txData
+  let result = await getTransactionAsync(req.params.txid)
+  if (result.error) return next(result.error)
+
   res.contentType = 'application/json'
-  res.cache('public', { maxAge: 2592000 })
-  res.send(tx)
+  res.send(result.tx)
   return next()
 }
 
@@ -57,32 +61,14 @@ async function getCalTxAsync(req, res, next) {
  *
  * Expects a path parameter 'txid' as a string
  *
- * Returns a calendar tx by tx hash
+ * Returns a calendar tx's data element
  */
 async function getCalTxDataAsync(req, res, next) {
-  let txID = req.params.txid
-  if (!txID.includes('0x')) {
-    txID = '0x' + txID
-  }
-  let tx
-  try {
-    let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
-    tx = await rpc.tx({ hash: txID, prove: false })
-  } catch (error) {
-    console.error('rpc error')
-    return next(new restify.InternalServerError('Could not query for tx by hash'))
-  }
-  if (!tx) {
-    res.status(404)
-    res.noCache()
-    res.send({ code: 'NotFoundError', message: '' })
-    return next()
-  }
-  let txData = new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii')
-  let jsonData = JSON.parse(txData)
-  res.contentType = 'application/json'
-  res.cache('public', { maxAge: 2592000 })
-  res.send(jsonData.hash)
+  let result = await getTransactionAsync(req.params.txid)
+  if (result.error) return next(result.error)
+
+  res.contentType = 'text/plain'
+  res.send(result.tx.hash.toLowerCase()) // uppercase hashes are uglyAF
   return next()
 }
 
