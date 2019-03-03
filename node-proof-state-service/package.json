@@ -31,7 +31,6 @@
     "envalid": "^3.1.1",
     "exit-hook": "^1.1.1",
     "ioredis": "^3.2.2",
-    "node-resque": "^5.4.1",
     "pg": "^7.8.1",
     "pg-hstore": "^2.3.2",
     "sequelize": "^4.42.1"

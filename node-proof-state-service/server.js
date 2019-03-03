@@ -35,9 +35,6 @@ var amqpChannel = null
 // This value is set once the connection has been established
 let redis = null
 
-// This value is set once the connection has been established
-let taskQueue = null
-
 const CAL_STATE_WRITE_BATCH_SIZE = 200
 const CAL_PROOF_GEN_BATCH_SIZE = 2500
 const ANCHOR_BTC_STATE_WRITE_BATCH_SIZE = 200
@@ -235,70 +232,30 @@ async function ConsumeBtcMonMessageAsync(msg) {
 }
 
 /**
- * Prunes proof state data and hash tracker logs
- * All hashb data that is logged as complete will be removed from all relevant tables
+ * Prunes proof state data
  * This is required to be run regularly in order to keep the proof state database from growing too large
  *
  */
 async function PruneStateDataAsync() {
   try {
-    // CRDB
     // remove all rows from agg_states that are older than the expiration age
-    let results = await queueProofStatePruningTasks('agg_states')
-    if (results.rowCount)
-      console.log(`Pruning agg_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
-    // remove all rows from cal_states that are older than the expiration age
-    results = await queueProofStatePruningTasks('cal_states')
-    if (results.rowCount)
-      console.log(`Pruned cal_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
-    // remove all rows from anchor_btc_agg_states that are older than the expiration age
-    results = await queueProofStatePruningTasks('anchor_btc_agg_states')
-    if (results.rowCount)
-      console.log(
-        `Pruned anchor_btc_agg_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`
-      )
-    // remove all rows from btctx_states that are older than the expiration age
-    results = await queueProofStatePruningTasks('btctx_states')
-    if (results.rowCount)
-      console.log(`Pruned btctx_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
-    // remove all rows from btchead_states that are older than the expiration age
-    results = await queueProofStatePruningTasks('btchead_states')
-    if (results.rowCount)
-      console.log(`Pruned btchead_states - ${results.rowCount} row(s) to be deleted in ${results.batchCount} batches`)
+    let deleteCount = await cachedProofState.pruneAggStatesAsync()
+    if (deleteCount > 0) console.log(`Pruning agg_states - ${deleteCount} row(s) deleted`)
+    // remove all rows from agg_states that are older than the expiration age
+    deleteCount = await cachedProofState.pruneCalStatesAsync()
+    if (deleteCount > 0) console.log(`Pruning cal_states - ${deleteCount} row(s) deleted`)
+    // remove all rows from agg_states that are older than the expiration age
+    deleteCount = await cachedProofState.pruneAnchorBTCAggStatesAsync()
+    if (deleteCount > 0) console.log(`Pruning anchor_btc_agg_states - ${deleteCount} row(s) deleted`)
+    // remove all rows from agg_states that are older than the expiration age
+    deleteCount = await cachedProofState.pruneBTCTxStatesAsync()
+    if (deleteCount > 0) console.log(`Pruning btctx_states - ${deleteCount} row(s) deleted`)
+    // remove all rows from agg_states that are older than the expiration age
+    deleteCount = await cachedProofState.pruneBTCHeadStatesAsync()
+    if (deleteCount > 0) console.log(`Pruning btchead_states - ${deleteCount} row(s) deleted`)
   } catch (error) {
     console.error(`Unable to complete pruning process: ${error.message}`)
   }
-}
-
-async function queueProofStatePruningTasks(modelName) {
-  // determine the primary key ids for each batch
-  let primaryKeyValues = await cachedProofState.getExpiredPKValuesForModel(modelName)
-  let totalCount = primaryKeyValues.length
-  let pruneBatchTasks = []
-  let pruneBatchSize = 500
-
-  while (primaryKeyValues.length > 0) {
-    let batch = primaryKeyValues.splice(0, pruneBatchSize)
-
-    pruneBatchTasks.push(batch)
-    console.log(`Created pruning batch for ${modelName} table ${batch[0]}...`)
-  }
-
-  // create and issue individual delete tasks for each batch
-  for (let pruneBatchTask of pruneBatchTasks) {
-    try {
-      await taskQueue.enqueue('state-pruning-queue', `prune_${modelName}_ids`, [pruneBatchTask])
-    } catch (error) {
-      console.error(`Could not enqueue state pruning task : ${error.message}`)
-    }
-  }
-
-  let results = {
-    rowCount: totalCount,
-    batchCount: pruneBatchTasks.length
-  }
-
-  return results
 }
 
 /**
@@ -371,12 +328,10 @@ function openRedisConnection(redisURIs) {
     newRedis => {
       redis = newRedis
       cachedProofState.setRedis(redis)
-      initResqueQueueAsync()
     },
     () => {
       redis = null
       cachedProofState.setRedis(null)
-      taskQueue = null
       setTimeout(() => {
         openRedisConnection(redisURIs)
       }, 5000)
@@ -412,13 +367,6 @@ async function openRMQConnectionAsync(connectURI) {
       }, 5000)
     }
   )
-}
-
-/**
- * Initializes the connection to the Resque queue when Redis is ready
- */
-async function initResqueQueueAsync() {
-  taskQueue = await connections.initResqueQueueAsync(redis, 'resque')
 }
 
 function startIntervals() {

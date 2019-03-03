@@ -432,70 +432,30 @@ async function writeBTCHeadStateObjectAsync(stateObject) {
   return true
 }
 
-async function pruneProofStateTableByIdsAsync(model, pkColumnName, ids) {
-  // create whereClause object to allow for dynamic column assignment in WHERE
-  let whereClause = {}
-  whereClause[pkColumnName] = { [sequelize.Op.in]: ids }
-  let pruneCount = await model.destroy({ where: whereClause })
+async function pruneProofStateTableAsync(model) {
+  let pruneCutoffDate = new Date(Date.now() - PROOF_STATE_EXPIRE_HOURS * 60 * 60 * 1000)
+  let pruneCount = await model.destroy({ where: { created_at: { [sequelize.Op.lte]: pruneCutoffDate } } })
   return pruneCount
 }
 
-async function pruneAggStatesByIdsAsync(ids) {
-  return pruneProofStateTableByIdsAsync(AggState, 'hash_id', ids)
+async function pruneAggStatesAsync() {
+  return pruneProofStateTableAsync(AggState)
 }
 
-async function pruneCalStatesByIdsAsync(ids) {
-  return pruneProofStateTableByIdsAsync(CalState, 'agg_id', ids)
+async function pruneCalStatesAsync() {
+  return pruneProofStateTableAsync(CalState)
 }
 
-async function pruneAnchorBTCAggStatesByIdsAsync(ids) {
-  return pruneProofStateTableByIdsAsync(AnchorBtcAggState, 'cal_id', ids)
+async function pruneAnchorBTCAggStatesAsync() {
+  return pruneProofStateTableAsync(AnchorBtcAggState)
 }
 
-async function pruneBTCTxStatesByIdsAsync(ids) {
-  return pruneProofStateTableByIdsAsync(BtcTxState, 'anchor_btc_agg_id', ids)
+async function pruneBTCTxStatesAsync() {
+  return pruneProofStateTableAsync(BtcTxState)
 }
 
-async function pruneBTCHeadStatesByIdsAsync(ids) {
-  return pruneProofStateTableByIdsAsync(BtcHeadState, 'btctx_id', ids)
-}
-
-async function getExpiredPKValuesForModel(modelName) {
-  let model = null
-  let pkColName = null
-  switch (modelName) {
-    case 'agg_states':
-      model = AggState
-      pkColName = 'hash_id'
-      break
-    case 'cal_states':
-      model = CalState
-      pkColName = 'agg_id'
-      break
-    case 'anchor_btc_agg_states':
-      model = AnchorBtcAggState
-      pkColName = 'cal_id'
-      break
-    case 'btctx_states':
-      model = BtcTxState
-      pkColName = 'anchor_btc_agg_id'
-      break
-    case 'btchead_states':
-      model = BtcHeadState
-      pkColName = 'btctx_id'
-      break
-  }
-  if (model === null) throw new Error(`Unknown modelName : ${modelName}`)
-  let pruneCutoffDate = new Date(Date.now() - PROOF_STATE_EXPIRE_HOURS * 60 * 60 * 1000)
-  let primaryKeyVals = await model.findAll({
-    where: { created_at: { [sequelize.Op.lte]: pruneCutoffDate } },
-    raw: true,
-    attributes: [pkColName]
-  })
-  primaryKeyVals = primaryKeyVals.map(item => {
-    return item[pkColName]
-  })
-  return primaryKeyVals
+async function pruneBTCHeadStatesAsync() {
+  return pruneProofStateTableAsync(BtcHeadState)
 }
 
 module.exports = {
@@ -513,12 +473,11 @@ module.exports = {
   writeAnchorBTCAggStateObjectsAsync: writeAnchorBTCAggStateObjectsAsync,
   writeBTCTxStateObjectAsync: writeBTCTxStateObjectAsync,
   writeBTCHeadStateObjectAsync: writeBTCHeadStateObjectAsync,
-  pruneAggStatesByIdsAsync: pruneAggStatesByIdsAsync,
-  pruneCalStatesByIdsAsync: pruneCalStatesByIdsAsync,
-  pruneAnchorBTCAggStatesByIdsAsync: pruneAnchorBTCAggStatesByIdsAsync,
-  pruneBTCTxStatesByIdsAsync: pruneBTCTxStatesByIdsAsync,
-  pruneBTCHeadStatesByIdsAsync: pruneBTCHeadStatesByIdsAsync,
-  getExpiredPKValuesForModel: getExpiredPKValuesForModel,
+  pruneAggStatesAsync: pruneAggStatesAsync,
+  pruneCalStatesAsync: pruneCalStatesAsync,
+  pruneAnchorBTCAggStatesAsync: pruneAnchorBTCAggStatesAsync,
+  pruneBTCTxStatesAsync: pruneBTCTxStatesAsync,
+  pruneBTCHeadStatesAsync: pruneBTCHeadStatesAsync,
   setRedis: r => {
     redis = r
   },
