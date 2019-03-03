@@ -30,6 +30,7 @@ const calState = require('./lib/models/CalState.js')
 const anchorBtcAggState = require('./lib/models/AnchorBtcAggState.js')
 const btcTxState = require('./lib/models/BtcTxState.js')
 const btcHeadState = require('./lib/models/BtcHeadState.js')
+const proof = require('./lib/models/Proof.js')
 const cachedProofState = require('./lib/models/cachedProofState.js')
 
 // The channel used for all amqp communication
@@ -241,7 +242,7 @@ async function storeProofsAsync(proofs, batchType) {
 
   // save proof
   try {
-    // TODO: save proofs
+    await proof.writeProofsBulkAsync(proofs)
   } catch (error) {
     console.error(`Could not save proofs to local database : ${error.message}`)
   }
@@ -342,7 +343,7 @@ async function openRMQConnectionAsync(connectURI) {
  * Opens a Postgres connection
  **/
 async function openPostgresConnectionAsync() {
-  let sqlzModelArray = [aggState, calState, anchorBtcAggState, btcTxState, btcHeadState]
+  let sqlzModelArray = [aggState, calState, anchorBtcAggState, btcTxState, btcHeadState, proof]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   cachedProofState.setDatabase(
     cxObjects.sequelize,
@@ -352,6 +353,7 @@ async function openPostgresConnectionAsync() {
     cxObjects.models[3],
     cxObjects.models[4]
   )
+  proof.setDatabase(cxObjects.sequelize, cxObjects.models[5])
 }
 
 // process all steps need to start the application

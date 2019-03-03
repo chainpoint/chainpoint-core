@@ -18,6 +18,12 @@ const Sequelize = require('sequelize')
 
 const envalid = require('envalid')
 
+let sequelize
+let Proof
+
+// How many hours a proof is retained before pruning
+const PROOF_EXPIRE_HOURS = 24
+
 const env = envalid.cleanEnv(process.env, {
   PROOFS_TABLE_NAME: envalid.str({
     default: 'proofs',
@@ -50,6 +56,47 @@ function defineFor(sqlz) {
   return Proof
 }
 
+async function writeProofsBulkAsync(proofs) {
+  let insertCmd = 'INSERT INTO proofs (hash_id, proof, created_at, updated_at) VALUES '
+
+  let insertValues = proofs.map(proof => {
+    // use sequelize.escape() to sanitize input values just to be safe
+    let hashId = sequelize.escape(proof.hash_id_core)
+    let proofString = sequelize.escape(JSON.stringify(proof))
+    return `(${hashId}, ${proofString}, clock_timestamp(), clock_timestamp())`
+  })
+
+  insertCmd = insertCmd + insertValues.join(', ') + ' ON CONFLICT (hash_id) DO UPDATE SET proof = EXCLUDED.proof'
+
+  await sequelize.query(insertCmd, { type: sequelize.QueryTypes.INSERT })
+  return true
+}
+
+async function getProofsByHashIdsAsync(hashIds) {
+  let results = await Proof.findAll({
+    where: {
+      hash_id: { [sequelize.Op.in]: hashIds }
+    },
+    raw: true
+  })
+  return results
+}
+
+async function pruneExpiredProofsAsync() {
+  let pruneCutoffDate = new Date(Date.now() - PROOF_EXPIRE_HOURS * 60 * 60 * 1000)
+  let deleteCount = await Proof.destroy({
+    where: { created_at: { [sequelize.Op.lte]: pruneCutoffDate } }
+  })
+  return deleteCount
+}
+
 module.exports = {
-  defineFor: defineFor
+  defineFor: defineFor,
+  writeProofsBulkAsync: writeProofsBulkAsync,
+  getProofsByHashIdsAsync: getProofsByHashIdsAsync,
+  pruneExpiredProofsAsync: pruneExpiredProofsAsync,
+  setDatabase: (sqlz, proof) => {
+    sequelize = sqlz
+    Proof = proof
+  }
 }
