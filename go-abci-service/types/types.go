@@ -32,7 +32,7 @@ type State struct {
 // Tx holds custom transaction data and metadata for the Chainpoint Calendar
 type Tx struct {
 	TxType  string `json:"type"`
-	Data    string `json:"hash"`
+	Data    string `json:"data"`
 	Version int64  `json:"version"`
 	Time    int64  `json:"time"`
 }

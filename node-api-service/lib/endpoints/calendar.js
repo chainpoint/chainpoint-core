@@ -82,7 +82,7 @@ async function getCalTxDataAsync(req, res, next) {
   if (result.error) return next(result.error)
 
   res.contentType = 'text/plain'
-  res.send(result.tx.hash.toLowerCase()) // uppercase hashes are uglyAF
+  res.send(result.tx.data.toLowerCase()) // uppercase hashes are uglyAF
   return next()
 }
 
