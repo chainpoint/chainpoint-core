@@ -8,6 +8,7 @@ RUN yarn
 
 RUN mkdir /home/node/app/lib/endpoints
 COPY node-api-service/lib/endpoints /home/node/app/lib/endpoints/
+COPY node-api-service/lib /home/node/app/lib/
 
 COPY node-api-service/server.js /home/node/app/
 
