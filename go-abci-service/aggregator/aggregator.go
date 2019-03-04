@@ -81,7 +81,6 @@ func Aggregate(rabbitmqConnectURI string, nist beacon.Record) (agg []types.Aggre
 					mux.Unlock()
 				}
 			}
-			fmt.Println("Ending aggregation")
 		}()
 	}
 

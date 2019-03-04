@@ -13,12 +13,9 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 var proofDB *dbm.GoLevelDB
-var nodeStatus types.NodeStatus
-var netInfo *core_types.ResultNetInfo
 var currentCalTree merkletools.MerkleTree
 var tendermintRPC types.TendermintURI
 var rabbitmqURI string

@@ -89,7 +89,8 @@ func AggregateAnchorTx(txLeaves []core_types.ResultTx) types.BtcAgg {
 	tree.AddLeaves(calBytes)
 	tree.MakeTree()
 	var treeData types.BtcAgg
-	uuid, _ := util.UUIDFromHash(tree.Root[0:15])
+	uuid, err := util.UUIDFromHash(tree.Root[0:16])
+	util.LogError(err)
 	treeData.AnchorBtcAggID = uuid.String()
 	treeData.AnchorBtcAggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 	treeData.ProofData = make([]types.BtcProofData, len(calLeaves))

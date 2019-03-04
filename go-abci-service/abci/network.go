@@ -2,42 +2,40 @@ package abci
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"sort"
 	"time"
 
+	"github.com/tendermint/tendermint/p2p"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/rpc/client"
 )
 
 // GetStatus retrieves status of our node. Can't use RPC because remote_ip has buggy encoding.
-func GetStatus(tendermintRPC types.TendermintURI) (types.NodeStatus, error) {
-	resp, err := http.Get(fmt.Sprintf("http://%s:%s/net_info", tendermintRPC.TMServer, tendermintRPC.TMPort))
-	if err != nil {
-		return types.NodeStatus{}, err
+func GetStatus(tendermintRPC types.TendermintURI) (core_types.ResultStatus, error) {
+	rpc := GetHTTPClient(tendermintRPC)
+	defer rpc.Stop()
+	if rpc == nil {
+		return core_types.ResultStatus{}, errors.New("rpc failure")
 	}
-	var status types.NodeStatus
-	body, _ := ioutil.ReadAll(resp.Body)
-	json.Unmarshal(body, &status)
-	resp.Body.Close()
-	return status, nil
+	status, err := rpc.Status()
+	return *status, err
 }
 
 // GetNetInfo retrieves known peer information. Can't use RPC because remote_ip has buggy encoding.
-func GetNetInfo(tendermintRPC types.TendermintURI) (types.NetInfo, error) {
-	resp, err := http.Get(fmt.Sprintf("http://%s:%s/status", tendermintRPC.TMServer, tendermintRPC.TMPort))
-	if err != nil {
-		return types.NetInfo{}, err
+func GetNetInfo(tendermintRPC types.TendermintURI) (core_types.ResultNetInfo, error) {
+	rpc := GetHTTPClient(tendermintRPC)
+	defer rpc.Stop()
+	if rpc == nil {
+		return core_types.ResultNetInfo{}, errors.New("rpc failure")
 	}
-	var info types.NetInfo
-	body, _ := ioutil.ReadAll(resp.Body)
-	json.Unmarshal(body, &info)
-	resp.Body.Close()
-	return info, nil
+	netInfo, err := rpc.NetInfo()
+	return *netInfo, err
 }
 
 // GetAbciInfo retrieves custom ABCI status struct detailing the state of our application
@@ -49,18 +47,14 @@ func GetAbciInfo(tendermintRPC types.TendermintURI) (types.State, error) {
 		return types.State{}, err
 	}
 	var anchorState types.State
-	err = json.Unmarshal([]byte(resp.Response.Data), &anchorState)
-	if err != nil {
-		fmt.Println(err)
-		return types.State{}, err
-	}
+	util.LogError(json.Unmarshal([]byte(resp.Response.Data), &anchorState))
 	return anchorState, nil
 }
 
 // ElectLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
 func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leader string) {
-	var status types.NodeStatus
-	var netInfo types.NetInfo
+	var status core_types.ResultStatus
+	var netInfo core_types.ResultNetInfo
 	var err error
 	var err2 error
 
@@ -81,25 +75,27 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leader strin
 		return false, ""
 	}
 
-	currentNodeID := status.Result.NodeInfo.ID
-	if len(netInfo.Result.Peers) > 0 {
-		nodeArray := make([]types.NodeInfo, len(netInfo.Result.Peers)+1)
-		for i := 0; i < len(netInfo.Result.Peers); i++ {
-			nodeArray[i] = netInfo.Result.Peers[i].NodeInfo
+	currentNodeID := status.NodeInfo.ID()
+	if len(netInfo.Peers) > 0 {
+		nodeArray := make([]p2p.DefaultNodeInfo, len(netInfo.Peers)+1)
+		for i := 0; i < len(netInfo.Peers); i++ {
+			nodeArray[i] = netInfo.Peers[i].NodeInfo
 		}
-		nodeArray[len(netInfo.Result.Peers)] = status.Result.NodeInfo
+		nodeArray[len(netInfo.Peers)] = status.NodeInfo
 		sort.Slice(nodeArray[:], func(i, j int) bool {
-			return nodeArray[i].ID > nodeArray[j].ID
+			return nodeArray[i].ID() > nodeArray[j].ID()
 		})
-		if !status.Result.SyncInfo.CatchingUp {
-			blockHash := status.Result.SyncInfo.LatestBlockHash
+		if !status.SyncInfo.CatchingUp {
+			blockHash := status.SyncInfo.LatestBlockHash
 			index := util.GetSeededRandInt([]byte(blockHash), len(nodeArray))
 			leader := nodeArray[index]
-			return leader.ID == currentNodeID, leader.ID
+			return leader.ID() == currentNodeID, string(leader.ID())
 		}
+		fmt.Println("No leader (not caught up)")
 		return false, ""
 	}
-	return true, currentNodeID
+	fmt.Println(currentNodeID)
+	return true, string(currentNodeID)
 }
 
 // GetHTTPClient creates an Tendermint RPC client from connection URI/Port details

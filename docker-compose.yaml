@@ -20,7 +20,7 @@ services:
       AGGREGATE: "true"
       AGGREGATION_THREADS: "4"
       HASHES_PER_MERKLE_TREE: "200"
-      ANCHOR_BLOCK_INTERVAL: "3"
+      ANCHOR_BLOCK_INTERVAL: "1"
     ports:
     - "26658"
     command: bash -c "abci-service"
@@ -30,7 +30,7 @@ services:
   tendermint:
     depends_on:
     - abci
-    image: tierion/tendermint-cleveldb
+    image: tierion/tendermint-cleveldb:latest
     entrypoint: ''
     volumes:
     - ./config/node_1:/tendermint/config:Z
