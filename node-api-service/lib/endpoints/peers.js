@@ -32,17 +32,8 @@ async function getPeersAsync(req, res, next) {
   }
 
   let decodedPeers = netResponse.result.peers.map(peer => {
-    let byteArray = Array.prototype.slice.call(Buffer.from(peer.remote_ip, 'base64'), 0)
-    let newBytes = byteArray.slice(-4)
-    return (
-      newBytes[0].toString(10) +
-      '.' +
-      newBytes[1].toString(10) +
-      '.' +
-      newBytes[2].toString(10) +
-      '.' +
-      newBytes[3].toString(10)
-    )
+    let ipBytes = Buffer.from(peer.remote_ip, 'base64').slice(-4)
+    return ipBytes.join('.')
   })
   res.contentType = 'application/json'
   res.send(decodedPeers)
