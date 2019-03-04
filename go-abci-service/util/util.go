@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
 
@@ -48,6 +50,11 @@ func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	seed, _ := binary.Varint(eightByteHash)
 	rand.Seed(seed)
 	return rand.Intn(upperBound)
+}
+
+// UUIDFromHash : generate a uuid from a byte hash, must be 16 bytes
+func UUIDFromHash(seedBytes []byte) (uuid.UUID, error) {
+	return uuid.FromBytes(seedBytes)
 }
 
 // DecodeTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct

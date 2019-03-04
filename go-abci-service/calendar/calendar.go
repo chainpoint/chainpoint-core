@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/google/uuid"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
@@ -90,7 +89,7 @@ func AggregateAnchorTx(txLeaves []core_types.ResultTx) types.BtcAgg {
 	tree.AddLeaves(calBytes)
 	tree.MakeTree()
 	var treeData types.BtcAgg
-	uuid, _ := uuid.NewUUID()
+	uuid, _ := util.UUIDFromHash(tree.Root[0:15])
 	treeData.AnchorBtcAggID = uuid.String()
 	treeData.AnchorBtcAggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 	treeData.ProofData = make([]types.BtcProofData, len(calLeaves))

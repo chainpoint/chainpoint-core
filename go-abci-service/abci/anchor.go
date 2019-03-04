@@ -45,8 +45,8 @@ func AggregateCalendar(tendermintRPC types.TendermintURI, rabbitmqURI string, ni
 // AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
 func AnchorBTC(tendermintURI types.TendermintURI, rabbitmqURI string, startTxRange *int64, endTxRange int64) error {
 	fmt.Println("starting scheduled anchor")
-	iAmLeader, _ := ElectLeader(tendermintURI)
-	fmt.Printf("Leader: %t", iAmLeader)
+	iAmLeader, leaderID := ElectLeader(tendermintURI)
+	fmt.Printf("Leader: %s\n", leaderID)
 	/* Get CAL transactions between the latest BTCA tx and the current latest tx */
 	txLeaves, err := getTxRange(tendermintURI, *startTxRange, endTxRange)
 	if util.LogError(err) != nil {

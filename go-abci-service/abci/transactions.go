@@ -83,7 +83,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 // GetTxRange gets all CAL TXs within a particular range
 func getTxRange(tendermintRPC types.TendermintURI, minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
 	fmt.Printf("minTxInt: %d, maxTxINt: %d\n", minTxInt, maxTxInt)
-	if maxTxInt < minTxInt {
+	if maxTxInt <= minTxInt {
 		return nil, errors.New("max of tx range is less than min")
 	}
 	rpc := GetHTTPClient(tendermintRPC)
