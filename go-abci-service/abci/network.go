@@ -24,6 +24,9 @@ func GetStatus(tendermintRPC types.TendermintURI) (core_types.ResultStatus, erro
 		return core_types.ResultStatus{}, errors.New("rpc failure")
 	}
 	status, err := rpc.Status()
+	if util.LogError(err) != nil {
+		return core_types.ResultStatus{}, err
+	}
 	return *status, err
 }
 
@@ -35,6 +38,9 @@ func GetNetInfo(tendermintRPC types.TendermintURI) (core_types.ResultNetInfo, er
 		return core_types.ResultNetInfo{}, errors.New("rpc failure")
 	}
 	netInfo, err := rpc.NetInfo()
+	if util.LogError(err) != nil {
+		return core_types.ResultNetInfo{}, err
+	}
 	return *netInfo, err
 }
 
