@@ -20,10 +20,22 @@ const utils = require('./utils.js')
 /**
  * Opens a Tendermint RPC connection
  */
-function openTendermintConnection(tendermintURI) {
+async function openTendermintConnectionAsync(tendermintURI, debug) {
   let { RpcClient } = require('tendermint')
-  let client = RpcClient(tendermintURI)
-  return client
+  let tmConnected = false
+  let rpcClient
+  while (!tmConnected) {
+    try {
+      rpcClient = RpcClient(tendermintURI)
+      logMessage('Tendermint connection established', debug, 'general')
+      tmConnected = true
+    } catch (error) {
+      // catch errors when attempting to establish connection
+      console.error('Cannot establish Tendermint connection. Attempting in 5 seconds...')
+      await utils.sleepAsync(5000)
+    }
+  }
+  return rpcClient
 }
 
 /**
@@ -213,7 +225,7 @@ function logMessage(message, debug, msgType) {
 }
 
 module.exports = {
-  openTendermintConnection: openTendermintConnection,
+  openTendermintConnectionAsync: openTendermintConnectionAsync,
   openRedisConnection: openRedisConnection,
   openPostgresConnectionAsync: openPostgresConnectionAsync,
   openStandardRMQConnectionAsync: openStandardRMQConnectionAsync,

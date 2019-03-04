@@ -13,6 +13,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 const env = require('../parse-env.js')('api')
 
 // get the first entry in the ETH_TNT_LISTEN_ADDRS CSV to publicize

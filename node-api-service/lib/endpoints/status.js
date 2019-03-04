@@ -14,38 +14,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const env = require('../parse-env.js')('api')
 const restify = require('restify')
-const connections = require('../connections.js')
+const tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
 
 async function getCoreStatusAsync(req, res, next) {
-  let status
-  try {
-    let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
-    status = await rpc.status({})
-  } catch (error) {
-    console.log(error)
-    console.error('rpc error')
-    return next(new restify.InternalServerError('Could not query for status'))
+  let statusResponse = await tmRpc.getStatusAsync()
+  if (statusResponse.error) {
+    switch (statusResponse.error.responseCode) {
+      case 404:
+        return { tx: null, error: new restify.NotFoundError(`Resource not found`) }
+      case 409:
+        return { tx: null, error: new restify.InvalidArgumentError(statusResponse.error.message) }
+      default:
+        console.error(`RPC error communicating with Tendermint : ${statusResponse.error.message}`)
+        return { tx: null, error: new restify.InternalServerError('Could not query for status') }
+    }
   }
-  if (!status) {
-    res.status(404)
-    res.noCache()
-    res.send({ code: 'NotFoundError', message: '' })
-    return next()
-  }
-  res.noCache()
-  res.contentType = 'application/json'
-  res.cache('public', { maxAge: 1000 })
 
-  let result = Object.assign(
-    {
-      version: version,
-      time: new Date().toISOString()
-    },
-    status
-  )
+  let result = Object.assign({ version: version, time: new Date().toISOString() }, statusResponse.result)
+  res.contentType = 'application/json'
   res.send(result)
   return next()
 }

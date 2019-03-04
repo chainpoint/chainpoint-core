@@ -14,47 +14,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const env = require('../parse-env.js')('api')
 const restify = require('restify')
-const connections = require('../connections.js')
+const tmRpc = require('../tendermint-rpc.js')
 
 async function getPeersAsync(req, res, next) {
-  let netInfo
-  try {
-    let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
-    netInfo = await rpc.netInfo({})
-  } catch (error) {
-    console.log(error)
-    console.error('rpc error')
-    return next(new restify.InternalServerError('Could not get net info'))
+  let netResponse = await tmRpc.getNetInfoAsync()
+  if (netResponse.error) {
+    switch (netResponse.error.responseCode) {
+      case 404:
+        return { tx: null, error: new restify.NotFoundError(`Resource not found`) }
+      case 409:
+        return { tx: null, error: new restify.InvalidArgumentError(netResponse.error.message) }
+      default:
+        console.error(`RPC error communicating with Tendermint : ${netResponse.error.message}`)
+        return { tx: null, error: new restify.InternalServerError('Could not query for net info') }
+    }
   }
-  if (!netInfo) {
-    res.status(404)
-    res.noCache()
-    res.send({ code: 'NotFoundError', message: '' })
-    return next()
-  }
-  if (netInfo.peers.length > 0) {
-    let decodedPeers = netInfo.peers.map(peer => {
-      let byteArray = Array.prototype.slice.call(Buffer.from(peer.remote_ip, 'base64'), 0)
-      let newBytes = byteArray.slice(-4)
-      return (
-        newBytes[0].toString(10) +
-        '.' +
-        newBytes[1].toString(10) +
-        '.' +
-        newBytes[2].toString(10) +
-        '.' +
-        newBytes[3].toString(10)
-      )
-    })
-    res.contentType = 'application/json'
-    res.cache('public', { maxAge: 1000 })
-    res.send(decodedPeers)
-    return next()
-  }
-  res.noCache()
-  res.send([])
+
+  let decodedPeers = netResponse.result.peers.map(peer => {
+    let byteArray = Array.prototype.slice.call(Buffer.from(peer.remote_ip, 'base64'), 0)
+    let newBytes = byteArray.slice(-4)
+    return (
+      newBytes[0].toString(10) +
+      '.' +
+      newBytes[1].toString(10) +
+      '.' +
+      newBytes[2].toString(10) +
+      '.' +
+      newBytes[3].toString(10)
+    )
+  })
+  res.contentType = 'application/json'
+  res.send(decodedPeers)
   return next()
 }
 

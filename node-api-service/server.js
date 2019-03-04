@@ -29,6 +29,7 @@ const config = require('./lib/endpoints/config.js')
 const root = require('./lib/endpoints/root.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
+const tmRpc = require('./lib/tendermint-rpc.js')
 
 const bunyan = require('bunyan')
 
@@ -117,6 +118,14 @@ async function openPostgresConnectionAsync() {
 }
 
 /**
+ * Opens a Tendermint connection
+ **/
+async function openTendermintConnectionAsync() {
+  let rpcClient = await connections.openTendermintConnectionAsync(env.TENDERMINT_URI)
+  tmRpc.setRpcClient(rpcClient)
+}
+
+/**
  * Opens an AMPQ connection and channel
  * Retry logic is included to handle losses of connection
  *
@@ -147,6 +156,8 @@ async function start() {
   try {
     // init DB
     await openPostgresConnectionAsync()
+    // init Tendermint
+    await openTendermintConnectionAsync()
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify

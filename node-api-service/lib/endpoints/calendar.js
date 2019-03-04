@@ -13,45 +13,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-const env = require('../parse-env.js')('api')
+
 const restify = require('restify')
-const connections = require('../connections.js')
+const tmRpc = require('../tendermint-rpc.js')
 
 async function getTransactionAsync(txID) {
-  if (!txID.startsWith('0x')) txID = `0x${txID}`
-  let tx
-  try {
-    let rpc = connections.openTendermintConnection(env.TENDERMINT_URI)
-    tx = await rpc.tx({ hash: txID, prove: false })
-  } catch (error) {
-    // check for transaction not found
-    if (error.code === -32603) {
-      return {
-        tx: null,
-        error: new restify.NotFoundError(`Could not find transaction with id = '${txID}'`)
-      }
-    }
-    // check for invalid parameters
-    if (error.code === -32602) {
-      return {
-        tx: null,
-        error: new restify.InvalidArgumentError(error.data)
-      }
-    }
-    console.log(error.code)
-    console.error(`RPC error communicating with Tendermint : ${error.data}`)
-    return {
-      tx: null,
-      error: new restify.InternalServerError('Could not query for tx by hash')
+  let txResponse = await tmRpc.getTransactionAsync(txID)
+  if (txResponse.error) {
+    switch (txResponse.error.responseCode) {
+      case 404:
+        return { tx: null, error: new restify.NotFoundError(`Could not find transaction with id = '${txID}'`) }
+      case 409:
+        return { tx: null, error: new restify.InvalidArgumentError(txResponse.error.message) }
+      default:
+        console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+        return { tx: null, error: new restify.InternalServerError('Could not query for tx by hash') }
     }
   }
-  // Txs are double-encoded in base64 when returned from this RPC client
-  tx.tx = JSON.parse(new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii'))
-
-  return {
-    tx: tx,
-    error: null
-  }
+  return { tx: txResponse.result, error: null }
 }
 
 /**
