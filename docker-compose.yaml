@@ -37,7 +37,7 @@ services:
     - ./config/node_1/data:/tendermint/data:Z
     command: sh -c "tendermint node --moniker=`hostname` --proxy_app=abci:26658"
     ports:
-    - "26656"
+    - "26656:26656"
     - "26657:26657"
     networks:
     - chainpoint
