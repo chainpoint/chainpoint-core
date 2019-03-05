@@ -17,7 +17,8 @@ type State struct {
 	Size             int64  `json:"size"`
 	Height           int64  `json:"height"`
 	AppHash          []byte `json:"app_hash"`
-	PrevCalTxInt     int64  `json:"prev_cal_int"`
+	BeginCalTxInt    int64  `json:"begin_cal_int"`
+	EndCalTxInt      int64  `json:"end_cal_int"`
 	LatestCalTxInt   int64  `json:"latest_cal_int"`
 	LatestBtcaTx     []byte `json:"latest_btca"`
 	LatestBtcaTxInt  int64  `json:"latest_btca_int"`

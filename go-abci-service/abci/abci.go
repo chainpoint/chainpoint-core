@@ -79,6 +79,14 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 	}
 	state := loadState(db)
 
+	app := AnchorApplication{
+		state:          state,
+		rabbitmqURI:    rabbitmqURI,
+		tendermintURI:  tendermintRPC,
+		doAnchor:       doAnchor,
+		anchorInterval: anchorInterval,
+	}
+
 	if doCal {
 		// Create cron scheduler
 		scheduler := cron.New(cron.WithLocation(time.UTC))
@@ -92,7 +100,7 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
-			AggregateCalendar(tendermintRPC, rabbitmqURI, &nistRecord)
+			app.AggregateCalendar(&nistRecord)
 		})
 		scheduler.Start()
 	}
@@ -102,13 +110,7 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 		go ReceiveCalRMQ(rabbitmqURI, tendermintRPC)
 	}
 
-	return &AnchorApplication{
-		state:          state,
-		rabbitmqURI:    rabbitmqURI,
-		tendermintURI:  tendermintRPC,
-		doAnchor:       doAnchor,
-		anchorInterval: anchorInterval,
-	}
+	return &app
 }
 
 // SetOption : TODO: describe this
@@ -168,7 +170,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Anchor every anchorInterval of blocks
 	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
-		go AnchorBTC(app.tendermintURI, app.rabbitmqURI, &app.state.PrevCalTxInt, app.state.LatestCalTxInt)
+		go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
 	}
 
 	// Finalize new block by calculating appHash and incrementing height

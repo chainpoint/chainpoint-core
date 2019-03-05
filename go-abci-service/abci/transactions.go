@@ -56,6 +56,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.state.LatestBtcaHeight = app.state.Height + 1
 		tags := app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
+		app.state.BeginCalTxInt = app.state.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-M":
