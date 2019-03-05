@@ -65,7 +65,11 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 		heightAndRoot := string(btcMonObj.BtcHeadHeight) + ":" + btcMonObj.BtcHeadRoot
 		result, err := BroadcastTx(rpcURI, "BTC-C", heightAndRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
-			return err
+			if strings.Contains(err.Error(), "-32603") {
+				fmt.Println("Another core has already committed a BTCC tx")
+			} else {
+				return err
+			}
 		}
 		var btccStateObj types.BtccStateObj
 		btccStateObj.BtcTxID = btcMonObj.BtcTxID

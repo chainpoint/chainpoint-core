@@ -20,7 +20,7 @@ func BroadcastTx(rpcURI types.TendermintURI, txType string, data string, version
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time}
 	result, err := rpc.BroadcastTxSync([]byte(util.EncodeTx(tx)))
 	if util.LogError(err) != nil {
-		return *result, err
+		return core_types.ResultBroadcastTx{}, err
 	}
 	return *result, nil
 }
