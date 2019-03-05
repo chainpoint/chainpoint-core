@@ -1,5 +1,5 @@
 hash: 0e16a5d763c70972ef40b73eb47fb0c0ef49239a7506d2cf1ab6aa8a43687424
-updated: 2019-02-28T14:56:43.525581655-08:00
+updated: 2019-03-04T16:02:11.802168946-08:00
 imports:
 - name: github.com/beorn7/perks
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
@@ -10,17 +10,17 @@ imports:
   subpackages:
   - btcec
 - name: github.com/chainpoint/go-nist-beacon
-  version: 76edef23d8f4cca67e2bcde90778d8c6d216a7ce
+  version: 7779b0805bdd6c658bda68f750c0e3996ac57156
 - name: github.com/davecgh/go-spew
   version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/ethereum/go-ethereum
-  version: 994326ba00bc5783a8935c8428d97131d72a4654
+  version: 216bd2ceba2eb1708b7bdc7d69cf2984ff972cbf
   subpackages:
   - crypto/secp256k1
 - name: github.com/go-kit/kit
-  version: a8cc1630e08ad79caf184b550589ded1a16b203d
+  version: 102522abed87468226354b1a1c8c588c81313822
   subpackages:
   - log
   - log/level
@@ -77,7 +77,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7a3416fd1f41341905f138746c51a5092e7ddf7a
+  version: bf857faf208676b0294bd49959aa34c8d98163ed
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -96,7 +96,7 @@ imports:
 - name: github.com/streadway/amqp
   version: 30f8ed68076eedf14990dafc696f469f58fc1342
 - name: github.com/syndtr/goleveldb
-  version: 4217c9f31f5816db02addc94e56061da77f288d8
+  version: 3a907f965fc16db5f7787e18d4434bbe46d47f6e
   subpackages:
   - leveldb
   - leveldb/cache
@@ -113,7 +113,7 @@ imports:
 - name: github.com/tendermint/go-amino
   version: dc14acf9ef15f85828bfbc561ed9dd9d2a284885
 - name: github.com/tendermint/tendermint
-  version: 28d75ec8016b7fb043735cbe4c4d92ec73355de7
+  version: e0f8936455029a40287a69d5b0e7baa4d5864da1
   subpackages:
   - abci/client
   - abci/example/code
@@ -181,7 +181,7 @@ imports:
   - ripemd160
   - salsa20/salsa
 - name: golang.org/x/net
-  version: 92fc7df08ae7536330f5a21328292abfa70520a8
+  version: 16b79f2e4e95ea23b2bf9903c9809ff7b013ce85
   subpackages:
   - context
   - http/httpguts
@@ -192,7 +192,7 @@ imports:
   - netutil
   - trace
 - name: golang.org/x/sys
-  version: a34e9553db1e492c9a76e60db2296ae7e5fbb772
+  version: e844e0132e93db857c984c24fd4fc86815e43be3
   subpackages:
   - cpu
   - unix
@@ -208,7 +208,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 9ecb6116ff8b19e6f9627f339177681034a6c568
+  version: 45890ffd9e533ea1d7555737205707de67ebe453
   subpackages:
   - balancer
   - balancer/base
