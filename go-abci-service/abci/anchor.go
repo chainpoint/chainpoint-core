@@ -45,7 +45,17 @@ func (app *AnchorApplication) AggregateCalendar(nist *beacon.Record) error {
 // AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
 	fmt.Println("starting scheduled anchor")
+
+	rpc := GetHTTPClient(app.tendermintURI)
+	defer rpc.Stop()
+	status, err := rpc.Status()
+
 	iAmLeader, leaderID := ElectLeader(app.tendermintURI)
+	if err != nil && leaderID == "" && status.SyncInfo.CatchingUp {
+		app.state.EndCalTxInt = endTxRange
+		return errors.New("No leader- not caught up")
+	}
+
 	fmt.Printf("Leader: %s\n", leaderID)
 	/* Get CAL transactions between the latest BTCA tx and the current latest tx */
 	txLeaves, err := getTxRange(app.tendermintURI, startTxRange, endTxRange)

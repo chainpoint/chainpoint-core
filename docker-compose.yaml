@@ -20,7 +20,7 @@ services:
       AGGREGATE: "true"
       AGGREGATION_THREADS: "4"
       HASHES_PER_MERKLE_TREE: "200"
-      ANCHOR_BLOCK_INTERVAL: "3"
+      ANCHOR_BLOCK_INTERVAL: "60"
     ports:
     - "26658"
     command: bash -c "abci-service"
