@@ -26,6 +26,7 @@ type State struct {
 	LatestBtccTx     []byte `json:"latest_btcc"`
 	LatestBtccTxInt  int64  `json:"latest_btcc_int"`
 	LatestBtccHeight int64  `json:"latest_btcc_height"`
+	LatestNistRecord string `json:"latest_nist_record"`
 }
 
 // Tx holds custom transaction data and metadata for the Chainpoint Calendar

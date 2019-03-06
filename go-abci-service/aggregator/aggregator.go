@@ -18,7 +18,6 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
-	beacon "github.com/chainpoint/go-nist-beacon"
 	"github.com/streadway/amqp"
 )
 
@@ -28,7 +27,7 @@ const aggQueueOut = "work.agg"
 const proofStateQueueOut = "work.proofstate"
 
 // Aggregate retrieves hash messages from rabbitmq, stores them, and creates a proof path for each
-func Aggregate(rabbitmqConnectURI string, nist beacon.Record) (agg []types.Aggregation) {
+func Aggregate(rabbitmqConnectURI string, nist string) (agg []types.Aggregation) {
 	var session rabbitmq.Session
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "200"))
@@ -65,7 +64,7 @@ func Aggregate(rabbitmqConnectURI string, nist beacon.Record) (agg []types.Aggre
 					msgStructSlice = append(msgStructSlice, hash)
 					//create new agg roots under heavy load
 					if len(msgStructSlice) > hashBatchSize {
-						if agg := ProcessAggregation(rabbitmqConnectURI, msgStructSlice, nist.ChainpointFormat()); agg.AggRoot != "" {
+						if agg := ProcessAggregation(rabbitmqConnectURI, msgStructSlice, nist); agg.AggRoot != "" {
 							mux.Lock()
 							aggStructSlice = append(aggStructSlice, agg)
 							mux.Unlock()
@@ -75,7 +74,7 @@ func Aggregate(rabbitmqConnectURI string, nist beacon.Record) (agg []types.Aggre
 				}
 			}
 			if len(msgStructSlice) > 0 {
-				if agg := ProcessAggregation(rabbitmqConnectURI, msgStructSlice, nist.ChainpointFormat()); agg.AggRoot != "" {
+				if agg := ProcessAggregation(rabbitmqConnectURI, msgStructSlice, nist); agg.AggRoot != "" {
 					mux.Lock()
 					aggStructSlice = append(aggStructSlice, agg)
 					mux.Unlock()

@@ -91,16 +91,22 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 		// Create cron scheduler
 		scheduler := cron.New(cron.WithLocation(time.UTC))
 
-		// Update nist object every minute
-		nistRecord := beacon.Record{}
+		// Update NIST beacon record and gossip it to ensure everyone has the same aggregator state
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
-			nistRecord, err = beacon.LastRecord()
-			util.LogError(err)
+			nistRecord, err := beacon.LastRecord()
+			if util.LogError(err) != nil {
+				return
+			}
+			if leader, _ := ElectLeader(tendermintRPC); leader {
+				_, err := BroadcastTx(tendermintRPC, "NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
+				util.LogError(err)
+			}
 		})
 
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
-			app.AggregateCalendar(&nistRecord)
+			time.Sleep(30 * time.Second) //offset from nist loop by 30 seconds
+			app.AggregateCalendar()
 		})
 		scheduler.Start()
 	}

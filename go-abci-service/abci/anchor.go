@@ -9,17 +9,16 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	beacon "github.com/chainpoint/go-nist-beacon"
 )
 
 // AggregateCalendar : Aggregate submitted hashes into a calendar transaction
-func (app *AnchorApplication) AggregateCalendar(nist *beacon.Record) error {
+func (app *AnchorApplication) AggregateCalendar() error {
 	fmt.Println("starting scheduled aggregation")
 	rpc := GetHTTPClient(app.tendermintURI)
 	defer rpc.Stop()
 
 	// Get agg objects
-	aggs := aggregator.Aggregate(app.rabbitmqURI, *nist)
+	aggs := aggregator.Aggregate(app.rabbitmqURI, app.state.LatestNistRecord)
 
 	// Pass the agg objects to generate a calendar tree
 	calAgg := calendar.GenerateCalendarTree(aggs)

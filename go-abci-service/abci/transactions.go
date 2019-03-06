@@ -72,8 +72,8 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "NIST":
-		tags := app.incrementTxInt(tags)
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		app.state.LatestNistRecord = tx.Data
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
