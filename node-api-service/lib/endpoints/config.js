@@ -16,8 +16,7 @@
 
 const env = require('../parse-env.js')('api')
 
-// get the first entry in the ETH_TNT_LISTEN_ADDRS CSV to publicize
-let coreEthAddress = env.ETH_TNT_LISTEN_ADDRS.split(',')[0]
+let coreEthAddress = env.ETH_TNT_LISTEN_ADDR
 
 /**
  * GET /config handler

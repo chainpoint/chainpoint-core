@@ -14,6 +14,7 @@ services:
     depends_on:
     - rabbitmq
     environment:
+      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
       ANCHOR: "true"
@@ -89,7 +90,7 @@ services:
     environment:
       NODE_ENV: development
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}    
+      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}    
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
 
@@ -109,7 +110,7 @@ services:
     environment:
       NODE_ENV: test
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
-      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}   
+      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}   
       VIRTUAL_HOST: api.local
 
   # Bitcoin Transmit

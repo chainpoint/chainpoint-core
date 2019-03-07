@@ -28,9 +28,9 @@ const validateMinConfirmRange = envalid.makeValidator(x => {
   if (x >= 1 && x <= 16) return x
   else throw new Error('Value must be between 1 and 16, inclusive')
 })
-const validateETHAddressesCSV = envalid.makeValidator(x => {
-  if (/^((0x[0-9a-f]{40})(,(0x[0-9a-f]{40}))*)+$/i.test(x)) return x.toLowerCase()
-  else throw new Error('Value must be a comma separated list of well formatted Ethereum addresses')
+const valETHAddress = envalid.makeValidator(addr => {
+  if (!/^0x[0-9a-fA-F]{40}$/i.test(addr)) throw new Error('The Ethereum (TNT) address is invalid')
+  return addr.toLowerCase()
 })
 
 let envDefinitions = {
@@ -156,8 +156,8 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.ETH_TNT_LISTEN_ADDRS = validateETHAddressesCSV({
-        desc: 'The addresses used to listen for incoming TNT transfers.  If more that one, separate by commas.'
+      envDefinitions.ETH_TNT_LISTEN_ADDR = valETHAddress({
+        desc: 'The address used to listen for incoming TNT transfers.'
       })
       break
     case 'btc-mon':
