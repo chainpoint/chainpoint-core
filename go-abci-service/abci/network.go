@@ -108,7 +108,7 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leader strin
 			tendermintRPC.TMServer = leader.RemoteIP
 			syncStatus, err := GetStatus(tendermintRPC)
 			if util.LogError(err) != nil {
-				return false, ""
+				continue
 			}
 			if !syncStatus.SyncInfo.CatchingUp {
 				return leader.NodeInfo.ID() == currentNodeID, string(leader.NodeInfo.ID())
@@ -118,7 +118,6 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leader strin
 		fmt.Println("No leader (not caught up)")
 		return false, ""
 	}
-	fmt.Println(currentNodeID)
 	return true, string(currentNodeID)
 }
 

@@ -135,3 +135,19 @@ func ReceiveCalRMQ(rabbitmqURI string, rpcURI types.TendermintURI) error {
 		}
 	}
 }
+
+//SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
+func (app *AnchorApplication) SyncMonitor() {
+	for {
+		status, err := GetStatus(app.tendermintURI)
+		if util.LogError(err) != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		if status.SyncInfo.CatchingUp {
+			app.state.AnchorEnabled = false
+		}
+		app.state.AnchorEnabled = true
+		time.Sleep(30 * time.Second)
+	}
+}

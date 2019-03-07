@@ -65,7 +65,6 @@ type AnchorApplication struct {
 	state          types.State
 	rabbitmqURI    string
 	tendermintURI  types.TendermintURI
-	doAnchor       bool
 	anchorInterval int
 }
 
@@ -78,12 +77,12 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 		panic(err)
 	}
 	state := loadState(db)
+	state.AnchorEnabled = doAnchor
 
 	app := AnchorApplication{
 		state:          state,
 		rabbitmqURI:    rabbitmqURI,
 		tendermintURI:  tendermintRPC,
-		doAnchor:       doAnchor,
 		anchorInterval: anchorInterval,
 	}
 
@@ -113,6 +112,7 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 
 	// Infinite loop to process btctx and btcmon rabbitMQ messages
 	if doAnchor {
+		go app.SyncMonitor()
 		go ReceiveCalRMQ(rabbitmqURI, tendermintRPC)
 	}
 
@@ -175,7 +175,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Anchor every anchorInterval of blocks
-	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
+	if app.state.AnchorEnabled && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
 		go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
 	}
 
