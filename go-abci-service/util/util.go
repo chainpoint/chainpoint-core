@@ -90,3 +90,18 @@ func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		return true // timed out
 	}
 }
+
+// DecodeIP: decode tendermint's arcane remote_ip format
+func DecodeIP(remote_ip string) string {
+	data, err := base64.StdEncoding.DecodeString(remote_ip)
+	if LogError(err) != nil {
+		return ""
+	}
+	encoded_ip := data[len(data)-4:]
+	// No nice joins for individual bytes, bytes.Join only likes arrays of arrays
+	ip := strconv.Itoa(int(encoded_ip[0])) + "." +
+		strconv.Itoa(int(encoded_ip[1])) + "." +
+		strconv.Itoa(int(encoded_ip[2])) + "." +
+		strconv.Itoa(int(encoded_ip[3]))
+	return ip
+}
