@@ -65,6 +65,7 @@ type AnchorApplication struct {
 	state          types.State
 	rabbitmqURI    string
 	tendermintURI  types.TendermintURI
+	doAnchor       bool
 	anchorInterval int
 }
 
@@ -77,12 +78,13 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 		panic(err)
 	}
 	state := loadState(db)
-	state.AnchorEnabled = doAnchor
+	state.AnchorEnabled = false
 
 	app := AnchorApplication{
 		state:          state,
 		rabbitmqURI:    rabbitmqURI,
 		tendermintURI:  tendermintRPC,
+		doAnchor:       doAnchor,
 		anchorInterval: anchorInterval,
 	}
 
@@ -175,10 +177,12 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Anchor every anchorInterval of blocks
-	if app.state.AnchorEnabled && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
-		go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
-	} else if !app.state.AnchorEnabled {
-		app.state.EndCalTxInt = app.state.LatestCalTxInt
+	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
+		if app.state.AnchorEnabled {
+			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
+		} else {
+			app.state.EndCalTxInt = app.state.LatestCalTxInt
+		}
 	}
 
 	// Finalize new block by calculating appHash and incrementing height
