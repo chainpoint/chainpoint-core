@@ -77,6 +77,7 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leader strin
 	if len(netInfo.Peers) > 0 {
 		nodeArray := make([]core_types.Peer, 0)
 		for i := 0; i < len(netInfo.Peers); i++ {
+			netInfo.Peers[i].RemoteIP = util.DecodeIP(netInfo.Peers[i].RemoteIP)
 			nodeArray = append(nodeArray, netInfo.Peers[i])
 		}
 		selfPeer := core_types.Peer{
