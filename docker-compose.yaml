@@ -53,6 +53,35 @@ services:
       context: .
       dockerfile: docker/Dockerfile.node-base
 
+  # NGINX Proxy
+  #
+  # An auto-scaling reverse proxy that reconfigures
+  # itself based on which API services are available
+  # for requests.
+  #
+  # See : https://github.com/jwilder/nginx-proxy
+  #
+  # SCALED : false
+  #
+  # PORTS:
+  # http : 80
+  #
+  nginx-proxy:
+    restart: always
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy-core
+    ports:
+    - "80:80"
+    volumes:
+    - /var/run/docker.sock:/tmp/docker.sock:ro
+    environment:
+      NODE_ENV: development
+      DEFAULT_HOST: api.local
+    depends_on:
+    - api
+    networks:
+    - chainpoint
+
   # HTTP API
   # Restify Node public web API service.
   #
@@ -83,8 +112,6 @@ services:
       - redis
       - rabbitmq
       - postgres
-    ports:
-      - "8080:8080"
     networks:
       - chainpoint
     environment:

@@ -177,6 +177,8 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	// Anchor every anchorInterval of blocks
 	if app.state.AnchorEnabled && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
 		go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
+	} else if !app.state.AnchorEnabled {
+		app.state.EndCalTxInt = app.state.LatestCalTxInt
 	}
 
 	// Finalize new block by calculating appHash and incrementing height

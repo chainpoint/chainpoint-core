@@ -45,14 +45,9 @@ func (app *AnchorApplication) AggregateCalendar() error {
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
 	fmt.Println("starting scheduled anchor")
 
-	rpc := GetHTTPClient(app.tendermintURI)
-	defer rpc.Stop()
-	status, err := rpc.Status()
-
 	iAmLeader, leaderID := ElectLeader(app.tendermintURI)
-	if err != nil && leaderID == "" && status.SyncInfo.CatchingUp {
-		app.state.EndCalTxInt = endTxRange
-		return errors.New("No leader- not caught up")
+	if leaderID == "" {
+		return errors.New("Leader election error")
 	}
 
 	fmt.Printf("Leader: %s\n", leaderID)
