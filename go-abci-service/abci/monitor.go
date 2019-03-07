@@ -84,8 +84,8 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 			}
 			btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Op: "sha-256-x2"})
 		}
-		baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "tendermint.chainpoint.org")
-		uri := fmt.Sprintf("https://%s/calendar/%x/data", baseURI, result.Hash)
+		baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
+		uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, result.Hash)
 		btccStateObj.BtcHeadState.Anchor = types.AnchorObj{
 			AnchorID: hex.EncodeToString(result.Hash),
 			Uris:     []string{uri},
