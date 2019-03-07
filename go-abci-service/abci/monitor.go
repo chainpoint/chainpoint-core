@@ -1,9 +1,9 @@
 package abci
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -86,7 +86,7 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 		baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
 		uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, result.Hash)
 		btccStateObj.BtcHeadState.Anchor = types.AnchorObj{
-			AnchorID: hex.EncodeToString(result.Hash),
+			AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
 			Uris:     []string{uri},
 		}
 		stateObjBytes, err := json.Marshal(btccStateObj)
