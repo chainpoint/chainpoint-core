@@ -62,8 +62,7 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 	case "btcmon":
 		var btcMonObj types.BtcMonMsg
 		json.Unmarshal(msg.Body, &btcMonObj)
-		heightAndRoot := string(btcMonObj.BtcHeadHeight) + ":" + btcMonObj.BtcHeadRoot
-		result, err := BroadcastTx(rpcURI, "BTC-C", heightAndRoot, 2, time.Now().Unix())
+		result, err := BroadcastTx(rpcURI, "BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			if strings.Contains(err.Error(), "-32603") {
 				fmt.Println("Another core has already committed a BTCC tx")
@@ -107,7 +106,8 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 	return nil
 }
 
-// ReceiveCalRMQ : TODO: describe this
+// ReceiveCalRMQ : Continually consume the calendar work queue and
+// process any resulting messages from the tx and monitor services
 func ReceiveCalRMQ(rabbitmqURI string, rpcURI types.TendermintURI) error {
 	var session rabbitmq.Session
 	var err error
