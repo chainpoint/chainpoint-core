@@ -52,6 +52,11 @@ func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	return rand.Intn(upperBound)
 }
 
+//GetRandInt : retrieves an unseeded random int between 0 and upperBound
+func GetRandInt(upperBound int) int {
+	return rand.Intn(upperBound)
+}
+
 // UUIDFromHash : generate a uuid from a byte hash, must be 16 bytes
 func UUIDFromHash(seedBytes []byte) (uuid.UUID, error) {
 	return uuid.FromBytes(seedBytes)
