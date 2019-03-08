@@ -40,6 +40,17 @@ func GetNetInfo(tendermintRPC types.TendermintURI) (core_types.ResultNetInfo, er
 	return *netInfo, err
 }
 
+//GetTxByInt : Retrieves a tx by its unique integer ID (txInt)
+func GetTxByInt(tendermintRPC types.TendermintURI, txInt int64) (core_types.ResultTxSearch, error) {
+	rpc := GetHTTPClient(tendermintRPC)
+	defer rpc.Stop()
+	txResult, err := rpc.TxSearch(fmt.Sprintf("TxInt=%d", txInt), false, 1, 1)
+	if util.LogError(err) != nil {
+		return core_types.ResultTxSearch{}, err
+	}
+	return *txResult, err
+}
+
 // GetAbciInfo retrieves custom ABCI status struct detailing the state of our application
 func GetAbciInfo(tendermintRPC types.TendermintURI) (types.State, error) {
 	rpc := GetHTTPClient(tendermintRPC)

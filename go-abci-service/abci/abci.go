@@ -54,7 +54,7 @@ func saveState(state types.State) {
 
 var _ types2.Application = (*AnchorApplication)(nil)
 
-// AnchorApplication : TODO: describe this
+// AnchorApplication : State and config variables for the abci app
 type AnchorApplication struct {
 	types2.BaseApplication
 	ValUpdates []types2.ValidatorUpdate

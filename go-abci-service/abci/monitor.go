@@ -66,15 +66,22 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 		msg.Ack(false)
 		break
 	case "btcmon":
+		var hash []byte
 		var btcMonObj types.BtcMonMsg
 		json.Unmarshal(msg.Body, &btcMonObj)
 		result, err := BroadcastTx(app.config.TendermintRPC, "BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			if strings.Contains(err.Error(), "-32603") {
 				app.logger.Error("Another core has already committed a BTCC tx")
+				txResult, err := GetTxByInt(app.config.TendermintRPC, app.state.LatestBtccTxInt)
+				if util.LogError(err) != nil && len(txResult.Txs) > 0 {
+					hash = txResult.Txs[0].Hash
+				}
 			} else {
 				return err
 			}
+		} else {
+			hash = result.Hash
 		}
 		var btccStateObj types.BtccStateObj
 		btccStateObj.BtcTxID = btcMonObj.BtcTxID
@@ -90,7 +97,7 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 			btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Op: "sha-256-x2"})
 		}
 		baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
-		uri := strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", baseURI, result.Hash))
+		uri := strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", baseURI, hash))
 		btccStateObj.BtcHeadState.Anchor = types.AnchorObj{
 			AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
 			Uris:     []string{uri},
