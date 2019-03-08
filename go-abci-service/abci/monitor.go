@@ -27,9 +27,13 @@ func ConsumeBtcTxMsg(rabbitmqURI string, msgBytes []byte) error {
 		BtcTxState: types.BtcTxOpsState{
 			Ops: []types.ProofLineItem{
 				types.ProofLineItem{
-					Left:  btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
+					Left: btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
+				},
+				types.ProofLineItem{
 					Right: btcTxObj.BtcTxBody[strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)+len(btcTxObj.AnchorBtcAggRoot):],
-					Op:    "sha-256-x2",
+				},
+				types.ProofLineItem{
+					Op: "sha-256-x2",
 				},
 			},
 		},
@@ -146,8 +150,9 @@ func (app *AnchorApplication) SyncMonitor() {
 		}
 		if status.SyncInfo.CatchingUp {
 			app.state.AnchorEnabled = false
+		} else {
+			app.state.AnchorEnabled = true
 		}
-		app.state.AnchorEnabled = true
 		time.Sleep(30 * time.Second)
 	}
 }
