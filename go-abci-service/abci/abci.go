@@ -11,10 +11,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-
-	beacon "github.com/chainpoint/go-nist-beacon"
-
 	cron "gopkg.in/robfig/cron.v3"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -25,12 +21,7 @@ import (
 	"github.com/tendermint/tendermint/version"
 )
 
-// TODO: Describe this
-const (
-	ValidatorSetChangePrefix string = "val:"
-)
-
-// TODO: Describe this
+// variables for protocol version and main db state key
 var (
 	stateKey                         = []byte("chainpoint")
 	ProtocolVersion version.Protocol = 0x1
@@ -104,16 +95,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		scheduler := cron.New(cron.WithLocation(time.UTC))
 
 		// Update NIST beacon record and gossip it to ensure everyone has the same aggregator state
-		scheduler.AddFunc("0/1 0-23 * * *", func() {
-			nistRecord, err := beacon.LastRecord()
-			if util.LogError(err) != nil {
-				return
-			}
-			if leader, _ := ElectLeader(config.TendermintRPC); leader {
-				_, err := BroadcastTx(config.TendermintRPC, "NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
-				util.LogError(err)
-			}
-		})
+		scheduler.AddFunc("0/1 0-23 * * *", app.NistBeaconMonitor)
 
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
@@ -131,7 +113,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	return &app
 }
 
-// SetOption : TODO: describe this
+// SetOption : Method for runtime data transfer between other apps and ABCI
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
 	return
 }
@@ -147,7 +129,7 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 	return types2.ResponseInitChain{}
 }
 
-// Info : TODO: describe this
+// Info : Return the state of the current application in JSON
 func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.ResponseInfo) {
 	infoJSON, err := json.Marshal(app.state)
 	if err != nil {
@@ -166,18 +148,18 @@ func (app *AnchorApplication) DeliverTx(tx []byte) types2.ResponseDeliverTx {
 	return resp
 }
 
-// CheckTx : TODO: describe this
+// CheckTx : Pre-gossip validation
 func (app *AnchorApplication) CheckTx(tx []byte) types2.ResponseCheckTx {
 	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
 }
 
-// BeginBlock : TODO: describe this
+// BeginBlock : Handler that runs at the beginning of every block
 func (app *AnchorApplication) BeginBlock(req types2.RequestBeginBlock) types2.ResponseBeginBlock {
 	app.ValUpdates = make([]types2.ValidatorUpdate, 0)
 	return types2.ResponseBeginBlock{}
 }
 
-// EndBlock : TODO: describe this
+// EndBlock : Handler that runs at the end of every block, validators can be updated here
 func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.ResponseEndBlock {
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
@@ -204,7 +186,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	return types2.ResponseCommit{Data: appHash}
 }
 
-// Query : TODO: describe this
+// Query : Custom ABCI query method. TODO: implement
 func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery types2.ResponseQuery) {
 	return
 }

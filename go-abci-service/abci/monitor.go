@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	beacon "github.com/chainpoint/go-nist-beacon"
+
 	"github.com/streadway/amqp"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -154,5 +156,20 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.state.AnchorEnabled = true
 		}
 		time.Sleep(30 * time.Second)
+	}
+}
+
+// NistBeaconMonitor : gets the latest NIST beacon record and elects a leader to write a NIST transaction
+func (app *AnchorApplication) NistBeaconMonitor() {
+	nistRecord, err := beacon.LastRecord()
+	if util.LogError(err) != nil {
+		app.logger.Error("Unable to obtain new NIST beacon value")
+		return
+	}
+	if leader, _ := ElectLeader(app.config.TendermintRPC); leader {
+		_, err := BroadcastTx(app.config.TendermintRPC, "NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
+		if util.LogError(err) != nil {
+			app.logger.Debug(fmt.Sprintf("Gossiped new NIST beacon value of %s", nistRecord.ChainpointFormat()))
+		}
 	}
 }

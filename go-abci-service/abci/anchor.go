@@ -41,7 +41,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 
 // AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
-	app.logger.Debug(fmt.Sprintf("starting scheduled anchor for tx ranges %s to %s", startTxRange, endTxRange))
+	app.logger.Debug(fmt.Sprintf("starting scheduled anchor for tx ranges %d to %d", startTxRange, endTxRange))
 
 	iAmLeader, leaderID := ElectLeader(app.config.TendermintRPC)
 	if leaderID == "" {
