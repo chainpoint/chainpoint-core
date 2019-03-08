@@ -64,17 +64,9 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leader strin
 	var err error
 	var err2 error
 
-	// Simple retry logic for obtaining self and peer info
-	for i := 0; i < 5; i++ {
-		status, err = GetStatus(tendermintRPC)
-		netInfo, err2 = GetNetInfo(tendermintRPC)
-		if err != nil || err2 != nil {
-			time.Sleep(5 * time.Second)
-			continue
-		} else {
-			break
-		}
-	}
+	status, err = GetStatus(tendermintRPC)
+	netInfo, err2 = GetNetInfo(tendermintRPC)
+
 	if err != nil || err2 != nil {
 		fmt.Println(err)
 		fmt.Println(err2)
@@ -83,24 +75,49 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leader strin
 
 	currentNodeID := status.NodeInfo.ID()
 	if len(netInfo.Peers) > 0 {
-		nodeArray := make([]p2p.DefaultNodeInfo, len(netInfo.Peers)+1)
+		nodeArray := make([]core_types.Peer, 0)
 		for i := 0; i < len(netInfo.Peers); i++ {
-			nodeArray[i] = netInfo.Peers[i].NodeInfo
+			netInfo.Peers[i].RemoteIP = util.DecodeIP(netInfo.Peers[i].RemoteIP)
+			nodeArray = append(nodeArray, netInfo.Peers[i])
 		}
-		nodeArray[len(netInfo.Peers)] = status.NodeInfo
+		selfPeer := core_types.Peer{
+			NodeInfo:         status.NodeInfo,
+			IsOutbound:       false,
+			ConnectionStatus: p2p.ConnectionStatus{},
+			RemoteIP:         "127.0.0.1",
+		}
+		nodeArray = append(nodeArray, selfPeer)
 		sort.Slice(nodeArray[:], func(i, j int) bool {
-			return nodeArray[i].ID() > nodeArray[j].ID()
+			return nodeArray[i].NodeInfo.ID() > nodeArray[j].NodeInfo.ID()
 		})
-		if !status.SyncInfo.CatchingUp {
-			blockHash := status.SyncInfo.LatestBlockHash
-			index := util.GetSeededRandInt([]byte(blockHash), len(nodeArray))
+		// This loop determines a leader and checks if it's still syncing. If so, it finds another leader
+		for i := 0; i < 5; i++ {
+			var index int
+			if i == 0 {
+				blockHash := status.SyncInfo.LatestBlockHash
+				index = util.GetSeededRandInt([]byte(blockHash), len(nodeArray)) //seed the first time
+			} else {
+				index = util.GetRandInt(len(nodeArray))
+			}
 			leader := nodeArray[index]
-			return leader.ID() == currentNodeID, string(leader.ID())
+			if leader.NodeInfo.ID() == currentNodeID && !status.SyncInfo.CatchingUp {
+				return true, string(leader.NodeInfo.ID())
+			} else if status.SyncInfo.CatchingUp {
+				continue
+			}
+			tendermintRPC.TMServer = leader.RemoteIP
+			syncStatus, err := GetStatus(tendermintRPC)
+			if util.LogError(err) != nil {
+				continue
+			}
+			if !syncStatus.SyncInfo.CatchingUp {
+				return leader.NodeInfo.ID() == currentNodeID, string(leader.NodeInfo.ID())
+			}
+			time.Sleep(5 * time.Second)
 		}
 		fmt.Println("No leader (not caught up)")
 		return false, ""
 	}
-	fmt.Println(currentNodeID)
 	return true, string(currentNodeID)
 }
 

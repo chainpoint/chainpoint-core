@@ -1,9 +1,9 @@
 package abci
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,9 +27,13 @@ func ConsumeBtcTxMsg(rabbitmqURI string, msgBytes []byte) error {
 		BtcTxState: types.BtcTxOpsState{
 			Ops: []types.ProofLineItem{
 				types.ProofLineItem{
-					Left:  btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
+					Left: btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
+				},
+				types.ProofLineItem{
 					Right: btcTxObj.BtcTxBody[strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)+len(btcTxObj.AnchorBtcAggRoot):],
-					Op:    "sha-256-x2",
+				},
+				types.ProofLineItem{
+					Op: "sha-256-x2",
 				},
 			},
 		},
@@ -62,8 +66,7 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 	case "btcmon":
 		var btcMonObj types.BtcMonMsg
 		json.Unmarshal(msg.Body, &btcMonObj)
-		heightAndRoot := string(btcMonObj.BtcHeadHeight) + ":" + btcMonObj.BtcHeadRoot
-		result, err := BroadcastTx(rpcURI, "BTC-C", heightAndRoot, 2, time.Now().Unix())
+		result, err := BroadcastTx(rpcURI, "BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			if strings.Contains(err.Error(), "-32603") {
 				fmt.Println("Another core has already committed a BTCC tx")
@@ -87,7 +90,7 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 		baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
 		uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, result.Hash)
 		btccStateObj.BtcHeadState.Anchor = types.AnchorObj{
-			AnchorID: hex.EncodeToString(result.Hash),
+			AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
 			Uris:     []string{uri},
 		}
 		stateObjBytes, err := json.Marshal(btccStateObj)
@@ -107,7 +110,8 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 	return nil
 }
 
-// ReceiveCalRMQ : TODO: describe this
+// ReceiveCalRMQ : Continually consume the calendar work queue and
+// process any resulting messages from the tx and monitor services
 func ReceiveCalRMQ(rabbitmqURI string, rpcURI types.TendermintURI) error {
 	var session rabbitmq.Session
 	var err error
@@ -133,5 +137,22 @@ func ReceiveCalRMQ(rabbitmqURI string, rpcURI types.TendermintURI) error {
 				}
 			}
 		}
+	}
+}
+
+//SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
+func (app *AnchorApplication) SyncMonitor() {
+	for {
+		status, err := GetStatus(app.tendermintURI)
+		if util.LogError(err) != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		if status.SyncInfo.CatchingUp {
+			app.state.AnchorEnabled = false
+		} else {
+			app.state.AnchorEnabled = true
+		}
+		time.Sleep(30 * time.Second)
 	}
 }
