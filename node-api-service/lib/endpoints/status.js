@@ -17,6 +17,9 @@
 const restify = require('restify')
 const tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
+const env = require('../parse-env.js')('api')
+
+let coreEthAddress = env.ETH_TNT_LISTEN_ADDR
 
 async function getCoreStatusAsync(req, res, next) {
   let statusResponse = await tmRpc.getStatusAsync()
@@ -32,7 +35,15 @@ async function getCoreStatusAsync(req, res, next) {
     }
   }
 
-  let result = Object.assign({ version: version, time: new Date().toISOString() }, statusResponse.result)
+  let result = Object.assign(
+    {
+      version: version,
+      time: new Date().toISOString(),
+      base_uri: env.CHAINPOINT_CORE_BASE_URI,
+      eth_address: coreEthAddress
+    },
+    statusResponse.result
+  )
   res.contentType = 'application/json'
   res.send(result)
   return next()

@@ -20,8 +20,6 @@ tags:
   description: "Verification process for your proofs"
 - name: "calendar"
   description: "Chainpoint calendar block data"
-- name: "config"
-  description: "Configuration information about the Chainpoint stack"
 externalDocs:
   description: "Find out more about Chainpoint"
   url: "https://chainpoint.org"
@@ -234,21 +232,6 @@ paths:
           description: "invalid argument in request"
           schema:
             $ref: "#/definitions/ErrorResponse"
-  '/config':
-    get:
-      tags:
-      - "config"
-      summary: "Retrieves the configuration information for this stack"
-      description: ""
-      produces:
-      - "application/json"
-      responses:
-        '200':
-          description: "successful operation"
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/GetConfigResponse"
 definitions:
   PostHashRequest:
     type: object
@@ -419,13 +402,3 @@ definitions:
             sig:
               type: string
               example: "lfdvO6fOeRo+wAj9n3Ca9GHMsRsosawRdZ6o2fkvdgIjMkaAa83RkTX/iveK5ogTs7FdNrxnnjmvC9bR5ayLACn3K8f65uUE0QgKwgaxSdbL2MohtLvQrF6eRCE6UhZa"
-  GetConfigResponse:
-    type: object
-    properties:       
-      chainpoint_core_base_uri:
-        type: string
-        example: https://a.prod.server.com
-      time:
-        type: string
-        format: date-time
-        example: "2017-07-14T18:07:31Z"

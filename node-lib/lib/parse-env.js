@@ -34,7 +34,7 @@ const valETHAddress = envalid.makeValidator(addr => {
 })
 
 let envDefinitions = {
-  // The following variables are exposed by this stack's /config endpoint
+  // The following variables are exposed by this stack's /status endpoint
   //
   // CHAINPOINT_CORE_BASE_URI: Base URI for this Chainpoint Core stack of services
 
