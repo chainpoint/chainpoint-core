@@ -1,50 +1,57 @@
 package main
 
 import (
-	"os"
 	"strconv"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
 	"github.com/tendermint/tendermint/abci/server"
 	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
+	"go.uber.org/zap"
 )
 
-var proofDB *dbm.GoLevelDB
-var currentCalTree merkletools.MerkleTree
-var tendermintRPC types.TendermintURI
-var rabbitmqURI string
-
 func main() {
-	tmServer := util.GetEnv("TENDERMINT_HOST", "tendermint")
-	tmPort := util.GetEnv("TENDERMINT_PORT", "26657")
-	rabbitmqURI = util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
+	// Perform env type conversions
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
-
-	tendermintRPC = types.TendermintURI{
-		TMServer: tmServer,
-		TMPort:   tmPort,
+	tendermintRPC := types.TendermintURI{
+		TMServer: util.GetEnv("TENDERMINT_HOST", "tendermint"),
+		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 	}
 
-	allowLevel, _ := log.AllowLevel("debug")
-	logger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
+	// Configure Zap logger
+	zapLevel := zapcore.DebugLevel
+	zapLevel.Set(util.GetEnv("LOG_LEVEL", "DEBUG"))
+	logger, _ := zap.Config{
+		Encoding:    "console",
+		Level:       zap.NewAtomicLevelAt(zapLevel),
+		OutputPaths: []string{"stdout"},
+	}.Build()
 
-	/* Instantiate ABCI application */
-	app := abci.NewAnchorApplication(rabbitmqURI, tendermintRPC, doCalLoop, doAnchorLoop, anchorInterval)
+	// Create config object
+	config := types.AnchorConfig{
+		RabbitmqURI:    util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
+		TendermintRPC:  tendermintRPC,
+		DoCal:          doCalLoop,
+		DoAnchor:       doAnchorLoop,
+		AnchorInterval: anchorInterval,
+		Logger:         logger.Sugar(),
+	}
+
+	//Instantiate ABCI application
+	app := abci.NewAnchorApplication(config)
 
 	// Start the ABCI connection to the Tendermint Node
 	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
 	if err != nil {
 		return
 	}
-	srv.SetLogger(logger.With("module", "abci-server"))
+
 	if err := srv.Start(); err != nil {
 		return
 	}

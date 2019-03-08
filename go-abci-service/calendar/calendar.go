@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go.uber.org/zap"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
@@ -15,8 +17,13 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 )
 
+type Calendar struct {
+	RabbitmqURI string
+	Logger      *zap.SugaredLogger
+}
+
 // GenerateCalendarTree creates the MerkleTree for the aggregation roots which will be committed to the calendar
-func GenerateCalendarTree(aggs []types.Aggregation) types.CalAgg {
+func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.CalAgg {
 	var treeDataObj types.CalAgg
 	var tree merkletools.MerkleTree
 	for _, agg := range aggs {
@@ -48,7 +55,7 @@ func GenerateCalendarTree(aggs []types.Aggregation) types.CalAgg {
 }
 
 // QueueCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
-func QueueCalStateMessage(rabbitmqConnectURI string, tx types.TxTm, treeDataObj types.CalAgg) {
+func (calendar *Calendar) QueueCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) {
 	var calState types.CalState
 	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
 	uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, tx.Hash)
@@ -60,14 +67,14 @@ func QueueCalStateMessage(rabbitmqConnectURI string, tx types.TxTm, treeDataObj 
 	calState.ProofData = treeDataObj.ProofData
 	calState.CalID = hex.EncodeToString(tx.Hash)
 	calStateJSON, _ := json.Marshal(calState)
-	err := rabbitmq.Publish(rabbitmqConnectURI, "work.proofstate", "cal_batch", calStateJSON)
+	err := rabbitmq.Publish(calendar.RabbitmqURI, "work.proofstate", "cal_batch", calStateJSON)
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 	}
 }
 
 // AggregateAnchorTx takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop
-func AggregateAnchorTx(txLeaves []core_types.ResultTx) types.BtcAgg {
+func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) types.BtcAgg {
 	calBytes := make([][]byte, 0)
 	calLeaves := make([]core_types.ResultTx, 0)
 	for _, t := range txLeaves {
@@ -113,17 +120,17 @@ func AggregateAnchorTx(txLeaves []core_types.ResultTx) types.BtcAgg {
 }
 
 // QueueBtcaStateDataMessage notifies proof and btc tx services of BTC-A anchoring
-func QueueBtcaStateDataMessage(rabbitmqURI string, isLeader bool, anchorDataObj types.BtcAgg) error {
+func (calendar *Calendar) QueueBtcaStateDataMessage(isLeader bool, anchorDataObj types.BtcAgg) error {
 	treeDataJSON, err := json.Marshal(anchorDataObj)
 	if util.LogError(err) != nil {
 		return err
 	}
-	errBatch := rabbitmq.Publish(rabbitmqURI, "work.proofstate", "anchor_btc_agg_batch", treeDataJSON)
+	errBatch := rabbitmq.Publish(calendar.RabbitmqURI, "work.proofstate", "anchor_btc_agg_batch", treeDataJSON)
 	if errBatch != nil {
 		return errBatch
 	}
 	if isLeader {
-		errBtcTx := rabbitmq.Publish(rabbitmqURI, "work.btctx", "", treeDataJSON)
+		errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btctx", "", treeDataJSON)
 		if errBtcTx != nil {
 			return errBtcTx
 		}

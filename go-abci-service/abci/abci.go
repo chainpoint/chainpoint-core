@@ -3,8 +3,12 @@ package abci
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"time"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
+
+	"go.uber.org/zap"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
@@ -61,16 +65,16 @@ var _ types2.Application = (*AnchorApplication)(nil)
 // AnchorApplication : TODO: describe this
 type AnchorApplication struct {
 	types2.BaseApplication
-	ValUpdates     []types2.ValidatorUpdate
-	state          types.State
-	rabbitmqURI    string
-	tendermintURI  types.TendermintURI
-	doAnchor       bool
-	anchorInterval int
+	ValUpdates []types2.ValidatorUpdate
+	state      types.State
+	config     types.AnchorConfig
+	logger     *zap.SugaredLogger
+	calendar   *calendar.Calendar
+	aggregator *aggregator.Aggregator
 }
 
 //NewAnchorApplication is ABCI app constructor
-func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI, doCal bool, doAnchor bool, anchorInterval int) *AnchorApplication {
+func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
 	db, err := dbm.NewGoLevelDB(name, "/tendermint/data")
@@ -78,17 +82,23 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 		panic(err)
 	}
 	state := loadState(db)
-	state.AnchorEnabled = false
+	state.AnchorEnabled = false // False until we finish syncing
 
 	app := AnchorApplication{
-		state:          state,
-		rabbitmqURI:    rabbitmqURI,
-		tendermintURI:  tendermintRPC,
-		doAnchor:       doAnchor,
-		anchorInterval: anchorInterval,
+		state:  state,
+		config: config,
+		logger: config.Logger,
+		calendar: &calendar.Calendar{
+			RabbitmqURI: config.RabbitmqURI,
+			Logger:      config.Logger,
+		},
+		aggregator: &aggregator.Aggregator{
+			RabbitmqURI: config.RabbitmqURI,
+			Logger:      config.Logger,
+		},
 	}
 
-	if doCal {
+	if config.DoCal {
 		// Create cron scheduler
 		scheduler := cron.New(cron.WithLocation(time.UTC))
 
@@ -98,8 +108,8 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 			if util.LogError(err) != nil {
 				return
 			}
-			if leader, _ := ElectLeader(tendermintRPC); leader {
-				_, err := BroadcastTx(tendermintRPC, "NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
+			if leader, _ := ElectLeader(config.TendermintRPC); leader {
+				_, err := BroadcastTx(config.TendermintRPC, "NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
 				util.LogError(err)
 			}
 		})
@@ -112,10 +122,9 @@ func NewAnchorApplication(rabbitmqURI string, tendermintRPC types.TendermintURI,
 		scheduler.Start()
 	}
 
-	// Infinite loop to process btctx and btcmon rabbitMQ messages
-	if doAnchor {
-		go app.SyncMonitor()
-		go ReceiveCalRMQ(rabbitmqURI, tendermintRPC)
+	if config.DoAnchor {
+		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
+		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
 
 	return &app
@@ -131,7 +140,7 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 	for _, v := range req.Validators {
 		r := app.updateValidator(v, []cmn.KVPair{})
 		if r.IsErr() {
-			fmt.Println(r)
+			app.logger.Error(r)
 		}
 	}
 	return types2.ResponseInitChain{}
@@ -141,7 +150,7 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.ResponseInfo) {
 	infoJSON, err := json.Marshal(app.state)
 	if err != nil {
-		fmt.Println(err)
+		app.logger.Error(err)
 		infoJSON = []byte("{}")
 	}
 	return types2.ResponseInfo{
@@ -177,7 +186,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Anchor every anchorInterval of blocks
-	if app.doAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.anchorInterval) {
+	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.AnchorEnabled {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
 		} else {

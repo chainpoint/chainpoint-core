@@ -22,6 +22,7 @@ services:
       AGGREGATION_THREADS: "4"
       HASHES_PER_MERKLE_TREE: "200"
       ANCHOR_BLOCK_INTERVAL: "60"
+      LOG_LEVEL: "DEBUG"
     ports:
     - "26658"
     command: bash -c "abci-service"

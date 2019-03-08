@@ -2,12 +2,22 @@ package types
 
 import (
 	dbm "github.com/tendermint/tendermint/libs/db"
+	"go.uber.org/zap"
 )
 
 // TendermintURI holds connection info for RPC
 type TendermintURI struct {
 	TMServer string
 	TMPort   string
+}
+
+type AnchorConfig struct {
+	RabbitmqURI    string
+	TendermintRPC  TendermintURI
+	DoCal          bool
+	DoAnchor       bool
+	AnchorInterval int
+	Logger         *zap.SugaredLogger
 }
 
 // State holds Tendermint/ABCI application state. Persisted by ABCI app

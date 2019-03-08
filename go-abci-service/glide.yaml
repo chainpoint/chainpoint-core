@@ -14,3 +14,5 @@ import:
   - rpc/client
   - rpc/core/types
   - version
+- package: github.com/uber-go/zap
+  version: ^1.9.1

@@ -61,7 +61,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		break
 	case "BTC-M":
 		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
-		ConsumeBtcTxMsg(app.rabbitmqURI, []byte(tx.Data))
+		app.ConsumeBtcTxMsg([]byte(tx.Data))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "BTC-C":
@@ -82,24 +82,20 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 }
 
 // GetTxRange gets all CAL TXs within a particular range
-func getTxRange(tendermintRPC types.TendermintURI, minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
-	fmt.Printf("minTxInt: %d, maxTxINt: %d\n", minTxInt, maxTxInt)
+func (app *AnchorApplication) getTxRange(minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
 	if maxTxInt <= minTxInt {
-		return nil, errors.New("max of tx range is less than min")
+		return nil, errors.New("max of tx range is less than or equal to min")
 	}
-	rpc := GetHTTPClient(tendermintRPC)
+	rpc := GetHTTPClient(app.config.TendermintRPC)
 	defer rpc.Stop()
 	Txs := []core_types.ResultTx{}
 	for i := minTxInt; i <= maxTxInt; i++ {
 		txResult, err := rpc.TxSearch(fmt.Sprintf("TxInt=%d", i), false, 1, 1)
 		if err != nil {
-			fmt.Println("RPC error: " + err.Error())
 			return nil, err
 		} else if txResult.TotalCount > 0 {
 			for _, tx := range txResult.Txs {
-
 				Txs = append(Txs, *tx)
-
 			}
 		}
 	}

@@ -16,7 +16,7 @@ import (
 )
 
 // ConsumeBtcTxMsg : Consumes a btctx RMQ message to initiate monitoring on all nodes
-func ConsumeBtcTxMsg(rabbitmqURI string, msgBytes []byte) error {
+func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	var btcTxObj types.BtcTxMsg
 	if err := json.Unmarshal(msgBytes, &btcTxObj); err != nil {
 		return util.LogError(err)
@@ -42,13 +42,13 @@ func ConsumeBtcTxMsg(rabbitmqURI string, msgBytes []byte) error {
 	if util.LogError(err) != nil {
 		return err
 	}
-	err = rabbitmq.Publish(rabbitmqURI, "work.proofstate", "btctx", dataJSON)
+	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.proofstate", "btctx", dataJSON)
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 		return err
 	}
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID})
-	err = rabbitmq.Publish(rabbitmqURI, "work.btcmon", "", txIDBytes)
+	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "", txIDBytes)
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 		return err
@@ -56,20 +56,20 @@ func ConsumeBtcTxMsg(rabbitmqURI string, msgBytes []byte) error {
 	return nil
 }
 
-func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Delivery) error {
+func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	switch msg.Type {
 	case "btctx":
 		time.Sleep(30 * time.Second)
-		BroadcastTx(rpcURI, "BTC-M", string(msg.Body), 2, time.Now().Unix())
+		BroadcastTx(app.config.TendermintRPC, "BTC-M", string(msg.Body), 2, time.Now().Unix())
 		msg.Ack(false)
 		break
 	case "btcmon":
 		var btcMonObj types.BtcMonMsg
 		json.Unmarshal(msg.Body, &btcMonObj)
-		result, err := BroadcastTx(rpcURI, "BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
+		result, err := BroadcastTx(app.config.TendermintRPC, "BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			if strings.Contains(err.Error(), "-32603") {
-				fmt.Println("Another core has already committed a BTCC tx")
+				app.logger.Error("Another core has already committed a BTCC tx")
 			} else {
 				return err
 			}
@@ -95,7 +95,7 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 		}
 		stateObjBytes, err := json.Marshal(btccStateObj)
 
-		err = rabbitmq.Publish(rabbitmqURI, "work.proofstate", "btcmon", stateObjBytes)
+		err = rabbitmq.Publish(app.config.RabbitmqURI, "work.proofstate", "btcmon", stateObjBytes)
 		if err != nil {
 			rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 			return err
@@ -112,12 +112,12 @@ func processMessage(rabbitmqURI string, rpcURI types.TendermintURI, msg amqp.Del
 
 // ReceiveCalRMQ : Continually consume the calendar work queue and
 // process any resulting messages from the tx and monitor services
-func ReceiveCalRMQ(rabbitmqURI string, rpcURI types.TendermintURI) error {
+func (app *AnchorApplication) ReceiveCalRMQ() error {
 	var session rabbitmq.Session
 	var err error
 	endConsume := false
 	for {
-		session, err = rabbitmq.ConnectAndConsume(rabbitmqURI, "work.cal")
+		session, err = rabbitmq.ConnectAndConsume(app.config.RabbitmqURI, "work.cal")
 		if err != nil {
 			rabbitmq.LogError(err, "failed to dial for work.cal queue")
 			time.Sleep(5 * time.Second)
@@ -133,7 +133,7 @@ func ReceiveCalRMQ(rabbitmqURI string, rpcURI types.TendermintURI) error {
 				break //reconnect
 			case msg := <-session.Msgs:
 				if len(msg.Body) > 0 {
-					go processMessage(rabbitmqURI, rpcURI, msg)
+					go app.processMessage(msg)
 				}
 			}
 		}
@@ -143,7 +143,7 @@ func ReceiveCalRMQ(rabbitmqURI string, rpcURI types.TendermintURI) error {
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
 	for {
-		status, err := GetStatus(app.tendermintURI)
+		status, err := GetStatus(app.config.TendermintRPC)
 		if util.LogError(err) != nil {
 			time.Sleep(5 * time.Second)
 			continue

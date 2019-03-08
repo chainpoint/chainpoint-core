@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/streadway/amqp"
 )
@@ -68,7 +71,17 @@ func TestHashResult(t *testing.T) {
 			Body:            itemBytes2,
 		},
 	}
-	agg := ProcessAggregation("", msgArray, "")
+	zapLevel := zapcore.DebugLevel
+	logger, _ := zap.Config{
+		Encoding:    "console",
+		Level:       zap.NewAtomicLevelAt(zapLevel),
+		OutputPaths: []string{"stdout"},
+	}.Build()
+	aggregator := Aggregator{
+		RabbitmqURI: "",
+		Logger:      logger.Sugar(),
+	}
+	agg := aggregator.ProcessAggregation(msgArray, "")
 	if agg.AggRoot != "58f42246b9c6d303e33206d461e05f3e2292d8eddfce92b7434f1d8be9f0e2c1" {
 		t.Errorf("merkle root value should be 58f42246b9c6d303e33206d461e05f3e2292d8eddfce92b7434f1d8be9f0e2c1, got: %s", agg.AggRoot)
 	}
