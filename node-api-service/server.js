@@ -69,7 +69,7 @@ server.pre(restify.pre.userAgentConnection())
 // curl \
 // --verbose \
 // --request OPTIONS \
-// http://127.0.0.1:8080/hashes \
+// http://127.0.0.1/hashes \
 // --header 'Origin: http://localhost:9292' \
 // --header 'Access-Control-Request-Headers: Origin, Accept, Content-Type' \
 // --header 'Access-Control-Request-Method: POST'

@@ -70,7 +70,7 @@ services:
   #
   # curl -i http://127.0.0.1/
   #
-  # PORTS : 8080
+  # PORTS : 80
   #
   api:
     restart: always
@@ -84,7 +84,7 @@ services:
       - rabbitmq
       - postgres
     ports:
-      - "8080:8080"
+      - "80:8080"
     networks:
       - chainpoint
     environment:
