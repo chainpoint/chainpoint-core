@@ -25,7 +25,6 @@ const calendar = require('./lib/endpoints/calendar.js')
 const peers = require('./lib/endpoints/peers.js')
 const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
-const config = require('./lib/endpoints/config.js')
 const root = require('./lib/endpoints/root.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
@@ -103,8 +102,6 @@ server.get({ path: '/proofs', version: '1.0.0' }, proofs.getProofsByIDsAsync)
 server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
 // get status
 server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
-// get configuration information for this stack
-server.get({ path: '/config', version: '1.0.0' }, config.getConfigInfoV1Async)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
@@ -177,6 +174,5 @@ module.exports = {
   setAMQPChannel: chan => {
     hashes.setAMQPChannel(chan)
   },
-  server: server,
-  config: config
+  server: server
 }
