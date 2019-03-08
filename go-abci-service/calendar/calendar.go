@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"go.uber.org/zap"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
@@ -19,7 +19,7 @@ import (
 
 type Calendar struct {
 	RabbitmqURI string
-	Logger      *zap.SugaredLogger
+	Logger      log.Logger
 }
 
 // GenerateCalendarTree creates the MerkleTree for the aggregation roots which will be committed to the calendar

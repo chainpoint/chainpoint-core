@@ -2,7 +2,7 @@ package types
 
 import (
 	dbm "github.com/tendermint/tendermint/libs/db"
-	"go.uber.org/zap"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 // TendermintURI holds connection info for RPC
@@ -17,7 +17,7 @@ type AnchorConfig struct {
 	DoCal          bool
 	DoAnchor       bool
 	AnchorInterval int
-	Logger         *zap.SugaredLogger
+	Logger         *log.Logger
 }
 
 // State holds Tendermint/ABCI application state. Persisted by ABCI app

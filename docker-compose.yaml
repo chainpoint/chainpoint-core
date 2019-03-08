@@ -21,7 +21,7 @@ services:
       AGGREGATE: "true"
       AGGREGATION_THREADS: "4"
       HASHES_PER_MERKLE_TREE: "200"
-      ANCHOR_BLOCK_INTERVAL: "60"
+      ANCHOR_BLOCK_INTERVAL: "3"
       LOG_LEVEL: "DEBUG"
     ports:
     - "26658"
@@ -118,7 +118,7 @@ services:
     environment:
       NODE_ENV: development
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}    
+      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
 
@@ -138,7 +138,7 @@ services:
     environment:
       NODE_ENV: test
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
-      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}   
+      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}
       VIRTUAL_HOST: api.local
 
   # Bitcoin Transmit

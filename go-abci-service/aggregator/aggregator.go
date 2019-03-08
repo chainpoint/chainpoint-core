@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
@@ -29,7 +29,7 @@ const proofStateQueueOut = "work.proofstate"
 
 type Aggregator struct {
 	RabbitmqURI string
-	Logger      *zap.SugaredLogger
+	Logger      log.Logger
 }
 
 // Aggregate retrieves hash messages from rabbitmq, stores them, and creates a proof path for each
@@ -91,6 +91,7 @@ func (aggregator *Aggregator) Aggregate(nist string) (agg []types.Aggregation) {
 	time.Sleep(time.Duration(sleep) * time.Second)
 	close(shutdown)
 	wg.Wait()
+	aggregator.Logger.Debug(fmt.Sprintf("Aggregated %d items", len(aggStructSlice)))
 	return aggStructSlice
 }
 

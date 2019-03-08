@@ -3,12 +3,13 @@ package abci
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"time"
+
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
-
-	"go.uber.org/zap"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
@@ -68,7 +69,7 @@ type AnchorApplication struct {
 	ValUpdates []types2.ValidatorUpdate
 	state      types.State
 	config     types.AnchorConfig
-	logger     *zap.SugaredLogger
+	logger     log.Logger
 	calendar   *calendar.Calendar
 	aggregator *aggregator.Aggregator
 }
@@ -87,14 +88,14 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	app := AnchorApplication{
 		state:  state,
 		config: config,
-		logger: config.Logger,
+		logger: *config.Logger,
 		calendar: &calendar.Calendar{
 			RabbitmqURI: config.RabbitmqURI,
-			Logger:      config.Logger,
+			Logger:      *config.Logger,
 		},
 		aggregator: &aggregator.Aggregator{
 			RabbitmqURI: config.RabbitmqURI,
-			Logger:      config.Logger,
+			Logger:      *config.Logger,
 		},
 	}
 
@@ -140,7 +141,7 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 	for _, v := range req.Validators {
 		r := app.updateValidator(v, []cmn.KVPair{})
 		if r.IsErr() {
-			app.logger.Error(r)
+			app.logger.Error(fmt.Sprintf("InitChain err: %s\n", r))
 		}
 	}
 	return types2.ResponseInitChain{}
@@ -150,7 +151,6 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.ResponseInfo) {
 	infoJSON, err := json.Marshal(app.state)
 	if err != nil {
-		app.logger.Error(err)
 		infoJSON = []byte("{}")
 	}
 	return types2.ResponseInfo{

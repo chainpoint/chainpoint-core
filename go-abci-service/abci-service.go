@@ -1,9 +1,11 @@
 package main
 
 import (
+	"os"
 	"strconv"
+	"strings"
 
-	"go.uber.org/zap/zapcore"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -11,7 +13,6 @@ import (
 
 	"github.com/tendermint/tendermint/abci/server"
 	cmn "github.com/tendermint/tendermint/libs/common"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -24,14 +25,8 @@ func main() {
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 	}
 
-	// Configure Zap logger
-	zapLevel := zapcore.DebugLevel
-	zapLevel.Set(util.GetEnv("LOG_LEVEL", "DEBUG"))
-	logger, _ := zap.Config{
-		Encoding:    "console",
-		Level:       zap.NewAtomicLevelAt(zapLevel),
-		OutputPaths: []string{"stdout"},
-	}.Build()
+	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
+	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
 	// Create config object
 	config := types.AnchorConfig{
@@ -40,7 +35,7 @@ func main() {
 		DoCal:          doCalLoop,
 		DoAnchor:       doAnchorLoop,
 		AnchorInterval: anchorInterval,
-		Logger:         logger.Sugar(),
+		Logger:         &tmLogger,
 	}
 
 	//Instantiate ABCI application
@@ -51,7 +46,7 @@ func main() {
 	if err != nil {
 		return
 	}
-
+	srv.SetLogger(tmLogger.With("module", "abci-server"))
 	if err := srv.Start(); err != nil {
 		return
 	}
