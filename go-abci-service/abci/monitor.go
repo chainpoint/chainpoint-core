@@ -166,7 +166,7 @@ func (app *AnchorApplication) SyncMonitor() {
 	}
 }
 
-// NistBeaconMonitor : gets the latest NIST beacon record and elects a leader to write a NIST transaction
+// NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI app
 func (app *AnchorApplication) NistBeaconMonitor() {
 	if leader, _ := ElectLeader(app.config.TendermintRPC); leader {
 		nistRecord, err := beacon.LastRecord()

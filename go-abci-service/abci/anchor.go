@@ -54,6 +54,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	if util.LogError(err) != nil {
 		return err
 	}
+	// Aggregate all txs in rage into a new merkle tree in prep for BTC anchoring
 	treeData := app.calendar.AggregateAnchorTx(txLeaves)
 	app.logger.Debug(fmt.Sprintf("treeData for current anchor: %v", treeData))
 	if treeData.AnchorBtcAggRoot != "" {
@@ -65,7 +66,10 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 			app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
 		}
 		app.state.EndCalTxInt = endTxRange
-		app.calendar.QueueBtcaStateDataMessage(iAmLeader, treeData)
+		err := app.calendar.QueueBtcaStateDataMessage(iAmLeader, treeData)
+		if util.LogError(err) != nil {
+			return err
+		}
 		return nil
 	}
 	return errors.New("no transactions to aggregate")
