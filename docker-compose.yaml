@@ -100,7 +100,7 @@ services:
   #
   # curl -i http://127.0.0.1/
   #
-  # PORTS : 80
+  # PORTS : 8080
   #
   api:
     restart: always
@@ -118,7 +118,7 @@ services:
     environment:
       NODE_ENV: development
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}
+      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
 
@@ -138,7 +138,7 @@ services:
     environment:
       NODE_ENV: test
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
-      ETH_TNT_LISTEN_ADDRS: ${ETH_TNT_LISTEN_ADDRS}
+      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
       VIRTUAL_HOST: api.local
 
   # Bitcoin Transmit
