@@ -70,6 +70,12 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if util.LogError(err) != nil {
 			return err
 		}
+		time.Sleep(60 * time.Second)
+		// A BTC-M tx should have hit by now. If not, it'll be less than the start of the current range.
+		if app.state.LatestBtcmTxInt < startTxRange {
+			app.state.BeginCalTxInt = startTxRange
+			app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
+		}
 		return nil
 	}
 	return errors.New("no transactions to aggregate")

@@ -34,6 +34,9 @@ type State struct {
 	LatestBtcaTx     []byte `json:"latest_btca"`
 	LatestBtcaTxInt  int64  `json:"latest_btca_int"`
 	LatestBtcaHeight int64  `json:"latest_btca_height"`
+	LatestBtcmTx     []byte `json:"latest_btcm"`
+	LatestBtcmTxInt  int64  `json:"latest_btcm_int"`
+	LatestBtcmHeight int64  `json:"latest_btcm_height"`
 	LatestBtccTx     []byte `json:"latest_btcc"`
 	LatestBtccTxInt  int64  `json:"latest_btcc_int"`
 	LatestBtccHeight int64  `json:"latest_btcc_height"`
