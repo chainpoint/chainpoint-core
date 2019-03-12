@@ -95,6 +95,18 @@ clean: down
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 	@sudo docker system prune --volumes -f
 
+## init                     : Create data folder with proper permissions
+.PHONY : init
+init:
+	@sudo mkdir -p ./data
+	@sudo mkdir -p ./config/node_1
+	@sudo chmod 777 ./config/node_1
+	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config tendermint/tendermint init
+	@sudo chmod 777 ./config/node_1
+	@sudo mkdir -p ./config/node_1/data
+	@sudo chmod 777 ./config/node_1/data
+	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
+
 ## prune                     : Shutdown and destroy all docker assets
 .PHONY : prune
 prune: down

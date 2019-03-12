@@ -51,10 +51,12 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leaderID str
 				index = util.GetRandInt(len(nodeArray))
 			}
 			leader := nodeArray[index]
-			if leader.NodeInfo.ID() == currentNodeID && !status.SyncInfo.CatchingUp { //If the current node is leader and is synced
-				return true, string(leader.NodeInfo.ID())
-			} else if status.SyncInfo.CatchingUp {
-				continue //if not, choose another leader
+			if leader.NodeInfo.ID() == currentNodeID { //If the current node is leader and is synced
+				if !status.SyncInfo.CatchingUp {
+					return true, string(leader.NodeInfo.ID())
+				} else {
+					continue //if not, choose another leader
+				}
 			}
 			tendermintRPC.TMServer = leader.RemoteIP
 			syncStatus, err := GetStatus(tendermintRPC) //check sync status of chosen leader

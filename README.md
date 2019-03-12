@@ -1,9 +1,9 @@
-# Chainpoint Services
+# Chainpoint Core
 
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint Services is at the Core of the Tierion Network and
+Chainpoint Core is at the heart of the Tierion Network and
 built as a modern [microservices architecture](https://martinfowler.com/articles/microservices.html).
 
 The services provided are generally composed of Node.js applications
@@ -27,8 +27,8 @@ Build and start the whole system locally with `make up`. Running `make help`
 will display additional `Makefile` commands that are available.
 
 ```sh
-git clone https://github.com/chainpoint/chainpoint-services
-cd chainpoint-services
+git clone https://github.com/chainpoint/chainpoint-core
+cd chainpoint-core
 make
 ```
 
@@ -57,7 +57,9 @@ You can modify the `.env` as needed, any changes will be ignored by Git.
 
 ## Startup
 
-Running `make up` should build and start all services for you.
+Running `make up` should build and start all services for you. 
+
+Running `make up-no-build` will pull docker images from Tierion's docker repository and start all services for you.
 
 ## Build
 
