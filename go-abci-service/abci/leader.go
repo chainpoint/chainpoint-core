@@ -2,7 +2,6 @@ package abci
 
 import (
 	"sort"
-	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -24,12 +23,16 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leaderID str
 		return false, ""
 	}
 
+	return determineLeaderIndex(status, netInfo.Peers)
+}
+
+func determineLeaderIndex(status core_types.ResultStatus, peers []core_types.Peer) (isLeader bool, leaderID string) {
 	currentNodeID := status.NodeInfo.ID()
-	if len(netInfo.Peers) > 0 {
+	if len(peers) > 0 {
 		nodeArray := make([]core_types.Peer, 0)
-		for i := 0; i < len(netInfo.Peers); i++ {
-			netInfo.Peers[i].RemoteIP = util.DecodeIP(netInfo.Peers[i].RemoteIP)
-			nodeArray = append(nodeArray, netInfo.Peers[i])
+		for i := 0; i < len(peers); i++ {
+			peers[i].RemoteIP = util.DecodeIP(peers[i].RemoteIP)
+			nodeArray = append(nodeArray, peers[i])
 		}
 		selfPeer := core_types.Peer{
 			NodeInfo:         status.NodeInfo,
@@ -41,34 +44,15 @@ func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leaderID str
 		sort.Slice(nodeArray[:], func(i, j int) bool {
 			return nodeArray[i].NodeInfo.ID() > nodeArray[j].NodeInfo.ID()
 		})
-		// This loop determines a leader and checks if it's still syncing. If so, it finds another leader
-		for i := 0; i < 5; i++ { // Only retry five times so we don't zombify anchor process
-			var index int
-			if i == 0 { // Only seed during the first loop. Calls thereafter should still be using the seed
-				blockHash := status.SyncInfo.LatestBlockHash
-				index = util.GetSeededRandInt([]byte(blockHash), len(nodeArray)) //seed the first time
-			} else {
-				index = util.GetRandInt(len(nodeArray))
+		blockHash := status.SyncInfo.LatestBlockHash
+		index := util.GetSeededRandInt([]byte(blockHash), len(nodeArray)) //seed the first time
+		leader := nodeArray[index]
+		if leader.NodeInfo.ID() == currentNodeID {
+			if !status.SyncInfo.CatchingUp {
+				return true, string(leader.NodeInfo.ID())
 			}
-			leader := nodeArray[index]
-			if leader.NodeInfo.ID() == currentNodeID { //If the current node is leader and is synced
-				if !status.SyncInfo.CatchingUp {
-					return true, string(leader.NodeInfo.ID())
-				} else {
-					continue //if not, choose another leader
-				}
-			}
-			tendermintRPC.TMServer = leader.RemoteIP
-			syncStatus, err := GetStatus(tendermintRPC) //check sync status of chosen leader
-			if util.LogError(err) != nil {
-				continue //If we can't talk to this core, choose another leader
-			}
-			if !syncStatus.SyncInfo.CatchingUp {
-				return leader.NodeInfo.ID() == currentNodeID, string(leader.NodeInfo.ID()) // if synced, return this leader
-			}
-			time.Sleep(5 * time.Second)
 		}
-		return false, ""
+		return false, string(leader.NodeInfo.ID())
 	}
 	return true, string(currentNodeID)
 }
