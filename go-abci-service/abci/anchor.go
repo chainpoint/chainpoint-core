@@ -43,7 +43,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
 	app.logger.Debug(fmt.Sprintf("starting scheduled anchor for tx ranges %d to %d", startTxRange, endTxRange))
 
-	iAmLeader, leaderID := ElectLeader(app.config.TendermintRPC)
+	iAmLeader, leaderID := app.ElectLeader()
 	if leaderID == "" {
 		return errors.New("Leader election error")
 	}
@@ -70,9 +70,9 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if util.LogError(err) != nil {
 			return err
 		}
-		time.Sleep(60 * time.Second)
-		// A BTC-M tx should have hit by now. If not, it'll be less than the start of the current range.
-		if app.state.LatestBtcmTxInt < startTxRange {
+		time.Sleep(60 * time.Second) // wait for a BTC-M tx
+		// A BTC-M tx should have hit by now.
+		if app.state.LatestBtcmTxInt < startTxRange { //If not, it'll be less than the start of the current range.
 			app.state.BeginCalTxInt = startTxRange
 			app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
 		}

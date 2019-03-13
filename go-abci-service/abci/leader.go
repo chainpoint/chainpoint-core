@@ -3,30 +3,30 @@ package abci
 import (
 	"sort"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/p2p"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 // ElectLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
-func ElectLeader(tendermintRPC types.TendermintURI) (isLeader bool, leaderID string) {
+func (app *AnchorApplication) ElectLeader() (isLeader bool, leaderID string) {
 	var status core_types.ResultStatus
 	var netInfo core_types.ResultNetInfo
 	var err error
 	var err2 error
 
-	status, err = GetStatus(tendermintRPC)
-	netInfo, err2 = GetNetInfo(tendermintRPC)
+	status, err = GetStatus(app.config.TendermintRPC)
+	netInfo, err2 = GetNetInfo(app.config.TendermintRPC)
 
 	if util.LogError(err) != nil || util.LogError(err2) != nil {
 		return false, ""
 	}
 
-	return determineLeaderIndex(status, netInfo.Peers)
+	return determineLeader(status, netInfo.Peers, status.SyncInfo.LatestBlockHash.String())
 }
 
-func determineLeaderIndex(status core_types.ResultStatus, peers []core_types.Peer) (isLeader bool, leaderID string) {
+// determineLeader accepts current node status and a peer array, then finds a leader based on the latest blockhash
+func determineLeader(status core_types.ResultStatus, peers []core_types.Peer, seed string) (isLeader bool, leaderID string) {
 	currentNodeID := status.NodeInfo.ID()
 	if len(peers) > 0 {
 		nodeArray := make([]core_types.Peer, 0)
@@ -44,8 +44,7 @@ func determineLeaderIndex(status core_types.ResultStatus, peers []core_types.Pee
 		sort.Slice(nodeArray[:], func(i, j int) bool {
 			return nodeArray[i].NodeInfo.ID() > nodeArray[j].NodeInfo.ID()
 		})
-		blockHash := status.SyncInfo.LatestBlockHash
-		index := util.GetSeededRandInt([]byte(blockHash), len(nodeArray)) //seed the first time
+		index := util.GetSeededRandInt([]byte(seed), len(nodeArray)) //seed the first time
 		leader := nodeArray[index]
 		if leader.NodeInfo.ID() == currentNodeID {
 			if !status.SyncInfo.CatchingUp {

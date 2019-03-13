@@ -168,7 +168,7 @@ func (app *AnchorApplication) SyncMonitor() {
 
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI app
 func (app *AnchorApplication) NistBeaconMonitor() {
-	if leader, _ := ElectLeader(app.config.TendermintRPC); leader {
+	if leader, _ := app.ElectLeader(); leader {
 		nistRecord, err := beacon.LastRecord()
 		if util.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new NIST beacon value")
