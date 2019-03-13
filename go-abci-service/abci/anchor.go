@@ -73,6 +73,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		time.Sleep(60 * time.Second) // wait for a BTC-M tx
 		// A BTC-M tx should have hit by now.
 		if app.state.LatestBtcmTxInt < startTxRange { //If not, it'll be less than the start of the current range.
+			app.logger.Debug("Anchoring failed, restarting anchor epoch")
 			app.state.BeginCalTxInt = startTxRange
 			app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
 		}
