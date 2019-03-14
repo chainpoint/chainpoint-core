@@ -62,14 +62,14 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	switch msg.Type {
 	case "btctx":
 		time.Sleep(30 * time.Second)
-		BroadcastTx(app.config.TendermintRPC, "BTC-M", string(msg.Body), 2, time.Now().Unix())
+		app.BroadcastTx("BTC-M", string(msg.Body), 2, time.Now().Unix())
 		msg.Ack(false)
 		break
 	case "btcmon":
 		var hash []byte
 		var btcMonObj types.BtcMonMsg
 		json.Unmarshal(msg.Body, &btcMonObj)
-		result, err := BroadcastTx(app.config.TendermintRPC, "BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
+		result, err := app.BroadcastTx("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			if strings.Contains(err.Error(), "-32603") {
 				app.logger.Error("Another core has already committed a BTCC tx")
@@ -174,7 +174,7 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 			app.logger.Error("Unable to obtain new NIST beacon value")
 			return
 		}
-		_, err = BroadcastTx(app.config.TendermintRPC, "NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
+		_, err = app.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
 		if util.LogError(err) != nil {
 			app.logger.Debug(fmt.Sprintf("Gossiped new NIST beacon value of %s", nistRecord.ChainpointFormat()))
 		}

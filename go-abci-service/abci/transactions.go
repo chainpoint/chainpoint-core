@@ -14,11 +14,11 @@ import (
 )
 
 // BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
-func BroadcastTx(rpcURI types.TendermintURI, txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
-	rpc := GetHTTPClient(rpcURI)
+func (app *AnchorApplication) BroadcastTx(txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
+	rpc := GetHTTPClient(app.config.TendermintRPC)
 	defer rpc.Stop()
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time}
-	result, err := rpc.BroadcastTxSync([]byte(util.EncodeTx(tx)))
+	result, err := rpc.BroadcastTxAsync([]byte(util.EncodeTx(tx)))
 	if util.LogError(err) != nil {
 		return core_types.ResultBroadcastTx{}, err
 	}

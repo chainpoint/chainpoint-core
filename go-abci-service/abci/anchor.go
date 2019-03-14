@@ -23,7 +23,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 	if calAgg.CalRoot != "" {
 		app.logger.Debug(fmt.Sprintf("Calendar Root: %s", calAgg.CalRoot))
 
-		result, err := BroadcastTx(app.config.TendermintRPC, "CAL", calAgg.CalRoot, 2, time.Now().Unix())
+		result, err := app.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			return err
 		}
@@ -59,7 +59,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	app.logger.Debug(fmt.Sprintf("treeData for current anchor: %v", treeData))
 	if treeData.AnchorBtcAggRoot != "" {
 		if iAmLeader {
-			result, err := BroadcastTx(app.config.TendermintRPC, "BTC-A", treeData.AnchorBtcAggRoot, 2, time.Now().Unix())
+			result, err := app.BroadcastTx("BTC-A", treeData.AnchorBtcAggRoot, 2, time.Now().Unix())
 			if util.LogError(err) != nil {
 				return err
 			}
