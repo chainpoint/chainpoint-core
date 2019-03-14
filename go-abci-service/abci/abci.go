@@ -180,7 +180,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Finalize new block by calculating appHash and incrementing height
 	appHash := make([]byte, 8)
-	binary.PutVarint(appHash, app.state.Size)
+	binary.PutVarint(appHash, 0)
 	app.state.AppHash = appHash
 	app.state.Height++
 	saveState(app.state)
