@@ -95,7 +95,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		scheduler := cron.New(cron.WithLocation(time.UTC))
 
 		// Update NIST beacon record and gossip it to ensure everyone has the same aggregator state
-		scheduler.AddFunc("0/1 0-23 * * *", app.NistBeaconMonitor)
+		//scheduler.AddFunc("0/1 0-23 * * *", app.NistBeaconMonitor)
 
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
