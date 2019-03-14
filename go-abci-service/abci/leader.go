@@ -46,6 +46,7 @@ func determineLeader(status core_types.ResultStatus, peers []core_types.Peer, se
 			return nodeArray[i].NodeInfo.ID() > nodeArray[j].NodeInfo.ID()
 		})
 		index := util.GetSeededRandInt([]byte(seed), len(nodeArray)) //seed the first time
+		fmt.Printf("Elected index %d of core array (len %d\n)", index, len(nodeArray))
 		leader := nodeArray[index]
 		if leader.NodeInfo.ID() == currentNodeID {
 			if !status.SyncInfo.CatchingUp {
