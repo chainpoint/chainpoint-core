@@ -18,7 +18,7 @@ func (app *AnchorApplication) BroadcastTx(txType string, data string, version in
 	rpc := GetHTTPClient(app.config.TendermintRPC)
 	defer rpc.Stop()
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time}
-	result, err := rpc.BroadcastTxAsync([]byte(util.EncodeTx(tx)))
+	result, err := rpc.BroadcastTxSync([]byte(util.EncodeTx(tx)))
 	if util.LogError(err) != nil {
 		return core_types.ResultBroadcastTx{}, err
 	}
