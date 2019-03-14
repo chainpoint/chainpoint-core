@@ -158,9 +158,9 @@ func (app *AnchorApplication) SyncMonitor() {
 			continue
 		}
 		if status.SyncInfo.CatchingUp {
-			app.state.AnchorEnabled = false
+			app.state.ChainSynced = false
 		} else {
-			app.state.AnchorEnabled = true
+			app.state.ChainSynced = true
 		}
 		time.Sleep(30 * time.Second)
 	}

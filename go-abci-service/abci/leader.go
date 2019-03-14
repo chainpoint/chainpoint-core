@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -21,7 +22,7 @@ func (app *AnchorApplication) ElectLeader() (isLeader bool, leaderID string) {
 	if util.LogError(err) != nil || util.LogError(err2) != nil {
 		return false, ""
 	}
-
+	app.logger.Debug(fmt.Sprintf("Blockhash Seed: %s", status.SyncInfo.LatestBlockHash.String()))
 	return determineLeader(status, netInfo.Peers, status.SyncInfo.LatestBlockHash.String())
 }
 

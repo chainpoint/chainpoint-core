@@ -74,7 +74,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		panic(err)
 	}
 	state := loadState(db)
-	state.AnchorEnabled = false // False until we finish syncing
+	state.ChainSynced = false // False until we finish syncing
 
 	app := AnchorApplication{
 		state:  state,
@@ -99,8 +99,10 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
-			time.Sleep(30 * time.Second) //offset from nist loop by 30 seconds
-			app.AggregateCalendar()
+			if app.state.ChainSynced { // don't aggregate if Tendermint isn't synced or functioning correctly
+				time.Sleep(30 * time.Second) //offset from nist loop by 30 seconds
+				app.AggregateCalendar()
+			}
 		})
 		scheduler.Start()
 	}
@@ -169,7 +171,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// Anchor every anchorInterval of blocks
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
-		if app.state.AnchorEnabled {
+		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt

@@ -26,7 +26,7 @@ type State struct {
 	TxInt            int64  `json:"tx_int"`
 	Size             int64  `json:"size"`
 	Height           int64  `json:"height"`
-	AnchorEnabled    bool   `json:"anchor_enabled"`
+	ChainSynced      bool   `json:"chain_synced"`
 	AppHash          []byte `json:"app_hash"`
 	BeginCalTxInt    int64  `json:"begin_cal_int"`
 	EndCalTxInt      int64  `json:"end_cal_int"`
