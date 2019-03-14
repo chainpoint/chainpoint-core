@@ -11,6 +11,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 
+	cron "gopkg.in/robfig/cron.v3"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/tendermint/tendermint/abci/example/code"
 	types2 "github.com/tendermint/tendermint/abci/types"
@@ -88,6 +90,21 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		},
 	}
 
+	if config.DoCal {
+		// Create cron scheduler
+		scheduler := cron.New(cron.WithLocation(time.UTC))
+
+		// Update NIST beacon record and gossip it to ensure everyone has the same aggregator state
+		scheduler.AddFunc("0/1 0-23 * * *", app.NistBeaconMonitor)
+
+		// Run calendar aggregation every minute with pointer to nist object
+		scheduler.AddFunc("0/1 0-23 * * *", func() {
+			time.Sleep(30 * time.Second) //offset from nist loop by 30 seconds
+			app.AggregateCalendar()
+		})
+		scheduler.Start()
+	}
+
 	if config.DoAnchor {
 		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
@@ -157,14 +174,6 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
-	} else if app.config.DoCal {
-		// Only trigger calendar aggregation and nist beacon update from Tendermint
-		// so if Tendermint is down, hashes will be queued instead of wasted
-		go app.NistBeaconMonitor()
-		go func() {
-			time.Sleep(30 * time.Second) //offset from nist loop by 30 seconds
-			app.AggregateCalendar()
-		}()
 	}
 
 	// Finalize new block by calculating appHash and incrementing height
