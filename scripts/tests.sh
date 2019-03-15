@@ -17,4 +17,14 @@ function merkletools {
     make down
 }
 
+function leader {
+    # Leader Election
+    echo -e "\n==Testing Leader Election=="
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestLeaderElectionLeader
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestLeaderElectionNotLeader
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestLeaderElectionSingleCore
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestLeaderElectionCatchingUp
+    make down
+}
+
 ${COMMAND}

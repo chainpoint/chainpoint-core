@@ -3,7 +3,6 @@ package abci
 import (
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/tendermint/tendermint/libs/log"
@@ -125,7 +124,7 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 	for _, v := range req.Validators {
 		r := app.updateValidator(v, []cmn.KVPair{})
 		if r.IsErr() {
-			app.logger.Error(fmt.Sprintf("InitChain err: %s\n", r))
+			app.logger.Error("Init Chain failed", r)
 		}
 	}
 	return types2.ResponseInitChain{}

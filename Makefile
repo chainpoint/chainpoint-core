@@ -41,9 +41,14 @@ test-api:
 test-aggregator:
 	scripts/tests.sh aggregator
 
+## test-merkletools          : Run merkletools test suite with Mocha
+.PHONY : test-merkletools
+test-merkletools:
+	scripts/tests.sh merkletools
+
 ## test                      : Run all application tests
 .PHONY : test
-test: test-api test-aggregator
+test: test-api test-aggregator test-merkletools
 
 ## up                        : Build and start all
 .PHONY : up
