@@ -3,7 +3,7 @@
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint Core is at the heart of the Tierion Network and
+Chainpoint Core is at the heart of the Chainpoint Network and
 built as a modern [microservices architecture](https://martinfowler.com/articles/microservices.html).
 
 The services provided are generally composed of Node.js applications
@@ -15,7 +15,7 @@ This run method is suitable for development only.
 
 ## Important Notice
 
-This software is intended to be run as the Core of the Tierion Network. It is not for end users. If you are interested in running a Tierion Node, or installing a copy of our command line interface please instead visit:
+This software is intended to be run as the Core of the Chainpoint Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
 
 [https://github.com/chainpoint/chainpoint-node](https://github.com/chainpoint/chainpoint-node)
 
