@@ -39,7 +39,7 @@ test-api:
 ## test-aggregator           : Run aggregator test suite with Mocha
 .PHONY : test-aggregator
 test-aggregator:
-	docker-compose up --build aggregator-test
+	scripts/tests.sh aggregator
 
 ## test                      : Run all application tests
 .PHONY : test

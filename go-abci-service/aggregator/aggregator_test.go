@@ -2,11 +2,12 @@ package aggregator
 
 import (
 	"encoding/json"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/streadway/amqp"
@@ -71,15 +72,11 @@ func TestHashResult(t *testing.T) {
 			Body:            itemBytes2,
 		},
 	}
-	zapLevel := zapcore.DebugLevel
-	logger, _ := zap.Config{
-		Encoding:    "console",
-		Level:       zap.NewAtomicLevelAt(zapLevel),
-		OutputPaths: []string{"stdout"},
-	}.Build()
+	allowLevel, _ := log.AllowLevel(strings.ToLower("DEBUG"))
+	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 	aggregator := Aggregator{
 		RabbitmqURI: "",
-		Logger:      logger.Sugar(),
+		Logger:      tmLogger,
 	}
 	agg := aggregator.ProcessAggregation(msgArray, "")
 	if agg.AggRoot != "58f42246b9c6d303e33206d461e05f3e2292d8eddfce92b7434f1d8be9f0e2c1" {
