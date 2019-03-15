@@ -192,14 +192,14 @@ skip_timeout_commit = false
 
 # EmptyBlocks mode and possible interval between empty blocks
 create_empty_blocks = true
-create_empty_blocks_interval = "60s"
+create_empty_blocks_interval = "0s"
 
 # Reactor sleep duration parameters
 peer_gossip_sleep_duration = "100ms"
 peer_query_maj23_sleep_duration = "2s"
 
 # Block time parameters. Corresponds to the minimum time increment between consecutive blocks.
-blocktime_iota = "60s"
+blocktime_iota = "1s"
 
 ##### transactions indexer configuration options #####
 [tx_index]
