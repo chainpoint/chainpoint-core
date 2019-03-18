@@ -58,6 +58,55 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	return nil
 }
 
+// ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
+func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
+	var hash []byte
+	var btcMonObj types.BtcMonMsg
+	json.Unmarshal(msg.Body, &btcMonObj)
+	result, err := app.BroadcastTx("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
+	if util.LogError(err) != nil {
+		if strings.Contains(err.Error(), "-32603") {
+			app.logger.Error("Another core has already committed a BTCC tx")
+			txResult, err := GetTxByInt(app.config.TendermintRPC, app.state.LatestBtccTxInt)
+			if util.LogError(err) != nil && len(txResult.Txs) > 0 {
+				hash = txResult.Txs[0].Hash
+			}
+		} else {
+			return err
+		}
+	} else {
+		hash = result.Hash
+	}
+	var btccStateObj types.BtccStateObj
+	btccStateObj.BtcTxID = btcMonObj.BtcTxID
+	btccStateObj.BtcHeadHeight = btcMonObj.BtcHeadHeight
+	btccStateObj.BtcHeadState.Ops = make([]types.ProofLineItem, 0)
+	for _, p := range btcMonObj.Path {
+		if p.Left != "" {
+			btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Left: string(p.Left)})
+		}
+		if p.Right != "" {
+			btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Right: string(p.Right)})
+		}
+		btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Op: "sha-256-x2"})
+	}
+	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
+	uri := strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", baseURI, hash))
+	btccStateObj.BtcHeadState.Anchor = types.AnchorObj{
+		AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
+		Uris:     []string{uri},
+	}
+	stateObjBytes, err := json.Marshal(btccStateObj)
+
+	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.proofstate", "btcmon", stateObjBytes)
+	if err != nil {
+		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+		return err
+	}
+	msg.Ack(false)
+	return nil
+}
+
 func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	switch msg.Type {
 	case "btctx":
@@ -66,50 +115,8 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 		msg.Ack(false)
 		break
 	case "btcmon":
-		var hash []byte
-		var btcMonObj types.BtcMonMsg
-		json.Unmarshal(msg.Body, &btcMonObj)
-		result, err := app.BroadcastTx("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
-		if util.LogError(err) != nil {
-			if strings.Contains(err.Error(), "-32603") {
-				app.logger.Error("Another core has already committed a BTCC tx")
-				txResult, err := GetTxByInt(app.config.TendermintRPC, app.state.LatestBtccTxInt)
-				if util.LogError(err) != nil && len(txResult.Txs) > 0 {
-					hash = txResult.Txs[0].Hash
-				}
-			} else {
-				return err
-			}
-		} else {
-			hash = result.Hash
-		}
-		var btccStateObj types.BtccStateObj
-		btccStateObj.BtcTxID = btcMonObj.BtcTxID
-		btccStateObj.BtcHeadHeight = btcMonObj.BtcHeadHeight
-		btccStateObj.BtcHeadState.Ops = make([]types.ProofLineItem, 0)
-		for _, p := range btcMonObj.Path {
-			if p.Left != "" {
-				btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Left: string(p.Left)})
-			}
-			if p.Right != "" {
-				btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Right: string(p.Right)})
-			}
-			btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Op: "sha-256-x2"})
-		}
-		baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
-		uri := strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", baseURI, hash))
-		btccStateObj.BtcHeadState.Anchor = types.AnchorObj{
-			AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
-			Uris:     []string{uri},
-		}
-		stateObjBytes, err := json.Marshal(btccStateObj)
-
-		err = rabbitmq.Publish(app.config.RabbitmqURI, "work.proofstate", "btcmon", stateObjBytes)
-		if err != nil {
-			rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
-			return err
-		}
-		msg.Ack(false)
+		err := app.ConsumeBtcMonMsg(msg)
+		util.LogError(err)
 		break
 	case "reward":
 		break
