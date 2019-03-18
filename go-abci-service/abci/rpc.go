@@ -52,14 +52,14 @@ func GetTxByInt(tendermintRPC types.TendermintURI, txInt int64) (core_types.Resu
 }
 
 // GetAbciInfo retrieves custom ABCI status struct detailing the state of our application
-func GetAbciInfo(tendermintRPC types.TendermintURI) (types.State, error) {
+func GetAbciInfo(tendermintRPC types.TendermintURI) (types.AnchorState, error) {
 	rpc := GetHTTPClient(tendermintRPC)
 	defer rpc.Stop()
 	resp, err := rpc.ABCIInfo()
 	if err != nil {
-		return types.State{}, err
+		return types.AnchorState{}, err
 	}
-	var anchorState types.State
+	var anchorState types.AnchorState
 	util.LogError(json.Unmarshal([]byte(resp.Response.Data), &anchorState))
 	return anchorState, nil
 }

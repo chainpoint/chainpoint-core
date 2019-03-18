@@ -62,12 +62,12 @@ func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate, tags []cm
 	key := []byte("val:" + string(v.PubKey.Data))
 	if v.Power == 0 {
 		// remove validator
-		if !app.state.Db.Has(key) {
+		if !app.Db.Has(key) {
 			return types.ResponseDeliverTx{
 				Code: code.CodeTypeUnauthorized,
 				Log:  fmt.Sprintf("Cannot remove non-existent validator %X", key)}
 		}
-		app.state.Db.Delete(key)
+		app.Db.Delete(key)
 	} else {
 		// add or update validator
 		value := bytes.NewBuffer(make([]byte, 0))
@@ -76,7 +76,7 @@ func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate, tags []cm
 				Code: code.CodeTypeEncodingError,
 				Log:  fmt.Sprintf("Error encoding validator: %v", err)}
 		}
-		app.state.Db.Set(key, value.Bytes())
+		app.Db.Set(key, value.Bytes())
 	}
 
 	// we only update the changes array if we successfully updated the tree

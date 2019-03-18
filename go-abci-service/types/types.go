@@ -1,7 +1,6 @@
 package types
 
 import (
-	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -12,6 +11,7 @@ type TendermintURI struct {
 }
 
 type AnchorConfig struct {
+	DBType         string
 	RabbitmqURI    string
 	TendermintRPC  TendermintURI
 	DoCal          bool
@@ -20,9 +20,8 @@ type AnchorConfig struct {
 	Logger         *log.Logger
 }
 
-// State holds Tendermint/ABCI application state. Persisted by ABCI app
-type State struct {
-	Db               dbm.DB
+// AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
+type AnchorState struct {
 	TxInt            int64  `json:"tx_int"`
 	Height           int64  `json:"height"`
 	ChainSynced      bool   `json:"chain_synced"`

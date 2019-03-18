@@ -36,19 +36,24 @@ pull:
 test-api: 
 	docker-compose up --build api-test
 
-## test-aggregator           : Run aggregator test suite with Mocha
+## test-aggregator           : Run aggregator test suite
 .PHONY : test-aggregator
 test-aggregator:
 	scripts/tests.sh aggregator
 
-## test-merkletools          : Run merkletools test suite with Mocha
+## test-merkletools          : Run merkletools test suite
 .PHONY : test-merkletools
 test-merkletools:
 	scripts/tests.sh merkletools
 
+## test-merkletools          : Run abci test suite
+.PHONY : test-abci
+test-abci:
+	scripts/tests.sh abci
+
 ## test                      : Run all application tests
 .PHONY : test
-test: test-api test-aggregator test-merkletools
+test: test-api test-aggregator test-merkletools test-abci
 
 ## up                        : Build and start all
 .PHONY : up

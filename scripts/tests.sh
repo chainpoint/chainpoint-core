@@ -27,4 +27,15 @@ function leader {
     make down
 }
 
+function abci {
+    # ABCI
+    echo -e "\n==Testing ABCI Application=="
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestABCIDeclaration
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestDeliverTx
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestABCIInfo
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestCommit
+    make down
+
+}
+
 ${COMMAND}

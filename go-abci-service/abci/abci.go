@@ -26,38 +26,38 @@ var (
 	ProtocolVersion version.Protocol = 0x1
 )
 
-// loadState loads the State struct from a database instance
-func loadState(db dbm.DB) types.State {
+// loadState loads the AnchorState struct from a database instance
+func loadState(db dbm.DB) types.AnchorState {
 	stateBytes := db.Get(stateKey)
-	var state types.State
+	var state types.AnchorState
 	if len(stateBytes) != 0 {
 		err := json.Unmarshal(stateBytes, &state)
 		if err != nil {
 			panic(err)
 		}
 	}
-	state.Db = db
 	return state
 }
 
-//loadState saves the State struct to disk
-func saveState(state types.State) {
+//loadState saves the AnchorState struct to disk
+func saveState(Db dbm.DB, state types.AnchorState) {
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
 		panic(err)
 	}
-	state.Db.Set(stateKey, stateBytes)
+	Db.Set(stateKey, stateBytes)
 }
 
 //---------------------------------------------------
 
 var _ types2.Application = (*AnchorApplication)(nil)
 
-// AnchorApplication : State and config variables for the abci app
+// AnchorApplication : AnchorState and config variables for the abci app
 type AnchorApplication struct {
 	types2.BaseApplication
 	ValUpdates []types2.ValidatorUpdate
-	state      types.State
+	Db         dbm.DB
+	state      types.AnchorState
 	config     types.AnchorConfig
 	logger     log.Logger
 	calendar   *calendar.Calendar
@@ -68,14 +68,12 @@ type AnchorApplication struct {
 func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
-	db, err := dbm.NewGoLevelDB(name, "/tendermint/data")
-	if err != nil {
-		panic(err)
-	}
+	db := dbm.NewDB(name, dbm.DBBackendType(config.DBType), "/tendermint/data")
 	state := loadState(db)
 	state.ChainSynced = false // False until we finish syncing
 
 	app := AnchorApplication{
+		Db:     db,
 		state:  state,
 		config: config,
 		logger: *config.Logger,
@@ -182,7 +180,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	binary.PutVarint(appHash, app.state.LatestCalTxInt) // most frequent tx, best tracks app state
 	app.state.AppHash = appHash
 	app.state.Height++
-	saveState(app.state)
+	saveState(app.Db, app.state)
 
 	return types2.ResponseCommit{Data: appHash}
 }

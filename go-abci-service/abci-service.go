@@ -30,6 +30,7 @@ func main() {
 
 	// Create config object
 	config := types.AnchorConfig{
+		DBType:         "goleveldb",
 		RabbitmqURI:    util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintRPC:  tendermintRPC,
 		DoCal:          doCalLoop,
