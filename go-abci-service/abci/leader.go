@@ -22,8 +22,9 @@ func (app *AnchorApplication) ElectLeader() (isLeader bool, leaderID string) {
 	if util.LogError(err) != nil || util.LogError(err2) != nil {
 		return false, ""
 	}
-	app.logger.Debug(fmt.Sprintf("Blockhash Seed: %s", status.SyncInfo.LatestBlockHash.String()))
-	return determineLeader(status, netInfo.Peers, status.SyncInfo.LatestBlockHash.String())
+	blockHash := status.SyncInfo.LatestBlockHash.String()
+	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
+	return determineLeader(status, netInfo.Peers, blockHash)
 }
 
 // determineLeader accepts current node status and a peer array, then finds a leader based on the latest blockhash

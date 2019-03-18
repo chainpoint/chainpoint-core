@@ -51,7 +51,7 @@ func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.C
 		}
 		treeDataObj.ProofData[i] = proofData
 	}
-	calendar.Logger.Info(fmt.Sprintf("AggTree Input: %v\nCalTree Output: %v\n", aggs, treeDataObj))
+	calendar.Logger.Info(fmt.Sprintf("AggTree Input: %#v\nCalTree Output: %#v\n", aggs, treeDataObj))
 	return treeDataObj
 }
 
@@ -76,6 +76,10 @@ func (calendar *Calendar) QueueCalStateMessage(tx types.TxTm, treeDataObj types.
 
 // AggregateAnchorTx takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop
 func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) types.BtcAgg {
+	if len(txLeaves) == 0 {
+		calendar.Logger.Error("No txLeaves to aggregate, exiting")
+		return types.BtcAgg{}
+	}
 	calBytes := make([][]byte, 0)
 	calLeaves := make([]core_types.ResultTx, 0)
 	for _, t := range txLeaves {
@@ -117,7 +121,7 @@ func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) type
 		}
 		treeData.ProofData[i] = proofDataItem
 	}
-	calendar.Logger.Info(fmt.Sprintf("AggTree Input: %v\nCalTree Output: %v\n", calLeaves, treeData))
+	calendar.Logger.Info(fmt.Sprintf("AggTree Input: %#v\nAggTree Output: %#v\n", txLeaves, treeData))
 	return treeData
 }
 

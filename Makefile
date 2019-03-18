@@ -46,14 +46,19 @@ test-aggregator:
 test-merkletools:
 	scripts/tests.sh merkletools
 
-## test-merkletools          : Run abci test suite
+## test-abci		         : Run abci test suite
 .PHONY : test-abci
 test-abci:
 	scripts/tests.sh abci
 
+## test-calendar	         : Run calendar test suite
+.PHONY : test-calendar
+test-calendar:
+	scripts/tests.sh calendar
+
 ## test                      : Run all application tests
 .PHONY : test
-test: test-api test-aggregator test-merkletools test-abci
+test: test-api test-aggregator test-merkletools test-abci test-calendar
 
 ## up                        : Build and start all
 .PHONY : up

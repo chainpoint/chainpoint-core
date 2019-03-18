@@ -35,7 +35,16 @@ function abci {
     docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestABCIInfo
     docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/abci -run TestCommit
     make down
+}
 
+function calendar {
+    # Calendar
+    echo -e "\n==Testing Calendar Aggregation=="
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/calendar -run TestEmptyCalTreeGeneration
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/calendar -run TestFullCalTreeGeneration
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/calendar -run TestEmptyAnchorTreeGeneration
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/calendar -run TestFullAnchorTreeGeneration
+    make down
 }
 
 ${COMMAND}
