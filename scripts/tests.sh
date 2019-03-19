@@ -45,4 +45,11 @@ function util {
     make down
 }
 
+function rabbit {
+    # RabbitMQ
+    echo -e "\n==Testing Rabbit=="
+    docker-compose --log-level ERROR run abci go test -v $PROJECT_PATH/go-abci-service/rabbitmq -run Test*
+    make down
+}
+
 ${COMMAND}

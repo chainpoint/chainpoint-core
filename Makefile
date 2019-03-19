@@ -61,9 +61,14 @@ test-calendar:
 test-util:
 	scripts/tests.sh util
 
+## test-rabbitmq	         : Run rabbit test suite
+.PHONY : test-rabbit
+test-rabbit:
+	scripts/tests.sh rabbit
+
 ## test                      : Run all application tests
 .PHONY : test
-test: test-api test-aggregator test-merkletools test-abci test-calendar test-util
+test: test-api test-aggregator test-merkletools test-abci test-calendar test-util test-rabbit
 
 ## up                        : Build and start all
 .PHONY : up
