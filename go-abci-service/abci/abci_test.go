@@ -55,7 +55,7 @@ func TestABCIDeclaration(t *testing.T) {
 	}
 }
 
-func TestDeliverTx(t *testing.T) {
+func TestABCIDeliverTx(t *testing.T) {
 	app := declareABCI()
 	sendTx(app)
 	if app.state.LatestCalTxInt != app.state.TxInt || app.state.LatestCalTxInt == 0 {
@@ -77,7 +77,7 @@ func TestABCIInfo(t *testing.T) {
 	}
 }
 
-func TestCommit(t *testing.T) {
+func TestABCICommit(t *testing.T) {
 	app := declareABCI()
 	app.Commit()
 	if app.state.Height == 0 {

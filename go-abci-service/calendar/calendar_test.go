@@ -14,7 +14,7 @@ import (
 )
 
 func newCalendar(rmqUri string) *Calendar {
-	allowLevel, _ := log.AllowLevel(strings.ToLower("DEBUG"))
+	allowLevel, _ := log.AllowLevel(strings.ToLower("ERROR"))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 	calendar := Calendar{
 		RabbitmqURI: rmqUri,
