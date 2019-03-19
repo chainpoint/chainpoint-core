@@ -56,9 +56,14 @@ test-abci:
 test-calendar:
 	scripts/tests.sh calendar
 
+## test-util		         : Run util test suite
+.PHONY : test-util
+test-util:
+	scripts/tests.sh util
+
 ## test                      : Run all application tests
 .PHONY : test
-test: test-api test-aggregator test-merkletools test-abci test-calendar
+test: test-api test-aggregator test-merkletools test-abci test-calendar test-util
 
 ## up                        : Build and start all
 .PHONY : up

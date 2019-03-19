@@ -1,5 +1,5 @@
 hash: 2d515a802a372f14e3dba5dcd485d5e1b36f3859c9ec8a9f3e6f37691c7649d2
-updated: 2019-03-08T10:36:55.3807068-08:00
+updated: 2019-03-19T12:58:21.851891891-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
@@ -167,18 +167,6 @@ imports:
   - version
 - name: github.com/uber-go/zap
   version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
-- name: go.uber.org/atomic
-  version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
-- name: go.uber.org/multierr
-  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
-- name: go.uber.org/zap
-  version: d2a364dac1d9b70c651d9f47381c5912361e5596
-  subpackages:
-  - buffer
-  - internal/bufferpool
-  - internal/color
-  - internal/exit
-  - zapcore
 - name: golang.org/x/crypto
   version: 8dd112bcdc25174059e45e07517d9fc663123347
   subpackages:
@@ -256,4 +244,12 @@ imports:
   - tap
 - name: gopkg.in/robfig/cron.v3
   version: dbf322045545dc016828ed3581ae310a1fc1152e
-testImports: []
+testImports:
+- name: github.com/pmezard/go-difflib
+  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: 34c6fa2dc70986bccbbffcc6130f6920a924b075
+  subpackages:
+  - assert

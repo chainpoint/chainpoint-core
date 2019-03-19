@@ -8,8 +8,6 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"sync"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -52,11 +50,6 @@ func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	return rand.Intn(upperBound)
 }
 
-//GetRandInt : retrieves an unseeded random int between 0 and upperBound
-func GetRandInt(upperBound int) int {
-	return rand.Intn(upperBound)
-}
-
 // UUIDFromHash : generate a uuid from a byte hash, must be 16 bytes
 func UUIDFromHash(seedBytes []byte) (uuid.UUID, error) {
 	return uuid.FromBytes(seedBytes)
@@ -70,30 +63,14 @@ func DecodeTx(incoming []byte) (types.Tx, error) {
 		fmt.Println(err)
 		return calendar, err
 	}
-	json.Unmarshal([]byte(decoded), &calendar)
-	return calendar, nil
+	err = json.Unmarshal([]byte(decoded), &calendar)
+	return calendar, err
 }
 
 // EncodeTx : Encodes a Tendermint transaction to base64
 func EncodeTx(outgoing types.Tx) string {
 	txJSON, _ := json.Marshal(outgoing)
 	return base64.StdEncoding.EncodeToString(txJSON)
-}
-
-// WaitTimeout waits for the waitgroup for the specified max timeout.
-// Returns true if waiting timed out.
-func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return false // completed normally
-	case <-time.After(timeout):
-		return true // timed out
-	}
 }
 
 // DecodeIP: decode tendermint's arcane remote_ip format

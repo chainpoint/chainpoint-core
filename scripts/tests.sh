@@ -47,4 +47,18 @@ function calendar {
     make down
 }
 
+function util {
+    # Util
+    echo -e "\n==Testing Utils=="
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/util -run TestSeededRandInt
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/util -run TestInt64ToByte
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/util -run TestByteToInt64
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/util -run TestGetEnv
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/util -run TestUUIDFromHash
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/util -run TestEncodeTx
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/util -run TestDecodeTx
+    docker-compose --log-level ERROR run abci go test $PROJECT_PATH/go-abci-service/util -run TestDecodeIP
+    make down
+}
+
 ${COMMAND}
