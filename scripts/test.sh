@@ -52,4 +52,15 @@ function rabbit {
     make down
 }
 
+function all {
+    echo -e "\n==Test All==\n"
+    aggregator
+    merkletools
+    leader
+    abci
+    calendar
+    util
+    rabbit
+}
+
 ${COMMAND}

@@ -39,32 +39,32 @@ test-api:
 ## test-aggregator           : Run aggregator test suite
 .PHONY : test-aggregator
 test-aggregator:
-	scripts/tests.sh aggregator
+	scripts/test.sh aggregator
 
 ## test-merkletools          : Run merkletools test suite
 .PHONY : test-merkletools
 test-merkletools:
-	scripts/tests.sh merkletools
+	scripts/test.sh merkletools
 
 ## test-abci		         : Run abci test suite
 .PHONY : test-abci
 test-abci:
-	scripts/tests.sh abci
+	scripts/test.sh abci
 
 ## test-calendar	         : Run calendar test suite
 .PHONY : test-calendar
 test-calendar:
-	scripts/tests.sh calendar
+	scripts/test.sh calendar
 
 ## test-util		         : Run util test suite
 .PHONY : test-util
 test-util:
-	scripts/tests.sh util
+	scripts/test.sh util
 
 ## test-rabbitmq	         : Run rabbit test suite
 .PHONY : test-rabbit
 test-rabbit:
-	scripts/tests.sh rabbit
+	scripts/test.sh rabbit
 
 ## test                      : Run all application tests
 .PHONY : test
