@@ -217,3 +217,40 @@ func TestQueueCalStateMessage(t *testing.T) {
 	}
 	err = session.End()
 }
+
+func TestQueueBtcaStateDataMessage(t *testing.T) {
+	assert := assert.New(t)
+	time.Sleep(5 * time.Second) //sleep until rabbit comes online
+	rabbitTestURI := util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
+	cal := NewCalendar(rabbitTestURI)
+	btcAgg := types.BtcAgg{
+		AnchorBtcAggID:   "blah",
+		AnchorBtcAggRoot: "hurr",
+	}
+	err := cal.QueueBtcaStateDataMessage(true, btcAgg)
+	assert.Equal(nil, err, "output of QueueBtcaStateDataMessage should be nil")
+	// Test that object is in proofstate queue
+	session, err := rabbitmq.ConnectAndConsume(rabbitTestURI, "work.proofstate")
+	for m := range session.Msgs {
+		assert.Equal(m.Type, "anchor_btc_agg_batch", "rabbitmq message type should be agg_batch")
+		var stateObj types.BtcAgg
+		err = json.Unmarshal(m.Body, &stateObj)
+		assert.Equal(err, nil, "err upon unmarshalling btcAgg data should be nil")
+		assert.Equal(stateObj.AnchorBtcAggRoot, "hurr", "output btcAgg should match input")
+		m.Ack(false)
+		break
+	}
+	err = session.End()
+	// Test that object is in btctx queue since we're leader
+	session, err = rabbitmq.ConnectAndConsume(rabbitTestURI, "work.btctx")
+	for m := range session.Msgs {
+		assert.Equal(m.Type, "", "rabbitmq message type should be empty string")
+		var stateObj types.BtcAgg
+		err = json.Unmarshal(m.Body, &stateObj)
+		assert.Equal(err, nil, "err upon unmarshalling btcAgg data should be nil")
+		assert.Equal(stateObj.AnchorBtcAggRoot, "hurr", "output btcAgg should match input")
+		m.Ack(false)
+		break
+	}
+	err = session.End()
+}
