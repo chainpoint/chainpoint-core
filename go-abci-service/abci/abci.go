@@ -62,6 +62,7 @@ type AnchorApplication struct {
 	logger     log.Logger
 	calendar   *calendar.Calendar
 	aggregator *aggregator.Aggregator
+	rpc        *RPC
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -85,6 +86,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			RabbitmqURI: config.RabbitmqURI,
 			Logger:      *config.Logger,
 		},
+		rpc: NewRPCClient(config.TendermintRPC),
 	}
 
 	if config.DoCal {

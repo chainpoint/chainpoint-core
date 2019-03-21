@@ -12,8 +12,6 @@ import (
 // AggregateCalendar : Aggregate submitted hashes into a calendar transaction
 func (app *AnchorApplication) AggregateCalendar() error {
 	app.logger.Debug("starting scheduled aggregation")
-	rpc := GetHTTPClient(app.config.TendermintRPC)
-	defer rpc.Stop()
 
 	// Get agg objects
 	aggs := app.aggregator.Aggregate(app.state.LatestNistRecord)
@@ -23,7 +21,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 	if calAgg.CalRoot != "" {
 		app.logger.Debug(fmt.Sprintf("Calendar Root: %s", calAgg.CalRoot))
 
-		result, err := app.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix())
+		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix())
 		if util.LogError(err) != nil {
 			return err
 		}
@@ -59,7 +57,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	app.logger.Debug(fmt.Sprintf("treeData for current anchor: %v", treeData))
 	if treeData.AnchorBtcAggRoot != "" {
 		if iAmLeader {
-			result, err := app.BroadcastTx("BTC-A", treeData.AnchorBtcAggRoot, 2, time.Now().Unix())
+			result, err := app.rpc.BroadcastTx("BTC-A", treeData.AnchorBtcAggRoot, 2, time.Now().Unix())
 			if util.LogError(err) != nil {
 				return err
 			}

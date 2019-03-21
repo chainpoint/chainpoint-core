@@ -130,6 +130,7 @@ init:
 	@sudo chmod 777 ./config/node_1
 	@sudo mkdir -p ./config/node_1/data
 	@sudo chmod 777 ./config/node_1/data
+	@sudo chmod 777 config/node_1/priv_validator_key.json
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 
 ## prune                     : Shutdown and destroy all docker assets

@@ -12,14 +12,33 @@ import (
 	"github.com/tendermint/tendermint/rpc/client"
 )
 
+type RPC struct {
+	client *client.HTTP
+}
+
+// NewRPCClient : Creates a new client connected to a tendermint instance at web socket "tendermintRPC"
+func NewRPCClient(tendermintRPC types.TendermintURI) (rpc *RPC) {
+	return &RPC{
+		client: client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket"),
+	}
+}
+
+// BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
+func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
+	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time}
+	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTx(tx)))
+	if util.LogError(err) != nil {
+		return core_types.ResultBroadcastTx{}, err
+	}
+	return *result, nil
+}
+
 // GetStatus retrieves status of our node. Can't use RPC because remote_ip has buggy encoding.
-func GetStatus(tendermintRPC types.TendermintURI) (core_types.ResultStatus, error) {
-	rpc := GetHTTPClient(tendermintRPC)
-	defer rpc.Stop()
+func (rpc *RPC) GetStatus() (core_types.ResultStatus, error) {
 	if rpc == nil {
 		return core_types.ResultStatus{}, errors.New("rpc failure")
 	}
-	status, err := rpc.Status()
+	status, err := rpc.client.Status()
 	if util.LogError(err) != nil {
 		return core_types.ResultStatus{}, err
 	}
@@ -27,13 +46,11 @@ func GetStatus(tendermintRPC types.TendermintURI) (core_types.ResultStatus, erro
 }
 
 // GetNetInfo retrieves known peer information. Can't use RPC because remote_ip has buggy encoding.
-func GetNetInfo(tendermintRPC types.TendermintURI) (core_types.ResultNetInfo, error) {
-	rpc := GetHTTPClient(tendermintRPC)
-	defer rpc.Stop()
+func (rpc *RPC) GetNetInfo() (core_types.ResultNetInfo, error) {
 	if rpc == nil {
 		return core_types.ResultNetInfo{}, errors.New("rpc failure")
 	}
-	netInfo, err := rpc.NetInfo()
+	netInfo, err := rpc.client.NetInfo()
 	if util.LogError(err) != nil {
 		return core_types.ResultNetInfo{}, err
 	}
@@ -41,10 +58,8 @@ func GetNetInfo(tendermintRPC types.TendermintURI) (core_types.ResultNetInfo, er
 }
 
 //GetTxByInt : Retrieves a tx by its unique integer ID (txInt)
-func GetTxByInt(tendermintRPC types.TendermintURI, txInt int64) (core_types.ResultTxSearch, error) {
-	rpc := GetHTTPClient(tendermintRPC)
-	defer rpc.Stop()
-	txResult, err := rpc.TxSearch(fmt.Sprintf("TxInt=%d", txInt), false, 1, 1)
+func (rpc *RPC) GetTxByInt(txInt int64) (core_types.ResultTxSearch, error) {
+	txResult, err := rpc.client.TxSearch(fmt.Sprintf("TxInt=%d", txInt), false, 1, 1)
 	if util.LogError(err) != nil {
 		return core_types.ResultTxSearch{}, err
 	}
@@ -52,19 +67,12 @@ func GetTxByInt(tendermintRPC types.TendermintURI, txInt int64) (core_types.Resu
 }
 
 // GetAbciInfo retrieves custom ABCI status struct detailing the state of our application
-func GetAbciInfo(tendermintRPC types.TendermintURI) (types.AnchorState, error) {
-	rpc := GetHTTPClient(tendermintRPC)
-	defer rpc.Stop()
-	resp, err := rpc.ABCIInfo()
+func (rpc *RPC) GetAbciInfo() (types.AnchorState, error) {
+	resp, err := rpc.client.ABCIInfo()
 	if err != nil {
 		return types.AnchorState{}, err
 	}
 	var anchorState types.AnchorState
 	util.LogError(json.Unmarshal([]byte(resp.Response.Data), &anchorState))
 	return anchorState, nil
-}
-
-// GetHTTPClient creates an Tendermint RPC client from connection URI/Port details
-func GetHTTPClient(tendermintRPC types.TendermintURI) *client.HTTP {
-	return client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket")
 }

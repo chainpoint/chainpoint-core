@@ -6,24 +6,11 @@ import (
 
 	types2 "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/abci/example/code"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
-
-// BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
-func (app *AnchorApplication) BroadcastTx(txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
-	rpc := GetHTTPClient(app.config.TendermintRPC)
-	defer rpc.Stop()
-	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time}
-	result, err := rpc.BroadcastTxSync([]byte(util.EncodeTx(tx)))
-	if util.LogError(err) != nil {
-		return core_types.ResultBroadcastTx{}, err
-	}
-	return *result, nil
-}
 
 // incrementTxInt: Helper method to increment transaction integer
 func (app *AnchorApplication) incrementTxInt(tags []cmn.KVPair) []cmn.KVPair {
@@ -90,11 +77,9 @@ func (app *AnchorApplication) getTxRange(minTxInt int64, maxTxInt int64) ([]core
 	if maxTxInt <= minTxInt {
 		return nil, errors.New("max of tx range is less than or equal to min")
 	}
-	rpc := GetHTTPClient(app.config.TendermintRPC)
-	defer rpc.Stop()
 	Txs := []core_types.ResultTx{}
 	for i := minTxInt; i <= maxTxInt; i++ {
-		txResult, err := rpc.TxSearch(fmt.Sprintf("TxInt=%d", i), false, 1, 1)
+		txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("TxInt=%d", i), false, 1, 1)
 		if err != nil {
 			return nil, err
 		} else if txResult.TotalCount > 0 {

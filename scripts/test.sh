@@ -52,6 +52,12 @@ function rabbit {
     make down
 }
 
+function monitor {
+    # Monitor
+    echo -e "\n==Testing Monitor=="
+    docker-compose --log-level ERROR run abci go test -v $PROJECT_PATH/go-abci-service/abci -run TestMonitor*
+}
+
 function all {
     echo -e "\n==Test All==\n"
     aggregator

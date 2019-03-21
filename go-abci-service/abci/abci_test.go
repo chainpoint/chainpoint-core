@@ -15,7 +15,7 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 )
 
-func declareABCI() *AnchorApplication {
+func DeclareABCI() *AnchorApplication {
 	doCalLoop := false
 	doAnchorLoop := false
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
@@ -48,7 +48,7 @@ func sendTx(app *AnchorApplication) {
 }
 
 func TestABCIDeclaration(t *testing.T) {
-	app := declareABCI()
+	app := DeclareABCI()
 
 	if app.Db == nil {
 		t.Errorf("App state db did not initialize")
@@ -56,7 +56,7 @@ func TestABCIDeclaration(t *testing.T) {
 }
 
 func TestABCIDeliverTx(t *testing.T) {
-	app := declareABCI()
+	app := DeclareABCI()
 	sendTx(app)
 	if app.state.LatestCalTxInt != app.state.TxInt || app.state.LatestCalTxInt == 0 {
 		t.Errorf("Cal tx not properly delivered and saved in app state")
@@ -64,7 +64,7 @@ func TestABCIDeliverTx(t *testing.T) {
 }
 
 func TestABCIInfo(t *testing.T) {
-	app := declareABCI()
+	app := DeclareABCI()
 	sendTx(app)
 	response := app.Info(types2.RequestInfo{})
 	var state types.AnchorState
@@ -78,7 +78,7 @@ func TestABCIInfo(t *testing.T) {
 }
 
 func TestABCICommit(t *testing.T) {
-	app := declareABCI()
+	app := DeclareABCI()
 	app.Commit()
 	if app.state.Height == 0 {
 		t.Logf("App State: %v\n", app.state)

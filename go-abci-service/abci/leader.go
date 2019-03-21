@@ -16,8 +16,8 @@ func (app *AnchorApplication) ElectLeader() (isLeader bool, leaderID string) {
 	var err error
 	var err2 error
 
-	status, err = GetStatus(app.config.TendermintRPC)
-	netInfo, err2 = GetNetInfo(app.config.TendermintRPC)
+	status, err = app.rpc.GetStatus()
+	netInfo, err2 = app.rpc.GetNetInfo()
 
 	if util.LogError(err) != nil || util.LogError(err2) != nil {
 		return false, ""

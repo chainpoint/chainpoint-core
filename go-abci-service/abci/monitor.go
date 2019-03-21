@@ -63,11 +63,11 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	var hash []byte
 	var btcMonObj types.BtcMonMsg
 	json.Unmarshal(msg.Body, &btcMonObj)
-	result, err := app.BroadcastTx("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
+	result, err := app.rpc.BroadcastTx("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix())
 	if util.LogError(err) != nil {
 		if strings.Contains(err.Error(), "-32603") {
 			app.logger.Error("Another core has already committed a BTCC tx")
-			txResult, err := GetTxByInt(app.config.TendermintRPC, app.state.LatestBtccTxInt)
+			txResult, err := app.rpc.GetTxByInt(app.state.LatestBtccTxInt)
 			if util.LogError(err) != nil && len(txResult.Txs) > 0 {
 				hash = txResult.Txs[0].Hash
 			}
@@ -111,7 +111,7 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	switch msg.Type {
 	case "btctx":
 		time.Sleep(30 * time.Second)
-		app.BroadcastTx("BTC-M", string(msg.Body), 2, time.Now().Unix())
+		app.rpc.BroadcastTx("BTC-M", string(msg.Body), 2, time.Now().Unix())
 		msg.Ack(false)
 		break
 	case "btcmon":
@@ -159,7 +159,7 @@ func (app *AnchorApplication) ReceiveCalRMQ() error {
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
 	for {
-		status, err := GetStatus(app.config.TendermintRPC)
+		status, err := app.rpc.GetStatus()
 		if util.LogError(err) != nil {
 			time.Sleep(5 * time.Second)
 			continue
@@ -181,7 +181,7 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 			app.logger.Error("Unable to obtain new NIST beacon value")
 			return
 		}
-		_, err = app.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
+		_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
 		if util.LogError(err) != nil {
 			app.logger.Debug(fmt.Sprintf("Gossiped new NIST beacon value of %s", nistRecord.ChainpointFormat()))
 		}
