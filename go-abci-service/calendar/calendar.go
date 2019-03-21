@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -20,6 +22,17 @@ import (
 type Calendar struct {
 	RabbitmqURI string
 	Logger      log.Logger
+}
+
+// NewCalendar returns a new Calendar Object with a built-in logger. Useful for testing
+func NewCalendar(rmqUri string) *Calendar {
+	allowLevel, _ := log.AllowLevel(strings.ToLower("ERROR"))
+	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
+	calendar := Calendar{
+		RabbitmqURI: rmqUri,
+		Logger:      tmLogger,
+	}
+	return &calendar
 }
 
 // GenerateCalendarTree creates the MerkleTree for the aggregation roots which will be committed to the calendar

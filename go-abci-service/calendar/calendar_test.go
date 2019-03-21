@@ -1,30 +1,27 @@
 package calendar
 
 import (
-	"os"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/stretchr/testify/assert"
 
 	types2 "github.com/tendermint/tendermint/types"
 
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
-func newCalendar(rmqUri string) *Calendar {
-	allowLevel, _ := log.AllowLevel(strings.ToLower("ERROR"))
-	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
-	calendar := Calendar{
-		RabbitmqURI: rmqUri,
-		Logger:      tmLogger,
-	}
-	return &calendar
-}
-
 func TestEmptyCalTreeGeneration(t *testing.T) {
-	cal := newCalendar("")
+	cal := NewCalendar("")
 	calAggregation := cal.GenerateCalendarTree([]types.Aggregation{})
 	if calAggregation.CalRoot != "" {
 		t.Errorf("Calendar Aggregation Tree should be empty but obtained %s instead", calAggregation.CalRoot)
@@ -32,7 +29,7 @@ func TestEmptyCalTreeGeneration(t *testing.T) {
 }
 
 func TestFullCalTreeGeneration(t *testing.T) {
-	cal := newCalendar("")
+	cal := NewCalendar("")
 	aggregationItems := []types.Aggregation{
 		types.Aggregation{AggID: "f4c5445a-49ca-11e9-b3cf-0242ac190005", AggRoot: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", ProofData: []types.ProofData{
 			types.ProofData{HashID: "d297b590-49ca-11e9-83c4-01bcf13503c2", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
@@ -75,7 +72,7 @@ func TestFullCalTreeGeneration(t *testing.T) {
 }
 
 func TestEmptyAnchorTreeGeneration(t *testing.T) {
-	cal := newCalendar("")
+	cal := NewCalendar("")
 	resultTx := []core_types.ResultTx{}
 	anchorAggregation := cal.AggregateAnchorTx(resultTx)
 	if anchorAggregation.AnchorBtcAggRoot != "" {
@@ -84,7 +81,7 @@ func TestEmptyAnchorTreeGeneration(t *testing.T) {
 }
 
 func TestFullAnchorTreeGeneration(t *testing.T) {
-	cal := newCalendar("")
+	cal := NewCalendar("")
 	aggregationItems := []core_types.ResultTx{
 		core_types.ResultTx{
 			Tx: types2.Tx{0x65, 0x79, 0x4a, 0x30, 0x65, 0x58, 0x42, 0x6c,
@@ -183,4 +180,40 @@ func TestFullAnchorTreeGeneration(t *testing.T) {
 		t.Errorf("Aggregation Roots don't match; expected %s, got %s\n", "d0c045a62fee7310b58c58a7e6e3b5948ef59c8f86454898149cd578609f515f", anchorAggregation.AnchorBtcAggRoot)
 
 	}
+}
+
+func TestQueueCalStateMessage(t *testing.T) {
+	assert := assert.New(t)
+	time.Sleep(5 * time.Second) //sleep until rabbit comes online
+	rabbitTestURI := util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/")
+	hashBytes, err := hex.DecodeString("B52E3F769921B60352F750BFF7998A1D6E3159494C32C639E0431439D418DBBA")
+	assert.Equal(nil, err, "DecodeString of Hash string err should be nil")
+	dataBytes, err := base64.StdEncoding.DecodeString("eyJ0eXBlIjoiQ0FMIiwiZGF0YSI6IjBhYzFkNjU2ZWMwYzVkOWQwYWUxNjM1ZTk3MGJiMTMxZDk4Yjk0MTBjMDNhY2U2OWNmNTEwNjk5ZDJhOWNjYjEiLCJ2ZXJzaW9uIjoyLCJ0aW1lIjoxNTUzMTkwODI1fQ==")
+	assert.Equal(nil, err, "DecodeString of Data string err should be nil")
+	txTm := types.TxTm{
+		Hash: hashBytes,
+		Data: dataBytes,
+	}
+	cal := NewCalendar(rabbitTestURI)
+	calAggregation := types.CalAgg{CalRoot: "80e157fd9029660d2900391b003ee0017671431e5e37fb46dc252877e13355ec", ProofData: []types.CalProofData{
+		types.CalProofData{AggID: "f4c5445a-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
+			types.ProofLineItem{Left: "", Right: "e05d2a67a74278dd4bca5866f4c5a5e66ba7a2217205959bfb27fc0e727aa7d0", Op: ""},
+			types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}},
+		types.CalProofData{AggID: "f4c549c3-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
+			types.ProofLineItem{Left: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", Right: "", Op: ""},
+			types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}}}}
+
+	cal.QueueCalStateMessage(txTm, calAggregation)
+
+	session, err := rabbitmq.ConnectAndConsume(rabbitTestURI, "work.proofstate")
+	for m := range session.Msgs {
+		assert.Equal(m.Type, "cal_batch", "rabbitmq message type should be cal_batch")
+		var stateObj types.CalState
+		err = json.Unmarshal(m.Body, &stateObj)
+		assert.Equal(err, nil, "err upon unmarshalling calState data should be nil")
+		assert.Equal(strings.ToUpper(stateObj.CalID), "B52E3F769921B60352F750BFF7998A1D6E3159494C32C639E0431439D418DBBA", "BTC Tx hash should match between monitor output and rabbit message")
+		m.Ack(false)
+		break
+	}
+	err = session.End()
 }
