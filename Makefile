@@ -66,9 +66,14 @@ test-util:
 test-rabbit:
 	scripts/test.sh rabbit
 
+## test-monitor		         : Run monitor test suite
+.PHONY : test-monitor
+test-monitor:
+	scripts/test.sh monitor
+
 ## test                      : Run all application tests
 .PHONY : test
-test: test-api test-aggregator test-merkletools test-abci test-calendar test-util test-rabbit
+test: test-api test-aggregator test-merkletools test-abci test-calendar test-util test-rabbit test-monitor
 
 ## up                        : Build and start all
 .PHONY : up
