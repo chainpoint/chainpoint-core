@@ -81,21 +81,23 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				app.resetAnchor(startTxRange)
 				return err
 			}
-			BtcA := types.BtcA{
-				AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
-				BtcTxID:          app.state.LatestBtcTx,
-			}
-			BtcAData, err := json.Marshal(BtcA)
-			if util.LogError(err) != nil {
-				app.resetAnchor(startTxRange)
-				return err
-			}
 			app.state.EndCalTxInt = endTxRange
-			result, err := app.rpc.BroadcastTx("BTC-A", string(BtcAData), 2, time.Now().Unix())
-			app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
-			if util.LogError(err) != nil {
-				app.resetAnchor(startTxRange)
-				return err
+			if iAmLeader {
+				BtcA := types.BtcA{
+					AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
+					BtcTxID:          app.state.LatestBtcTx,
+				}
+				BtcAData, err := json.Marshal(BtcA)
+				if util.LogError(err) != nil {
+					app.resetAnchor(startTxRange)
+					return err
+				}
+				result, err := app.rpc.BroadcastTx("BTC-A", string(BtcAData), 2, time.Now().Unix())
+				app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
+				if util.LogError(err) != nil {
+					app.resetAnchor(startTxRange)
+					return err
+				}
 			}
 		}
 		return nil
