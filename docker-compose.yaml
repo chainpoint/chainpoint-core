@@ -38,7 +38,7 @@ services:
     volumes:
     - ./config/node_1:/tendermint/config:Z
     - ./config/node_1/data:/tendermint/data:Z
-    command: sh -c "tendermint node $PEERS --moniker=`hostname` --proxy_app=abci:26658"
+    command: ["sh", "-c", "tendermint node $PEERS --moniker=`hostname` --proxy_app=abci:26658"]
     ports:
     - "26656:26656"
     - "26657:26657"
