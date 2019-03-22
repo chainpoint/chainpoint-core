@@ -6,5 +6,7 @@ COPY node-btc-tx-service/package.json node-btc-tx-service/yarn.lock /home/node/a
 RUN yarn
 
 COPY node-btc-tx-service/server.js /home/node/app/
+COPY node-btc-tx-service/run.sh /home/node/app/
+COPY node-btc-tx-service/env_secrets_expand.sh /home/node/app/
 
-CMD ["yarn", "start"]
+CMD ["./run.sh"]
