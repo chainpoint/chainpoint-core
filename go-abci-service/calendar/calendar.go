@@ -139,7 +139,7 @@ func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) type
 }
 
 // QueueBtcaStateDataMessage notifies proof and btc tx services of BTC-A anchoring
-func (calendar *Calendar) QueueBtcaStateDataMessage(isLeader bool, anchorDataObj types.BtcAgg) error {
+func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) error {
 	treeDataJSON, err := json.Marshal(anchorDataObj)
 	if util.LogError(err) != nil {
 		return err
@@ -148,11 +148,18 @@ func (calendar *Calendar) QueueBtcaStateDataMessage(isLeader bool, anchorDataObj
 	if errBatch != nil {
 		return errBatch
 	}
-	if isLeader {
-		errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btctx", "", treeDataJSON)
-		if errBtcTx != nil {
-			return errBtcTx
-		}
+	return nil
+}
+
+// QueueBtcTxStateDataMessage
+func (calendar *Calendar) QueueBtcTxStateDataMessage(anchorDataObj types.BtcAgg) error {
+	treeDataJSON, err := json.Marshal(anchorDataObj)
+	if util.LogError(err) != nil {
+		return err
+	}
+	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btctx", "", treeDataJSON)
+	if errBtcTx != nil {
+		return errBtcTx
 	}
 	return nil
 }

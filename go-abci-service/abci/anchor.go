@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -39,43 +40,72 @@ func (app *AnchorApplication) AggregateCalendar() error {
 
 // AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
-	app.logger.Debug(fmt.Sprintf("starting scheduled anchor for tx ranges %d to %d", startTxRange, endTxRange))
+	app.logger.Debug(fmt.Sprintf("starting scheduled anchor period for tx ranges %d to %d", startTxRange, endTxRange))
 
+	// elect leader to do the actual anchoring
 	iAmLeader, leaderID := app.ElectLeader()
 	if leaderID == "" {
 		return errors.New("Leader election error")
 	}
-
 	app.logger.Debug(fmt.Sprintf("Leader: %s", leaderID))
-	/* Get CAL transactions between the latest BTCA tx and the current latest tx */
+
+	// Get CAL transactions between the latest BTCA tx and the current latest tx
 	txLeaves, err := app.getTxRange(startTxRange, endTxRange)
 	if util.LogError(err) != nil {
 		return err
 	}
+
 	// Aggregate all txs in rage into a new merkle tree in prep for BTC anchoring
 	treeData := app.calendar.AggregateAnchorTx(txLeaves)
 	app.logger.Debug(fmt.Sprintf("treeData for current anchor: %v", treeData))
+
+	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
 		if iAmLeader {
-			result, err := app.rpc.BroadcastTx("BTC-A", treeData.AnchorBtcAggRoot, 2, time.Now().Unix())
+			err := app.calendar.QueueBtcTxStateDataMessage(treeData)
 			if util.LogError(err) != nil {
+				app.resetAnchor(startTxRange)
 				return err
 			}
-			app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
 		}
-		app.state.EndCalTxInt = endTxRange
-		err := app.calendar.QueueBtcaStateDataMessage(iAmLeader, treeData)
-		if util.LogError(err) != nil {
-			return err
-		}
-		time.Sleep(60 * time.Second) // wait for a BTC-M tx
-		// A BTC-M tx should have hit by now.
+		app.state.LatestBtcaHeight = app.state.Height //So no one will try to re-anchor while processing the btc tx
+
+		time.Sleep(120 * time.Second) // wait for a BTC-M tx
+
+		// A BTC-M tx should have hit by now
 		if app.state.LatestBtcmTxInt < startTxRange { //If not, it'll be less than the start of the current range.
-			app.logger.Debug("Anchoring failed, restarting anchor epoch")
-			app.state.BeginCalTxInt = startTxRange
-			app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
+			app.resetAnchor(startTxRange)
+		} else {
+			err = app.calendar.QueueBtcaStateDataMessage(treeData)
+			if util.LogError(err) != nil {
+				app.resetAnchor(startTxRange)
+				return err
+			}
+			BtcA := types.BtcA{
+				AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
+				BtcTxID:          app.state.LatestBtcTx,
+			}
+			BtcAData, err := json.Marshal(BtcA)
+			if util.LogError(err) != nil {
+				app.resetAnchor(startTxRange)
+				return err
+			}
+			app.state.EndCalTxInt = endTxRange
+			result, err := app.rpc.BroadcastTx("BTC-A", string(BtcAData), 2, time.Now().Unix())
+			app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
+			if util.LogError(err) != nil {
+				app.resetAnchor(startTxRange)
+				return err
+			}
 		}
 		return nil
 	}
 	return errors.New("no transactions to aggregate")
+}
+
+// resetAnchor ensures that anchoring will begin again in the next block
+func (app *AnchorApplication) resetAnchor(startTxRange int64) {
+	app.logger.Debug("Anchoring failed, restarting anchor epoch")
+	app.state.BeginCalTxInt = startTxRange
+	app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
 }

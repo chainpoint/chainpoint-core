@@ -67,6 +67,7 @@ func (aggregator *Aggregator) Aggregate(nist string) (agg []types.Aggregation) {
 					break //exit
 				case hash := <-session.Msgs:
 					msgStructSlice = append(msgStructSlice, hash)
+					aggregator.Logger.Info(fmt.Sprintf("Hash: %s\n", string(hash.Body)))
 					//create new agg roots under heavy load
 					if len(msgStructSlice) > hashBatchSize {
 						if agg := aggregator.ProcessAggregation(msgStructSlice, nist); agg.AggRoot != "" {
