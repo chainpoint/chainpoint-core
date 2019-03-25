@@ -38,21 +38,20 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.state.LatestCalTxInt = app.state.TxInt
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
+	case "BTC-M":
+		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
+		app.state.LatestBtcmHeight = app.state.Height + 1
+		tags := app.incrementTxInt(tags)
+		app.state.LatestBtcmTxInt = app.state.TxInt
+		app.ConsumeBtcTxMsg([]byte(tx.Data))
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		break
 	case "BTC-A":
 		app.state.LatestBtcaTx = rawTx
 		app.state.LatestBtcaHeight = app.state.Height + 1
 		tags := app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
 		app.state.BeginCalTxInt = app.state.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "BTC-M":
-		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
-		app.state.LatestBtcmTx = rawTx
-		app.state.LatestBtcmHeight = app.state.Height + 1
-		tags := app.incrementTxInt(tags)
-		app.state.LatestBtcmTxInt = app.state.TxInt
-		app.ConsumeBtcTxMsg([]byte(tx.Data))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-C":

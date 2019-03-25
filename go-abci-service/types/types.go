@@ -32,7 +32,7 @@ type AnchorState struct {
 	LatestBtcaTx     []byte `json:"latest_btca"`
 	LatestBtcaTxInt  int64  `json:"latest_btca_int"`
 	LatestBtcaHeight int64  `json:"latest_btca_height"`
-	LatestBtcmTx     []byte `json:"latest_btcm"`
+	LatestBtcTx      string `json:"latest_btc"`
 	LatestBtcmTxInt  int64  `json:"latest_btcm_int"`
 	LatestBtcmHeight int64  `json:"latest_btcm_height"`
 	LatestBtccTx     []byte `json:"latest_btcc"`
@@ -47,6 +47,12 @@ type Tx struct {
 	Data    string `json:"data"`
 	Version int64  `json:"version"`
 	Time    int64  `json:"time"`
+}
+
+// BtcA struct will be included in the BTC-A tx data field
+type BtcA struct {
+	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
+	BtcTxID          string `json:"btctx_id"`
 }
 
 // TxTm holds result of submitting a CAL transaction (needed in order to get Hash)

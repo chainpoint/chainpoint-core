@@ -23,6 +23,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	if err := json.Unmarshal(msgBytes, &btcTxObj); err != nil {
 		return util.LogError(err)
 	}
+	app.state.LatestBtcTx = btcTxObj.BtcTxID // Update app state with txID so we can broadcast BTC-A
 	stateObj := types.BtcTxProofState{
 		AnchorBtcAggID: btcTxObj.AnchorBtcAggID,
 		BtcTxID:        btcTxObj.BtcTxID,
