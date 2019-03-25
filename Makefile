@@ -78,42 +78,43 @@ test: test-api test-aggregator test-merkletools test-abci test-calendar test-uti
 ## up                        : Build and start all
 .PHONY : up
 up: pull 
-	docker-compose up -d
+	docker stack deploy -c docker-compose.yaml chainpoint-core
 
 ## up-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : up-no-build
 up-no-build: 
-	docker-compose up -d --no-build
+	docker stack deploy -c docker-compose.yaml chainpoint-core
 
 ## dev                       : Build and start all
 .PHONY : dev
 dev: build 
-	docker-compose up -d
+	docker stack deploy -c docker-compose.yaml chainpoint-core
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build
 dev-no-build: 
-	docker-compose up -d --no-build
+	docker stack deploy -c docker-compose.yaml chainpoint-core
 
 ## down                      : Shutdown Application
 .PHONY : down
 down:
-	docker-compose down
+	docker stack rm chainpoint-core
 
 ## ps                        : View running processes
 .PHONY : ps
 ps:
-	docker-compose ps
+	docker stack ls
 
 ## restart                        : Restart a dev mode container
 .PHONY : restart
 restart:
-	docker-compose up -d --build $(app)
+	docker-compose build $(app)
+	docker service update --force $(app)
 
 ## logs                      : Tail application logs
 .PHONY : logs
 logs:
-	docker-compose logs -f
+	docker service logs -f 
 
 ## clean                     : Shutdown and destroy all local application data
 .PHONY : clean
@@ -125,16 +126,29 @@ clean: down
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 	@sudo docker system prune --volumes -f
 
+## init-swarm               : Create data folder with proper permissions
+.PHONY : init-swarm
+init-swarm:
+	@docker swarm init || true
+
+## init-secrets             : Create data folder with proper permissions
+.PHONY : init-secrets
+init-secrets: init-swarm
+	@read -p "What is your Bitcoin WIF (private key for your HOT WALLET anchoring account)? " bitcoin_wif
+	@read -p "What is your Infura API Key? " infura_api_key
+	@echo $bitcoin_wif | docker secret create BITCOIN_WIF -
+	@echo $infura_api_key | docker secret create ETH_INFURA_API_KEY -
+
 ## init                     : Create data folder with proper permissions
 .PHONY : init
-init:
+init: init-swarm
 	@sudo mkdir -p ./data
 	@sudo mkdir -p ./config/node_1
 	@sudo chmod 777 ./config/node_1
-	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config tendermint/tendermint init
-	@sudo chmod 777 ./config/node_1
 	@sudo mkdir -p ./config/node_1/data
 	@sudo chmod 777 ./config/node_1/data
+	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config  -v $(shell pwd)/config/node_1/data:/tendermint/data tendermint/tendermint init
+	@sudo chmod 777 ./config/node_1
 	@sudo chmod 777 config/node_1/priv_validator_key.json
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 

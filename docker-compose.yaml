@@ -3,6 +3,12 @@ version: '3.7'
 networks:
   chainpoint:
 
+secrets:
+  BITCOIN_WIF:
+    external: true
+  ETH_INFURA_API_KEY:
+    external: true
+
 services:
 
   abci:
@@ -14,6 +20,7 @@ services:
     - rabbitmq
     environment:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
       ANCHOR: "true"
@@ -38,7 +45,7 @@ services:
     volumes:
     - ./config/node_1:/tendermint/config:Z
     - ./config/node_1/data:/tendermint/data:Z
-    command: ["sh", "-c", "tendermint node $PEERS --moniker=`hostname` --proxy_app=abci:26658"]
+    command: "node $PEERS --moniker=`hostname` --proxy_app=abci:26658"
     ports:
     - "26656:26656"
     - "26657:26657"
@@ -157,11 +164,13 @@ services:
       - rabbitmq
     networks:
       - chainpoint
+    secrets:
+      - BITCOIN_WIF
     environment:
       NODE_ENV: production
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
-      BITCOIN_WIF: ${BITCOIN_WIF}
+      BITCOIN_WIF: DOCKER-SECRET->BITCOIN_WIF
       USE_BTCETH_TESTNET: "true"
       REDIS_CONNECT_URIS: "redis://redis:6379"
 
@@ -287,4 +296,6 @@ services:
       - "5433:5432"
     networks:
       - chainpoint
+
+
 
