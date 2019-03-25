@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -95,6 +96,10 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				result, err := app.rpc.BroadcastTx("BTC-A", string(BtcAData), 2, time.Now().Unix())
 				app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
 				if util.LogError(err) != nil {
+					if strings.Contains(err.Error(), "-32603") {
+						app.logger.Debug(fmt.Sprintf("BTC-A block already committed; Leader is %s", leaderID))
+						return err
+					}
 					app.resetAnchor(startTxRange)
 					return err
 				}
