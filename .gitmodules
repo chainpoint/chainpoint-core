@@ -1,0 +1,3 @@
+[submodule "go-abci-service/ethcontracts"]
+	path = go-abci-service/ethcontracts
+	url = https://github.com/chainpoint/go-hydra-smart-contract-files.git
