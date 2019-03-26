@@ -114,7 +114,7 @@ restart:
 ## logs                      : Tail application logs
 .PHONY : logs
 logs:
-	docker service logs -f 
+	docker service logs -f
 
 ## clean                     : Shutdown and destroy all local application data
 .PHONY : clean
