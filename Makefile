@@ -34,7 +34,7 @@ pull:
 ## test-api                  : Run API test suite with Mocha
 .PHONY : test-api
 test-api: 
-	docker-compose up --build api-test
+	docker-compose up-swarm --build api-test
 
 ## test-aggregator           : Run aggregator test suite
 .PHONY : test-aggregator
@@ -77,37 +77,67 @@ test: test-api test-aggregator test-merkletools test-abci test-calendar test-uti
 
 ## up                        : Build and start all
 .PHONY : up
-up: pull 
-	docker stack deploy -c docker-compose.yaml chainpoint-core
+up: pull
+	docker-compose up -d
 
 ## up-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : up-no-build
-up-no-build: 
-	docker stack deploy -c docker-compose.yaml chainpoint-core
+up-no-build:
+	docker-compose up -d --no-build
 
 ## dev                       : Build and start all
 .PHONY : dev
-dev: build 
-	docker stack deploy -c docker-compose.yaml chainpoint-core
+dev: build
+	docker-compose up -d
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build
-dev-no-build: 
-	docker stack deploy -c docker-compose.yaml chainpoint-core
+dev-no-build:
+	docker-compose up -d --no-build
 
 ## down                      : Shutdown Application
 .PHONY : down
 down:
-	docker stack rm chainpoint-core
+	docker-compose down
 
 ## ps                        : View running processes
 .PHONY : ps
 ps:
-	docker stack ls
+	docker-compose ps
 
 ## restart                        : Restart a dev mode container
 .PHONY : restart
 restart:
+	docker-compose up -d --build $(app)
+
+## up-swarm                        : Build and start all
+.PHONY : up-swarm
+up-swarm: pull 
+	docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## up-swarm-no-build              : Startup swarm without performing builds, rely on pull of images.
+.PHONY : up-swarm-no-build
+up-swarm-no-build: 
+	docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## dev-swarm                       : Build and start all
+.PHONY : dev-swarm
+dev-swarm: build 
+	docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## dev-swarm-no-build              : Startup swarm without performing builds, rely on pull of images.
+.PHONY : dev-swarm-no-build
+dev-swarm-no-build: 
+	docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## down-swarm                      : Shutdown Application
+.PHONY : down-swarm
+down-swarm:
+	docker stack rm chainpoint-core
+
+## restart-swarm                        : Restart a dev-swarm mode container
+.PHONY : restart-swarm
+restart-swarm:
 	docker-compose build $(app)
 	docker service update --force $(app)
 
@@ -141,7 +171,7 @@ init-secrets: init-swarm
 
 ## init                     : Create data folder with proper permissions
 .PHONY : init
-init: init-swarm
+init:
 	@sudo mkdir -p ./data
 	@sudo mkdir -p ./config/node_1
 	@sudo chmod 777 ./config/node_1
@@ -170,7 +200,7 @@ prune-node-modules:
 burn: clean prune
 	@echo ""
 	@echo "****************************************************************************"
-	@echo "Services stopped, and data pruned. Run 'make up' or 'make up-no-build' now."
+	@echo "Services stopped, and data pruned. Run 'make up-swarm' or 'make up-swarm-no-build' now."
 	@echo "****************************************************************************"
 
 ## yarn                      : Install Node Javascript dependencies
@@ -181,13 +211,13 @@ yarn:
 ## postgres                  : Connect to the local PostgreSQL with `psql`	
 	.PHONY : postgres
 	postgres:
-	@docker-compose up -d postgres
+	@docker-compose up-swarm -d postgres
 	@sleep 6
 	@docker exec -it postgres-core psql -U chainpoint
 
 ## redis                     : Connect to the local Redis with `redis-cli`
 .PHONY : redis
 redis:
-	@docker-compose up -d redis
+	@docker-compose up-swarm -d redis
 	@sleep 2
 	@docker exec -it redis-core redis-cli
