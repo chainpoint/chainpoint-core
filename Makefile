@@ -34,7 +34,7 @@ pull:
 ## test-api                  : Run API test suite with Mocha
 .PHONY : test-api
 test-api: 
-	docker-compose up-swarm --build api-test
+	docker-compose up --build api-test
 
 ## test-aggregator           : Run aggregator test suite
 .PHONY : test-aggregator
