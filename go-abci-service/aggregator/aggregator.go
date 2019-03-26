@@ -27,6 +27,7 @@ const msgType = "aggregator"
 const aggQueueIn = "work.agg"
 const proofStateQueueOut = "work.proofstate"
 
+// Aggregator : object includes rabbitURI and Logger
 type Aggregator struct {
 	RabbitmqURI string
 	Logger      log.Logger

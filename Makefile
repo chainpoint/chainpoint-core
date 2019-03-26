@@ -77,22 +77,22 @@ test: test-api test-aggregator test-merkletools test-abci test-calendar test-uti
 
 ## up                        : Build and start all
 .PHONY : up
-up: pull 
+up: pull
 	docker-compose up -d
 
 ## up-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : up-no-build
-up-no-build: 
+up-no-build:
 	docker-compose up -d --no-build
 
 ## dev                       : Build and start all
 .PHONY : dev
-dev: build 
+dev: build
 	docker-compose up -d
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build
-dev-no-build: 
+dev-no-build:
 	docker-compose up -d --no-build
 
 ## down                      : Shutdown Application
@@ -110,10 +110,41 @@ ps:
 restart:
 	docker-compose up -d --build $(app)
 
+## up-swarm                        : Build and start all
+.PHONY : up-swarm
+up-swarm: pull 
+	docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## up-swarm-no-build              : Startup swarm without performing builds, rely on pull of images.
+.PHONY : up-swarm-no-build
+up-swarm-no-build: 
+	docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## dev-swarm                       : Build and start all
+.PHONY : dev-swarm
+dev-swarm: build 
+	docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## dev-swarm-no-build              : Startup swarm without performing builds, rely on pull of images.
+.PHONY : dev-swarm-no-build
+dev-swarm-no-build: 
+	docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## down-swarm                      : Shutdown Application
+.PHONY : down-swarm
+down-swarm:
+	docker stack rm chainpoint-core
+
+## restart-swarm                        : Restart a dev-swarm mode container
+.PHONY : restart-swarm
+restart-swarm:
+	docker-compose build $(app)
+	docker service update --force $(app)
+
 ## logs                      : Tail application logs
 .PHONY : logs
 logs:
-	docker-compose logs -f
+	docker service logs -f
 
 ## clean                     : Shutdown and destroy all local application data
 .PHONY : clean
@@ -125,16 +156,29 @@ clean: down
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 	@sudo docker system prune --volumes -f
 
+## init-swarm               : Create data folder with proper permissions
+.PHONY : init-swarm
+init-swarm:
+	@docker swarm init || true
+
+## init-secrets             : Create data folder with proper permissions
+.PHONY : init-secrets
+init-secrets: init-swarm
+	@read -p "What is your Bitcoin WIF (private key for your HOT WALLET anchoring account)? " bitcoin_wif
+	@read -p "What is your Infura API Key? " infura_api_key
+	@echo $bitcoin_wif | docker secret create BITCOIN_WIF -
+	@echo $infura_api_key | docker secret create ETH_INFURA_API_KEY -
+
 ## init                     : Create data folder with proper permissions
 .PHONY : init
 init:
 	@sudo mkdir -p ./data
 	@sudo mkdir -p ./config/node_1
 	@sudo chmod 777 ./config/node_1
-	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config tendermint/tendermint init
-	@sudo chmod 777 ./config/node_1
 	@sudo mkdir -p ./config/node_1/data
 	@sudo chmod 777 ./config/node_1/data
+	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config  -v $(shell pwd)/config/node_1/data:/tendermint/data tendermint/tendermint init
+	@sudo chmod 777 ./config/node_1
 	@sudo chmod 777 config/node_1/priv_validator_key.json
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 
@@ -156,7 +200,7 @@ prune-node-modules:
 burn: clean prune
 	@echo ""
 	@echo "****************************************************************************"
-	@echo "Services stopped, and data pruned. Run 'make up' or 'make up-no-build' now."
+	@echo "Services stopped, and data pruned. Run 'make up-swarm' or 'make up-swarm-no-build' now."
 	@echo "****************************************************************************"
 
 ## yarn                      : Install Node Javascript dependencies
@@ -167,13 +211,13 @@ yarn:
 ## postgres                  : Connect to the local PostgreSQL with `psql`	
 	.PHONY : postgres
 	postgres:
-	@docker-compose up -d postgres
+	@docker-compose up-swarm -d postgres
 	@sleep 6
 	@docker exec -it postgres-core psql -U chainpoint
 
 ## redis                     : Connect to the local Redis with `redis-cli`
 .PHONY : redis
 redis:
-	@docker-compose up -d redis
+	@docker-compose up-swarm -d redis
 	@sleep 2
 	@docker exec -it redis-core redis-cli

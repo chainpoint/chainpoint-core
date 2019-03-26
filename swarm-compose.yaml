@@ -1,0 +1,300 @@
+version: '3.7'
+
+networks:
+  chainpoint:
+
+secrets:
+  BITCOIN_WIF:
+    external: true
+  ETH_INFURA_API_KEY:
+    external: true
+
+services:
+
+  abci:
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.abci
+    depends_on:
+    - rabbitmq
+    environment:
+      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
+      TENDERMINT_HOST: tendermint
+      TENDERMINT_PORT: 26657
+      ANCHOR: "true"
+      AGGREGATE: "true"
+      AGGREGATION_THREADS: "4"
+      HASHES_PER_MERKLE_TREE: "200"
+      ANCHOR_BLOCK_INTERVAL: "3"
+      LOG_LEVEL: "DEBUG"
+    ports:
+    - "26658"
+    command: bash -c "abci-service"
+    networks:
+    - chainpoint
+
+  tendermint:
+    depends_on:
+    - abci
+    image: tierion/tendermint-cleveldb:latest
+    entrypoint: ["sh", "-c", "tendermint node $PEERS --moniker=`hostname` --proxy_app=abci:26658"]
+    environment:
+      PEERS: ${PEERS}
+    volumes:
+    - ./config/node_1:/tendermint/config:Z
+    - ./config/node_1/data:/tendermint/data:Z
+    ports:
+    - "26656:26656"
+    - "26657:26657"
+    networks:
+    - chainpoint
+
+
+  # Node.js Base Image
+  # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
+  #
+  base:
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node-base
+
+  # NGINX Proxy
+  #
+  # An auto-scaling reverse proxy that reconfigures
+  # itself based on which API services are available
+  # for requests.
+  #
+  # See : https://github.com/jwilder/nginx-proxy
+  #
+  # SCALED : false
+  #
+  # PORTS:
+  # http : 80
+  #
+  nginx-proxy:
+    restart: always
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy-core
+    ports:
+    - "80:80"
+    volumes:
+    - /var/run/docker.sock:/tmp/docker.sock:ro
+    environment:
+      NODE_ENV: development
+      DEFAULT_HOST: api.local
+    depends_on:
+    - api
+    networks:
+    - chainpoint
+
+  # HTTP API
+  # Restify Node public web API service.
+  #
+  # Note : You don't access this directly, but through
+  # the nginx-proxy load balancer. This service cannot be
+  # given an explicit container_name since it needs
+  # to be scalable with 'docker-compose scale api=5'
+  #
+  # The VIRTUAL_HOST env var is used by the nginx-proxy
+  # to rebuild its reverse proxy host config and must be
+  # passed in by the HTTP client:
+  #
+  # Start With:
+  # docker-compose up -d --build nginx-proxy
+  #
+  # curl -i http://127.0.0.1/
+  #
+  # PORTS : 8080
+  #
+  api:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    depends_on:
+      - base
+      - redis
+      - rabbitmq
+      - postgres
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: development
+      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
+      VIRTUAL_HOST: api.local
+      TENDERMINT_URI: http://tendermint:26657
+
+  api-test:
+    container_name: node-api-service-test
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service-test:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api-test
+    depends_on:
+      - base
+      - redis
+      - rabbitmq
+      - postgres
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: test
+      CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
+      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
+      VIRTUAL_HOST: api.local
+
+  # Bitcoin Transmit
+  # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
+  #
+  btc-tx:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.btc-tx
+    container_name: btc-tx-core
+    depends_on:
+      - base
+      - rabbitmq
+    networks:
+      - chainpoint
+    secrets:
+      - BITCOIN_WIF
+    environment:
+      NODE_ENV: production
+      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
+      BITCOIN_WIF: DOCKER-SECRET->BITCOIN_WIF
+      USE_BTCETH_TESTNET: "true"
+      REDIS_CONNECT_URIS: "redis://redis:6379"
+
+  # Bitcoin Transmit MonitorF
+  # Monitor and report on the state of BTC transactions this app has submitted.
+  #
+  btc-mon:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-mon-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.btc-mon
+    container_name: btc-mon-core
+    depends_on:
+      - base
+      - rabbitmq
+      - redis
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: development
+      INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
+
+  # Proof State
+  # Encapsulates all persistent data storage for partial proof data.
+  #
+  proof-state:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.proof-state
+    depends_on:
+      - base
+      - rabbitmq
+      - postgres
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: development
+      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+
+  # Proof Generation
+  # Responsible for constructing, signing, and validating Chainpoint proofs
+  # for Calendar, Bitcoin, and Ethereum attestation levels.
+  #
+  proof-gen:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.proof-gen
+    depends_on:
+      - base
+      - rabbitmq
+      - postgres
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: development
+
+  # RabbitMQ
+  #
+  # Admin Page (username:pass)
+  # http://127.0.0.1:15673/ (rabbitmq:rabbitmq)
+  #
+  # LOCAL PORTS:
+  # amqp : 5673 (+1 over default)
+  # http : 15673 (+1 over default)
+  #
+  rabbitmq:
+    restart: always
+    image: rabbitmq:3.6.11-management-alpine
+    container_name: rabbitmq-core
+    hostname: rabbitmq
+    ports:
+    - 5673:5672
+    - 15673:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: chainpoint
+      RABBITMQ_DEFAULT_PASS: chainpoint
+    networks:
+      - chainpoint
+
+  # Redis
+  #
+  redis:
+    restart: always
+    image: redis:4.0.9-alpine
+    container_name: redis-core
+    ports:
+      - "6382:6379"
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./data/redis:/data
+    networks:
+      - chainpoint
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+
+  # Postgres	
+  #
+  # See : https://hub.docker.com/_/postgres/
+  # Note: Connect locally on OS X:
+  #
+  # Installs local client 'psql'
+  #   brew install postgres
+  #
+  # Connect (uname/pass chainpoint/chainpoint):
+  #   psql -h 127.0.0.1 -U chainpoint
+  #
+  postgres:
+    restart: always
+    image: postgres:11.2-alpine
+    container_name: postgres-core
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: chainpoint
+      POSTGRES_PASSWORD: chainpoint
+    ports:
+      - "5433:5432"
+    networks:
+      - chainpoint
+
+
+
