@@ -28,6 +28,7 @@ const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
+const stakedNode = require('./lib/models/StakedNode.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 
 const bunyan = require('bunyan')
@@ -109,7 +110,7 @@ server.get({ path: '/', version: '1.0.0' }, root.getV1)
  * Opens a Postgres connection
  **/
 async function openPostgresConnectionAsync() {
-  let sqlzModelArray = [proof]
+  let sqlzModelArray = [proof, stakedNode]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.models[0])
 }
