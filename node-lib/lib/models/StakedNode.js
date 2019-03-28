@@ -47,16 +47,6 @@ function defineFor (sqlz) {
                 field: 'public_ip',
                 allowNull: true
             },
-            pubKey: {
-                comment: 'The public key for this Node.',
-                type: Sequelize.STRING,
-                validate: {
-                    is: ['^[a-f0-9]{64}$', 'i']
-                },
-                field: 'public_key',
-                allowNull: false,
-                unique: true
-            },
             amountStaked: {
                 comment: 'The balance of token credit they have staked against their node.',
                 type: Sequelize.DOUBLE,
@@ -72,22 +62,22 @@ function defineFor (sqlz) {
                 field: 'stake_expiration',
                 allowNull: true
             },
-            lastTokenHash: {
-                comment: 'The hash of the last expired auth token',
+            activeTokenHash: {
+                comment: 'The hash of the active expired auth token',
                 type: Sequelize.STRING,
                 validate: {
                     isAlphanumeric: true
                 },
-                field: 'last_token_hash',
+                field: 'active_token_hash',
                 allowNull: true
             },
-            lastTokenTimestamp: {
+            activeTokenTimestamp: {
                 comment: 'The timestamp in unix epoch time of the last auth token',
                 type: Sequelize.INTEGER,
                 validate: {
                     isInt: true
                 },
-                field: 'last_token_timestamp',
+                field: 'active_token_timestamp',
                 allowNull: true
             },
             balance: {
@@ -97,24 +87,6 @@ function defineFor (sqlz) {
                     isInt: true
                 },
                 field: 'balance',
-                allowNull: true
-            },
-            createdAt: {
-                comment: 'The unix epoch time of creation in seconds',
-                type: Sequelize.INTEGER,
-                validate: {
-                    isInt: true
-                },
-                field: 'created_at',
-                allowNull: true
-            },
-            updatedAt: {
-                comment: 'The unix epoch time of an update in seconds',
-                type: Sequelize.INTEGER,
-                validate: {
-                    isInt: true
-                },
-                field: 'updated_at',
                 allowNull: true
             }
         },
