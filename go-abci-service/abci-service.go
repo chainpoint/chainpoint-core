@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -20,6 +23,7 @@ func main() {
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
+	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
 	tendermintRPC := types.TendermintURI{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "tendermint"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
@@ -38,6 +42,15 @@ func main() {
 		AnchorInterval: anchorInterval,
 		Logger:         &tmLogger,
 	}
+
+	_, err := ethcontracts.NewClient(fmt.Sprintf("https://ropsten.infura.io/%s", ethInfuraApiKey),
+		"0xC58f7d9a97bE0aC0084DBb2011Da67f36A0deD9F",
+		"0x5AfdE9fFFf63FF1f883405615965422889B8dF29",
+		tmLogger)
+	/*	util.LoggerError(tmLogger, err)
+		nodesStaked, err := ethClient.GetPastNodesStakedEvents()
+		util.LoggerError(tmLogger, err)
+		fmt.Printf("Node Stake Events: %#v\n", nodesStaked)*/
 
 	//Instantiate ABCI application
 	app := abci.NewAnchorApplication(config)

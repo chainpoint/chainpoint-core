@@ -9,6 +9,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/tendermint/tendermint/libs/log"
+
 	"github.com/google/uuid"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -18,6 +20,14 @@ import (
 func LogError(err error) error {
 	if err != nil {
 		fmt.Println(err)
+	}
+	return err
+}
+
+// LoggerError : Log error if it exists using a logger
+func LoggerError(logger log.Logger, err error) error {
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error: %s", err.Error()))
 	}
 	return err
 }

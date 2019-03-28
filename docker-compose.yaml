@@ -15,6 +15,7 @@ services:
     - rabbitmq
     environment:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
       ANCHOR: "true"
