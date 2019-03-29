@@ -49,7 +49,7 @@ function defineFor (sqlz) {
             },
             amountStaked: {
                 comment: 'The balance of token credit they have staked against their node.',
-                type: Sequelize.DOUBLE,
+                type: Sequelize.BIGINT,
                 field: 'amount_staked',
                 defaultValue: 0
             },
@@ -87,6 +87,15 @@ function defineFor (sqlz) {
                     isInt: true
                 },
                 field: 'balance',
+                allowNull: true
+            },
+            blockNumber: {
+                comment: 'The eth block number where this info was valid. Used for versioning node stake updates',
+                type: Sequelize.BIGINT, // is 64 bit in CockroachDB
+                validate: {
+                    isInt: true
+                },
+                field: 'block_number',
                 allowNull: true
             }
         },

@@ -18,6 +18,7 @@ services:
       dockerfile: docker/Dockerfile.abci
     depends_on:
     - rabbitmq
+    - api
     environment:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY

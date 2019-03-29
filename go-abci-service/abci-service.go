@@ -1,12 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -28,6 +25,11 @@ func main() {
 		TMServer: util.GetEnv("TENDERMINT_HOST", "tendermint"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 	}
+	POSTGRES_USER := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
+	POSTGRES_PW := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")
+	POSTGRES_HOST := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
+	POSTGRES_PORT := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
+	POSTGRES_DB := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
@@ -43,14 +45,44 @@ func main() {
 		Logger:         &tmLogger,
 	}
 
-	_, err := ethcontracts.NewClient(fmt.Sprintf("https://ropsten.infura.io/%s", ethInfuraApiKey),
-		"0xC58f7d9a97bE0aC0084DBb2011Da67f36A0deD9F",
-		"0x5AfdE9fFFf63FF1f883405615965422889B8dF29",
-		tmLogger)
-	/*	util.LoggerError(tmLogger, err)
+	/*	pgClient, err := postgres.NewPG(POSTGRES_USER, POSTGRES_PW, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, tmLogger)
+		util.LoggerError(tmLogger, err)
+		ethClient, err := ethcontracts.NewClient(fmt.Sprintf("https://ropsten.infura.io/%s", ethInfuraApiKey),
+			"0xC58f7d9a97bE0aC0084DBb2011Da67f36A0deD9F",
+			"0x5AfdE9fFFf63FF1f883405615965422889B8dF29",
+			tmLogger)
+		util.LoggerError(tmLogger, err)
 		nodesStaked, err := ethClient.GetPastNodesStakedEvents()
 		util.LoggerError(tmLogger, err)
-		fmt.Printf("Node Stake Events: %#v\n", nodesStaked)*/
+		for _, node := range nodesStaked {
+			newNode := types.Node{
+				EthAddr:         node.Sender.Hex(),
+				PublicIP:        sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+				AmountStaked:    sql.NullInt64{Int64: node.AmountStaked.Int64(), Valid: true},
+				StakeExpiration: sql.NullInt64{Int64: node.Duration.Int64(), Valid: true},
+				BlockNumber:     sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+			}
+			inserted, err := pgClient.NodeUpsert(newNode)
+			util.LoggerError(tmLogger, err)
+			fmt.Printf("Inserted for %#v: %t\n", newNode, inserted)
+		}
+		nodesStakedUpdated, err := ethClient.GetPastNodesStakeUpdatedEvents()
+		util.LoggerError(tmLogger, err)
+		for _, node := range nodesStakedUpdated {
+			newNode := types.Node{
+				EthAddr:         node.Sender.Hex(),
+				PublicIP:        sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+				AmountStaked:    sql.NullInt64{Int64: node.AmountStaked.Int64(), Valid: true},
+				StakeExpiration: sql.NullInt64{Int64: node.Duration.Int64(), Valid: true},
+				BlockNumber:     sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+			}
+			inserted, err := pgClient.NodeUpsert(newNode)
+			util.LoggerError(tmLogger, err)
+			fmt.Printf("Inserted Update for %#v: %t\n", newNode, inserted)
+		}
+		retrievedNode, err := pgClient.GetNodeByEthAddr("0xc6a7897cc8F2e3B294844A07165573C6194324aB")
+		util.LoggerError(tmLogger, err)
+		fmt.Printf("Retrieved for %#v\n", retrievedNode)*/
 
 	//Instantiate ABCI application
 	app := abci.NewAnchorApplication(config)

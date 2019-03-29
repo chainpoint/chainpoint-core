@@ -1,6 +1,8 @@
 package types
 
 import (
+	"database/sql"
+
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -176,4 +178,16 @@ type ProofLineItem struct {
 type JSProof struct {
 	Left  string `json:"left,omitempty"`
 	Right string `json:"right,omitempty"`
+}
+
+// Node : Used to represent Node info to and from postgres
+type Node struct {
+	EthAddr              string
+	PublicIP             sql.NullString
+	AmountStaked         sql.NullInt64
+	StakeExpiration      sql.NullInt64
+	ActiveTokenHash      sql.NullString
+	ActiveTokenTimestamp sql.NullInt64
+	Balance              sql.NullInt64
+	BlockNumber          sql.NullInt64
 }

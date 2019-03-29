@@ -91,6 +91,12 @@ func DecodeIP(remote_ip string) string {
 	}
 	encoded_ip := data[len(data)-4:]
 	// No nice joins for individual bytes, bytes.Join only likes arrays of arrays
+	ip := BytesToIP(encoded_ip)
+	return ip
+}
+
+// BytesToIP : takes an IP byte array and converts it to corresponding dot string format
+func BytesToIP(encoded_ip []byte) string {
 	ip := strconv.Itoa(int(encoded_ip[0])) + "." +
 		strconv.Itoa(int(encoded_ip[1])) + "." +
 		strconv.Itoa(int(encoded_ip[2])) + "." +
