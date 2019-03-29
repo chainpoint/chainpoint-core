@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
@@ -76,6 +77,23 @@ func (pg *Postgres) NodeUpsert(node types.Node) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+//UpdateNodeAuth : update active access token info and remaining time balance
+func (pg *Postgres) UpdateNodeAuth(ethAddr string, activeTokenHash string, activeTokenTimestamp int64, balance int64) error {
+	stmt := "UPDATE staked_node SET active_token_hash = $1, active_token_timestamp = $2, balance = $3 WHERE eth_addr = $4;"
+	res, err := pg.DB.Exec(stmt, activeTokenHash, activeTokenTimestamp, balance, ethAddr)
+	if util.LoggerError(pg.Logger, err) != nil {
+		return err
+	}
+	affect, err := res.RowsAffected()
+	if util.LoggerError(pg.Logger, err) != nil {
+		return err
+	}
+	if affect == 0 {
+		return errors.New("No rows updated")
+	}
+	return nil
 }
 
 // GetNodeByEthAddr : gets staked nodes by their ethereum address (in hex with 0x format)
