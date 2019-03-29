@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
@@ -62,6 +66,8 @@ type AnchorApplication struct {
 	logger     log.Logger
 	calendar   *calendar.Calendar
 	aggregator *aggregator.Aggregator
+	pgClient   *postgres.Postgres
+	ethClient  *ethcontracts.EthClient
 	rpc        *RPC
 }
 
@@ -73,6 +79,19 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	state := loadState(db)
 	state.ChainSynced = false // False until we finish syncing
 
+	// Declare postgres connection
+	pgClient, err := postgres.NewPGFromURI(config.PostgresURI, *config.Logger)
+	if util.LoggerError(*config.Logger, err) != nil {
+		panic(err)
+	}
+
+	//Declare ethereum Client
+	ethClient, err := ethcontracts.NewClient(config.EthereumURL, config.TokenContractAddr, config.RegistryContractAddr, *config.Logger)
+	if util.LoggerError(*config.Logger, err) != nil {
+		panic(err)
+	}
+
+	//Construct application
 	app := AnchorApplication{
 		Db:     db,
 		state:  state,
@@ -86,9 +105,12 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			RabbitmqURI: config.RabbitmqURI,
 			Logger:      *config.Logger,
 		},
-		rpc: NewRPCClient(config.TendermintRPC),
+		pgClient:  pgClient,
+		ethClient: ethClient,
+		rpc:       NewRPCClient(config.TendermintRPC),
 	}
 
+	//Initialize calendar writing if enabled
 	if config.DoCal {
 		// Create cron scheduler
 		scheduler := cron.New(cron.WithLocation(time.UTC))
@@ -106,10 +128,15 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		scheduler.Start()
 	}
 
+	//Initialize anchoring to bitcoin if enabled
 	if config.DoAnchor {
 		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
+
+	//Initialize node state
+	go app.LoadNodesFromContract()
+	go app.WatchNodesFromContract()
 
 	return &app
 }

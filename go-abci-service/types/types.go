@@ -12,14 +12,19 @@ type TendermintURI struct {
 	TMPort   string
 }
 
+//AnchorConfig represents values to configure all connections within the ABCI anchor app
 type AnchorConfig struct {
-	DBType         string
-	RabbitmqURI    string
-	TendermintRPC  TendermintURI
-	DoCal          bool
-	DoAnchor       bool
-	AnchorInterval int
-	Logger         *log.Logger
+	DBType               string
+	RabbitmqURI          string
+	TendermintRPC        TendermintURI
+	PostgresURI          string
+	EthereumURL          string
+	TokenContractAddr    string
+	RegistryContractAddr string
+	DoCal                bool
+	DoAnchor             bool
+	AnchorInterval       int
+	Logger               *log.Logger
 }
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
