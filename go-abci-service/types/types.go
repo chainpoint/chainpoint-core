@@ -198,10 +198,10 @@ type Node struct {
 	BlockNumber          sql.NullInt64
 }
 
-// RepChain : Used to represent reputation chain items for nodes
-type RepChain struct {
-	ID              int32  `json:"id"`
-	CalBlockHeight  int64  `json:"calBlockHeight"`
+// RepChainItem : Used to represent reputation chain items for nodes
+type RepChainItem struct {
+	ID              uint32 `json:"id"`
+	CalBlockHeight  uint64 `json:"calBlockHeight"`
 	CalBlockHash    string `json:"calBlockHash"`
 	PrevRepItemHash string `json:"prevRepItemHash"`
 	HashIDNode      string `json:"hashIdNode"`

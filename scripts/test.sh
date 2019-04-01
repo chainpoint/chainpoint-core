@@ -56,6 +56,14 @@ function monitor {
     # Monitor
     echo -e "\n==Testing Monitor=="
     docker-compose --log-level ERROR run abci go test -v $PROJECT_PATH/go-abci-service/abci -run TestMonitor*
+    make down
+}
+
+function repchain {
+    # Reputation Chain
+    echo -e "\n==Testing Reputation Chain Validation=="
+    docker-compose --log-level ERROR run abci go test -v $PROJECT_PATH/go-abci-service/abci -run TestValidate*
+    make down
 }
 
 function all {

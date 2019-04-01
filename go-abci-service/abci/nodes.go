@@ -9,8 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-
-	"golang.org/x/tools/go/ssa/interp/testdata/src/strings"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -78,10 +77,16 @@ func (app *AnchorApplication) WatchNodesFromContract() error {
 }
 
 //ValidateRepChainItemHash : Validate hash of chain item
-func (app *AnchorApplication) ValidateRepChainItemHash(node types.Node, chainItem types.RepChain) error {
+func (app *AnchorApplication) ValidateRepChainItemHash(chainItem types.RepChainItem) (string, error) {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, chainItem.ID)
-	binary.Write(buf, binary.BigEndian, chainItem.CalBlockHeight)
+	bid := make([]byte, 4)
+	bbh := make([]byte, 8)
+
+	binary.BigEndian.PutUint32(bid, chainItem.ID)
+	binary.BigEndian.PutUint64(bbh, chainItem.CalBlockHeight)
+
+	buf.Write(bid)
+	buf.Write(bbh)
 
 	hashBytes, err := hex.DecodeString(chainItem.CalBlockHash)
 	util.LoggerError(app.logger, err)
@@ -97,14 +102,15 @@ func (app *AnchorApplication) ValidateRepChainItemHash(node types.Node, chainIte
 	buf.Write(hashIDNodeNoHyphensBytes)
 
 	hash := sha256.Sum256(buf.Bytes())
-	if !strings.Contains(chainItem.RepItemHash, hex.EncodeToString(hash[:])) {
-		return errors.New(fmt.Sprintf("Hash mismatch between local record %s and repItem %s\n", hex.EncodeToString(hash[:]), chainItem.RepItemHash))
+	hashStr := hex.EncodeToString(hash[:])
+	if !strings.Contains(chainItem.RepItemHash, hashStr) {
+		return "", errors.New(fmt.Sprintf("Hash mismatch between local record %s and repItem %s\n", hashStr, chainItem.RepItemHash))
 	}
-	return nil
+	return hashStr, nil
 }
 
 //ValidateRepChainItemSig : validates the signature from a node's reputation chain item
-func (app *AnchorApplication) ValidateRepChainItemSig(node types.Node, chainItem types.RepChain) error {
+func (app *AnchorApplication) ValidateRepChainItemSig(node types.Node, chainItem types.RepChainItem) error {
 	repItemHashBytes, err := hex.DecodeString(chainItem.RepItemHash)
 	if util.LoggerError(app.logger, err) != nil {
 		return err
