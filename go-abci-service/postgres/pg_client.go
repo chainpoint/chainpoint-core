@@ -96,6 +96,20 @@ func (pg *Postgres) UpdateNodeAuth(ethAddr string, activeTokenHash string, activ
 	return nil
 }
 
+func (pg *Postgres) GetNodeCount() (int, error) {
+	stmt := "SELECT count(*) FROM staked_node;" //WHERE (staked_node.public_ip <> NULL) AND (staked_node.public_ip <> '');"
+	row := pg.DB.QueryRow(stmt)
+	var nodeCount int
+	switch err := row.Scan(&nodeCount); err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return nodeCount, nil
+	default:
+		return 0, err
+	}
+}
+
 // GetNodeByEthAddr : gets staked nodes by their ethereum address (in hex with 0x format)
 func (pg *Postgres) GetNodeByEthAddr(ethAddr string) (types.Node, error) {
 	stmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, balance, block_number FROM staked_node where eth_addr = $1"

@@ -38,6 +38,15 @@ function defineFor (sqlz) {
                 allowNull: false,
                 primaryKey: true
             },
+            pubKey: {
+                comment: 'The public key of a Node.',
+                type: Sequelize.STRING,
+                validate: {
+                    isAlphanumeric: true
+                },
+                field: 'public_key',
+                allowNull: true
+            },
             publicIp: {
                 comment: 'The public IP address of a Node, when blank represents a non-public Node.',
                 type: Sequelize.STRING,

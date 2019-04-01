@@ -189,10 +189,22 @@ type JSProof struct {
 type Node struct {
 	EthAddr              string
 	PublicIP             sql.NullString
+	PublicKey            sql.NullString
 	AmountStaked         sql.NullInt64
 	StakeExpiration      sql.NullInt64
 	ActiveTokenHash      sql.NullString
 	ActiveTokenTimestamp sql.NullInt64
 	Balance              sql.NullInt64
 	BlockNumber          sql.NullInt64
+}
+
+// RepChain : Used to represent reputation chain items for nodes
+type RepChain struct {
+	ID              int32  `json:"id"`
+	CalBlockHeight  int64  `json:"calBlockHeight"`
+	CalBlockHash    string `json:"calBlockHash"`
+	PrevRepItemHash string `json:"prevRepItemHash"`
+	HashIDNode      string `json:"hashIdNode"`
+	RepItemHash     string `json:"repItemHash"`
+	Signature       string `json:"signature"`
 }
