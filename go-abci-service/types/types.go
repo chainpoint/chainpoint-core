@@ -211,3 +211,8 @@ type RepChainItem struct {
 	RepItemHash     string `json:"repItemHash"`
 	Signature       string `json:"signature"`
 }
+
+// NodeHash : json struct for submitting hashes to nodes
+type NodeHash struct {
+	Hashes []string `json:"hashes"`
+}

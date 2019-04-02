@@ -94,6 +94,35 @@ func (app *AnchorApplication) ValidateNodeRecentReputation(node types.Node) erro
 	return err
 }
 
+//SendNodeHash : Post a hash to a node
+func SendNodeHash(node types.Node) (bool, error) {
+	if net.ParseIP(node.PublicIP.String) != nil {
+		HashURI := fmt.Sprintf("http://%s/hashes", node.PublicIP.String)
+		nodeHash := types.NodeHash{
+			Hashes: []string{"c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2"},
+		}
+		hashJson, err := json.Marshal(nodeHash)
+		if err != nil {
+			return false, err
+		}
+		req, err := http.NewRequest("POST", HashURI, bytes.NewReader(hashJson))
+		if err != nil {
+			return false, err
+		}
+		client := http.Client{}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		resp, err := client.Do(req)
+		if err != nil {
+			return false, err
+		}
+		if resp.StatusCode == http.StatusOK {
+			return true, nil
+		}
+	}
+	return false, errors.New("cannot parse node IP")
+}
+
 //ValidateRepChain : validates a reputation chain array struct. Returns nil if valid
 func ValidateRepChain(node types.Node, repChain types.RepChain) error {
 	for _, repItem := range repChain {
