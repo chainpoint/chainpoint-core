@@ -79,6 +79,37 @@ func (pg *Postgres) NodeUpsert(node types.Node) (bool, error) {
 	return false, nil
 }
 
+//GetSeededRandomNodes : Get seeded random sequence of 3 nodes from the staked_nodes table
+func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
+	seedFloat := util.GetSeededRandFloat([]byte(seed))
+	seedStmt := fmt.Sprintf("SET seed TO %f;", seedFloat)
+	_, err := pg.DB.Exec(seedStmt)
+	if util.LoggerError(pg.Logger, err) != nil {
+		return []types.Node{}, err
+	}
+	randomStmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, balance, block_number FROM staked_node ORDER BY random() LIMIT 3;"
+	rows, err := pg.DB.Query(randomStmt)
+	if util.LoggerError(pg.Logger, err) != nil {
+		return []types.Node{}, err
+	}
+	defer rows.Close()
+	nodes := make([]types.Node, 0)
+	for rows.Next() {
+		var node types.Node
+		switch err := rows.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.Balance, &node.BlockNumber); err {
+		case sql.ErrNoRows:
+			return []types.Node{}, nil
+		case nil:
+			nodes = append(nodes, node)
+			break
+		default:
+			util.LoggerError(pg.Logger, err)
+			return []types.Node{}, err
+		}
+	}
+	return nodes, nil
+}
+
 //UpdateNodeAuth : update active access token info and remaining time balance
 func (pg *Postgres) UpdateNodeAuth(ethAddr string, activeTokenHash string, activeTokenTimestamp int64, balance int64) error {
 	stmt := "UPDATE staked_node SET active_token_hash = $1, active_token_timestamp = $2, balance = $3 WHERE eth_addr = $4;"

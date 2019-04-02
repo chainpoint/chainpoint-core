@@ -60,6 +60,14 @@ func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	return rand.Intn(upperBound)
 }
 
+// GetSeededRandFloat : Given a seed return a random float
+func GetSeededRandFloat(seedBytes []byte) float32 {
+	eightByteHash := seedBytes[0:7]
+	seed, _ := binary.Varint(eightByteHash)
+	rand.Seed(seed)
+	return rand.Float32()
+}
+
 // UUIDFromHash : generate a uuid from a byte hash, must be 16 bytes
 func UUIDFromHash(seedBytes []byte) (uuid.UUID, error) {
 	return uuid.FromBytes(seedBytes)

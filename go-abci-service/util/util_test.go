@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -29,6 +30,13 @@ func TestSeededRandInt(t *testing.T) {
 	seed := "3719ADA3EEE198F3A7A33616EA60ED6D72D94D31A2B2422FA12E2BCDDCABD4D4"
 	output := GetSeededRandInt([]byte(seed), 4)
 	assert.Equal(t, output, 3, "Seeded output should be equal to 3")
+}
+
+func TestGetSeededRandFloat(t *testing.T) {
+	seed := "3719ADA3EEE198F3A7A33616EA60ED6D72D94D31A2B2422FA12E2BCDDCABD4D4"
+	output := GetSeededRandFloat([]byte(seed))
+	floatStr := fmt.Sprintf("%f", output)
+	assert.Equal(t, floatStr, "0.546605", "Seeded random float should be 0.546605")
 }
 
 func TestGetEnv(t *testing.T) {
