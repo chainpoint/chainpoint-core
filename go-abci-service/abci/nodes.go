@@ -11,6 +11,9 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -110,19 +113,37 @@ func (app *AnchorApplication) ValidateRepChainItemHash(chainItem types.RepChainI
 }
 
 //ValidateRepChainItemSig : validates the signature from a node's reputation chain item
-func (app *AnchorApplication) ValidateRepChainItemSig(node types.Node, chainItem types.RepChainItem) error {
+func (app *AnchorApplication) ValidateRepChainItemSig(node types.Node, chainItem types.RepChainItem) (bool, error) {
 	repItemHashBytes, err := hex.DecodeString(chainItem.RepItemHash)
 	if util.LoggerError(app.logger, err) != nil {
-		return err
+		return true, err
 	}
-	sigBytes, err := hex.DecodeString(chainItem.Signature)
-	if util.LoggerError(app.logger, err) != nil {
-		return err
+	verified, err := verifySig(node.EthAddr, chainItem.Signature, repItemHashBytes)
+	if !verified {
+		return false, err
 	}
-	sigPublicKey, err := crypto.Ecrecover(repItemHashBytes, sigBytes)
-	pubKeyHex := hex.EncodeToString(sigPublicKey)
-	if !strings.Contains(node.PublicKey.String, pubKeyHex) {
-		return errors.New(fmt.Sprintf("Signature mismatch between local record %s and repItem %s\n", node.PublicKey.String, pubKeyHex))
+	return true, nil
+}
+
+func verifySig(from, sigHex string, msg []byte) (bool, error) {
+	fromAddr := common.HexToAddress(from)
+	sig, err := hexutil.Decode(sigHex)
+	if err != nil {
+		return false, err
 	}
-	return nil
+	if sig[64] != 27 && sig[64] != 28 {
+		return false, nil
+	}
+	sig[64] -= 27
+	pubKey, err := crypto.SigToPub(signHash(msg), sig)
+	if err != nil {
+		return false, err
+	}
+	recoveredAddr := crypto.PubkeyToAddress(*pubKey)
+	return fromAddr == recoveredAddr, nil
+}
+
+func signHash(data []byte) []byte {
+	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
+	return crypto.Keccak256([]byte(msg))
 }

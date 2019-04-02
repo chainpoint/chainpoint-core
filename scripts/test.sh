@@ -62,7 +62,7 @@ function monitor {
 function repchain {
     # Reputation Chain
     echo -e "\n==Testing Reputation Chain Validation=="
-    docker-compose --log-level ERROR run abci go test -v $PROJECT_PATH/go-abci-service/abci -run TestValidate*
+    docker-compose --log-level ERROR run abci go test -v $PROJECT_PATH/go-abci-service/abci -run TestValidateRepChain*
     make down
 }
 
