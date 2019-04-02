@@ -6,9 +6,13 @@ import (
 	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"net"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -79,8 +83,59 @@ func (app *AnchorApplication) WatchNodesFromContract() error {
 	return nil
 }
 
+//ValidateNodeRepChain : download and verify reputation chain items from a node
+func (app *AnchorApplication) ValidateNodeRecentReputation(node types.Node) error {
+	repChain, err := GetNodeRecentReputation(node)
+	if util.LoggerError(app.logger, err) != nil {
+		return err
+	}
+	err = ValidateRepChain(node, repChain)
+	util.LoggerError(app.logger, err)
+	return err
+}
+
+//ValidateRepChain : validates a reputation chain array struct. Returns nil if valid
+func ValidateRepChain(node types.Node, repChain types.RepChain) error {
+	for _, repItem := range repChain {
+		hash, errHash := ValidateRepChainItemHash(repItem)
+		valid, errSig := ValidateRepChainItemSig(node, repItem)
+		if errHash != nil {
+			return errHash
+		}
+		if errSig != nil {
+			return errSig
+		}
+		if !valid || hash == "" {
+			return errors.New("Rep Item did not validate")
+		}
+	}
+	return nil
+}
+
+//GetNodeRecentReputation : get reputation chain item array from node_ip/reputation/recent
+func GetNodeRecentReputation(node types.Node) (types.RepChain, error) {
+	if net.ParseIP(node.PublicIP.String) != nil {
+		RecentRepURI := fmt.Sprintf("http://%s/reputation/recent", node.PublicIP.String)
+		resp, err := http.Get(RecentRepURI)
+		var repChain types.RepChain
+		if err != nil {
+			return types.RepChain{}, err
+		}
+		contents, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return types.RepChain{}, err
+		}
+		err = json.Unmarshal(contents, &repChain)
+		if err != nil {
+			return types.RepChain{}, err
+		}
+		return repChain, nil
+	}
+	return types.RepChain{}, errors.New("cannot parse node IP")
+}
+
 //ValidateRepChainItemHash : Validate hash of chain item
-func (app *AnchorApplication) ValidateRepChainItemHash(chainItem types.RepChainItem) (string, error) {
+func ValidateRepChainItemHash(chainItem types.RepChainItem) (string, error) {
 	buf := new(bytes.Buffer)
 	bid := make([]byte, 4)
 	bbh := make([]byte, 4)
@@ -92,16 +147,22 @@ func (app *AnchorApplication) ValidateRepChainItemHash(chainItem types.RepChainI
 	buf.Write(bbh)
 
 	hashBytes, err := hex.DecodeString(chainItem.CalBlockHash)
-	util.LoggerError(app.logger, err)
+	if err != nil {
+		return "", err
+	}
 	buf.Write(hashBytes)
 
 	prevRepItemHashBytes, err := hex.DecodeString(chainItem.PrevRepItemHash)
-	util.LoggerError(app.logger, err)
+	if err != nil {
+		return "", err
+	}
 	buf.Write(prevRepItemHashBytes)
 
 	hashIDNodeNoHyphens := strings.Replace(chainItem.HashIDNode, "-", "", -1)
 	hashIDNodeNoHyphensBytes, err := hex.DecodeString(hashIDNodeNoHyphens)
-	util.LoggerError(app.logger, err)
+	if err != nil {
+		return "", err
+	}
 	buf.Write(hashIDNodeNoHyphensBytes)
 
 	hash := sha256.Sum256(buf.Bytes())
@@ -113,9 +174,9 @@ func (app *AnchorApplication) ValidateRepChainItemHash(chainItem types.RepChainI
 }
 
 //ValidateRepChainItemSig : validates the signature from a node's reputation chain item
-func (app *AnchorApplication) ValidateRepChainItemSig(node types.Node, chainItem types.RepChainItem) (bool, error) {
+func ValidateRepChainItemSig(node types.Node, chainItem types.RepChainItem) (bool, error) {
 	repItemHashBytes, err := hex.DecodeString(chainItem.RepItemHash)
-	if util.LoggerError(app.logger, err) != nil {
+	if err != nil {
 		return true, err
 	}
 	verified, err := verifySig(node.EthAddr, chainItem.Signature, repItemHashBytes)

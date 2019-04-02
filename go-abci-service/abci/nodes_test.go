@@ -13,7 +13,6 @@ import (
 
 func TestValidateRepChainItemHash(t *testing.T) {
 	assert := assert.New(t)
-	app := DeclareABCI()
 	repChainItem := types.RepChainItem{
 		ID:              34559,
 		CalBlockHeight:  765756,
@@ -23,14 +22,13 @@ func TestValidateRepChainItemHash(t *testing.T) {
 		RepItemHash:     "c9ee7f0b005eb6ef26dc09eb1c99f0402ef2fdb3acd214634e8b70a21bcab465",
 		Signature:       "efd06c51a52e8bec76d294fd8e296a3a3b6be8829873dbe0e84ba42320d13c1f0e88907340937d1397bb68ce18389c04016c2cbe8f02b161f8320da2fac8226b1b",
 	}
-	hash, err := app.ValidateRepChainItemHash(repChainItem)
+	hash, err := ValidateRepChainItemHash(repChainItem)
 	util.LogError(err)
 	assert.Equal(hash, "c9ee7f0b005eb6ef26dc09eb1c99f0402ef2fdb3acd214634e8b70a21bcab465", "hashes should be equal")
 }
 
 func TestValidateRepChainItemSig(t *testing.T) {
 	assert := assert.New(t)
-	app := DeclareABCI()
 	node := types.Node{
 		EthAddr:   "0x94200160227D9dB7353ecE34BE0aE3E506Fa35a1",
 		PublicKey: sql.NullString{String: "0xefd06c51a52e8bec76d294fd8e296a3a3b6be8829873dbe0e84ba42320d13c1f0e88907340937d1397bb68ce18389c04016c2cbe8f02b161f8320da2fac8226b1b", Valid: true},
@@ -44,7 +42,7 @@ func TestValidateRepChainItemSig(t *testing.T) {
 		RepItemHash:     "c9ee7f0b005eb6ef26dc09eb1c99f0402ef2fdb3acd214634e8b70a21bcab465",
 		Signature:       "0xefd06c51a52e8bec76d294fd8e296a3a3b6be8829873dbe0e84ba42320d13c1f0e88907340937d1397bb68ce18389c04016c2cbe8f02b161f8320da2fac8226b1b",
 	}
-	verified, err := app.ValidateRepChainItemSig(node, repChainItem)
+	verified, err := ValidateRepChainItemSig(node, repChainItem)
 	util.LogError(err)
 	assert.Equal(nil, err, "Error from signature verification should be nil")
 	assert.Equal(true, verified, "Signature should verify true")

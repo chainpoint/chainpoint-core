@@ -198,6 +198,9 @@ type Node struct {
 	BlockNumber          sql.NullInt64
 }
 
+//RepChain
+type RepChain []RepChainItem
+
 // RepChainItem : Used to represent reputation chain items for nodes
 type RepChainItem struct {
 	ID              uint32 `json:"id"`
