@@ -80,10 +80,10 @@ func (app *AnchorApplication) WatchNodesFromContract() error {
 func (app *AnchorApplication) ValidateRepChainItemHash(chainItem types.RepChainItem) (string, error) {
 	buf := new(bytes.Buffer)
 	bid := make([]byte, 4)
-	bbh := make([]byte, 8)
+	bbh := make([]byte, 4)
 
 	binary.BigEndian.PutUint32(bid, chainItem.ID)
-	binary.BigEndian.PutUint64(bbh, chainItem.CalBlockHeight)
+	binary.BigEndian.PutUint32(bbh, chainItem.CalBlockHeight)
 
 	buf.Write(bid)
 	buf.Write(bbh)

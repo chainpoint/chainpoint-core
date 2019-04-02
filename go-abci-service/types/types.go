@@ -201,7 +201,7 @@ type Node struct {
 // RepChainItem : Used to represent reputation chain items for nodes
 type RepChainItem struct {
 	ID              uint32 `json:"id"`
-	CalBlockHeight  uint64 `json:"calBlockHeight"`
+	CalBlockHeight  uint32 `json:"calBlockHeight"`
 	CalBlockHash    string `json:"calBlockHash"`
 	PrevRepItemHash string `json:"prevRepItemHash"`
 	HashIDNode      string `json:"hashIdNode"`
