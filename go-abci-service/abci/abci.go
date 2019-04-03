@@ -136,8 +136,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	//Initialize node state
 	go app.LoadNodesFromContract()
-	//nodes, err := app.pgClient.GetSeededRandomNodes([]byte("3719ADA3EEE198F3A7A33616EA60ED6D72D94D31A2B2422FA12E2BCDDCABD4D4"))
-	//fmt.Printf("Random nodes: %#v\n", nodes)
 	go app.WatchNodesFromContract()
 
 	return &app

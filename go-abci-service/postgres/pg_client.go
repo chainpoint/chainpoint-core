@@ -81,6 +81,9 @@ func (pg *Postgres) NodeUpsert(node types.Node) (bool, error) {
 
 //GetSeededRandomNodes : Get seeded random sequence of 3 nodes from the staked_nodes table
 func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
+	//Usage:
+	//nodes, err := app.pgClient.GetSeededRandomNodes([]byte("3719ADA3EEE198F3A7A33616EA60ED6D72D94D31A2B2422FA12E2BCDDCABD4D4"))
+	//fmt.Printf("Random nodes: %#v\n", nodes)
 	seedFloat := util.GetSeededRandFloat([]byte(seed))
 	seedStmt := fmt.Sprintf("SET seed TO %f;", seedFloat)
 	_, err := pg.DB.Exec(seedStmt)
