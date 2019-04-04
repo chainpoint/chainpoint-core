@@ -89,15 +89,6 @@ function defineFor (sqlz) {
                 field: 'active_token_timestamp',
                 allowNull: true
             },
-            balance: {
-                comment: 'The balance in time units of usage time remaining',
-                type: Sequelize.INTEGER,
-                validate: {
-                    isInt: true
-                },
-                field: 'balance',
-                allowNull: true
-            },
             blockNumber: {
                 comment: 'The eth block number where this info was valid. Used for versioning node stake updates',
                 type: Sequelize.BIGINT, // is 64 bit in CockroachDB

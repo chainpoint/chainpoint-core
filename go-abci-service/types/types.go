@@ -198,7 +198,6 @@ type Node struct {
 	StakeExpiration      sql.NullInt64
 	ActiveTokenHash      sql.NullString
 	ActiveTokenTimestamp sql.NullInt64
-	Balance              sql.NullInt64
 	BlockNumber          sql.NullInt64
 }
 

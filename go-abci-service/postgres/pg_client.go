@@ -90,7 +90,7 @@ func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
 	if util.LoggerError(pg.Logger, err) != nil {
 		return []types.Node{}, err
 	}
-	randomStmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, balance, block_number FROM staked_node ORDER BY random() LIMIT 3;"
+	randomStmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, block_number FROM staked_node ORDER BY random() LIMIT 3;"
 	rows, err := pg.DB.Query(randomStmt)
 	if util.LoggerError(pg.Logger, err) != nil {
 		return []types.Node{}, err
@@ -99,7 +99,7 @@ func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
 	nodes := make([]types.Node, 0)
 	for rows.Next() {
 		var node types.Node
-		switch err := rows.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.Balance, &node.BlockNumber); err {
+		switch err := rows.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.BlockNumber); err {
 		case sql.ErrNoRows:
 			return []types.Node{}, nil
 		case nil:
@@ -115,8 +115,8 @@ func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
 
 //UpdateNodeAuth : update active access token info and remaining time balance
 func (pg *Postgres) UpdateNodeAuth(ethAddr string, activeTokenHash string, activeTokenTimestamp int64, balance int64) error {
-	stmt := "UPDATE staked_node SET active_token_hash = $1, active_token_timestamp = $2, balance = $3 WHERE eth_addr = $4;"
-	res, err := pg.DB.Exec(stmt, activeTokenHash, activeTokenTimestamp, balance, ethAddr)
+	stmt := "UPDATE staked_node SET active_token_hash = $1, active_token_timestamp = $2, WHERE eth_addr = $3;"
+	res, err := pg.DB.Exec(stmt, activeTokenHash, activeTokenTimestamp, ethAddr)
 	if util.LoggerError(pg.Logger, err) != nil {
 		return err
 	}
@@ -146,10 +146,10 @@ func (pg *Postgres) GetNodeCount() (int, error) {
 
 // GetNodeByEthAddr : gets staked nodes by their ethereum address (in hex with 0x format)
 func (pg *Postgres) GetNodeByEthAddr(ethAddr string) (types.Node, error) {
-	stmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, balance, block_number FROM staked_node where eth_addr = $1"
+	stmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, block_number FROM staked_node where eth_addr = $1"
 	row := pg.DB.QueryRow(stmt, ethAddr)
 	var node types.Node
-	switch err := row.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.Balance, &node.BlockNumber); err {
+	switch err := row.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.BlockNumber); err {
 	case sql.ErrNoRows:
 		return types.Node{}, nil
 	case nil:
@@ -162,10 +162,10 @@ func (pg *Postgres) GetNodeByEthAddr(ethAddr string) (types.Node, error) {
 
 //GetNodeByPublicIP : get staked nodes by their public IP string (should be unique)
 func (pg *Postgres) GetNodeByPublicIP(publicIP string) (types.Node, error) {
-	stmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, balance, block_number FROM staked_node where public_ip = $1"
+	stmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, block_number FROM staked_node where public_ip = $1"
 	row := pg.DB.QueryRow(stmt, publicIP)
 	var node types.Node
-	switch err := row.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.Balance, &node.BlockNumber); err {
+	switch err := row.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.BlockNumber); err {
 	case sql.ErrNoRows:
 		return types.Node{}, nil
 	case nil:
