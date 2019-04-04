@@ -68,6 +68,12 @@ func (app *AnchorApplication) AuditNodes() error {
 			}
 			wg.Wait()
 		}
+		if len(rewardCandidates) > 3 {
+			rewardCandidates = rewardCandidates[0:3]
+		}
+		if len(rewardCandidates) == 0 {
+			return errors.New("Unspecified reward candidate collation failure")
+		}
 		rcJson, err := json.Marshal(rewardCandidates)
 		if err != nil {
 			return err
