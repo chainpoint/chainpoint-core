@@ -14,6 +14,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,6 +25,65 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
+
+//AuditNodes : Audit nodes for reputation chain and hash submission validity. Submits reward tx with info if successful
+func (app *AnchorApplication) AuditNodes() error {
+	iAmLeader, _ := app.ElectLeader()
+	if iAmLeader {
+		status, err := app.rpc.GetStatus()
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
+		blockHash := status.SyncInfo.LatestBlockHash.String()
+		rewardCandidates := make([]types.Node, 0)
+		startTime := time.Now()
+		var wg sync.WaitGroup
+		var mux sync.Mutex
+		for len(rewardCandidates) < 3 || time.Since(startTime) < (5*time.Minute) {
+			nodes, err := app.pgClient.GetSeededRandomNodes([]byte(blockHash))
+			if util.LoggerError(app.logger, err) != nil {
+				return err
+			}
+			for _, nodeCandidate := range nodes {
+				go func(node types.Node) {
+					wg.Add(1)
+					defer wg.Done()
+					err := ValidateNodeRecentReputation(node)
+					if util.LoggerError(app.logger, err) != nil {
+						return
+					}
+					nodeResp, err := SendNodeHash(node)
+					if util.LoggerError(app.logger, err) != nil && len(nodeResp.Hashes) == 0 {
+						return
+					}
+					time.Sleep(180 * time.Second)
+					err = RetrieveNodeCalProof(node, nodeResp)
+					if err != nil {
+						return
+					}
+					mux.Lock()
+					rewardCandidates = append(rewardCandidates, node)
+					mux.Unlock()
+				}(nodeCandidate)
+			}
+			wg.Wait()
+		}
+		rcJson, err := json.Marshal(rewardCandidates)
+		if err != nil {
+			return err
+		}
+		res, err := app.rpc.BroadcastTx("REWARD-CANDIDATE", string(rcJson), 2, time.Now().Unix())
+		if err != nil {
+			return err
+		}
+		if res.Code == 0 {
+			return nil
+		}
+		return errors.New("Problem validating and submitting nodes for rewards!")
+	}
+	app.logger.Info("Not leader")
+	return nil
+}
 
 //LoadNodesFromContract : load all past node staking events and update events
 func (app *AnchorApplication) LoadNodesFromContract() error {
@@ -84,18 +145,17 @@ func (app *AnchorApplication) WatchNodesFromContract() error {
 }
 
 //ValidateNodeRepChain : download and verify reputation chain items from a node
-func (app *AnchorApplication) ValidateNodeRecentReputation(node types.Node) error {
+func ValidateNodeRecentReputation(node types.Node) error {
 	repChain, err := GetNodeRecentReputation(node)
-	if util.LoggerError(app.logger, err) != nil {
+	if err != nil {
 		return err
 	}
 	err = ValidateRepChain(node, repChain)
-	util.LoggerError(app.logger, err)
 	return err
 }
 
 //SendNodeHash : Post a hash to a node
-func SendNodeHash(node types.Node) (bool, error) {
+func SendNodeHash(node types.Node) (types.NodeHashResponse, error) {
 	if net.ParseIP(node.PublicIP.String) != nil {
 		HashURI := fmt.Sprintf("http://%s/hashes", node.PublicIP.String)
 		nodeHash := types.NodeHash{
@@ -103,24 +163,61 @@ func SendNodeHash(node types.Node) (bool, error) {
 		}
 		hashJson, err := json.Marshal(nodeHash)
 		if err != nil {
-			return false, err
+			return types.NodeHashResponse{}, err
 		}
 		req, err := http.NewRequest("POST", HashURI, bytes.NewReader(hashJson))
 		if err != nil {
-			return false, err
+			return types.NodeHashResponse{}, err
 		}
 		client := http.Client{}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json")
+		var nodeResponse types.NodeHashResponse
 		resp, err := client.Do(req)
 		if err != nil {
-			return false, err
+			return types.NodeHashResponse{}, err
 		}
 		if resp.StatusCode == http.StatusOK {
-			return true, nil
+			contents, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return types.NodeHashResponse{}, err
+			}
+			err = json.Unmarshal(contents, &nodeResponse)
+			if err != nil {
+				return types.NodeHashResponse{}, err
+			}
+			return nodeResponse, nil
 		}
 	}
-	return false, errors.New("cannot parse node IP")
+	return types.NodeHashResponse{}, errors.New("cannot parse node IP")
+}
+
+//RetrieveNodeCalProof : get back a node cal proof to validate Node health
+func RetrieveNodeCalProof(node types.Node, hashID types.NodeHashResponse) error {
+	if net.ParseIP(node.PublicIP.String) != nil && len(hashID.Hashes) > 0 {
+		calProofURI := fmt.Sprintf("http://%s/proofs/%s", node.PublicIP.String, hashID.Hashes[0].HashIDNode)
+		resp, err := http.Get(calProofURI)
+		if err != nil {
+			return err
+		}
+		contents, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		var nodeProof types.NodeProofResponse
+		if err := json.Unmarshal(contents, &nodeProof); err != nil {
+			return err
+		}
+		if len(nodeProof) > 0 && len(nodeProof[0].AnchorsComplete) > 0 {
+			for _, anchor := range nodeProof[0].AnchorsComplete {
+				if anchor == "cal" {
+					return nil
+				}
+			}
+		}
+		return errors.New("no Cal anchor")
+	}
+	return errors.New("cannot parse node IP")
 }
 
 //ValidateRepChain : validates a reputation chain array struct. Returns nil if valid

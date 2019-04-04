@@ -2,6 +2,7 @@ package types
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/tendermint/tendermint/libs/log"
 )
@@ -185,6 +186,9 @@ type JSProof struct {
 	Right string `json:"right,omitempty"`
 }
 
+// NodeArray : for unmarshalling reward candidate node array
+type NodeArray []Node
+
 // Node : Used to represent Node info to and from postgres
 type Node struct {
 	EthAddr              string
@@ -198,7 +202,7 @@ type Node struct {
 	BlockNumber          sql.NullInt64
 }
 
-//RepChain
+//RepChain : Array of repchain items
 type RepChain []RepChainItem
 
 // RepChainItem : Used to represent reputation chain items for nodes
@@ -215,4 +219,26 @@ type RepChainItem struct {
 // NodeHash : json struct for submitting hashes to nodes
 type NodeHash struct {
 	Hashes []string `json:"hashes"`
+}
+
+//NodeHashResponse : Response from node after submitting hash
+type NodeHashResponse struct {
+	Meta struct {
+		SubmittedAt     time.Time `json:"submitted_at"`
+		ProcessingHints struct {
+			Cal time.Time `json:"cal"`
+			Btc time.Time `json:"btc"`
+		} `json:"processing_hints"`
+	} `json:"meta"`
+	Hashes []struct {
+		HashIDNode string `json:"hash_id_node"`
+		Hash       string `json:"hash"`
+	} `json:"hashes"`
+}
+
+//NodeProofResponse : Proof returned by node
+type NodeProofResponse []struct {
+	HashIDNode      string   `json:"hash_id_node"`
+	Proof           string   `json:"proof"`
+	AnchorsComplete []string `json:"anchors_complete"`
 }
