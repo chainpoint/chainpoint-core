@@ -28,20 +28,20 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	var resp types2.ResponseDeliverTx
 	switch string(tx.TxType) {
 	case "VAL":
-		tags := app.incrementTxInt(tags)
+		tags = app.incrementTxInt(tags)
 		if isValidatorTx([]byte(tx.Data)) {
 			resp = app.execValidatorTx([]byte(tx.Data), tags)
 		}
 		break
 	case "CAL":
-		tags := app.incrementTxInt(tags)
+		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-M":
 		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
 		app.state.LatestBtcmHeight = app.state.Height + 1
-		tags := app.incrementTxInt(tags)
+		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcmTxInt = app.state.TxInt
 		app.ConsumeBtcTxMsg([]byte(tx.Data))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
@@ -49,7 +49,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	case "BTC-A":
 		app.state.LatestBtcaTx = rawTx
 		app.state.LatestBtcaHeight = app.state.Height + 1
-		tags := app.incrementTxInt(tags)
+		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
 		app.state.BeginCalTxInt = app.state.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
@@ -57,7 +57,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	case "BTC-C":
 		app.state.LatestBtccTx = rawTx
 		app.state.LatestBtccHeight = app.state.Height + 1
-		tags := app.incrementTxInt(tags)
+		tags = app.incrementTxInt(tags)
 		app.state.LatestBtccTxInt = app.state.TxInt
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
@@ -65,6 +65,10 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.state.LatestNistRecord = tx.Data
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
+	case "NODE-RC":
+		tags = app.incrementTxInt(tags)
+		tags = append(tags, cmn.KVPair{Key: []byte("NODE-RC"), Value: util.Int64ToByte(app.state.TxInt)}) //TODO: replace with mint epoch
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
 	}

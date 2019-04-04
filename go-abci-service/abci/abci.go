@@ -198,7 +198,8 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	// Anchor every anchorInterval of blocks
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
-			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
+			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
+			go app.AuditNodes()                                                 //retrieve, audit, and reward some nodes
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}

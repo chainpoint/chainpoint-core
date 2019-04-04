@@ -48,17 +48,7 @@ func (app *AnchorApplication) AuditNodes() error {
 				go func(node types.Node) {
 					wg.Add(1)
 					defer wg.Done()
-					err := ValidateNodeRecentReputation(node)
-					if util.LoggerError(app.logger, err) != nil {
-						return
-					}
-					nodeResp, err := SendNodeHash(node)
-					if util.LoggerError(app.logger, err) != nil && len(nodeResp.Hashes) == 0 {
-						return
-					}
-					time.Sleep(180 * time.Second)
-					err = RetrieveNodeCalProof(node, nodeResp)
-					if err != nil {
+					if err := app.AuditNode(node); err != nil {
 						return
 					}
 					mux.Lock()
@@ -78,7 +68,7 @@ func (app *AnchorApplication) AuditNodes() error {
 		if err != nil {
 			return err
 		}
-		res, err := app.rpc.BroadcastTx("REWARD-CANDIDATE", string(rcJson), 2, time.Now().Unix())
+		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJson), 2, time.Now().Unix())
 		if err != nil {
 			return err
 		}
@@ -88,6 +78,24 @@ func (app *AnchorApplication) AuditNodes() error {
 		return errors.New("Problem validating and submitting nodes for rewards!")
 	}
 	app.logger.Info("Not leader")
+	return nil
+}
+
+//AuditNode : Used by the audit leader and all confirming cores to validate node performance
+func (app *AnchorApplication) AuditNode(node types.Node) error {
+	err := ValidateNodeRecentReputation(node)
+	if util.LoggerError(app.logger, err) != nil {
+		return err
+	}
+	nodeResp, err := SendNodeHash(node)
+	if util.LoggerError(app.logger, err) != nil && len(nodeResp.Hashes) == 0 {
+		return err
+	}
+	time.Sleep(180 * time.Second)
+	err = RetrieveNodeCalProof(node, nodeResp)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
