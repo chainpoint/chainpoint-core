@@ -1,4 +1,24 @@
 {
+  "scripts": {
+    "eslint-check": "eslint --print-config . | eslint-config-prettier-check"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "linters": {
+      "*.js": [
+        "eslint --fix",
+        "git add"
+      ],
+      "*.{json,css,md}": [
+        "prettier --write",
+        "git add"
+      ]
+    }
+  },
   "devDependencies": {
     "eslint": "^5.14.1",
     "eslint-config-prettier": "^4.1.0",
