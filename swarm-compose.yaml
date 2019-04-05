@@ -8,6 +8,8 @@ secrets:
     external: true
   ETH_INFURA_API_KEY:
     external: true
+  ETH_PRIVATE_KEY:
+    external: true
 
 services:
 
@@ -22,6 +24,7 @@ services:
     environment:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
+      ETH_PRIVATE_KEY: DOCKER-SECRET->ETH_PRIVATE_KEY
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
       ANCHOR: "true"
