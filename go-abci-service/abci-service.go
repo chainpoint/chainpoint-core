@@ -24,6 +24,7 @@ func main() {
 	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
 	ethTokenContract := util.GetEnv("TokenContractAddr", "0xC58f7d9a97bE0aC0084DBb2011Da67f36A0deD9F")
 	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x5AfdE9fFFf63FF1f883405615965422889B8dF29")
+	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
 	tendermintRPC := types.TendermintURI{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "tendermint"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
@@ -44,6 +45,7 @@ func main() {
 		TendermintRPC:        tendermintRPC,
 		PostgresURI:          fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", POSTGRES_USER, POSTGRES_PW, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB),
 		EthereumURL:          fmt.Sprintf("https://ropsten.infura.io/%s", ethInfuraApiKey),
+		EthPrivateKey:        ethPrivateKey,
 		TokenContractAddr:    ethTokenContract,
 		RegistryContractAddr: ethRegistryContract,
 		DoCal:                doCalLoop,

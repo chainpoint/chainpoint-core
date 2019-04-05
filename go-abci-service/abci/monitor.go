@@ -176,7 +176,7 @@ func (app *AnchorApplication) SyncMonitor() {
 
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI app
 func (app *AnchorApplication) NistBeaconMonitor() {
-	if leader, _ := app.ElectLeader(); leader {
+	if leader, _ := app.ElectLeader(1); leader {
 		nistRecord, err := beacon.LastRecord()
 		if util.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new NIST beacon value")
@@ -184,7 +184,24 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 		}
 		_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix()) // elect a leader to send a NIST tx
 		if util.LogError(err) != nil {
-			app.logger.Debug(fmt.Sprintf("Gossiped new NIST beacon value of %s", nistRecord.ChainpointFormat()))
+			app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
+		}
+	}
+}
+
+//MintMonitor : efficiently monitor for new minting and gossip that block to other cores
+func (app *AnchorApplication) MintMonitor() {
+	if leader, _ := app.ElectLeader(1); leader {
+		lastMintedAt, err := app.ethClient.GetLastMintedAt()
+		if util.LogError(err) != nil {
+			app.logger.Error("Unable to obtain new LastMintedAt value")
+			return
+		}
+		if lastMintedAt.Int64() > app.state.LastMintedAtBlock {
+			_, err = app.rpc.BroadcastTx("MINT", strconv.FormatInt(lastMintedAt.Int64(), 10), 2, time.Now().Unix()) // elect a leader to send a NIST tx
+			if err != nil {
+				app.logger.Debug("Failed to gossip MINT for LastMintedAtBlock gossip")
+			}
 		}
 	}
 }

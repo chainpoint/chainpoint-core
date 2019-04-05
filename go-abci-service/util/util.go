@@ -4,9 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
+	"reflect"
 	"strconv"
 
 	"github.com/tendermint/tendermint/libs/log"
@@ -110,4 +112,102 @@ func BytesToIP(encoded_ip []byte) string {
 		strconv.Itoa(int(encoded_ip[2])) + "." +
 		strconv.Itoa(int(encoded_ip[3]))
 	return ip
+}
+
+//Contains : generic method for testing set (slice) inclusion
+func Contains(s interface{}, elem interface{}) bool {
+	arrV := reflect.ValueOf(s)
+	if arrV.Kind() == reflect.Slice {
+		for i := 0; i < arrV.Len(); i++ {
+			if arrV.Index(i).Interface() == elem {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// Rotate rotates the values of a slice by rotate positions, preserving the
+// rotated values by wrapping them around the slice
+func rotate(slice interface{}, rotate int) error {
+	// check slice is not nil
+	if slice == nil {
+		return errors.New("non-nil slice interface required")
+	}
+	// get the slice value
+	sliceV := reflect.ValueOf(slice)
+	if sliceV.Kind() != reflect.Slice {
+		return errors.New("slice kind required")
+	}
+	// check slice value is not nil
+	if sliceV.IsNil() {
+		return errors.New("non-nil slice value required")
+	}
+
+	// slice length
+	sLen := sliceV.Len()
+	// shortcut when empty slice
+	if sLen == 0 {
+		return nil
+	}
+
+	// limit rotates via modulo
+	rotate %= sLen
+	// Go's % operator returns the remainder and thus can return negative
+	// values. More detail can be found under the `Integer operators` section
+	// here: https://golang.org/ref/spec#Arithmetic_operators
+	if rotate < 0 {
+		rotate += sLen
+	}
+	// shortcut when shift == 0
+	if rotate == 0 {
+		return nil
+	}
+
+	// get gcd to determine number of juggles
+	gcd := gcd(rotate, sLen)
+
+	// do the shifting
+	for i := 0; i < gcd; i++ {
+		// remember the first value
+		temp := reflect.ValueOf(sliceV.Index(i).Interface())
+		j := i
+
+		for {
+			k := j + rotate
+			// wrap around slice
+			if k >= sLen {
+				k -= sLen
+			}
+			// end when we're back to where we started
+			if k == i {
+				break
+			}
+			// slice[j] = slice[k]
+			sliceV.Index(j).Set(sliceV.Index(k))
+			j = k
+		}
+		// slice[j] = slice
+		sliceV.Index(j).Set(temp)
+		// elemJ.Set(temp)
+	}
+	// success
+	return nil
+}
+
+func gcd(x, y int) int {
+	for y != 0 {
+		x, y = y, x%y
+	}
+	return x
+}
+
+// RotateRight is the analogue to RotateLeft
+func RotateRight(slice interface{}, by int) error {
+	return rotate(slice, -by)
+}
+
+// RotateLeft is an alias for Rotate
+func RotateLeft(slice interface{}, by int) error {
+	return rotate(slice, by)
 }

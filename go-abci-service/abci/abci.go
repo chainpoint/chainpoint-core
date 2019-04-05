@@ -59,16 +59,17 @@ var _ types2.Application = (*AnchorApplication)(nil)
 // AnchorApplication : AnchorState and config variables for the abci app
 type AnchorApplication struct {
 	types2.BaseApplication
-	ValUpdates []types2.ValidatorUpdate
-	Db         dbm.DB
-	state      types.AnchorState
-	config     types.AnchorConfig
-	logger     log.Logger
-	calendar   *calendar.Calendar
-	aggregator *aggregator.Aggregator
-	pgClient   *postgres.Postgres
-	ethClient  *ethcontracts.EthClient
-	rpc        *RPC
+	ValUpdates       []types2.ValidatorUpdate
+	RewardSignatures []string
+	Db               dbm.DB
+	state            types.AnchorState
+	config           types.AnchorConfig
+	logger           log.Logger
+	calendar         *calendar.Calendar
+	aggregator       *aggregator.Aggregator
+	pgClient         *postgres.Postgres
+	ethClient        *ethcontracts.EthClient
+	rpc              *RPC
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -86,17 +87,20 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	}
 
 	//Declare ethereum Client
-	ethClient, err := ethcontracts.NewClient(config.EthereumURL, config.TokenContractAddr, config.RegistryContractAddr, *config.Logger)
+	ethClient, err := ethcontracts.NewClient(config.EthereumURL, config.EthPrivateKey,
+		config.TokenContractAddr, config.RegistryContractAddr,
+		*config.Logger)
 	if util.LoggerError(*config.Logger, err) != nil {
 		panic(err)
 	}
 
 	//Construct application
 	app := AnchorApplication{
-		Db:     db,
-		state:  state,
-		config: config,
-		logger: *config.Logger,
+		Db:               db,
+		state:            state,
+		config:           config,
+		logger:           *config.Logger,
+		RewardSignatures: make([]string, 0),
 		calendar: &calendar.Calendar{
 			RabbitmqURI: config.RabbitmqURI,
 			Logger:      *config.Logger,
@@ -117,6 +121,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 		// Update NIST beacon record and gossip it to ensure everyone has the same aggregator state
 		scheduler.AddFunc("0/1 0-23 * * *", app.NistBeaconMonitor)
+
+		// Update Mint status
+		scheduler.AddFunc("0/1 0-23 * * *", app.MintMonitor)
 
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
@@ -200,9 +207,14 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
 			go app.AuditNodes()                                                 //retrieve, audit, and reward some nodes
+			go app.CollectRewardNodes()
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
+	}
+
+	if len(app.RewardSignatures) == 6 {
+		go app.MintRewardNodes(app.RewardSignatures)
 	}
 
 	// Finalize new block by calculating appHash and incrementing height

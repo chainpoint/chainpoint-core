@@ -20,6 +20,7 @@ type AnchorConfig struct {
 	TendermintRPC        TendermintURI
 	PostgresURI          string
 	EthereumURL          string
+	EthPrivateKey        string
 	TokenContractAddr    string
 	RegistryContractAddr string
 	DoCal                bool
@@ -30,23 +31,24 @@ type AnchorConfig struct {
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
 type AnchorState struct {
-	TxInt            int64  `json:"tx_int"`
-	Height           int64  `json:"height"`
-	ChainSynced      bool   `json:"chain_synced"`
-	AppHash          []byte `json:"app_hash"`
-	BeginCalTxInt    int64  `json:"begin_cal_int"`
-	EndCalTxInt      int64  `json:"end_cal_int"`
-	LatestCalTxInt   int64  `json:"latest_cal_int"`
-	LatestBtcaTx     []byte `json:"latest_btca"`
-	LatestBtcaTxInt  int64  `json:"latest_btca_int"`
-	LatestBtcaHeight int64  `json:"latest_btca_height"`
-	LatestBtcTx      string `json:"latest_btc"`
-	LatestBtcmTxInt  int64  `json:"latest_btcm_int"`
-	LatestBtcmHeight int64  `json:"latest_btcm_height"`
-	LatestBtccTx     []byte `json:"latest_btcc"`
-	LatestBtccTxInt  int64  `json:"latest_btcc_int"`
-	LatestBtccHeight int64  `json:"latest_btcc_height"`
-	LatestNistRecord string `json:"latest_nist_record"`
+	TxInt             int64  `json:"tx_int"`
+	Height            int64  `json:"height"`
+	ChainSynced       bool   `json:"chain_synced"`
+	AppHash           []byte `json:"app_hash"`
+	BeginCalTxInt     int64  `json:"begin_cal_int"`
+	EndCalTxInt       int64  `json:"end_cal_int"`
+	LatestCalTxInt    int64  `json:"latest_cal_int"`
+	LatestBtcaTx      []byte `json:"latest_btca"`
+	LatestBtcaTxInt   int64  `json:"latest_btca_int"`
+	LatestBtcaHeight  int64  `json:"latest_btca_height"`
+	LatestBtcTx       string `json:"latest_btc"`
+	LatestBtcmTxInt   int64  `json:"latest_btcm_int"`
+	LatestBtcmHeight  int64  `json:"latest_btcm_height"`
+	LatestBtccTx      []byte `json:"latest_btcc"`
+	LatestBtccTxInt   int64  `json:"latest_btcc_int"`
+	LatestBtccHeight  int64  `json:"latest_btcc_height"`
+	LatestNistRecord  string `json:"latest_nist_record"`
+	LastMintedAtBlock int64  `json:"last_mint_block"`
 }
 
 // Tx holds custom transaction data and metadata for the Chainpoint Calendar

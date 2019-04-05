@@ -44,14 +44,14 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	app.logger.Debug(fmt.Sprintf("starting scheduled anchor period for tx ranges %d to %d", startTxRange, endTxRange))
 
 	// elect leader to do the actual anchoring
-	iAmLeader, leaderID := app.ElectLeader()
-	if leaderID == "" {
+	iAmLeader, leaderIDs := app.ElectLeader(1)
+	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
-	app.logger.Debug(fmt.Sprintf("Leader: %s", leaderID))
+	app.logger.Debug(fmt.Sprintf("Leaders: %v", leaderIDs))
 
 	// Get CAL transactions between the latest BTCA tx and the current latest tx
-	txLeaves, err := app.getTxRange(startTxRange, endTxRange)
+	txLeaves, err := app.getCalTxRange(startTxRange, endTxRange)
 	if util.LogError(err) != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
 				if util.LogError(err) != nil {
 					if strings.Contains(err.Error(), "-32603") {
-						app.logger.Debug(fmt.Sprintf("BTC-A block already committed; Leader is %s", leaderID))
+						app.logger.Debug(fmt.Sprintf("BTC-A block already committed; Leader is %v", leaderIDs))
 						return err
 					}
 					app.resetAnchor(startTxRange)

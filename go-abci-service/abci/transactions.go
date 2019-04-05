@@ -3,6 +3,7 @@ package abci
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	types2 "github.com/tendermint/tendermint/abci/types"
 
@@ -65,9 +66,22 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.state.LatestNistRecord = tx.Data
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
+	case "MINT":
+		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
+		if err != nil {
+			app.logger.Debug("Parsing MINT tx failed")
+		} else {
+			app.state.LastMintedAtBlock = lastMintedAtBlock
+		}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		break
+	case "SIGN":
+		app.RewardSignatures = append(app.RewardSignatures, tx.Data)
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		break
 	case "NODE-RC":
 		tags = app.incrementTxInt(tags)
-		tags = append(tags, cmn.KVPair{Key: []byte("NODE-RC"), Value: util.Int64ToByte(app.state.TxInt)}) //TODO: replace with mint epoch
+		tags = append(tags, cmn.KVPair{Key: []byte("NODERC"), Value: util.Int64ToByte(app.state.LastMintedAtBlock)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
@@ -76,7 +90,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 }
 
 // GetTxRange gets all CAL TXs within a particular range
-func (app *AnchorApplication) getTxRange(minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
+func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
 	if maxTxInt <= minTxInt {
 		return nil, errors.New("max of tx range is less than or equal to min")
 	}

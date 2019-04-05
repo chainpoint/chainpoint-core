@@ -10,7 +10,7 @@ import (
 )
 
 // ElectLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
-func (app *AnchorApplication) ElectLeader() (isLeader bool, leaderID string) {
+func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leaderID []string) {
 	var status core_types.ResultStatus
 	var netInfo core_types.ResultNetInfo
 	var err error
@@ -20,15 +20,15 @@ func (app *AnchorApplication) ElectLeader() (isLeader bool, leaderID string) {
 	netInfo, err2 = app.rpc.GetNetInfo()
 
 	if util.LogError(err) != nil || util.LogError(err2) != nil {
-		return false, ""
+		return false, []string{}
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineLeader(status, netInfo.Peers, blockHash)
+	return determineLeader(numLeaders, status, netInfo.Peers, blockHash)
 }
 
 // determineLeader accepts current node status and a peer array, then finds a leader based on the latest blockhash
-func determineLeader(status core_types.ResultStatus, peers []core_types.Peer, seed string) (isLeader bool, leaderID string) {
+func determineLeader(numLeaders int, status core_types.ResultStatus, peers []core_types.Peer, seed string) (isLeader bool, leaderIDs []string) {
 	currentNodeID := status.NodeInfo.ID()
 	if len(peers) > 0 {
 		nodeArray := make([]core_types.Peer, 0)
@@ -47,14 +47,25 @@ func determineLeader(status core_types.ResultStatus, peers []core_types.Peer, se
 			return nodeArray[i].NodeInfo.ID() > nodeArray[j].NodeInfo.ID()
 		})
 		index := util.GetSeededRandInt([]byte(seed), len(nodeArray)) //seed the first time
-		//fmt.Printf("Elected index %d of core array (len %d)\n", index, len(nodeArray))
-		leader := nodeArray[index]
-		if leader.NodeInfo.ID() == currentNodeID {
-			if !status.SyncInfo.CatchingUp {
-				return true, string(leader.NodeInfo.ID())
+		if err := util.RotateLeft(nodeArray[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
+			util.LogError(err)
+			return false, []string{}
+		}
+		leaders := make([]core_types.Peer, 0)
+		if numLeaders <= len(nodeArray) {
+			leaders = nodeArray[0:numLeaders]
+		} else {
+			leaders = nodeArray[0:1]
+		}
+		leaderStrings := make([]string, 0)
+		iAmLeader := false
+		for _, leader := range leaders {
+			leaderStrings = append(leaderStrings, string(leader.NodeInfo.ID()))
+			if leader.NodeInfo.ID() == currentNodeID && !status.SyncInfo.CatchingUp {
+				iAmLeader = true
 			}
 		}
-		return false, string(leader.NodeInfo.ID())
+		return iAmLeader, leaderStrings
 	}
-	return true, string(currentNodeID)
+	return true, []string{string(currentNodeID)}
 }

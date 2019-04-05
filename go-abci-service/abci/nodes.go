@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -26,10 +28,86 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
+//MintRewardNodes : mint rewards for nodes
+func (app *AnchorApplication) MintRewardNodes(sig []string) error {
+	if leader, _ := app.ElectLeader(1); leader {
+		sigBytes := make([][]byte, len(sig))
+		for i, sigStr := range sig {
+			decodedSig, err := hex.DecodeString(sigStr)
+			if util.LoggerError(app.logger, err) != nil {
+				continue
+			}
+			sigBytes[i] = decodedSig
+		}
+		rewardCandidates, rewardHash, err := app.GetNodeRewardCandidates()
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
+		err = app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
+		app.RewardSignatures = make([]string, 0)
+	}
+	return nil
+}
+
+//CollectRewardNodes : collate and sign reward node list
+func (app *AnchorApplication) CollectRewardNodes() error {
+	if leader, _ := app.ElectLeader(5); leader {
+		currentEthBlock, err := app.ethClient.HighestBlock()
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
+		if currentEthBlock.Int64()-app.state.LastMintedAtBlock < 5760 {
+			return errors.New("Too soon for minting")
+		}
+		_, rewardHash, err := app.GetNodeRewardCandidates()
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
+		signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
+		res, err := app.rpc.BroadcastTx("SIGN-RC", hex.EncodeToString(signature), 2, time.Now().Unix())
+		if err != nil {
+			return err
+		}
+		if res.Code == 0 {
+			return nil
+		}
+		return errors.New("did not successfully broadcast SIGN-RC tx")
+	}
+	return nil
+}
+
+//GetNodeRewardCandidates : scans for and collates the reward candidates in the current epoch
+func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byte, error) {
+	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("NODERC=%d", app.state.LastMintedAtBlock), false, 1, 25)
+	if util.LoggerError(app.logger, err) != nil {
+		return []common.Address{}, []byte{}, err
+	}
+	nodeArray := make([]common.Address, 0)
+	for _, tx := range txResult.Txs {
+		decoded, err := util.DecodeTx(tx.Tx)
+		if err != nil {
+			continue
+		}
+		var node types.Node
+		if err := json.Unmarshal([]byte(decoded.Data), &node); err != nil {
+			return []common.Address{}, []byte{}, err
+		}
+		nodeArray = append(nodeArray, common.HexToAddress(node.EthAddr))
+	}
+	addresses := uniquify(nodeArray)
+	rewardHash := ethcontracts.AddressesToHash(addresses)
+	return addresses, rewardHash, nil
+}
+
 //AuditNodes : Audit nodes for reputation chain and hash submission validity. Submits reward tx with info if successful
 func (app *AnchorApplication) AuditNodes() error {
-	iAmLeader, _ := app.ElectLeader()
-	if iAmLeader {
+	if leader, _ := app.ElectLeader(1); leader {
 		status, err := app.rpc.GetStatus()
 		if util.LoggerError(app.logger, err) != nil {
 			return err
@@ -347,4 +425,18 @@ func verifySig(from, sigHex string, msg []byte) (bool, error) {
 func signHash(data []byte) []byte {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 	return crypto.Keccak256([]byte(msg))
+}
+
+func uniquify(s []common.Address) []common.Address {
+	seen := make(map[common.Address]struct{}, len(s))
+	j := 0
+	for _, v := range s {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		s[j] = v
+		j++
+	}
+	return s[:j]
 }
