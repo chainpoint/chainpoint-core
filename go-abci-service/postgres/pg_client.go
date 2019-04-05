@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
@@ -55,17 +54,15 @@ func NewPGFromURI(connStr string, logger log.Logger) (*Postgres, error) {
 
 //Inserts a new node row if it doesn't exist, other wise updates it on conflict
 func (pg *Postgres) NodeUpsert(node types.Node) (bool, error) {
-	stmt := "INSERT INTO staked_node (eth_addr, public_ip, amount_staked, stake_expiration, block_number, created_at, updated_at) " +
-		"VALUES ($1, $2, $3, $4, $5, now(), now()) " +
+	stmt := "INSERT INTO node_state (eth_addr, public_ip, block_number, created_at, updated_at) " +
+		"VALUES ($1, $2, $3, now(), now()) " +
 		"ON CONFLICT (eth_addr) " +
 		"DO UPDATE " +
 		"SET " +
 		"public_ip = $2, " +
-		"amount_staked = $3, " +
-		"stake_expiration = $4, " +
-		"block_number = $5 " +
-		"WHERE $5 > staked_node.block_number OR $2 <> staked_node.public_ip;"
-	res, err := pg.DB.Exec(stmt, node.EthAddr, node.PublicIP, node.AmountStaked, node.StakeExpiration, node.BlockNumber)
+		"block_number = $3 " +
+		"WHERE $3 > node_state.block_number OR $2 <> node_state.public_ip;"
+	res, err := pg.DB.Exec(stmt, node.EthAddr, node.PublicIP, node.BlockNumber)
 	if util.LoggerError(pg.Logger, err) != nil {
 		return false, err
 	}
@@ -79,7 +76,7 @@ func (pg *Postgres) NodeUpsert(node types.Node) (bool, error) {
 	return false, nil
 }
 
-//GetSeededRandomNodes : Get seeded random sequence of 3 nodes from the staked_nodes table
+//GetSeededRandomNodes : Get seeded random sequence of 3 nodes from the node_states table
 func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
 	//Usage:
 	//nodes, err := app.pgClient.GetSeededRandomNodes([]byte("3719ADA3EEE198F3A7A33616EA60ED6D72D94D31A2B2422FA12E2BCDDCABD4D4"))
@@ -90,7 +87,7 @@ func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
 	if util.LoggerError(pg.Logger, err) != nil {
 		return []types.Node{}, err
 	}
-	randomStmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, block_number FROM staked_node ORDER BY random() LIMIT 3;"
+	randomStmt := "SELECT eth_addr, public_ip,block_number FROM node_state ORDER BY random() LIMIT 3;"
 	rows, err := pg.DB.Query(randomStmt)
 	if util.LoggerError(pg.Logger, err) != nil {
 		return []types.Node{}, err
@@ -99,7 +96,7 @@ func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
 	nodes := make([]types.Node, 0)
 	for rows.Next() {
 		var node types.Node
-		switch err := rows.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.BlockNumber); err {
+		switch err := rows.Scan(&node.EthAddr, &node.PublicIP, &node.BlockNumber); err {
 		case sql.ErrNoRows:
 			return []types.Node{}, nil
 		case nil:
@@ -113,25 +110,8 @@ func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
 	return nodes, nil
 }
 
-//UpdateNodeAuth : update active access token info and remaining time balance
-func (pg *Postgres) UpdateNodeAuth(ethAddr string, activeTokenHash string, activeTokenTimestamp int64, balance int64) error {
-	stmt := "UPDATE staked_node SET active_token_hash = $1, active_token_timestamp = $2, WHERE eth_addr = $3;"
-	res, err := pg.DB.Exec(stmt, activeTokenHash, activeTokenTimestamp, ethAddr)
-	if util.LoggerError(pg.Logger, err) != nil {
-		return err
-	}
-	affect, err := res.RowsAffected()
-	if util.LoggerError(pg.Logger, err) != nil {
-		return err
-	}
-	if affect == 0 {
-		return errors.New("No rows updated")
-	}
-	return nil
-}
-
 func (pg *Postgres) GetNodeCount() (int, error) {
-	stmt := "SELECT count(*) FROM staked_node;" //WHERE (staked_node.public_ip <> NULL) AND (staked_node.public_ip <> '');"
+	stmt := "SELECT count(*) FROM node_state;" //WHERE (node_state.public_ip <> NULL) AND (node_state.public_ip <> '');"
 	row := pg.DB.QueryRow(stmt)
 	var nodeCount int
 	switch err := row.Scan(&nodeCount); err {
@@ -146,10 +126,10 @@ func (pg *Postgres) GetNodeCount() (int, error) {
 
 // GetNodeByEthAddr : gets staked nodes by their ethereum address (in hex with 0x format)
 func (pg *Postgres) GetNodeByEthAddr(ethAddr string) (types.Node, error) {
-	stmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, block_number FROM staked_node where eth_addr = $1"
+	stmt := "SELECT eth_addr, public_ip, block_number FROM node_state where eth_addr = $1"
 	row := pg.DB.QueryRow(stmt, ethAddr)
 	var node types.Node
-	switch err := row.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.BlockNumber); err {
+	switch err := row.Scan(&node.EthAddr, &node.PublicIP, &node.BlockNumber); err {
 	case sql.ErrNoRows:
 		return types.Node{}, nil
 	case nil:
@@ -162,10 +142,10 @@ func (pg *Postgres) GetNodeByEthAddr(ethAddr string) (types.Node, error) {
 
 //GetNodeByPublicIP : get staked nodes by their public IP string (should be unique)
 func (pg *Postgres) GetNodeByPublicIP(publicIP string) (types.Node, error) {
-	stmt := "SELECT eth_addr, public_ip, amount_staked, stake_expiration, active_token_hash, active_token_timestamp, block_number FROM staked_node where public_ip = $1"
+	stmt := "SELECT eth_addr, public_ip, block_number FROM node_state where public_ip = $1"
 	row := pg.DB.QueryRow(stmt, publicIP)
 	var node types.Node
-	switch err := row.Scan(&node.EthAddr, &node.PublicIP, &node.AmountStaked, &node.StakeExpiration, &node.ActiveTokenHash, &node.ActiveTokenTimestamp, &node.BlockNumber); err {
+	switch err := row.Scan(&node.EthAddr, &node.PublicIP, &node.BlockNumber); err {
 	case sql.ErrNoRows:
 		return types.Node{}, nil
 	case nil:
@@ -178,11 +158,9 @@ func (pg *Postgres) GetNodeByPublicIP(publicIP string) (types.Node, error) {
 
 func (pg *Postgres) HandleNodeStaking(node ethcontracts.ChpRegistryNodeStaked) error {
 	newNode := types.Node{
-		EthAddr:         node.Sender.Hex(),
-		PublicIP:        sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
-		AmountStaked:    sql.NullInt64{Int64: node.AmountStaked.Int64(), Valid: true},
-		StakeExpiration: sql.NullInt64{Int64: node.Duration.Int64(), Valid: true},
-		BlockNumber:     sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+		EthAddr:     node.Sender.Hex(),
+		PublicIP:    sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+		BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 	}
 	inserted, err := pg.NodeUpsert(newNode)
 	if util.LoggerError(pg.Logger, err) != nil {
@@ -194,11 +172,9 @@ func (pg *Postgres) HandleNodeStaking(node ethcontracts.ChpRegistryNodeStaked) e
 
 func (pg *Postgres) HandleNodeStakeUpdating(node ethcontracts.ChpRegistryNodeStakeUpdated) error {
 	newNode := types.Node{
-		EthAddr:         node.Sender.Hex(),
-		PublicIP:        sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
-		AmountStaked:    sql.NullInt64{Int64: node.AmountStaked.Int64(), Valid: true},
-		StakeExpiration: sql.NullInt64{Int64: node.Duration.Int64(), Valid: true},
-		BlockNumber:     sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+		EthAddr:     node.Sender.Hex(),
+		PublicIP:    sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+		BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 	}
 	inserted, err := pg.NodeUpsert(newNode)
 	if util.LoggerError(pg.Logger, err) != nil {

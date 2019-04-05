@@ -193,21 +193,15 @@ type NodeArray []Node
 
 // Node : Used to represent Node info to and from postgres
 type Node struct {
-	EthAddr              string
-	PublicIP             sql.NullString
-	PublicKey            sql.NullString
-	AmountStaked         sql.NullInt64
-	StakeExpiration      sql.NullInt64
-	ActiveTokenHash      sql.NullString
-	ActiveTokenTimestamp sql.NullInt64
-	BlockNumber          sql.NullInt64
+	EthAddr     string
+	PublicIP    sql.NullString
+	BlockNumber sql.NullInt64
 }
 
 //NodeJson : Used to write to chain
 type NodeJson struct {
-	EthAddr   string `json:"eth_address"`
-	PublicIP  string `json:"node_ip"`
-	PublicKey string `json:"public_key"`
+	EthAddr  string `json:"eth_address"`
+	PublicIP string `json:"node_ip"`
 }
 
 //RepChain : Array of repchain items

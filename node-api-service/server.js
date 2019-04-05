@@ -28,7 +28,7 @@ const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
-const stakedNode = require('./lib/models/StakedNode.js')
+const stakedNode = require('./lib/models/NodeState.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 
 const bunyan = require('bunyan')

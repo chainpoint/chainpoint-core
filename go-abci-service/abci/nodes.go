@@ -132,9 +132,8 @@ func (app *AnchorApplication) AuditNodes() error {
 						return
 					}
 					nodeJson := types.NodeJson{
-						EthAddr:   node.EthAddr,
-						PublicIP:  node.PublicIP.String,
-						PublicKey: node.PublicKey.String,
+						EthAddr:  node.EthAddr,
+						PublicIP: node.PublicIP.String,
 					}
 					mux.Lock()
 					rewardCandidates = append(rewardCandidates, nodeJson)
@@ -192,14 +191,10 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 		return err
 	}
 	for _, node := range nodesStaked {
-		pubKeyHex := hex.EncodeToString(node.NodePublicKey[:])
 		newNode := types.Node{
-			EthAddr:         node.Sender.Hex(),
-			PublicIP:        sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
-			PublicKey:       sql.NullString{String: pubKeyHex, Valid: true},
-			AmountStaked:    sql.NullInt64{Int64: node.AmountStaked.Int64(), Valid: true},
-			StakeExpiration: sql.NullInt64{Int64: node.Duration.Int64(), Valid: true},
-			BlockNumber:     sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+			EthAddr:     node.Sender.Hex(),
+			PublicIP:    sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+			BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 		}
 		inserted, err := app.pgClient.NodeUpsert(newNode)
 		if util.LoggerError(app.logger, err) != nil {
@@ -214,14 +209,10 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 		return err
 	}
 	for _, node := range nodesStakedUpdated {
-		pubKeyHex := hex.EncodeToString(node.PublicKey[:])
 		newNode := types.Node{
-			EthAddr:         node.Sender.Hex(),
-			PublicIP:        sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
-			PublicKey:       sql.NullString{String: pubKeyHex, Valid: true},
-			AmountStaked:    sql.NullInt64{Int64: node.AmountStaked.Int64(), Valid: true},
-			StakeExpiration: sql.NullInt64{Int64: node.Duration.Int64(), Valid: true},
-			BlockNumber:     sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+			EthAddr:     node.Sender.Hex(),
+			PublicIP:    sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+			BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 		}
 		inserted, err := app.pgClient.NodeUpsert(newNode)
 		if util.LoggerError(app.logger, err) != nil {

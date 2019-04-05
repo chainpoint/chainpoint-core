@@ -20,13 +20,13 @@ const Sequelize = require('sequelize')
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-    STAKED_NODE_TABLE_NAME: envalid.str({
-        default: 'staked_node'
+    NODE_STATE_TABLE_NAME: envalid.str({
+        default: 'node_state'
     })
 })
 
 function defineFor (sqlz) {
-    let StakedNode = sqlz.define(env.STAKED_NODE_TABLE_NAME,
+    let StakedNode = sqlz.define(env.NODE_STATE_TABLE_NAME,
         {
             ethAddr: {
                 comment: 'A seemingly valid Ethereum address that the Node will send TNT from, or receive rewards with.',
@@ -38,15 +38,6 @@ function defineFor (sqlz) {
                 allowNull: false,
                 primaryKey: true
             },
-            pubKey: {
-                comment: 'The public key of a Node.',
-                type: Sequelize.STRING,
-                validate: {
-                    isAlphanumeric: true
-                },
-                field: 'public_key',
-                allowNull: true
-            },
             publicIp: {
                 comment: 'The public IP address of a Node, when blank represents a non-public Node.',
                 type: Sequelize.STRING,
@@ -54,39 +45,6 @@ function defineFor (sqlz) {
                     isIP: true
                 },
                 field: 'public_ip',
-                allowNull: true
-            },
-            amountStaked: {
-                comment: 'The balance of token credit they have staked against their node.',
-                type: Sequelize.BIGINT,
-                field: 'amount_staked',
-                defaultValue: 0
-            },
-            stakeExpiration: {
-                comment: 'The end of the staking period in unix epoch time',
-                type: Sequelize.INTEGER, // is 64 bit in CockroachDB
-                validate: {
-                    isInt: true
-                },
-                field: 'stake_expiration',
-                allowNull: true
-            },
-            activeTokenHash: {
-                comment: 'The hash of the active expired auth token',
-                type: Sequelize.STRING,
-                validate: {
-                    isAlphanumeric: true
-                },
-                field: 'active_token_hash',
-                allowNull: true
-            },
-            activeTokenTimestamp: {
-                comment: 'The timestamp in unix epoch time of the last auth token',
-                type: Sequelize.INTEGER,
-                validate: {
-                    isInt: true
-                },
-                field: 'active_token_timestamp',
                 allowNull: true
             },
             blockNumber: {
