@@ -22,8 +22,8 @@ func main() {
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
 	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
-	ethTokenContract := util.GetEnv("TokenContractAddr", "0xC58f7d9a97bE0aC0084DBb2011Da67f36A0deD9F")
-	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x5AfdE9fFFf63FF1f883405615965422889B8dF29")
+	ethTokenContract := util.GetEnv("TokenContractAddr", "0x5838881a1eE42AA343EB9dAdfbC456A9610978Ff")
+	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x959b1773272d560eeF0Dd917E05E4359015945bc")
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
 	tendermintRPC := types.TendermintURI{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "tendermint"),

@@ -38,6 +38,9 @@ services:
     command: bash -c "abci-service"
     networks:
     - chainpoint
+    secrets:
+      - ETH_INFURA_API_KEY
+      - ETH_PRIVATE_KEY
 
   tendermint:
     depends_on:

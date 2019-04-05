@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"reflect"
 	"strconv"
@@ -111,6 +112,21 @@ func BytesToIP(encoded_ip []byte) string {
 		strconv.Itoa(int(encoded_ip[1])) + "." +
 		strconv.Itoa(int(encoded_ip[2])) + "." +
 		strconv.Itoa(int(encoded_ip[3]))
+	return ip
+}
+
+//Ip2Int : converts IP to uint32
+func Ip2Int(ip net.IP) uint32 {
+	if len(ip) == 16 {
+		return binary.BigEndian.Uint32(ip[12:16])
+	}
+	return binary.BigEndian.Uint32(ip)
+}
+
+//Int2Ip : converts uint32 to IP
+func Int2Ip(nn uint32) net.IP {
+	ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(ip, nn)
 	return ip
 }
 

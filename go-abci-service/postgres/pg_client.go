@@ -159,7 +159,7 @@ func (pg *Postgres) GetNodeByPublicIP(publicIP string) (types.Node, error) {
 func (pg *Postgres) HandleNodeStaking(node ethcontracts.ChpRegistryNodeStaked) error {
 	newNode := types.Node{
 		EthAddr:     node.Sender.Hex(),
-		PublicIP:    sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+		PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
 		BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 	}
 	inserted, err := pg.NodeUpsert(newNode)
@@ -173,7 +173,7 @@ func (pg *Postgres) HandleNodeStaking(node ethcontracts.ChpRegistryNodeStaked) e
 func (pg *Postgres) HandleNodeStakeUpdating(node ethcontracts.ChpRegistryNodeStakeUpdated) error {
 	newNode := types.Node{
 		EthAddr:     node.Sender.Hex(),
-		PublicIP:    sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+		PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
 		BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 	}
 	inserted, err := pg.NodeUpsert(newNode)

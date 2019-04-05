@@ -193,7 +193,7 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 	for _, node := range nodesStaked {
 		newNode := types.Node{
 			EthAddr:     node.Sender.Hex(),
-			PublicIP:    sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+			PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
 			BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 		}
 		inserted, err := app.pgClient.NodeUpsert(newNode)
@@ -211,7 +211,7 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 	for _, node := range nodesStakedUpdated {
 		newNode := types.Node{
 			EthAddr:     node.Sender.Hex(),
-			PublicIP:    sql.NullString{String: util.BytesToIP(node.NodeIp[:]), Valid: true},
+			PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
 			BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 		}
 		inserted, err := app.pgClient.NodeUpsert(newNode)
