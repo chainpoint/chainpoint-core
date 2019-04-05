@@ -70,7 +70,7 @@ func (app *AnchorApplication) CollectRewardNodes() error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
-		res, err := app.rpc.BroadcastTx("SIGN-RC", hex.EncodeToString(signature), 2, time.Now().Unix())
+		res, err := app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix())
 		if err != nil {
 			return err
 		}
@@ -94,11 +94,13 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 		if err != nil {
 			continue
 		}
-		var node types.Node
-		if err := json.Unmarshal([]byte(decoded.Data), &node); err != nil {
+		var nodes []types.NodeJson
+		if err := json.Unmarshal([]byte(decoded.Data), &nodes); err != nil {
 			return []common.Address{}, []byte{}, err
 		}
-		nodeArray = append(nodeArray, common.HexToAddress(node.EthAddr))
+		for _, nodeJson := range nodes {
+			nodeArray = append(nodeArray, common.HexToAddress(nodeJson.EthAddr))
+		}
 	}
 	addresses := uniquify(nodeArray)
 	rewardHash := ethcontracts.AddressesToHash(addresses)
@@ -113,7 +115,7 @@ func (app *AnchorApplication) AuditNodes() error {
 			return err
 		}
 		blockHash := status.SyncInfo.LatestBlockHash.String()
-		rewardCandidates := make([]types.Node, 0)
+		rewardCandidates := make([]types.NodeJson, 0)
 		startTime := time.Now()
 		var wg sync.WaitGroup
 		var mux sync.Mutex
@@ -129,8 +131,13 @@ func (app *AnchorApplication) AuditNodes() error {
 					if err := app.AuditNode(node); err != nil {
 						return
 					}
+					nodeJson := types.NodeJson{
+						EthAddr:   node.EthAddr,
+						PublicIP:  node.PublicIP.String,
+						PublicKey: node.PublicKey.String,
+					}
 					mux.Lock()
-					rewardCandidates = append(rewardCandidates, node)
+					rewardCandidates = append(rewardCandidates, nodeJson)
 					mux.Unlock()
 				}(nodeCandidate)
 			}

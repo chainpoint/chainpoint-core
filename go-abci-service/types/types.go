@@ -203,6 +203,13 @@ type Node struct {
 	BlockNumber          sql.NullInt64
 }
 
+//NodeJson : Used to write to chain
+type NodeJson struct {
+	EthAddr   string `json:"eth_address"`
+	PublicIP  string `json:"node_ip"`
+	PublicKey string `json:"public_key"`
+}
+
 //RepChain : Array of repchain items
 type RepChain []RepChainItem
 
