@@ -159,7 +159,7 @@ clean: down
 ## init-swarm               : Create data folder with proper permissions
 .PHONY : init-swarm
 init-swarm:
-	@docker swarm init || true
+	@docker swarm init || echo "swarm already initialized"
 
 ## init-secrets             : Create data folder with proper permissions
 .PHONY : init-secrets
@@ -168,6 +168,12 @@ init-secrets: init-swarm
 	@read -p "What is your Infura API Key? " infura_api_key
 	@echo $bitcoin_wif | docker secret create BITCOIN_WIF -
 	@echo $infura_api_key | docker secret create ETH_INFURA_API_KEY -
+	@scripts/generate_eth_account.sh
+
+## rm-secrets               : Remove secrets
+.PHONY : rm-secrets
+rm-secrets:
+	scripts/remove_eth_account.sh
 
 ## init                     : Create data folder with proper permissions
 .PHONY : init

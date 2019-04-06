@@ -10,6 +10,8 @@ secrets:
     external: true
   ETH_PRIVATE_KEY:
     external: true
+  ETH_ADDRESS:
+    external: true
 
 services:
 
@@ -25,6 +27,7 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
       ETH_PRIVATE_KEY: DOCKER-SECRET->ETH_PRIVATE_KEY
+      ETH_ADDRESS: DOCKER-SECRET->ETH_ADDRESS
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
       ANCHOR: "true"
@@ -41,6 +44,7 @@ services:
     secrets:
       - ETH_INFURA_API_KEY
       - ETH_PRIVATE_KEY
+      - ETH_ADDRESS
 
   tendermint:
     depends_on:
