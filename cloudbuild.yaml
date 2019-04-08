@@ -1,12 +1,6 @@
 steps:
 - name: 'gcr.io/cloud-builders/git'
-  entrypoint: 'bash'
-  args:
-  - '-c'
-  - |
-    git config -f .gitmodules submodule.chainpoint_go-hydra-smart-contract-files.url https://source.developers.google.com/p/chainpoint-registry/r/github_chainpoint_go-hydra-smart-contract-files
-    git submodule init
-    git submodule update
+  args: ['submodule', 'update', '--init', '--recursive']
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.node-base', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:latest', '.' ]
   id: 'node-base'
