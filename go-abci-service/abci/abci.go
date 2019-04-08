@@ -70,6 +70,7 @@ type AnchorApplication struct {
 	pgClient         *postgres.Postgres
 	ethClient        *ethcontracts.EthClient
 	rpc              *RPC
+	ID               string
 }
 
 //NewAnchorApplication is ABCI app constructor

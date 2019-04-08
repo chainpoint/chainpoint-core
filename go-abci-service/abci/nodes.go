@@ -70,7 +70,7 @@ func (app *AnchorApplication) CollectRewardNodes() error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
-		res, err := app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix())
+		res, err := app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
 		if err != nil {
 			return err
 		}
@@ -152,7 +152,7 @@ func (app *AnchorApplication) AuditNodes() error {
 		if err != nil {
 			return err
 		}
-		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJson), 2, time.Now().Unix())
+		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJson), 2, time.Now().Unix(), app.ID)
 		if err != nil {
 			return err
 		}

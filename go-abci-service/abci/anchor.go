@@ -23,7 +23,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 	if calAgg.CalRoot != "" {
 		app.logger.Debug(fmt.Sprintf("Calendar Root: %s", calAgg.CalRoot))
 
-		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix())
+		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix(), app.ID)
 		if util.LogError(err) != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 					app.resetAnchor(startTxRange)
 					return err
 				}
-				result, err := app.rpc.BroadcastTx("BTC-A", string(BtcAData), 2, time.Now().Unix())
+				result, err := app.rpc.BroadcastTx("BTC-A", string(BtcAData), 2, time.Now().Unix(), app.ID)
 				app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
 				if util.LogError(err) != nil {
 					if strings.Contains(err.Error(), "-32603") {

@@ -57,6 +57,7 @@ type Tx struct {
 	Data    string `json:"data"`
 	Version int64  `json:"version"`
 	Time    int64  `json:"time"`
+	CoreID  string `json:"core_id"`
 }
 
 // BtcA struct will be included in the BTC-A tx data field

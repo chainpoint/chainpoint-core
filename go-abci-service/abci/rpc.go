@@ -24,8 +24,8 @@ func NewRPCClient(tendermintRPC types.TendermintURI) (rpc *RPC) {
 }
 
 // BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
-func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int64) (core_types.ResultBroadcastTx, error) {
-	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time}
+func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int64, stackID string) (core_types.ResultBroadcastTx, error) {
+	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID}
 	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTx(tx)))
 	if util.LogError(err) != nil {
 		return core_types.ResultBroadcastTx{}, err
