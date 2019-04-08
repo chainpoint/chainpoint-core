@@ -25,11 +25,14 @@ services:
       HASHES_PER_MERKLE_TREE: "200"
       ANCHOR_BLOCK_INTERVAL: "3"
       LOG_LEVEL: "DEBUG"
+    volumes:
+    - ${PWD}/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_KEYPAIR
     ports:
     - "26658"
     command: bash -c "abci-service"
     networks:
     - chainpoint
+
 
   tendermint:
     depends_on:

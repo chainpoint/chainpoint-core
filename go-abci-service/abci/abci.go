@@ -88,8 +88,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	}
 
 	//Declare ethereum Client
-	ethClient, err := ethcontracts.NewClient(config.EthereumURL, config.EthPrivateKey,
-		config.TokenContractAddr, config.RegistryContractAddr,
+	ethClient, err := ethcontracts.NewClient(config.EthConfig.EthereumURL, config.EthConfig.EthPrivateKey,
+		config.EthConfig.TokenContractAddr, config.EthConfig.RegistryContractAddr,
 		*config.Logger)
 	if util.LoggerError(*config.Logger, err) != nil {
 		panic(err)

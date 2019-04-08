@@ -1,10 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/knq/pemutil"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -38,20 +41,34 @@ func main() {
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
-	// Create config object
-	config := types.AnchorConfig{
-		DBType:               "goleveldb",
-		RabbitmqURI:          util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
-		TendermintRPC:        tendermintRPC,
-		PostgresURI:          fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", POSTGRES_USER, POSTGRES_PW, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB),
+	ethConfig := types.EthConfig{
 		EthereumURL:          fmt.Sprintf("https://ropsten.infura.io/%s", ethInfuraApiKey),
 		EthPrivateKey:        ethPrivateKey,
 		TokenContractAddr:    ethTokenContract,
 		RegistryContractAddr: ethRegistryContract,
-		DoCal:                doCalLoop,
-		DoAnchor:             doAnchorLoop,
-		AnchorInterval:       anchorInterval,
-		Logger:               &tmLogger,
+	}
+
+	store, err := pemutil.LoadFile("/run/secrets/ECDSA_KEYPAIR")
+	if err != nil {
+		util.LogError(err)
+	}
+	ecPrivKey, ok := store.ECPrivateKey()
+	if !ok {
+		util.LogError(errors.New("ecdsa key load failed"))
+	}
+
+	// Create config object
+	config := types.AnchorConfig{
+		DBType:         "goleveldb",
+		RabbitmqURI:    util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
+		TendermintRPC:  tendermintRPC,
+		PostgresURI:    fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", POSTGRES_USER, POSTGRES_PW, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB),
+		EthConfig:      ethConfig,
+		ECPrivateKey:   *ecPrivKey,
+		DoCal:          doCalLoop,
+		DoAnchor:       doAnchorLoop,
+		AnchorInterval: anchorInterval,
+		Logger:         &tmLogger,
 	}
 
 	//Instantiate ABCI application

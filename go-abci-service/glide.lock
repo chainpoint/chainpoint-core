@@ -1,5 +1,5 @@
 hash: 2d515a802a372f14e3dba5dcd485d5e1b36f3859c9ec8a9f3e6f37691c7649d2
-updated: 2019-04-04T21:14:20.360810738-07:00
+updated: 2019-04-08T16:29:10.835616767-07:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
@@ -91,6 +91,8 @@ imports:
   version: 6771d4b492ba2d5f57919c04b4cddb3735365120
 - name: github.com/jmhodges/levigo
   version: 853d788c5c416eaaee5b044570784a96c7a26975
+- name: github.com/knq/pemutil
+  version: fb6fad722528d308d5fbc9f39e0a9644905ee1cb
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/lib/pq

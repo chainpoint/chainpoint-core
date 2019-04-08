@@ -1,6 +1,7 @@
 package types
 
 import (
+	"crypto/ecdsa"
 	"database/sql"
 	"time"
 
@@ -15,18 +16,24 @@ type TendermintURI struct {
 
 //AnchorConfig represents values to configure all connections within the ABCI anchor app
 type AnchorConfig struct {
-	DBType               string
-	RabbitmqURI          string
-	TendermintRPC        TendermintURI
-	PostgresURI          string
+	DBType         string
+	RabbitmqURI    string
+	TendermintRPC  TendermintURI
+	PostgresURI    string
+	EthConfig      EthConfig
+	ECPrivateKey   ecdsa.PrivateKey
+	DoCal          bool
+	DoAnchor       bool
+	AnchorInterval int
+	Logger         *log.Logger
+}
+
+//EthConfig holds contract addresses and eth node URI
+type EthConfig struct {
 	EthereumURL          string
 	EthPrivateKey        string
 	TokenContractAddr    string
 	RegistryContractAddr string
-	DoCal                bool
-	DoAnchor             bool
-	AnchorInterval       int
-	Logger               *log.Logger
 }
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
