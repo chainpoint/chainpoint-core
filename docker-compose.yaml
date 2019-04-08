@@ -119,6 +119,8 @@ services:
       - postgres
     networks:
       - chainpoint
+    volumes:
+      - ${PWD}/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_KEYPAIR
     environment:
       NODE_ENV: development
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}

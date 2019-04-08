@@ -137,28 +137,30 @@ init-swarm:
 
 ## init-secrets              : Read secrets into docker storages
 .PHONY : init-secrets
-init-secrets: init-swarm
+init-secrets: init init-swarm
 	@read -p "What is your Bitcoin WIF (private key for your HOT WALLET anchoring account)? " bitcoin_wif
 	@read -p "What is your Infura API Key? " infura_api_key
 	@echo $bitcoin_wif | docker secret create BITCOIN_WIF -
 	@echo $infura_api_key | docker secret create ETH_INFURA_API_KEY -
 	@scripts/generate_eth_account.sh
+	@scripts/generate_ecdsa_keypair.sh
 
 ## rm-secrets                : Remove secrets
 .PHONY : rm-secrets
 rm-secrets:
-	scripts/remove_eth_account.sh
+	scripts/remove_secrets.sh
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init
 init:
 	@sudo mkdir -p ./data/postgresql
 	@sudo mkdir -p ./data/redis
+	@sudo mkdir -p ./data/keys
 	@sudo mkdir -p ./config/node_1
 	@sudo chmod 777 ./config/node_1
 	@sudo mkdir -p ./config/node_1/data
 	@sudo chmod 777 ./config/node_1/data
-	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config  -v $(shell pwd)/config/node_1/data:/tendermint/data tendermint/tendermint init
+	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config  -v $(shell pwd)/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
 	@sudo chmod 777 ./config/node_1
 	@sudo chmod 777 config/node_1/priv_validator_key.json
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
