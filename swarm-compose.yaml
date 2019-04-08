@@ -12,11 +12,13 @@ secrets:
     external: true
   ETH_ADDRESS:
     external: true
+  ECDSA_KEYPAIR:
+    external: true
 
 services:
 
   abci:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG}
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.abci
@@ -38,13 +40,13 @@ services:
       LOG_LEVEL: "DEBUG"
     ports:
     - "26658"
-    command: bash -c "abci-service"
     networks:
     - chainpoint
     secrets:
       - ETH_INFURA_API_KEY
       - ETH_PRIVATE_KEY
       - ETH_ADDRESS
+      - ECDSA_KEYPAIR
 
   tendermint:
     depends_on:
@@ -61,16 +63,6 @@ services:
     - "26657:26657"
     networks:
     - chainpoint
-
-
-  # Node.js Base Image
-  # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
-  #
-  base:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.node-base
 
   # NGINX Proxy
   #
@@ -122,7 +114,7 @@ services:
   #
   api:
     restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG}
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.api
@@ -140,31 +132,12 @@ services:
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
 
-  api-test:
-    container_name: node-api-service-test
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service-test:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api-test
-    depends_on:
-      - base
-      - redis
-      - rabbitmq
-      - postgres
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: test
-      CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
-      ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
-      VIRTUAL_HOST: api.local
-
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
   #
   btc-tx:
     restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG}
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.btc-tx
@@ -189,7 +162,7 @@ services:
   #
   btc-mon:
     restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-mon-service:${DOCKER_TAG}
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-mon-service:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.btc-mon
@@ -209,7 +182,7 @@ services:
   #
   proof-state:
     restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG}
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.proof-state
@@ -229,7 +202,7 @@ services:
   #
   proof-gen:
     restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG}
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.proof-gen

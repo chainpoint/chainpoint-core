@@ -1,6 +1,8 @@
 # First target in the Makefile is the default.
 all: help
 
+SHELL := /bin/bash
+
 # Get the location of this makefile.
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
@@ -46,27 +48,27 @@ test-aggregator:
 test-merkletools:
 	scripts/test.sh merkletools
 
-## test-abci		         : Run abci test suite
+## test-abci                 : Run abci test suite
 .PHONY : test-abci
 test-abci:
 	scripts/test.sh abci
 
-## test-calendar	         : Run calendar test suite
+## test-calendar	           : Run calendar test suite
 .PHONY : test-calendar
 test-calendar:
 	scripts/test.sh calendar
 
-## test-util		         : Run util test suite
+## test-util                 : Run util test suite
 .PHONY : test-util
 test-util:
 	scripts/test.sh util
 
-## test-rabbitmq	         : Run rabbit test suite
+## test-rabbitmq	           : Run rabbit test suite
 .PHONY : test-rabbit
 test-rabbit:
 	scripts/test.sh rabbit
 
-## test-monitor		         : Run monitor test suite
+## test-monitor              : Run monitor test suite
 .PHONY : test-monitor
 test-monitor:
 	scripts/test.sh monitor
@@ -80,7 +82,7 @@ test: test-api test-aggregator test-merkletools test-abci test-calendar test-uti
 up: pull
 	docker-compose up -d
 
-## up-no-build              : Startup without performing builds, rely on pull of images.
+## up-no-build               : Startup without performing builds, rely on pull of images.
 .PHONY : up-no-build
 up-no-build:
 	docker-compose up -d --no-build
@@ -105,41 +107,10 @@ down:
 ps:
 	docker-compose ps
 
-## restart                        : Restart a dev mode container
+## restart                   : Restart a dev mode container
 .PHONY : restart
 restart:
 	docker-compose up -d --build $(app)
-
-## up-swarm                        : Build and start all
-.PHONY : up-swarm
-up-swarm: pull 
-	docker stack deploy -c swarm-compose.yaml chainpoint-core
-
-## up-swarm-no-build              : Startup swarm without performing builds, rely on pull of images.
-.PHONY : up-swarm-no-build
-up-swarm-no-build: 
-	docker stack deploy -c swarm-compose.yaml chainpoint-core
-
-## dev-swarm                       : Build and start all
-.PHONY : dev-swarm
-dev-swarm: build 
-	docker stack deploy -c swarm-compose.yaml chainpoint-core
-
-## dev-swarm-no-build              : Startup swarm without performing builds, rely on pull of images.
-.PHONY : dev-swarm-no-build
-dev-swarm-no-build: 
-	docker stack deploy -c swarm-compose.yaml chainpoint-core
-
-## down-swarm                      : Shutdown Application
-.PHONY : down-swarm
-down-swarm:
-	docker stack rm chainpoint-core
-
-## restart-swarm                        : Restart a dev-swarm mode container
-.PHONY : restart-swarm
-restart-swarm:
-	docker-compose build $(app)
-	docker service update --force $(app)
 
 ## logs                      : Tail application logs
 .PHONY : logs
@@ -149,19 +120,22 @@ logs:
 ## clean                     : Shutdown and destroy all local application data
 .PHONY : clean
 clean: down
-	@sudo rm -rf ./data/*
+	@sudo rm -rf ./data/postgresql/*
+	@sudo rm -rf ./data/redis/*
+	@sudo chmod 777 ./data/postgresql
+	@sudo chmod 777 ./data/redis
 	@sudo rm -rf ./config/node_1/data/*
 	@sudo chmod 777 ./config/node_1
 	@sudo chmod 777 ./config/node_1/*
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 	@sudo docker system prune --volumes -f
 
-## init-swarm               : Create data folder with proper permissions
+## init-swarm                : Create a docker swarm manager node
 .PHONY : init-swarm
 init-swarm:
 	@docker swarm init || echo "swarm already initialized"
 
-## init-secrets             : Create data folder with proper permissions
+## init-secrets              : Read secrets into docker storages
 .PHONY : init-secrets
 init-secrets: init-swarm
 	@read -p "What is your Bitcoin WIF (private key for your HOT WALLET anchoring account)? " bitcoin_wif
@@ -170,15 +144,16 @@ init-secrets: init-swarm
 	@echo $infura_api_key | docker secret create ETH_INFURA_API_KEY -
 	@scripts/generate_eth_account.sh
 
-## rm-secrets               : Remove secrets
+## rm-secrets                : Remove secrets
 .PHONY : rm-secrets
 rm-secrets:
 	scripts/remove_eth_account.sh
 
-## init                     : Create data folder with proper permissions
+## init                      : Create data folder with proper permissions
 .PHONY : init
 init:
-	@sudo mkdir -p ./data
+	@sudo mkdir -p ./data/postgresql
+	@sudo mkdir -p ./data/redis
 	@sudo mkdir -p ./config/node_1
 	@sudo chmod 777 ./config/node_1
 	@sudo mkdir -p ./config/node_1/data
@@ -215,8 +190,8 @@ yarn:
 	docker run -it --rm --volume "$(PWD)":/usr/src/app --volume /var/run/docker.sock:/var/run/docker.sock --volume ~/.docker:/root/.docker --volume "$(PWD)":/wd --workdir /wd gcr.io/chainpoint-registry/github-chainpoint-chainpoint-services/node-base:latest yarn
 
 ## postgres                  : Connect to the local PostgreSQL with `psql`	
-	.PHONY : postgres
-	postgres:
+.PHONY : postgres
+postgres:
 	@docker-compose up-swarm -d postgres
 	@sleep 6
 	@docker exec -it postgres-core psql -U chainpoint
@@ -227,3 +202,14 @@ redis:
 	@docker-compose up-swarm -d redis
 	@sleep 2
 	@docker exec -it redis-core redis-cli
+
+## deploy					: deploys a swarm stack
+deploy:
+	set -a && source .env && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
+
+## stop-swarm				: stops a swarm stack
+stop-swarm:
+	docker stack rm chainpoint-core
+
+## remove 					: stops, removes, and cleans a swarm
+remove: stop-swarm clean

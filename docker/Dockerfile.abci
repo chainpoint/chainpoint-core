@@ -8,4 +8,4 @@ COPY go-abci-service/glide.yaml go-abci-service/glide.lock $PKG_PATH/
 RUN glide install
 ADD go-abci-service $PKG_PATH
 RUN make install
-CMD ["./run.sh"]
+CMD ["/bin/bash", "-c", "$GOPATH/src/$PKG_NAME/run.sh"]
