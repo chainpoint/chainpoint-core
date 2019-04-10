@@ -33,7 +33,18 @@ async function getPeersAsync(req, res, next) {
 
   let decodedPeers = netResponse.result.peers.map(peer => {
     let ipBytes = Buffer.from(peer.remote_ip, 'base64').slice(-4)
-    return ipBytes.join('.')
+    let remote_ip = ipBytes.join('.')
+    first_octet = remote_ip.substring(0, remote_ip.indexOf("."))
+    if (first_octet == "10" || first_octet == "172" || first_octet == "192") {
+      let listen_addr = peer.node_info.listen_addr
+        if (listen_addr.includes("//")) {
+            return listen_addr.substring(listen_addr.lastIndexOf("/"), listen_addr.indexOf(":"))
+        }
+        return list_addr.substring(0, listen_addr.indexOf(":"))
+    }
+    return remote_ip
+  }).filter(ip => {
+    return ip.substring(0, ip.indexOf(".")) != "0"
   })
   res.contentType = 'application/json'
   res.send(decodedPeers)

@@ -157,10 +157,9 @@ init:
 	@sudo mkdir -p ./data/postgresql
 	@sudo mkdir -p ./data/redis
 	@sudo mkdir -p ./data/keys
-	@sudo mkdir -p ./config/node_1
-	@sudo chmod -R 777 ./config/node_1
+	@sudo chmod -R 777 ./data
 	@sudo mkdir -p ./config/node_1/data
-	@sudo chmod 777 ./config/node_1/data
+	@sudo chmod -R 777 ./config/node_1
 	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config  -v $(shell pwd)/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
 	@sudo chmod 777 ./config/node_1
 	@sudo chmod 777 config/node_1/priv_validator_key.json
