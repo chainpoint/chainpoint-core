@@ -38,16 +38,16 @@ async function getPeersAsync(req, res, next) {
     //use listen_addr if there are non-routable peer exchange IPs when behind NATs
     if (first_octet == "10" || first_octet == "172" || first_octet == "192") {
       let listen_addr = peer.node_info.listen_addr
-        if (listen_addr.includes("//")) {
-            return listen_addr.substring(listen_addr.lastIndexOf("/"), listen_addr.indexOf(":"))
-        }
-        return listen_addr.substring(0, listen_addr.indexOf(":"))
+      if (listen_addr.includes("//")) {
+          return listen_addr.substring(listen_addr.lastIndexOf("/"), listen_addr.indexOf(":"))
+      }
+      return listen_addr.substring(0, listen_addr.indexOf(":"))
     }
     return remote_ip
   }).filter(ip => {
-    //filter out obviously bad IPs
+    //filter out non-routable IPs that slipped through the above fallback
     let first_octet = ip.substring(0, ip.indexOf("."))
-    return (first_octet != "0" || first_octet != "10")
+    return (first_octet != "0" || first_octet != "10" || first_octet != "172" || first_octet != "192")
   })
   res.contentType = 'application/json'
   res.send(decodedPeers)
