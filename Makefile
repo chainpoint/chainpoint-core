@@ -133,18 +133,18 @@ clean: down
 ## init-swarm                : Create a docker swarm manager node
 .PHONY : init-swarm
 init-swarm:
-	@read -p "What is the public IP of your server? " public_ip
-	@docker swarm init --advertise-addr $public_ip || echo "swarm already initialized"
+	@read -p "What is the public IP of your server? " public_ip; \
+	docker swarm init --advertise-addr $$public_ip || echo "swarm already initialized"
 
 ## init-secrets              : Read secrets into docker storages
 .PHONY : init-secrets
 init-secrets: init init-swarm
-	@read -p "What is your Bitcoin WIF (private key for your HOT WALLET anchoring account)? " bitcoin_wif
-	@read -p "What is your Infura API Key? " infura_api_key
-	@echo $bitcoin_wif | docker secret create BITCOIN_WIF -
-	@echo $infura_api_key | docker secret create ETH_INFURA_API_KEY -
-	@scripts/generate_eth_account.sh
-	@scripts/generate_ecdsa_keypair.sh
+	@read -p "What is your Bitcoin WIF (private key for your HOT WALLET anchoring account)? " bitcoin_wif; \
+	read -p "What is your Infura API Key? " infura_api_key; \
+	echo $$bitcoin_wif | docker secret create BITCOIN_WIF -; \
+	echo $$infura_api_key | docker secret create ETH_INFURA_API_KEY -;\
+	scripts/generate_eth_account.sh; \
+	scripts/generate_ecdsa_keypair.sh
 
 ## rm-secrets                : Remove secrets
 .PHONY : rm-secrets
