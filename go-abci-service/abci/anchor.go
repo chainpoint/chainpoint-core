@@ -21,7 +21,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 	// Pass the agg objects to generate a calendar tree
 	calAgg := app.calendar.GenerateCalendarTree(aggs)
 	if calAgg.CalRoot != "" {
-		app.logger.Debug(fmt.Sprintf("Calendar Root: %s", calAgg.CalRoot))
+		app.logger.Info(fmt.Sprintf("Calendar Root: %s", calAgg.CalRoot))
 
 		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix(), app.ID)
 		if util.LogError(err) != nil {
@@ -58,7 +58,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 
 	// Aggregate all txs in rage into a new merkle tree in prep for BTC anchoring
 	treeData := app.calendar.AggregateAnchorTx(txLeaves)
-	app.logger.Debug(fmt.Sprintf("treeData for current anchor: %v", treeData))
+	app.logger.Info(fmt.Sprintf("treeData for current anchor: %v", treeData))
 
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
