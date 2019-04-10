@@ -134,7 +134,9 @@ clean: down
 .PHONY : init-swarm
 init-swarm:
 	@read -p "What is the public IP of your server? " public_ip; \
-	docker swarm init --advertise-addr $$public_ip || echo "swarm already initialized"
+	docker swarm init --advertise-addr $$public_ip || echo "swarm already initialized"; \
+	sed -i "s/\(external_address *= *\).*/\1\"$$public_ip:26656\"/" config/node_1/config.toml
+
 
 ## init-secrets              : Read secrets into docker storages
 .PHONY : init-secrets
