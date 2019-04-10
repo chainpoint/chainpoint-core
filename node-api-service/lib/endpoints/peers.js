@@ -39,9 +39,9 @@ async function getPeersAsync(req, res, next) {
     if (first_octet == "10" || first_octet == "172" || first_octet == "192") {
       let listen_addr = peer.node_info.listen_addr
       if (listen_addr.includes("//")) {
-          return listen_addr.substring(listen_addr.lastIndexOf("/"), listen_addr.indexOf(":"))
+          return listen_addr.substring(listen_addr.lastIndexOf("/"), listen_addr.lastIndexOf(":"))
       }
-      return listen_addr.substring(0, listen_addr.indexOf(":"))
+      return listen_addr.substring(0, listen_addr.lastIndexOf(":"))
     }
     return remote_ip
   }).filter(ip => {
