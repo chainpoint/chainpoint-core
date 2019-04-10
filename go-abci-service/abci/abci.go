@@ -169,6 +169,7 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.ResponseInfo) {
 	infoJSON, err := json.Marshal(app.state)
 	if err != nil {
+		util.LoggerError(app.logger, err)
 		infoJSON = []byte("{}")
 	}
 	return types2.ResponseInfo{

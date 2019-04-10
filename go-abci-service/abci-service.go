@@ -25,6 +25,7 @@ func main() {
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
 	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
+	ethereumURL := util.GetEnv("ETH_URI", fmt.Sprintf("https://ropsten.infura.io/%s", ethInfuraApiKey))
 	ethTokenContract := util.GetEnv("TokenContractAddr", "0x5838881a1eE42AA343EB9dAdfbC456A9610978Ff")
 	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x959b1773272d560eeF0Dd917E05E4359015945bc")
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
@@ -42,7 +43,7 @@ func main() {
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
 	ethConfig := types.EthConfig{
-		EthereumURL:          fmt.Sprintf("https://ropsten.infura.io/%s", ethInfuraApiKey),
+		EthereumURL:          ethereumURL,
 		EthPrivateKey:        ethPrivateKey,
 		TokenContractAddr:    ethTokenContract,
 		RegistryContractAddr: ethRegistryContract,

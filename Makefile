@@ -133,7 +133,8 @@ clean: down
 ## init-swarm                : Create a docker swarm manager node
 .PHONY : init-swarm
 init-swarm:
-	@docker swarm init || echo "swarm already initialized"
+	@read -p "What is the public IP of your server? " public_ip
+	@docker swarm init --advertise-addr $public_ip || echo "swarm already initialized"
 
 ## init-secrets              : Read secrets into docker storages
 .PHONY : init-secrets
@@ -157,7 +158,7 @@ init:
 	@sudo mkdir -p ./data/redis
 	@sudo mkdir -p ./data/keys
 	@sudo mkdir -p ./config/node_1
-	@sudo chmod 777 ./config/node_1
+	@sudo chmod -R 777 ./config/node_1
 	@sudo mkdir -p ./config/node_1/data
 	@sudo chmod 777 ./config/node_1/data
 	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config  -v $(shell pwd)/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
