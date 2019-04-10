@@ -35,16 +35,19 @@ async function getPeersAsync(req, res, next) {
     let ipBytes = Buffer.from(peer.remote_ip, 'base64').slice(-4)
     let remote_ip = ipBytes.join('.')
     first_octet = remote_ip.substring(0, remote_ip.indexOf("."))
+    //use listen_addr if there are non-routable peer exchange IPs when behind NATs
     if (first_octet == "10" || first_octet == "172" || first_octet == "192") {
       let listen_addr = peer.node_info.listen_addr
         if (listen_addr.includes("//")) {
             return listen_addr.substring(listen_addr.lastIndexOf("/"), listen_addr.indexOf(":"))
         }
-        return list_addr.substring(0, listen_addr.indexOf(":"))
+        return listen_addr.substring(0, listen_addr.indexOf(":"))
     }
     return remote_ip
   }).filter(ip => {
-    return ip.substring(0, ip.indexOf(".")) != "0"
+    //filter out obviously bad IPs
+    let first_octet = ip.substring(0, ip.indexOf("."))
+    return (first_octet != "0" || first_octet != "10")
   })
   res.contentType = 'application/json'
   res.send(decodedPeers)
