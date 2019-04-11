@@ -133,10 +133,11 @@ clean: down
 ## init-swarm                : Create a docker swarm manager node
 .PHONY : init-swarm
 init-swarm:
+	cp -n .env.sample .env
 	@read -p "What is the public IP of your server? " public_ip; \
 	docker swarm init --advertise-addr $$public_ip || echo "swarm already initialized"; \
-	sed -i "s/\(external_address *= *\).*/\1\"$$public_ip:26656\"/" config/node_1/config.toml
-
+	sed -i "s#\(external_address *= *\).*#\1\"$$public_ip:26656\"#" config/node_1/config.toml; \
+	sed -i "s#\(CHAINPOINT_CORE_BASE_URI *= *\).*#\1http://$$public_ip#" .env
 
 ## init-secrets              : Read secrets into docker storages
 .PHONY : init-secrets
@@ -163,7 +164,7 @@ init:
 	@sudo mkdir -p ./config/node_1/data
 	@sudo chmod -R 777 ./config/node_1
 	@docker run -it --rm -v $(shell pwd)/config/node_1:/tendermint/config  -v $(shell pwd)/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
-	@sudo chmod 777 ./config/node_1
+	@sudo chmod 777 ./config/node_1/*
 	@sudo chmod 777 config/node_1/priv_validator_key.json
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 
