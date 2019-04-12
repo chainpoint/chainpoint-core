@@ -106,6 +106,8 @@ server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
 server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
 // get eth tx data
 server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, eth.getEthStatsAsync)
+// post eth broadcast
+server.post({ path: '/eth/broadcast', version: '1.0.0' }, eth.postEthBroadcastAsync)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 

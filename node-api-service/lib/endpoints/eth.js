@@ -18,7 +18,7 @@ const restify = require('restify')
 const ethers = require('ethers')
 const env = require('../parse-env.js')('api')
 
-let infuraProvider = new ethers.providers.InfuraProvider('ropsten', env.ETH_INFURA_API_KEY)
+const infuraProvider = new ethers.providers.InfuraProvider('ropsten', env.ETH_INFURA_API_KEY)
 
 async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
@@ -36,6 +36,24 @@ async function getEthStatsAsync(req, res, next) {
   return next()
 }
 
+async function postEthBroadcastAsync(req, res, next) {
+  const rawTx = req.body.tx
+
+  try {
+    let result = await infuraProvider.sendTransaction(rawTx)
+    await result.wait()
+
+    delete result.wait
+
+    res.send(result)
+  } catch (error) {
+    console.error(`Error communicating with Infura attempting to broadcast ETH Tx - ${error.message}`)
+    return next(new restify.InternalServerError(error.message))
+  }
+  return next()
+}
+
 module.exports = {
-  getEthStatsAsync: getEthStatsAsync
+  getEthStatsAsync: getEthStatsAsync,
+  postEthBroadcastAsync: postEthBroadcastAsync
 }
