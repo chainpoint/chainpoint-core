@@ -130,30 +130,6 @@ clean: down
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
 	@sudo docker system prune --volumes -f
 
-## init-swarm                : Create a docker swarm manager node
-.PHONY : init-swarm
-init-swarm:
-	cp -n .env.sample .env
-	@read -p "What is the public IP of your server? " public_ip; \
-	docker swarm init --advertise-addr $$public_ip || echo "swarm already initialized"; \
-	sed -i "s#\(external_address *= *\).*#\1\"$$public_ip:26656\"#" config/node_1/config.toml; \
-	sed -i "s#\(CHAINPOINT_CORE_BASE_URI *= *\).*#\1http://$$public_ip#" .env
-
-## init-secrets              : Read secrets into docker storages
-.PHONY : init-secrets
-init-secrets: init init-swarm
-	@read -p "What is your Bitcoin WIF (private key for your HOT WALLET anchoring account)? " bitcoin_wif; \
-	read -p "What is your Infura API Key? " infura_api_key; \
-	echo $$bitcoin_wif | docker secret create BITCOIN_WIF -; \
-	echo $$infura_api_key | docker secret create ETH_INFURA_API_KEY -;\
-	scripts/generate_eth_account.sh; \
-	scripts/generate_ecdsa_keypair.sh
-
-## rm-secrets                : Remove secrets
-.PHONY : rm-secrets
-rm-secrets:
-	scripts/remove_secrets.sh
-
 ## init                      : Create data folder with proper permissions
 .PHONY : init
 init:
@@ -167,6 +143,8 @@ init:
 	@sudo chmod 777 ./config/node_1/*
 	@sudo chmod 777 config/node_1/priv_validator_key.json
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
+	cli/scripts/install_deps.sh
+	node cli/init
 
 ## prune                     : Shutdown and destroy all docker assets
 .PHONY : prune
@@ -183,10 +161,12 @@ prune-node-modules:
 
 ## burn                      : Burn it all down and destroy the data. Start it again yourself!
 .PHONY : burn
-burn: clean prune
+burn: clean
+	cli/scripts/remove_secrets.sh
+	@docker swarm leave -f
 	@echo ""
 	@echo "****************************************************************************"
-	@echo "Services stopped, and data pruned. Run 'make up-swarm' or 'make up-swarm-no-build' now."
+	@echo "Services stopped, and data pruned. Run 'make init' now."
 	@echo "****************************************************************************"
 
 ## yarn                      : Install Node Javascript dependencies
