@@ -120,7 +120,6 @@ services:
       context: .
       dockerfile: docker/Dockerfile.api
     depends_on:
-      - base
       - redis
       - rabbitmq
       - postgres
@@ -147,7 +146,6 @@ services:
       dockerfile: docker/Dockerfile.btc-tx
     container_name: btc-tx-core
     depends_on:
-      - base
       - rabbitmq
     networks:
       - chainpoint
@@ -172,7 +170,6 @@ services:
       dockerfile: docker/Dockerfile.btc-mon
     container_name: btc-mon-core
     depends_on:
-      - base
       - rabbitmq
       - redis
     networks:
@@ -191,7 +188,6 @@ services:
       context: .
       dockerfile: docker/Dockerfile.proof-state
     depends_on:
-      - base
       - rabbitmq
       - postgres
     networks:
@@ -211,7 +207,6 @@ services:
       context: .
       dockerfile: docker/Dockerfile.proof-gen
     depends_on:
-      - base
       - rabbitmq
       - postgres
     networks:
