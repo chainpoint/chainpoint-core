@@ -19,6 +19,7 @@ async function main() {
   await pipeP(() =>
     inquirer.prompt([
       stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
+      stakingQuestions['INSIGHT_API_URI'],
       stakingQuestions['BITCOIN_WIF'],
       stakingQuestions['INFURA_API_KEY']
     ]),
