@@ -26,6 +26,7 @@ const peers = require('./lib/endpoints/peers.js')
 const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
+const eth = require('./lib/endpoints/eth.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
 const stakedNode = require('./lib/models/NodeState.js')
@@ -103,6 +104,8 @@ server.get({ path: '/proofs', version: '1.0.0' }, proofs.getProofsByIDsAsync)
 server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
 // get status
 server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
+// get eth tx data
+server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, eth.getEthStatsAsync)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
