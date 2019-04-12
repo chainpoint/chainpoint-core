@@ -1,7 +1,7 @@
 FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base
 
 COPY node-lib/lib /home/node/app/lib
-COPY go-abi-service/ethcontracts /home/node/app/artifacts/ethcontracts
+COPY go-abci-service/ethcontracts /home/node/app/artifacts/ethcontracts
 
 # Define and install dependencies
 COPY node-api-service/package.json node-api-service/yarn.lock /home/node/app/
