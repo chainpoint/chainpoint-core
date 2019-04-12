@@ -116,10 +116,10 @@ func (app *AnchorApplication) AuditNodes() error {
 		}
 		blockHash := status.SyncInfo.LatestBlockHash.String()
 		rewardCandidates := make([]types.NodeJson, 0)
-		startTime := time.Now()
+		deadline := time.Now().Add(1 * time.Minute)
 		var wg sync.WaitGroup
 		var mux sync.Mutex
-		for len(rewardCandidates) < 3 || time.Since(startTime) < (5*time.Minute) {
+		for len(rewardCandidates) < 3 && !time.Now().After(deadline) {
 			nodes, err := app.pgClient.GetSeededRandomNodes([]byte(blockHash))
 			if util.LoggerError(app.logger, err) != nil {
 				return err
@@ -128,6 +128,13 @@ func (app *AnchorApplication) AuditNodes() error {
 				go func(node types.Node) {
 					wg.Add(1)
 					defer wg.Done()
+					if strings.HasPrefix(node.PublicIP.String, "10") ||
+						strings.HasPrefix(node.PublicIP.String, "127") ||
+						strings.HasPrefix(node.PublicIP.String, "192") ||
+						strings.HasPrefix(node.PublicIP.String, "172") {
+						app.logger.Info(fmt.Sprintf("IP address %s is not routable", node.PublicIP.String))
+						return
+					}
 					if err := app.AuditNode(node); err != nil {
 						return
 					}
@@ -146,7 +153,9 @@ func (app *AnchorApplication) AuditNodes() error {
 			rewardCandidates = rewardCandidates[0:3]
 		}
 		if len(rewardCandidates) == 0 {
-			return errors.New("Unspecified reward candidate collation failure")
+			err = errors.New("Unspecified reward candidate collation failure")
+			util.LoggerError(app.logger, err)
+			return err
 		}
 		rcJson, err := json.Marshal(rewardCandidates)
 		if err != nil {
