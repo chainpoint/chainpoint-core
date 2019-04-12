@@ -16,15 +16,8 @@
 
 const restify = require('restify')
 const ethers = require('ethers')
-const Web3 = require('web3')
 const env = require('../parse-env.js')('api')
-
-const web3 = new Web3()
-web3.setProvider(new web3.providers.HttpProvider(`https://ropsten.infura.io/v3/${env.ETH_INFURA_API_KEY}`))
 const infuraProvider = new ethers.providers.InfuraProvider('ropsten', env.ETH_INFURA_API_KEY)
-
-// const tokenContractAddr = '0xB439eBe79cAeaA92C8E8813cEF14411B80bB8ef0'
-// const tokenContract = web3.eth.contract(abiArray).at(contractAddress)
 
 async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
