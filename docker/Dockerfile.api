@@ -1,7 +1,7 @@
 FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base
 
 COPY node-lib/lib /home/node/app/lib
-COPY go-abi-service/ethcontracts /home/node/app/artifacts/ethcontracts
+COPY go-abci-service/ethcontracts /home/node/app/artifacts/ethcontracts
 
 # Define and install dependencies
 COPY node-api-service/package.json node-api-service/yarn.lock /home/node/app/
@@ -10,9 +10,10 @@ RUN yarn
 RUN mkdir /home/node/app/lib/endpoints
 COPY node-api-service/lib/endpoints /home/node/app/lib/endpoints/
 COPY node-api-service/lib /home/node/app/lib/
-
 COPY node-api-service/server.js /home/node/app/
+COPY node-api-service/env_secrets_expand.sh /home/node/app
+COPY node-api-service/run.sh /home/node/app
 
 EXPOSE 8080
 
-CMD ["yarn", "start"]
+CMD ["/bin/bash", "-c", "/home/node/app/run.sh"]

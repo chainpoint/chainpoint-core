@@ -120,7 +120,6 @@ services:
       context: .
       dockerfile: docker/Dockerfile.api
     depends_on:
-      - base
       - redis
       - rabbitmq
       - postgres
@@ -132,8 +131,15 @@ services:
       ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
+      ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
+      ETH_PRIVATE_KEY: DOCKER-SECRET->ETH_PRIVATE_KEY
+      ETH_ADDRESS: DOCKER-SECRET->ETH_ADDRESS
+      ECDSA_KEYPAIR: DOCKER-SECRET->ECDSA_KEYPAIR
     secrets:
     - ECDSA_KEYPAIR
+    - ETH_INFURA_API_KEY
+    - ETH_PRIVATE_KEY
+    - ETH_ADDRESS
 
 
   # Bitcoin Transmit
@@ -147,7 +153,6 @@ services:
       dockerfile: docker/Dockerfile.btc-tx
     container_name: btc-tx-core
     depends_on:
-      - base
       - rabbitmq
     networks:
       - chainpoint
@@ -172,7 +177,6 @@ services:
       dockerfile: docker/Dockerfile.btc-mon
     container_name: btc-mon-core
     depends_on:
-      - base
       - rabbitmq
       - redis
     networks:
@@ -191,7 +195,6 @@ services:
       context: .
       dockerfile: docker/Dockerfile.proof-state
     depends_on:
-      - base
       - rabbitmq
       - postgres
     networks:
@@ -211,7 +214,6 @@ services:
       context: .
       dockerfile: docker/Dockerfile.proof-gen
     depends_on:
-      - base
       - rabbitmq
       - postgres
     networks:
