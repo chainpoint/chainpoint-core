@@ -125,8 +125,8 @@ func (app *AnchorApplication) AuditNodes() error {
 				return err
 			}
 			for _, nodeCandidate := range nodes {
+				wg.Add(1)
 				go func(node types.Node) {
-					wg.Add(1)
 					defer wg.Done()
 					if strings.HasPrefix(node.PublicIP.String, "10") ||
 						strings.HasPrefix(node.PublicIP.String, "127") ||
