@@ -74,11 +74,22 @@ async function postEthBroadcastAsync(req, res, next) {
     return next(new restify.InvalidArgumentError('invalid request, invalid ethereum transaction body supplied'))
   }
 
-    res.send(result)
+  let result
+  try {
+    let sendResponse = await infuraProvider.sendTransaction(rawTx)
+    let txReceipt = await infuraProvider.waitForTransaction(sendResponse.hash)
+    let transactionHash = txReceipt.transactionHash
+    let blockHash = txReceipt.blockHash
+    let blockNumber = txReceipt.blockNumber
+    let gasUsed = txReceipt.gasUsed.toNumber() // convert from BigNumber to native number
+    result = { transactionHash, blockHash, blockNumber, gasUsed }
   } catch (error) {
-    console.error(`Error communicating with Infura attempting to broadcast ETH Tx - ${error.message}`)
+    console.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
     return next(new restify.InternalServerError(error.message))
   }
+
+  res.contentType = 'application/json'
+  res.send(result)
   return next()
 }
 
