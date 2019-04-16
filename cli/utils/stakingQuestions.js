@@ -32,6 +32,11 @@ module.exports = {
       name: 'INFURA_API_KEY',
       message: 'Enter your Infura API key (free):'
   },
+  INSIGHT_API_URI: {
+      type: 'input',
+      name: 'INSIGHT_API_URI',
+      message: "Enter the full URL to your bitcoin node's Insight API:"
+  },
   AUTO_REFILL_ENABLED: {
     type: 'list',
     name: 'AUTO_REFILL_ENABLED',

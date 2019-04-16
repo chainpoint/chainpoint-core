@@ -7,6 +7,7 @@ async function createSwarmAndSecrets(valuePairs) {
     let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
     let wif = valuePairs.BITCOIN_WIF
     let apiKey = valuePairs.INFURA_API_KEY
+    let insightUri = valuePairs.INSIGHT_API_URI
     let sed = `sed -i 's#external_address = .*#external_address = "${ip}:26656"#' config/node_1/config.toml`
     try {
         await exec([
@@ -21,6 +22,6 @@ async function createSwarmAndSecrets(valuePairs) {
     } catch (err) {
         console.log(chalk.red('Setting secrets failed (is docker installed?)'))
     }
-    return updateOrCreateEnv({'CHAINPOINT_CORE_BASE_URI': `http://${ip}`})
+    return updateOrCreateEnv({'CHAINPOINT_CORE_BASE_URI': `http://${ip}`, 'INSIGHT_API_BASE_URI': insightUri})
 }
 module.exports = createSwarmAndSecrets

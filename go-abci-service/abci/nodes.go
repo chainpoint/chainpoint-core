@@ -35,6 +35,7 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
 			if util.LoggerError(app.logger, err) != nil {
+				app.logger.Info("mint hex decoding failed")
 				continue
 			}
 			sigBytes[i] = decodedSig
@@ -125,8 +126,8 @@ func (app *AnchorApplication) AuditNodes() error {
 				return err
 			}
 			for _, nodeCandidate := range nodes {
+				wg.Add(1)
 				go func(node types.Node) {
-					wg.Add(1)
 					defer wg.Done()
 					if strings.HasPrefix(node.PublicIP.String, "10") ||
 						strings.HasPrefix(node.PublicIP.String, "127") ||
@@ -178,15 +179,18 @@ func (app *AnchorApplication) AuditNodes() error {
 func (app *AnchorApplication) AuditNode(node types.Node) error {
 	err := ValidateNodeRecentReputation(node)
 	if util.LoggerError(app.logger, err) != nil {
+		app.logger.Info("unable to validate node reputation")
 		return err
 	}
 	nodeResp, err := SendNodeHash(node)
 	if util.LoggerError(app.logger, err) != nil && len(nodeResp.Hashes) == 0 {
+		app.logger.Info("node hash post failed")
 		return err
 	}
 	time.Sleep(180 * time.Second)
 	err = RetrieveNodeCalProof(node, nodeResp)
 	if err != nil {
+		app.logger.Info("retrieving cal proof from node audit failed")
 		return err
 	}
 	return nil
@@ -373,12 +377,14 @@ func ValidateRepChainItemHash(chainItem types.RepChainItem) (string, error) {
 
 	hashBytes, err := hex.DecodeString(chainItem.CalBlockHash)
 	if err != nil {
+		fmt.Println("Cannot decode calblockhash into bytes")
 		return "", err
 	}
 	buf.Write(hashBytes)
 
 	prevRepItemHashBytes, err := hex.DecodeString(chainItem.PrevRepItemHash)
 	if err != nil {
+		fmt.Println("Cannot decode prevRepItemHash into bytes")
 		return "", err
 	}
 	buf.Write(prevRepItemHashBytes)
@@ -386,6 +392,7 @@ func ValidateRepChainItemHash(chainItem types.RepChainItem) (string, error) {
 	hashIDNodeNoHyphens := strings.Replace(chainItem.HashIDNode, "-", "", -1)
 	hashIDNodeNoHyphensBytes, err := hex.DecodeString(hashIDNodeNoHyphens)
 	if err != nil {
+		fmt.Println("Cannot decode hashIDNodeNoHyphens into bytes")
 		return "", err
 	}
 	buf.Write(hashIDNodeNoHyphensBytes)
@@ -402,6 +409,7 @@ func ValidateRepChainItemHash(chainItem types.RepChainItem) (string, error) {
 func ValidateRepChainItemSig(node types.Node, chainItem types.RepChainItem) (bool, error) {
 	repItemHashBytes, err := hex.DecodeString(chainItem.RepItemHash)
 	if err != nil {
+		fmt.Println("can't decode RepItemHash hex string")
 		return true, err
 	}
 	verified, err := verifySig(node.EthAddr, chainItem.Signature, repItemHashBytes)

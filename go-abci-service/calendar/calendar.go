@@ -64,7 +64,7 @@ func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.C
 		}
 		treeDataObj.ProofData[i] = proofData
 	}
-	calendar.Logger.Info(fmt.Sprintf("AggTree Input: %#v\nCalTree Output: %#v\n", aggs, treeDataObj))
+	//calendar.Logger.Info(fmt.Sprintf("AggTree Input: %#v\nCalTree Output: %#v\n", aggs, treeDataObj))
 	return treeDataObj
 }
 
@@ -134,7 +134,7 @@ func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) type
 		}
 		treeData.ProofData[i] = proofDataItem
 	}
-	calendar.Logger.Info(fmt.Sprintf("AggTree Input: %#v\nAggTree Output: %#v\n", txLeaves, treeData))
+	//calendar.Logger.Info(fmt.Sprintf("AggTree Input: %#v\nAggTree Output: %#v\n", txLeaves, treeData))
 	return treeData
 }
 
