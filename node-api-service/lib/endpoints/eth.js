@@ -18,7 +18,11 @@ const restify = require('restify')
 const ethers = require('ethers')
 const utils = require('../utils.js')
 const env = require('../parse-env.js')('api')
-const infuraProvider = new ethers.providers.InfuraProvider('ropsten', env.ETH_INFURA_API_KEY)
+
+const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
+const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
+const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
+const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
 
 async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
@@ -36,14 +40,14 @@ async function getEthStatsAsync(req, res, next) {
     return next(new restify.InternalServerError('Error when attempting to retrieve credit price'))
   }
   try {
-    let gasPrice = await infuraProvider.getGasPrice()
+    let gasPrice = await fallbackProvider.getGasPrice()
     result.gasPrice = gasPrice.toNumber()
   } catch (error) {
     console.error(`Error when attempting to retrieve gas price : ${error.message}`)
     return next(new restify.InternalServerError('Error when attempting to retrieve gas price'))
   }
   try {
-    let transactionCount = await infuraProvider.getTransactionCount(ethAddress)
+    let transactionCount = await fallbackProvider.getTransactionCount(ethAddress)
     result.transactionCount = transactionCount.toNumber()
   } catch (error) {
     console.error(`Error when attempting to retrieve transaction count : ${ethAddress} : ${error.message}`)
@@ -76,8 +80,8 @@ async function postEthBroadcastAsync(req, res, next) {
 
   let result
   try {
-    let sendResponse = await infuraProvider.sendTransaction(rawTx)
-    let txReceipt = await infuraProvider.waitForTransaction(sendResponse.hash)
+    let sendResponse = await fallbackProvider.sendTransaction(rawTx)
+    let txReceipt = await fallbackProvider.waitForTransaction(sendResponse.hash)
     let transactionHash = txReceipt.transactionHash
     let blockHash = txReceipt.blockHash
     let blockNumber = txReceipt.blockNumber
