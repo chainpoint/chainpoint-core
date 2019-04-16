@@ -22,12 +22,12 @@ async function getPeersAsync(req, res, next) {
   if (netResponse.error) {
     switch (netResponse.error.responseCode) {
       case 404:
-        return { tx: null, error: new restify.NotFoundError(`Resource not found`) }
+        return next(new restify.NotFoundError(`Resource not found`))
       case 409:
-        return { tx: null, error: new restify.InvalidArgumentError(netResponse.error.message) }
+        return next(new restify.InvalidArgumentError(netResponse.error.message))
       default:
         console.error(`RPC error communicating with Tendermint : ${netResponse.error.message}`)
-        return { tx: null, error: new restify.InternalServerError('Could not query for net info') }
+        return next(new restify.InternalServerError('Could not query for net info'))
     }
   }
 
