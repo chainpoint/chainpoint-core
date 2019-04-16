@@ -31,6 +31,7 @@ const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
 const stakedNode = require('./lib/models/NodeState.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
+const checkEthTxWhitelist = require('./lib/middleware/checkEthTxWhitelist')
 
 const bunyan = require('bunyan')
 
@@ -107,7 +108,7 @@ server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
 // get eth tx data
 server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, eth.getEthStatsAsync)
 // post eth broadcast
-server.post({ path: '/eth/broadcast', version: '1.0.0' }, eth.postEthBroadcastAsync)
+server.post({ path: '/eth/broadcast', version: '1.0.0' }, checkEthTxWhitelist, eth.postEthBroadcastAsync)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
