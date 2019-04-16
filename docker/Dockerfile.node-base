@@ -43,9 +43,6 @@ RUN mkdir /home/node/app
 # will be run in the context of this directory.
 WORKDIR /home/node/app
 
-# Set required environment variables
-ENV NODE_ENV production
-
 # All CMD's in containers that inherit from this base
 # will be prefixed with the following command wrapper
 # defined in this ENTRYPOINT. They'll be wrapped to:

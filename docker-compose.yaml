@@ -17,6 +17,7 @@ services:
     environment:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
+      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
       ANCHOR: "true"
@@ -83,7 +84,7 @@ services:
     volumes:
     - /var/run/docker.sock:/tmp/docker.sock:ro
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV}
       DEFAULT_HOST: api.local
     depends_on:
     - api
@@ -125,12 +126,13 @@ services:
     volumes:
       - ${PWD}/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_KEYPAIR
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://tendermint:26657
       ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
+      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
       ETH_ADDRESS: ${ETH_ADDRESS}
 
@@ -169,12 +171,10 @@ services:
     networks:
       - chainpoint
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
       BITCOIN_WIF: ${BITCOIN_WIF}
-      USE_BTCETH_TESTNET: "true"
-      REDIS_CONNECT_URIS: "redis://redis:6379"
 
   # Bitcoin Transmit MonitorF
   # Monitor and report on the state of BTC transactions this app has submitted.
@@ -193,7 +193,7 @@ services:
     networks:
       - chainpoint
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
 
   # Proof State
@@ -212,7 +212,7 @@ services:
     networks:
       - chainpoint
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
 
   # Proof Generation
@@ -232,7 +232,7 @@ services:
     networks:
       - chainpoint
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV}
 
   # RabbitMQ
   #
