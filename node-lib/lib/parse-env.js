@@ -44,7 +44,6 @@ let envDefinitions = {
 
   // Chainpoint stack related variables
   NODE_ENV: envalid.str({ default: 'production', desc: 'The type of environment in which the service is running' }),
-  USE_BTCETH_TESTNET: envalid.bool({ default: 'true', desc: 'Whether to use BTC/ETH test or main networks' }),
 
   // RabbitMQ related variables
   RABBITMQ_CONNECT_URI: envalid.url({
