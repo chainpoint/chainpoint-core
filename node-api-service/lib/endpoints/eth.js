@@ -16,33 +16,63 @@
 
 const restify = require('restify')
 const ethers = require('ethers')
+const utils = require('../utils.js')
 const env = require('../parse-env.js')('api')
 const infuraProvider = new ethers.providers.InfuraProvider('ropsten', env.ETH_INFURA_API_KEY)
 
 async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
-
-  try {
-    let nonce = await infuraProvider.getTransactionCount(ethAddress)
-    let gasPrice = await infuraProvider.getGasPrice()
-
-    res.contentType = 'application/json'
-    res.send({ nonce, gasPrice: parseInt(gasPrice.toString(), 10) })
-  } catch (error) {
-    console.error(`Error communicating with Infura attempting to retrieve {nonce, gasPrice} - ${error.message}`)
-    return next(new restify.InternalServerError('Error fetching and delivering {nonce, gasPrice}'))
+  // ensure that addr represents a valid, well formatted ETH address
+  if (!/^0x[0-9a-fA-F]{40}$/i.test(ethAddress)) {
+    return next(new restify.InvalidArgumentError('invalid request, invalid ethereum address supplied'))
   }
+
+  let result = {}
+  try {
+    let creditPrice = 0.001 // TODO: Build and request from exchange rate service
+    result.creditPrice = creditPrice
+  } catch (error) {
+    console.error(`Error when attempting to retrieve credit price : ${error.message}`)
+    return next(new restify.InternalServerError('Error when attempting to retrieve credit price'))
+  }
+  try {
+    let gasPrice = await infuraProvider.getGasPrice()
+    result.gasPrice = gasPrice.toNumber()
+  } catch (error) {
+    console.error(`Error when attempting to retrieve gas price : ${error.message}`)
+    return next(new restify.InternalServerError('Error when attempting to retrieve gas price'))
+  }
+  try {
+    let transactionCount = await infuraProvider.getTransactionCount(ethAddress)
+    result.transactionCount = transactionCount.toNumber()
+  } catch (error) {
+    console.error(`Error when attempting to retrieve transaction count : ${ethAddress} : ${error.message}`)
+    return next(new restify.InternalServerError('Error when attempting to retrieve transaction count'))
+  }
+
+  res.contentType = 'application/json'
+  res.send(result)
   return next()
 }
 
 async function postEthBroadcastAsync(req, res, next) {
-  const rawTx = req.body.tx
+  const rawTx = req.params.tx
+  // ensure that rawTx represents a valid hex value starting wiht 0x
+  if (!rawTx.startsWith('0x')) {
+    return next(new restify.InvalidArgumentError('invalid request, transaction must begin with 0x'))
+  }
+  // ensure that rawTx represents a valid hex value
+  let txContent = rawTx.slice(2)
+  if (!utils.isHex(txContent)) {
+    return next(new restify.InvalidArgumentError('invalid request, non hex value supplied'))
+  }
 
+  // ensure that rawTx represents a valid ethereum transaction
   try {
-    let result = await infuraProvider.sendTransaction(rawTx)
-    await result.wait()
-
-    delete result.wait
+    ethers.utils.parseTransaction(rawTx)
+  } catch (error) {
+    return next(new restify.InvalidArgumentError('invalid request, invalid ethereum transaction body supplied'))
+  }
 
     res.send(result)
   } catch (error) {
