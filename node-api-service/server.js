@@ -42,7 +42,7 @@ var logger = bunyan.createLogger({
 
 // RESTIFY SETUP
 // 'version' : all routes will default to this version
-let server = restify.createServer({
+const server = restify.createServer({
   name: 'chainpoint',
   version: '1.0.0',
   log: logger
