@@ -26,12 +26,12 @@ async function getCoreStatusAsync(req, res, next) {
   if (statusResponse.error) {
     switch (statusResponse.error.responseCode) {
       case 404:
-        return { tx: null, error: new restify.NotFoundError(`Resource not found`) }
+        return next(new restify.NotFoundError(`Resource not found`))
       case 409:
-        return { tx: null, error: new restify.InvalidArgumentError(statusResponse.error.message) }
+        return next(new restify.InvalidArgumentError(statusResponse.error.message))
       default:
         console.error(`RPC error communicating with Tendermint : ${statusResponse.error.message}`)
-        return { tx: null, error: new restify.InternalServerError('Could not query for status') }
+        return next(new restify.InternalServerError('Could not query for status'))
     }
   }
 

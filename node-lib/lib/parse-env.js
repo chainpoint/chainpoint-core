@@ -44,7 +44,6 @@ let envDefinitions = {
 
   // Chainpoint stack related variables
   NODE_ENV: envalid.str({ default: 'production', desc: 'The type of environment in which the service is running' }),
-  USE_BTCETH_TESTNET: envalid.bool({ default: 'true', desc: 'Whether to use BTC/ETH test or main networks' }),
 
   // RabbitMQ related variables
   RABBITMQ_CONNECT_URI: envalid.url({
@@ -146,13 +145,7 @@ let envDefinitions = {
   }),
 
   // Tendermint RPC URI
-  TENDERMINT_URI: envalid.str({ default: 'http://tendermint:26657', desc: 'Tendermint RPC URI' }),
-
-  // Infura API Key
-  ETH_INFURA_API_URI: envalid.str({ default: '', desc: 'Infura API URI' }),
-
-  // Infura API Key
-  ETH_INFURA_API_KEY: envalid.str({ default: '', desc: 'Infura API Key' })
+  TENDERMINT_URI: envalid.str({ default: 'http://tendermint:26657', desc: 'Tendermint RPC URI' })
 }
 
 module.exports = service => {
@@ -162,10 +155,12 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.ETH_TNT_LISTEN_ADDR = envalid.str({
+      envDefinitions.ETH_TNT_LISTEN_ADDR = valETHAddress({
         default: '0x5702ac6389aa79dedea2b9e816a14a19dd11923f',
         desc: 'The address used to listen for incoming TNT transfers.'
       })
+      envDefinitions.ETH_INFURA_API_KEY = envalid.str({ desc: 'Infura API Key' })
+      envDefinitions.ETH_ETHERSCAN_API_KEY = envalid.str({ desc: 'Etherscan API Key' })
       break
     case 'btc-mon':
       envDefinitions.INSIGHT_API_BASE_URI = envalid.url({ desc: 'The Bitcore Insight-API base URI' })

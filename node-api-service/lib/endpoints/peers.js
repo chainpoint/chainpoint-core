@@ -22,33 +22,35 @@ async function getPeersAsync(req, res, next) {
   if (netResponse.error) {
     switch (netResponse.error.responseCode) {
       case 404:
-        return { tx: null, error: new restify.NotFoundError(`Resource not found`) }
+        return next(new restify.NotFoundError(`Resource not found`))
       case 409:
-        return { tx: null, error: new restify.InvalidArgumentError(netResponse.error.message) }
+        return next(new restify.InvalidArgumentError(netResponse.error.message))
       default:
         console.error(`RPC error communicating with Tendermint : ${netResponse.error.message}`)
-        return { tx: null, error: new restify.InternalServerError('Could not query for net info') }
+        return next(new restify.InternalServerError('Could not query for net info'))
     }
   }
 
-  let decodedPeers = netResponse.result.peers.map(peer => {
-    let ipBytes = Buffer.from(peer.remote_ip, 'base64').slice(-4)
-    let remote_ip = ipBytes.join('.')
-    first_octet = remote_ip.substring(0, remote_ip.indexOf("."))
-    //use listen_addr if there are non-routable peer exchange IPs when behind NATs
-    if (first_octet == "10" || first_octet == "172" || first_octet == "192") {
-      let listen_addr = peer.node_info.listen_addr
-      if (listen_addr.includes("//")) {
-          return listen_addr.substring(listen_addr.lastIndexOf("/"), listen_addr.lastIndexOf(":"))
+  let decodedPeers = netResponse.result.peers
+    .map(peer => {
+      let ipBytes = Buffer.from(peer.remote_ip, 'base64').slice(-4)
+      let remoteIP = ipBytes.join('.')
+      let firstOctet = remoteIP.substring(0, remoteIP.indexOf('.'))
+      //use listen_addr if there are non-routable peer exchange IPs when behind NATs
+      if (firstOctet == '10' || firstOctet == '172' || firstOctet == '192') {
+        let listenAddr = peer.node_info.listen_addr
+        if (listenAddr.includes('//')) {
+          return listenAddr.substring(listenAddr.lastIndexOf('/'), listenAddr.lastIndexOf(':'))
+        }
+        return listenAddr.substring(0, listenAddr.lastIndexOf(':'))
       }
-      return listen_addr.substring(0, listen_addr.lastIndexOf(":"))
-    }
-    return remote_ip
-  }).filter(ip => {
-    //filter out non-routable IPs that slipped through the above fallback
-    let first_octet = ip.substring(0, ip.indexOf("."))
-    return (first_octet != "0" || first_octet != "10" || first_octet != "172" || first_octet != "192")
-  })
+      return remoteIP
+    })
+    .filter(ip => {
+      //filter out non-routable IPs that slipped through the above fallback
+      let firstOctet = ip.substring(0, ip.indexOf('.'))
+      return firstOctet != '0' || firstOctet != '10' || firstOctet != '172' || firstOctet != '192'
+    })
   res.contentType = 'application/json'
   res.send(decodedPeers)
   return next()

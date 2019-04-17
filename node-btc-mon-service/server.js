@@ -37,9 +37,11 @@ let redis = null
 
 let CHECKS_IN_PROGRESS = false
 
+const btcUseTestnet = env.NODE_ENV === 'production' ? false : true
+
 // Initialize BlockchainAnchor object
 let anchor = new BlockchainAnchor({
-  btcUseTestnet: env.USE_BTCETH_TESTNET,
+  btcUseTestnet: btcUseTestnet,
   service: 'insightapi',
   insightApiBase: env.INSIGHT_API_BASE_URI,
   insightFallback: true

@@ -21,7 +21,9 @@ async function main() {
       stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
       stakingQuestions['INSIGHT_API_URI'],
       stakingQuestions['BITCOIN_WIF'],
-      stakingQuestions['INFURA_API_KEY']
+      stakingQuestions['INFURA_API_KEY'],
+      stakingQuestions['ETHERSCAN_API_KEY']
+      
     ]),
     createSwarmAndSecrets,
     createWallet,

@@ -32,6 +32,11 @@ module.exports = {
       name: 'INFURA_API_KEY',
       message: 'Enter your Infura API key (free):'
   },
+  ETHERSCAN_API_KEY: {
+      type: 'input',
+      name: 'ETHERSCAN_API_KEY',
+      message: 'Enter your Etherscan API key (free):'
+  },
   INSIGHT_API_URI: {
       type: 'input',
       name: 'INSIGHT_API_URI',
