@@ -33,7 +33,7 @@ const proof = require('./lib/models/Proof.js')
 const stakedNode = require('./lib/models/NodeState.js')
 const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
-const checkEthTxWhitelist = require('./lib/middleware/checkEthTxWhitelist')
+const ethTxWhitelist = require('./lib/middleware/checkEthTxWhitelist')
 
 const bunyan = require('bunyan')
 
@@ -96,11 +96,7 @@ server.use(
 // API RESOURCES
 
 // submit hash(es)
-server.post(
-  { path: '/hashes', version: '1.0.0' },
-  restify.throttle({ burst: 5, rate: 1, ip: true }),
-  hashes.postHashV1Async
-)
+server.post({ path: '/hashes', version: '1.0.0' }, throttle(5, 1), hashes.postHashV1Async)
 // get the block objects for the calendar in the specified block range
 server.get({ path: '/calendar/:txid', version: '1.0.0' }, calendar.getCalTxAsync)
 // get the data value of a txId
@@ -112,24 +108,19 @@ server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
 // get status
 server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
 // get eth tx data
-server.get(
-  { path: '/eth/:addr/stats', version: '1.0.0' },
-  restify.throttle({ burst: 5, rate: 1, ip: true }),
-  eth.getEthStatsAsync
-)
+server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
 // post eth broadcast
-server.post(
-  { path: '/eth/broadcast', version: '1.0.0' },
-  restify.throttle({ burst: 3, rate: 1, ip: true }),
-  checkEthTxWhitelist,
-  eth.postEthBroadcastAsync
-)
+server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(3, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
 // post token refresh
 server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
 // post token credit
 server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
+
+function throttle(burst, rate) {
+  return restify.throttle({ burst: burst, rate: rate, ip: true })
+}
 
 /**
  * Opens a Postgres connection
