@@ -129,6 +129,7 @@ func (app *AnchorApplication) AuditNodes() error {
 				wg.Add(1)
 				go func(node types.Node) {
 					defer wg.Done()
+					app.logger.Info(fmt.Sprintf("Auditing Node IP %s\n", node.PublicIP.String))
 					if strings.HasPrefix(node.PublicIP.String, "10") ||
 						strings.HasPrefix(node.PublicIP.String, "127") ||
 						strings.HasPrefix(node.PublicIP.String, "192") ||
@@ -137,6 +138,7 @@ func (app *AnchorApplication) AuditNodes() error {
 						return
 					}
 					if err := app.AuditNode(node); err != nil {
+						app.logger.Debug(fmt.Sprintf("Audit of node IP %s unsuccessful: %s\n", node.PublicIP.String, err.Error()))
 						return
 					}
 					nodeJson := types.NodeJson{
