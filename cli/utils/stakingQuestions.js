@@ -1,3 +1,19 @@
+/* Copyright (C) 2019 Tierion
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 const Web3 = require('web3')
 const validator = require('validator')
 
@@ -23,24 +39,24 @@ module.exports = {
     }
   },
   BITCOIN_WIF: {
-      type: 'input',
-      name: 'BITCOIN_WIF',
-      message: 'Enter the Bitcoin private key for your hotwallet:'
+    type: 'input',
+    name: 'BITCOIN_WIF',
+    message: 'Enter the Bitcoin private key for your hotwallet:'
   },
   INFURA_API_KEY: {
-      type: 'input',
-      name: 'INFURA_API_KEY',
-      message: 'Enter your Infura API key (free):'
+    type: 'input',
+    name: 'INFURA_API_KEY',
+    message: 'Enter your Infura API key (free):'
   },
   ETHERSCAN_API_KEY: {
-      type: 'input',
-      name: 'ETHERSCAN_API_KEY',
-      message: 'Enter your Etherscan API key (free):'
+    type: 'input',
+    name: 'ETHERSCAN_API_KEY',
+    message: 'Enter your Etherscan API key (free):'
   },
   INSIGHT_API_URI: {
-      type: 'input',
-      name: 'INSIGHT_API_URI',
-      message: "Enter the full URL to your bitcoin node's Insight API:"
+    type: 'input',
+    name: 'INSIGHT_API_URI',
+    message: "Enter the full URL to your bitcoin node's Insight API:"
   },
   AUTO_REFILL_ENABLED: {
     type: 'list',
