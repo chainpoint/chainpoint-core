@@ -47,14 +47,14 @@ async function getEthStatsAsync(req, res, next) {
   }
   try {
     let transactionCount = await fallbackProvider.getTransactionCount(ethAddress)
-    result.transactionCount = transactionCount.toNumber()
+    result.transactionCount = transactionCount
   } catch (error) {
     console.error(`Error when attempting to retrieve transaction count : ${ethAddress} : ${error.message}`)
     return next(new restify.InternalServerError('Error when attempting to retrieve transaction count'))
   }
 
   res.contentType = 'application/json'
-  res.send(result)
+  res.send({ [ethAddress]: result })
   return next()
 }
 
