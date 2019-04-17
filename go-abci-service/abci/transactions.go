@@ -45,7 +45,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcmTxInt = app.state.TxInt
 		app.ConsumeBtcTxMsg([]byte(tx.Data))
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
 		break
 	case "BTC-A":
 		app.state.LatestBtcaTx = rawTx
