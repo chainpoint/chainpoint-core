@@ -94,7 +94,11 @@ server.use(
 // API RESOURCES
 
 // submit hash(es)
-server.post({ path: '/hashes', version: '1.0.0' }, hashes.postHashV1Async)
+server.post(
+  { path: '/hashes', version: '1.0.0' },
+  restify.throttle({ burst: 5, rate: 1, ip: true }),
+  hashes.postHashV1Async
+)
 // get the block objects for the calendar in the specified block range
 server.get({ path: '/calendar/:txid', version: '1.0.0' }, calendar.getCalTxAsync)
 // get the data value of a txId
@@ -106,9 +110,18 @@ server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
 // get status
 server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
 // get eth tx data
-server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, eth.getEthStatsAsync)
+server.get(
+  { path: '/eth/:addr/stats', version: '1.0.0' },
+  restify.throttle({ burst: 5, rate: 1, ip: true }),
+  eth.getEthStatsAsync
+)
 // post eth broadcast
-server.post({ path: '/eth/broadcast', version: '1.0.0' }, checkEthTxWhitelist, eth.postEthBroadcastAsync)
+server.post(
+  { path: '/eth/broadcast', version: '1.0.0' },
+  restify.throttle({ burst: 3, rate: 1, ip: true }),
+  checkEthTxWhitelist,
+  eth.postEthBroadcastAsync
+)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
