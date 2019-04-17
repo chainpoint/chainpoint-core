@@ -16,7 +16,6 @@
 
 const restify = require('restify')
 const ethers = require('ethers')
-const utils = require('../utils.js')
 const env = require('../parse-env.js')('api')
 
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
@@ -61,22 +60,6 @@ async function getEthStatsAsync(req, res, next) {
 
 async function postEthBroadcastAsync(req, res, next) {
   const rawTx = req.params.tx
-  // ensure that rawTx represents a valid hex value starting wiht 0x
-  if (!rawTx.startsWith('0x')) {
-    return next(new restify.InvalidArgumentError('invalid request, transaction must begin with 0x'))
-  }
-  // ensure that rawTx represents a valid hex value
-  let txContent = rawTx.slice(2)
-  if (!utils.isHex(txContent)) {
-    return next(new restify.InvalidArgumentError('invalid request, non hex value supplied'))
-  }
-
-  // ensure that rawTx represents a valid ethereum transaction
-  try {
-    ethers.utils.parseTransaction(rawTx)
-  } catch (error) {
-    return next(new restify.InvalidArgumentError('invalid request, invalid ethereum transaction body supplied'))
-  }
 
   let result
   try {
