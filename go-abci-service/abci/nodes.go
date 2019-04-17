@@ -423,6 +423,7 @@ func verifySig(from, sigHex string, msg []byte) (bool, error) {
 	fromAddr := common.HexToAddress(from)
 	sig, err := hexutil.Decode(sigHex)
 	if err != nil {
+		util.LogError(err)
 		return false, err
 	}
 	if sig[64] != 27 && sig[64] != 28 {
@@ -431,6 +432,7 @@ func verifySig(from, sigHex string, msg []byte) (bool, error) {
 	sig[64] -= 27
 	pubKey, err := crypto.SigToPub(signHash(msg), sig)
 	if err != nil {
+		util.LogError(err)
 		return false, err
 	}
 	recoveredAddr := crypto.PubkeyToAddress(*pubKey)
