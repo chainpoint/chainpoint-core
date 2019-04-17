@@ -15,13 +15,23 @@ module.exports = function(req, res, next) {
     return next(new errors.BadRequestError())
   }
   // Ensure that the raw Eth Tx provided is interacting with either the Chainpoint Token or Registry Contracts
-  let decodedTx = ethers.utils.parseTransaction(req.body.tx)
+  let decodedTx
+  try {
+    decodedTx = ethers.utils.parseTransaction(req.body.tx)
 
-  if (decodedTx.to !== tokenAddress && decodedTx.to !== registryAddress) {
+    if (decodedTx.to !== tokenAddress && decodedTx.to !== registryAddress) {
+      return next(
+        new errors.BadRequestError({
+          message:
+            'Only Ethereum transactions that interact with either the Chainpoint Token or Registry contracts are allowed.'
+        })
+      )
+    }
+  } catch (error) {
     return next(
       new errors.BadRequestError({
         message:
-          'Only Ethereum transactions that interact with either the Chainpoint Token or Registry contracts are allowed.'
+          'Error parsing Ethereum Tx. Only Ethereum transactions that interact with either the Chainpoint Token or Registry contracts are allowed.'
       })
     )
   }
