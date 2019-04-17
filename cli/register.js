@@ -16,10 +16,7 @@ async function main() {
 
   try {
     await pipeP(
-      () =>
-        inquirer.prompt([
-          stakingQuestions['ETH_REWARDS_ADDRESS'],
-        ]),
+      () => inquirer.prompt([stakingQuestions['ETH_REWARDS_ADDRESS']]),
       updateOrCreateEnv
       // TODO: /eth/:addr/txdata
       // TODO: /eth/broadcast

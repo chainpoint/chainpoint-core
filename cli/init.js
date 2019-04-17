@@ -1,7 +1,5 @@
-const chalk = require('chalk')
 const inquirer = require('inquirer')
 const { pipe, pipeP } = require('ramda')
-const ora = require('ora')
 const tap = require('./utils/tap')
 const createSwarmAndSecrets = require('./scripts/0_swarm_secrets')
 const cliHelloLogger = require('./utils/cliHelloLogger')
@@ -16,15 +14,15 @@ const resolve = Promise.resolve.bind(Promise)
 async function main() {
   cliHelloLogger()
 
-  await pipeP(() =>
-    inquirer.prompt([
-      stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
-      stakingQuestions['INSIGHT_API_URI'],
-      stakingQuestions['BITCOIN_WIF'],
-      stakingQuestions['INFURA_API_KEY'],
-      stakingQuestions['ETHERSCAN_API_KEY']
-      
-    ]),
+  await pipeP(
+    () =>
+      inquirer.prompt([
+        stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
+        stakingQuestions['INSIGHT_API_URI'],
+        stakingQuestions['BITCOIN_WIF'],
+        stakingQuestions['INFURA_API_KEY'],
+        stakingQuestions['ETHERSCAN_API_KEY']
+      ]),
     createSwarmAndSecrets,
     createWallet,
     createDockerSecrets,
@@ -43,5 +41,5 @@ async function main() {
 }
 
 main().then(() => {
-    process.exit(0)
+  process.exit(0)
 })

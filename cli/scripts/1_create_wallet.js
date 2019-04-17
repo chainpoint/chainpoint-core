@@ -1,6 +1,6 @@
 const ethers = require('ethers')
 
-async function createWallet(values) {
+async function createWallet() {
   return ethers.Wallet.createRandom({
     extraEntropy: ethers.utils.formatBytes32String(`${Date.now()}`)
   })
