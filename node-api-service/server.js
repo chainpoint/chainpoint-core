@@ -118,8 +118,8 @@ server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxW
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
-function throttle(burst, rate) {
-  return restify.throttle({ burst: burst, rate: rate, ip: true })
+function throttle(burst, rate, opts = { ip: true }) {
+  return restify.throttle(Object.assign({}, { burst, rate }, opts))
 }
 
 /**
