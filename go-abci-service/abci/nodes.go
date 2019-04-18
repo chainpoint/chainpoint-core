@@ -99,8 +99,8 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 		if err := json.Unmarshal([]byte(decoded.Data), &nodes); err != nil {
 			return []common.Address{}, []byte{}, err
 		}
-		for _, nodeJson := range nodes {
-			nodeArray = append(nodeArray, common.HexToAddress(nodeJson.EthAddr))
+		for _, nodeJSON := range nodes {
+			nodeArray = append(nodeArray, common.HexToAddress(nodeJSON.EthAddr))
 		}
 	}
 	addresses := uniquify(nodeArray)
@@ -141,12 +141,12 @@ func (app *AnchorApplication) AuditNodes() error {
 						app.logger.Debug(fmt.Sprintf("Audit of node IP %s unsuccessful: %s\n", node.PublicIP.String, err.Error()))
 						return
 					}
-					nodeJson := types.NodeJson{
+					nodeJSON := types.NodeJson{
 						EthAddr:  node.EthAddr,
 						PublicIP: node.PublicIP.String,
 					}
 					mux.Lock()
-					rewardCandidates = append(rewardCandidates, nodeJson)
+					rewardCandidates = append(rewardCandidates, nodeJSON)
 					mux.Unlock()
 				}(nodeCandidate)
 			}
@@ -160,18 +160,18 @@ func (app *AnchorApplication) AuditNodes() error {
 			util.LoggerError(app.logger, err)
 			return err
 		}
-		rcJson, err := json.Marshal(rewardCandidates)
+		rcJSON, err := json.Marshal(rewardCandidates)
 		if err != nil {
 			return err
 		}
-		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJson), 2, time.Now().Unix(), app.ID)
+		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJSON), 2, time.Now().Unix(), app.ID)
 		if err != nil {
 			return err
 		}
 		if res.Code == 0 {
 			return nil
 		}
-		return errors.New("Problem validating and submitting nodes for rewards!")
+		return errors.New("problem validating and submitting nodes for rewards")
 	}
 	app.logger.Info("Not leader")
 	return nil
@@ -249,7 +249,7 @@ func (app *AnchorApplication) WatchNodesFromContract() error {
 	return nil
 }
 
-//ValidateNodeRepChain : download and verify reputation chain items from a node
+//ValidateNodeRecentReputation : download and verify reputation chain items from a node
 func ValidateNodeRecentReputation(node types.Node) error {
 	repChain, err := GetNodeRecentReputation(node)
 	if err != nil {
@@ -266,11 +266,11 @@ func SendNodeHash(node types.Node) (types.NodeHashResponse, error) {
 		nodeHash := types.NodeHash{
 			Hashes: []string{"c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2"},
 		}
-		hashJson, err := json.Marshal(nodeHash)
+		hashJSON, err := json.Marshal(nodeHash)
 		if err != nil {
 			return types.NodeHashResponse{}, err
 		}
-		req, err := http.NewRequest("POST", HashURI, bytes.NewReader(hashJson))
+		req, err := http.NewRequest("POST", HashURI, bytes.NewReader(hashJSON))
 		if err != nil {
 			return types.NodeHashResponse{}, err
 		}

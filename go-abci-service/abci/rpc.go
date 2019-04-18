@@ -12,6 +12,7 @@ import (
 	"github.com/tendermint/tendermint/rpc/client"
 )
 
+// RPC : hold abstract http client for mocking purposes
 type RPC struct {
 	client *client.HTTP
 }

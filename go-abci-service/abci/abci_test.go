@@ -2,12 +2,15 @@ package abci
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/knq/pemutil"
 
 	types2 "github.com/tendermint/tendermint/abci/types"
 
@@ -17,37 +20,55 @@ import (
 )
 
 func DeclareABCI() *AnchorApplication {
-	doCalLoop := false
-	doAnchorLoop := false
+	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
+	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
+	ethInfuraAPIKey := util.GetEnv("ETH_INFURA_API_KEY", "")
+	ethereumURL := util.GetEnv("ETH_URI", fmt.Sprintf("https://ropsten.infura.io/v3/%s", ethInfuraAPIKey))
+	ethTokenContract := util.GetEnv("TokenContractAddr", "0xB439eBe79cAeaA92C8E8813cEF14411B80bB8ef0")
+	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x2Cfa392F736C1f562C5aA3D62226a29b7D1517b6")
+	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
 	tendermintRPC := types.TendermintURI{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "tendermint"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 	}
-	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
-	ethTokenContract := util.GetEnv("TokenContractAddr", "0xC58f7d9a97bE0aC0084DBb2011Da67f36A0deD9F")
-	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x5AfdE9fFFf63FF1f883405615965422889B8dF29")
-	POSTGRES_USER := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
-	POSTGRES_PW := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")
-	POSTGRES_HOST := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
-	POSTGRES_PORT := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
-	POSTGRES_DB := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
+	postgresUser := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
+	postgresPw := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")
+	postgresHost := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
+	postgresPort := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
+	postgresDb := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
+
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
-	// Create config object
-	config := types.AnchorConfig{
-		DBType:               "memdb",
-		RabbitmqURI:          util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
-		TendermintRPC:        tendermintRPC,
-		PostgresURI:          fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", POSTGRES_USER, POSTGRES_PW, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB),
-		EthereumURL:          fmt.Sprintf("https://ropsten.infura.io/%s", ethInfuraApiKey),
+	ethConfig := types.EthConfig{
+		EthereumURL:          ethereumURL,
+		EthPrivateKey:        ethPrivateKey,
 		TokenContractAddr:    ethTokenContract,
 		RegistryContractAddr: ethRegistryContract,
-		DoCal:                doCalLoop,
-		DoAnchor:             doAnchorLoop,
-		AnchorInterval:       anchorInterval,
-		Logger:               &tmLogger,
+	}
+
+	store, err := pemutil.LoadFile("/run/secrets/ECDSA_KEYPAIR")
+	if err != nil {
+		util.LogError(err)
+	}
+	ecPrivKey, ok := store.ECPrivateKey()
+	if !ok {
+		util.LogError(errors.New("ecdsa key load failed"))
+	}
+
+	// Create config object
+	config := types.AnchorConfig{
+		DBType:         "memdb",
+		RabbitmqURI:    util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
+		TendermintRPC:  tendermintRPC,
+		PostgresURI:    fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
+		EthConfig:      ethConfig,
+		ECPrivateKey:   *ecPrivKey,
+		DoCal:          doCalLoop,
+		DoAnchor:       doAnchorLoop,
+		AnchorInterval: anchorInterval,
+		Logger:         &tmLogger,
 	}
 
 	app := NewAnchorApplication(config)

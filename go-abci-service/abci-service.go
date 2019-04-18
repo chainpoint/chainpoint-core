@@ -33,11 +33,11 @@ func main() {
 		TMServer: util.GetEnv("TENDERMINT_HOST", "tendermint"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 	}
-	POSTGRES_USER := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
-	POSTGRES_PW := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")
-	POSTGRES_HOST := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
-	POSTGRES_PORT := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
-	POSTGRES_DB := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
+	postgresUser := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
+	postgresPw := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")
+	postgresHost := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
+	postgresPort := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
+	postgresDb := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
@@ -63,7 +63,7 @@ func main() {
 		DBType:         "goleveldb",
 		RabbitmqURI:    util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintRPC:  tendermintRPC,
-		PostgresURI:    fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", POSTGRES_USER, POSTGRES_PW, POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB),
+		PostgresURI:    fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		EthConfig:      ethConfig,
 		ECPrivateKey:   *ecPrivKey,
 		DoCal:          doCalLoop,
