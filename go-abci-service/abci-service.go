@@ -41,6 +41,7 @@ func main() {
 	postgresHost := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
 	postgresPort := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
 	postgresDb := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
+	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
@@ -67,6 +68,7 @@ func main() {
 		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintRPC:    tendermintRPC,
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
+		RedisURI:         redisURI,
 		EthConfig:        ethConfig,
 		ECPrivateKey:     *ecPrivKey,
 		DoNodeAudit:      doAuditLoop,

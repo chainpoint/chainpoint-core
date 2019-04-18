@@ -1,5 +1,5 @@
 hash: 2d515a802a372f14e3dba5dcd485d5e1b36f3859c9ec8a9f3e6f37691c7649d2
-updated: 2019-04-18T11:15:37.448110173-07:00
+updated: 2019-04-18T12:22:37.541226992-07:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
@@ -62,6 +62,15 @@ imports:
   - metrics/prometheus
 - name: github.com/go-logfmt/logfmt
   version: 07c9b44f60d7ffdfb7d8efe1ad539965737836dc
+- name: github.com/go-redis/redis
+  version: 3f9b4d7004b1270253e54665d3b233afb06e9784
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
+  - internal/util
 - name: github.com/go-stack/stack
   version: 2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a
 - name: github.com/gogo/protobuf
