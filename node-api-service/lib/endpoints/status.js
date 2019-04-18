@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const restify = require('restify')
+const errors = require('restify-errors')
 const tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
 const env = require('../parse-env.js')('api')
@@ -26,12 +26,12 @@ async function getCoreStatusAsync(req, res, next) {
   if (statusResponse.error) {
     switch (statusResponse.error.responseCode) {
       case 404:
-        return next(new restify.NotFoundError(`Resource not found`))
+        return next(new errors.NotFoundError(`Resource not found`))
       case 409:
-        return next(new restify.InvalidArgumentError(statusResponse.error.message))
+        return next(new errors.InvalidArgumentError(statusResponse.error.message))
       default:
         console.error(`RPC error communicating with Tendermint : ${statusResponse.error.message}`)
-        return next(new restify.InternalServerError('Could not query for status'))
+        return next(new errors.InternalServerError('Could not query for status'))
     }
   }
 
