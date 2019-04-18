@@ -98,19 +98,19 @@ server.use(
 // submit hash(es)
 server.post({ path: '/hashes', version: '1.0.0' }, throttle(5, 1), hashes.postHashV1Async)
 // get the block objects for the calendar in the specified block range
-server.get({ path: '/calendar/:txid', version: '1.0.0' }, calendar.getCalTxAsync)
+server.get({ path: '/calendar/:txid', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxAsync)
 // get the data value of a txId
-server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, calendar.getCalTxDataAsync)
+server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxDataAsync)
 // get proofs from storage
-server.get({ path: '/proofs', version: '1.0.0' }, proofs.getProofsByIDsAsync)
+server.get({ path: '/proofs', version: '1.0.0' }, throttle(50, 10), proofs.getProofsByIDsAsync)
 // get random core peers
-server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
+server.get({ path: '/peers', version: '1.0.0' }, throttle(15, 3), peers.getPeersAsync)
 // get status
-server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
+server.get({ path: '/status', version: '1.0.0' }, throttle(15, 3), status.getCoreStatusAsync)
 // get eth tx data
 server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
 // post eth broadcast
-server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(3, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
+server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
 // post token refresh
 // server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
 // post token credit
