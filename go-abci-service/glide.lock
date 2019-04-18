@@ -1,12 +1,12 @@
 hash: 2d515a802a372f14e3dba5dcd485d5e1b36f3859c9ec8a9f3e6f37691c7649d2
-updated: 2019-04-08T16:29:10.835616767-07:00
+updated: 2019-04-18T12:22:37.541226992-07:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
   subpackages:
   - queue
 - name: github.com/aristanetworks/goarista
-  version: a123909ec740ba2ed43a293e3febaf7618aa67d5
+  version: 55bc7be9dd319639e5b8f276d66d76dd006df2d1
   subpackages:
   - monotime
 - name: github.com/beorn7/perks
@@ -62,6 +62,15 @@ imports:
   - metrics/prometheus
 - name: github.com/go-logfmt/logfmt
   version: 07c9b44f60d7ffdfb7d8efe1ad539965737836dc
+- name: github.com/go-redis/redis
+  version: 3f9b4d7004b1270253e54665d3b233afb06e9784
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
+  - internal/util
 - name: github.com/go-stack/stack
   version: 2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a
 - name: github.com/gogo/protobuf
@@ -96,9 +105,10 @@ imports:
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
 - name: github.com/lib/pq
-  version: d6156e141ac6c06345c7c73f450987a9ed4b751f
+  version: 51e2106eed1cea199c802d2a49e91e2491b02056
   subpackages:
   - oid
+  - scram
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c182affec369e30f25d3eb8cd8a478dee585ae7d
   subpackages:
@@ -158,7 +168,7 @@ imports:
 - name: github.com/tendermint/go-amino
   version: dc14acf9ef15f85828bfbc561ed9dd9d2a284885
 - name: github.com/tendermint/tendermint
-  version: e0f8936455029a40287a69d5b0e7baa4d5864da1
+  version: 1c6d9d20e4f474e9eed5c8f8c3f6b4761626d1f8
   subpackages:
   - abci/client
   - abci/example/code

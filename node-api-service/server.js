@@ -94,19 +94,19 @@ server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParam
 // submit hash(es)
 server.post({ path: '/hashes', version: '1.0.0' }, throttle(5, 1), hashes.postHashV1Async)
 // get the block objects for the calendar in the specified block range
-server.get({ path: '/calendar/:txid', version: '1.0.0' }, calendar.getCalTxAsync)
+server.get({ path: '/calendar/:txid', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxAsync)
 // get the data value of a txId
-server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, calendar.getCalTxDataAsync)
+server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxDataAsync)
 // get proofs from storage
-server.get({ path: '/proofs', version: '1.0.0' }, proofs.getProofsByIDsAsync)
+server.get({ path: '/proofs', version: '1.0.0' }, throttle(50, 10), proofs.getProofsByIDsAsync)
 // get random core peers
-server.get({ path: '/peers', version: '1.0.0' }, peers.getPeersAsync)
+server.get({ path: '/peers', version: '1.0.0' }, throttle(15, 3), peers.getPeersAsync)
 // get status
-server.get({ path: '/status', version: '1.0.0' }, status.getCoreStatusAsync)
+server.get({ path: '/status', version: '1.0.0' }, throttle(15, 3), status.getCoreStatusAsync)
 // get eth tx data
 server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
 // post eth broadcast
-server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(3, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
+server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
 // post token refresh
 // server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
 // post token credit
@@ -114,8 +114,8 @@ server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(3, 1), ethTxW
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
-function throttle(burst, rate) {
-  return restify.plugins.throttle({ burst: burst, rate: rate, ip: true })
+function throttle(burst, rate, opts = { ip: true }) {
+  return restify.plugins.throttle(Object.assign({}, { burst, rate }, opts))
 }
 
 /**

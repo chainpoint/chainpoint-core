@@ -8,6 +8,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/go-redis/redis"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -68,6 +69,7 @@ type AnchorApplication struct {
 	calendar         *calendar.Calendar
 	aggregator       *aggregator.Aggregator
 	pgClient         *postgres.Postgres
+	redisClient      *redis.Client
 	ethClient        *ethcontracts.EthClient
 	rpc              *RPC
 	ID               string
@@ -95,6 +97,17 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		panic(err)
 	}
 
+	//Declare redis Client
+	opt, err := redis.ParseURL(config.RedisURI)
+	if util.LoggerError(*config.Logger, err) != nil {
+		panic(err)
+	}
+	redisClient := redis.NewClient(opt)
+	_, err = redisClient.Ping().Result()
+	if util.LoggerError(*config.Logger, err) != nil {
+		panic(err)
+	}
+
 	//Construct application
 	app := AnchorApplication{
 		Db:               db,
@@ -110,9 +123,10 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			RabbitmqURI: config.RabbitmqURI,
 			Logger:      *config.Logger,
 		},
-		pgClient:  pgClient,
-		ethClient: ethClient,
-		rpc:       NewRPCClient(config.TendermintRPC),
+		pgClient:    pgClient,
+		redisClient: redisClient,
+		ethClient:   ethClient,
+		rpc:         NewRPCClient(config.TendermintRPC),
 	}
 
 	// Create cron scheduler
