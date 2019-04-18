@@ -3,8 +3,6 @@ node_modules
 data
 .vscode
 **/addrbook.json
-**/node_key.json
-**/priv_validator.json
 **/priv_validator.json.bak
 **/priv_validator_key.json
 **/write-file-atomic-*

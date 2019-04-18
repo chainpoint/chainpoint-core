@@ -91,9 +91,10 @@ func main() {
 	}
 
 	// Wait forever
-	cmn.TrapSignal(func() {
+	cmn.TrapSignal(tmLogger, func() {
 		// Cleanup
 		srv.Stop()
 	})
+	select {}
 	return
 }
