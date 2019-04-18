@@ -137,6 +137,7 @@ services:
       ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
       ETH_ADDRESS: ${ETH_ADDRESS}
+      ECDSA_KEYPAIR: ${ECDSA_KEYPAIR}
 
   api-test:
     container_name: node-api-service-test
