@@ -37,6 +37,8 @@ services:
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
       ANCHOR: "true"
+      AUDIT: "true"
+      NODE_MANAGEMENT: "true"
       AGGREGATE: "true"
       AGGREGATION_THREADS: "4"
       HASHES_PER_MERKLE_TREE: "200"

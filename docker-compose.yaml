@@ -20,6 +20,8 @@ services:
       ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       TENDERMINT_HOST: tendermint
       TENDERMINT_PORT: 26657
+      AUDIT: "true"
+      NODE_MANAGEMENT: "true"
       ANCHOR: "true"
       AGGREGATE: "true"
       AGGREGATION_THREADS: "4"

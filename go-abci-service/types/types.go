@@ -16,16 +16,18 @@ type TendermintURI struct {
 
 //AnchorConfig represents values to configure all connections within the ABCI anchor app
 type AnchorConfig struct {
-	DBType         string
-	RabbitmqURI    string
-	TendermintRPC  TendermintURI
-	PostgresURI    string
-	EthConfig      EthConfig
-	ECPrivateKey   ecdsa.PrivateKey
-	DoCal          bool
-	DoAnchor       bool
-	AnchorInterval int
-	Logger         *log.Logger
+	DBType           string
+	RabbitmqURI      string
+	TendermintRPC    TendermintURI
+	PostgresURI      string
+	EthConfig        EthConfig
+	ECPrivateKey     ecdsa.PrivateKey
+	DoNodeManagement bool
+	DoNodeAudit      bool
+	DoCal            bool
+	DoAnchor         bool
+	AnchorInterval   int
+	Logger           *log.Logger
 }
 
 //EthConfig holds contract addresses and eth node URI
@@ -206,8 +208,8 @@ type Node struct {
 	BlockNumber sql.NullInt64
 }
 
-//NodeJson : Used to write to chain
-type NodeJson struct {
+//NodeJSON : Used to write to chain
+type NodeJSON struct {
 	EthAddr  string `json:"eth_address"`
 	PublicIP string `json:"node_ip"`
 }

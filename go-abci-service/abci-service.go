@@ -21,6 +21,9 @@ import (
 
 func main() {
 	// Perform env type conversions
+	doNodeManagement, _ := strconv.ParseBool(util.GetEnv("NODE_MANAGEMENT", "true"))
+	doAuditLoop, _ := strconv.ParseBool(util.GetEnv("AUDIT", "true"))
+	doAuditLoop = doNodeManagement && doAuditLoop //only allow auditing if node management enabled
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
@@ -60,16 +63,18 @@ func main() {
 
 	// Create config object
 	config := types.AnchorConfig{
-		DBType:         "goleveldb",
-		RabbitmqURI:    util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
-		TendermintRPC:  tendermintRPC,
-		PostgresURI:    fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
-		EthConfig:      ethConfig,
-		ECPrivateKey:   *ecPrivKey,
-		DoCal:          doCalLoop,
-		DoAnchor:       doAnchorLoop,
-		AnchorInterval: anchorInterval,
-		Logger:         &tmLogger,
+		DBType:           "goleveldb",
+		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
+		TendermintRPC:    tendermintRPC,
+		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
+		EthConfig:        ethConfig,
+		ECPrivateKey:     *ecPrivKey,
+		DoNodeAudit:      doAuditLoop,
+		DoNodeManagement: doNodeManagement,
+		DoCal:            doCalLoop,
+		DoAnchor:         doAnchorLoop,
+		AnchorInterval:   anchorInterval,
+		Logger:           &tmLogger,
 	}
 
 	//Instantiate ABCI application

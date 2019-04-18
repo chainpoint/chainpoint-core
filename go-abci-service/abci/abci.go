@@ -115,16 +115,14 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		rpc:       NewRPCClient(config.TendermintRPC),
 	}
 
+	// Create cron scheduler
+	scheduler := cron.New(cron.WithLocation(time.UTC))
+
 	//Initialize calendar writing if enabled
 	if config.DoCal {
-		// Create cron scheduler
-		scheduler := cron.New(cron.WithLocation(time.UTC))
 
 		// Update NIST beacon record and gossip it to ensure everyone has the same aggregator state
 		scheduler.AddFunc("0/1 0-23 * * *", app.NistBeaconMonitor)
-
-		// Update Mint status
-		scheduler.AddFunc("0/1 0-23 * * *", app.MintMonitor)
 
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
@@ -133,7 +131,12 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 				app.AggregateCalendar()
 			}
 		})
-		scheduler.Start()
+	}
+
+	//Initialize node auditing if enabled
+	if config.DoNodeAudit {
+		// Update Mint status
+		scheduler.AddFunc("0/1 0-23 * * *", app.MintMonitor)
 	}
 
 	//Initialize anchoring to bitcoin if enabled
@@ -142,9 +145,14 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
 
-	//Initialize node state
-	go app.LoadNodesFromContract()
-	go app.WatchNodesFromContract()
+	if config.DoNodeManagement {
+		//Initialize node state
+		go app.LoadNodesFromContract()
+		go app.WatchNodesFromContract()
+	}
+
+	//Start scheduled cron tasks
+	scheduler.Start()
 
 	return &app
 }
@@ -208,14 +216,16 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
-			go app.AuditNodes()                                                 //retrieve, audit, and reward some nodes
-			go app.CollectRewardNodes()
+			if app.config.DoNodeAudit {
+				go app.AuditNodes() //retrieve, audit, and reward some nodes
+				go app.CollectRewardNodes()
+			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
 	}
 
-	if len(app.RewardSignatures) == 6 {
+	if len(app.RewardSignatures) == 6 && app.config.DoNodeAudit {
 		go app.MintRewardNodes(app.RewardSignatures)
 	}
 

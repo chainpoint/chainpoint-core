@@ -95,7 +95,7 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 		if err != nil {
 			continue
 		}
-		var nodes []types.NodeJson
+		var nodes []types.NodeJSON
 		if err := json.Unmarshal([]byte(decoded.Data), &nodes); err != nil {
 			return []common.Address{}, []byte{}, err
 		}
@@ -116,7 +116,7 @@ func (app *AnchorApplication) AuditNodes() error {
 			return err
 		}
 		blockHash := status.SyncInfo.LatestBlockHash.String()
-		rewardCandidates := make([]types.NodeJson, 0)
+		rewardCandidates := make([]types.NodeJSON, 0)
 		deadline := time.Now().Add(1 * time.Minute)
 		var wg sync.WaitGroup
 		var mux sync.Mutex
@@ -141,7 +141,7 @@ func (app *AnchorApplication) AuditNodes() error {
 						app.logger.Debug(fmt.Sprintf("Audit of node IP %s unsuccessful: %s\n", node.PublicIP.String, err.Error()))
 						return
 					}
-					nodeJSON := types.NodeJson{
+					nodeJSON := types.NodeJSON{
 						EthAddr:  node.EthAddr,
 						PublicIP: node.PublicIP.String,
 					}
