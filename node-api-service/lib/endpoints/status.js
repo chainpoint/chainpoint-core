@@ -37,7 +37,13 @@ async function getCoreStatusAsync(req, res, next) {
   }
 
   let privateKeyPEM = env.ECDSA_KEYPAIR
-  let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
+  let jwkJSON = null
+  try {
+    let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
+    jwkJSON = jwk.toJSON()
+  } catch (error) {
+    console.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
+  }
 
   let result = Object.assign(
     {
@@ -45,7 +51,7 @@ async function getCoreStatusAsync(req, res, next) {
       time: new Date().toISOString(),
       base_uri: env.CHAINPOINT_CORE_BASE_URI,
       eth_address: coreEthAddress,
-      jwk: jwk.toJSON()
+      jwk: jwkJSON
     },
     statusResponse.result
   )
