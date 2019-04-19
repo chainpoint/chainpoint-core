@@ -24,28 +24,35 @@ func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leader
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineLeader(numLeaders, status, netInfo.Peers, blockHash)
+	return determineLeader(numLeaders, status, netInfo, blockHash)
+}
+
+//GetSortedPeerList : returns sorted list of peers including self
+func GetSortedPeerList(status core_types.ResultStatus, netInfo core_types.ResultNetInfo) []core_types.Peer {
+	peers := netInfo.Peers
+	nodeArray := make([]core_types.Peer, 0)
+	for i := 0; i < len(peers); i++ {
+		peers[i].RemoteIP = util.DecodeIP(peers[i].RemoteIP)
+		nodeArray = append(nodeArray, peers[i])
+	}
+	selfPeer := core_types.Peer{
+		NodeInfo:         status.NodeInfo,
+		IsOutbound:       false,
+		ConnectionStatus: p2p.ConnectionStatus{},
+		RemoteIP:         "127.0.0.1",
+	}
+	nodeArray = append(nodeArray, selfPeer)
+	sort.Slice(nodeArray[:], func(i, j int) bool {
+		return nodeArray[i].NodeInfo.ID() > nodeArray[j].NodeInfo.ID()
+	})
+	return nodeArray
 }
 
 // determineLeader accepts current node status and a peer array, then finds a leader based on the latest blockhash
-func determineLeader(numLeaders int, status core_types.ResultStatus, peers []core_types.Peer, seed string) (isLeader bool, leaderIDs []string) {
+func determineLeader(numLeaders int, status core_types.ResultStatus, netInfo core_types.ResultNetInfo, seed string) (isLeader bool, leaderIDs []string) {
 	currentNodeID := status.NodeInfo.ID()
-	if len(peers) > 0 {
-		nodeArray := make([]core_types.Peer, 0)
-		for i := 0; i < len(peers); i++ {
-			peers[i].RemoteIP = util.DecodeIP(peers[i].RemoteIP)
-			nodeArray = append(nodeArray, peers[i])
-		}
-		selfPeer := core_types.Peer{
-			NodeInfo:         status.NodeInfo,
-			IsOutbound:       false,
-			ConnectionStatus: p2p.ConnectionStatus{},
-			RemoteIP:         "127.0.0.1",
-		}
-		nodeArray = append(nodeArray, selfPeer)
-		sort.Slice(nodeArray[:], func(i, j int) bool {
-			return nodeArray[i].NodeInfo.ID() > nodeArray[j].NodeInfo.ID()
-		})
+	if len(netInfo.Peers) > 0 {
+		nodeArray := GetSortedPeerList(status, netInfo)
 		index := util.GetSeededRandInt([]byte(seed), len(nodeArray)) //seed the first time
 		if err := util.RotateLeft(nodeArray[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 			util.LogError(err)
