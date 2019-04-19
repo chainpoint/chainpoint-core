@@ -27,11 +27,11 @@ const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
 const eth = require('./lib/endpoints/eth.js')
-// const usageToken = require('./lib/endpoints/usage-token.js')
+const usageToken = require('./lib/endpoints/usage-token.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
 const stakedNode = require('./lib/models/NodeState.js')
-// const activeToken = require('./lib/models/ActiveToken.js')
+const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const ethTxWhitelist = require('./lib/middleware/checkEthTxWhitelist')
 
@@ -108,9 +108,9 @@ server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.g
 // post eth broadcast
 server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
 // post token refresh
-// server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
+server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
 // post token credit
-// server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
+server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
 // teapot
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
@@ -119,10 +119,30 @@ function throttle(burst, rate, opts = { ip: true }) {
 }
 
 /**
+ * Opens a Redis connection
+ *
+ * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
+ */
+function openRedisConnection(redisURIs) {
+  connections.openRedisConnection(
+    redisURIs,
+    newRedis => {
+      usageToken.setRedis(newRedis)
+    },
+    () => {
+      usageToken.setRedis(null)
+      setTimeout(() => {
+        openRedisConnection(redisURIs)
+      }, 5000)
+    }
+  )
+}
+
+/**
  * Opens a Postgres connection
  **/
 async function openPostgresConnectionAsync() {
-  let sqlzModelArray = [proof, stakedNode] //, activeToken
+  let sqlzModelArray = [proof, stakedNode, activeToken]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.models[0])
 }
@@ -164,6 +184,8 @@ async function openRMQConnectionAsync(connectURI) {
 async function start() {
   if (env.NODE_ENV === 'test') return
   try {
+    // init Redis
+    openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
     await openPostgresConnectionAsync()
     // init Tendermint
