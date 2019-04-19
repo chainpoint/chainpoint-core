@@ -101,6 +101,27 @@ function formatAsChainpointV3Ops(proof, op) {
 
   return ChainpointV3Ops
 }
+/**
+ * Return the source IP of the HTTP request
+ *
+ * @param {Restify request object} req - The request object from which to get the source IP
+ * @returns {string} an IP address
+ */
+function getRequestSourceIP(req) {
+  let reqIp = null
+  if (req.headers['CF-Connecting-IP']) {
+    // if Cloudflare is in play
+    reqIp = req.headers['CF-Connecting-IP']
+  } else if (req.headers['x-forwarded-for']) {
+    let fwdIPs = req.headers['x-forwarded-for'].split(',')
+    reqIp = fwdIPs[0]
+  } else {
+    reqIp = req.connection.remoteAddress || null
+  }
+  if (reqIp) reqIp = reqIp.replace(/^.*:/, '')
+
+  return reqIp
+}
 
 module.exports = {
   sleepAsync: sleepAsync,
@@ -109,5 +130,6 @@ module.exports = {
   formatDateISO8601NoMs: formatDateISO8601NoMs,
   isHex: isHex,
   isIP: isIP,
-  formatAsChainpointV3Ops: formatAsChainpointV3Ops
+  formatAsChainpointV3Ops: formatAsChainpointV3Ops,
+  getRequestSourceIP: getRequestSourceIP
 }

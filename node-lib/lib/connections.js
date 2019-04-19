@@ -116,7 +116,7 @@ async function openPostgresConnectionAsync(modelSqlzArray, debug) {
     env.POSTGRES_CONNECT_PW
   }@${env.POSTGRES_CONNECT_HOST}:${env.POSTGRES_CONNECT_PORT}/${env.POSTGRES_CONNECT_DB}`
 
-  const sequelize = new Sequelize(POSTGRES_CONNECT_URI, { logging: null, operatorsAliases: false })
+  const sequelize = new Sequelize(POSTGRES_CONNECT_URI, { logging: null })
 
   let dbConnected = false
   let synchedModels = []
