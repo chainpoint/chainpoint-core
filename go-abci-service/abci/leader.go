@@ -32,7 +32,7 @@ func GetSortedPeerList(status core_types.ResultStatus, netInfo core_types.Result
 	peers := netInfo.Peers
 	nodeArray := make([]core_types.Peer, 0)
 	for i := 0; i < len(peers); i++ {
-		peers[i].RemoteIP = util.DecodeIP(peers[i].RemoteIP)
+		peers[i].RemoteIP = util.DetermineIP(peers[i])
 		nodeArray = append(nodeArray, peers[i])
 	}
 	selfPeer := core_types.Peer{

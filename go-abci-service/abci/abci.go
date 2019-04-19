@@ -161,6 +161,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	if config.DoNodeManagement {
 		//Initialize node state
+		go app.KeyMonitor()
 		go app.LoadNodesFromContract()
 		go app.WatchNodesFromContract()
 	}

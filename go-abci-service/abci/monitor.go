@@ -3,9 +3,15 @@ package abci
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-redis/redis"
+
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	beacon "github.com/chainpoint/go-nist-beacon"
 
@@ -174,6 +180,56 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.state.ChainSynced = true
 		}
 		time.Sleep(30 * time.Second)
+	}
+}
+
+//KeyMonitor : updates active ECDSA public keys from all accessible peers
+func (app *AnchorApplication) KeyMonitor() {
+	for {
+		var status core_types.ResultStatus
+		var netInfo core_types.ResultNetInfo
+		var err error
+		var err2 error
+
+		status, err = app.rpc.GetStatus()
+		netInfo, err2 = app.rpc.GetNetInfo()
+
+		if util.LogError(err) != nil || util.LogError(err2) != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			peers := GetSortedPeerList(status, netInfo)
+			for _, peer := range peers {
+				peerIP := util.DetermineIP(peer)
+				peerStatusURL := fmt.Sprintf("http://%s/status", peerIP)
+				response, err := http.Get(peerStatusURL)
+				if util.LoggerError(app.logger, err) != nil {
+					continue
+				}
+				contents, err := ioutil.ReadAll(response.Body)
+				if util.LoggerError(app.logger, err) != nil {
+					continue
+				}
+				var apiStatus types.CoreAPIStatus
+				err = json.Unmarshal(contents, &apiStatus)
+				if util.LoggerError(app.logger, err) != nil {
+					continue
+				}
+				key := fmt.Sprintf("CorePublicKey:%s", apiStatus.Jwk.Kid)
+				jsonJwk, err := json.Marshal(apiStatus.Jwk)
+				if util.LoggerError(app.logger, err) != nil {
+					continue
+				}
+				value, err := app.redisClient.Get(key).Result()
+				if err == redis.Nil || value != string(jsonJwk) {
+					err = app.redisClient.Set(key, value, 0).Err()
+					if util.LoggerError(app.logger, err) != nil {
+						continue
+					}
+				}
+			}
+		}
+		time.Sleep(600 * time.Second)
 	}
 }
 

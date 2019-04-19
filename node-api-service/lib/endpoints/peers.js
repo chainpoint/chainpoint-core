@@ -33,8 +33,7 @@ async function getPeersAsync(req, res, next) {
 
   let decodedPeers = netResponse.result.peers
     .map(peer => {
-      let ipBytes = Buffer.from(peer.remote_ip, 'base64').slice(-4)
-      let remoteIP = ipBytes.join('.')
+      let remoteIP = peer.remote_ip
       let firstOctet = remoteIP.substring(0, remoteIP.indexOf('.'))
       //use listen_addr if there are non-routable peer exchange IPs when behind NATs
       if (firstOctet == '10' || firstOctet == '172' || firstOctet == '192') {

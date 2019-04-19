@@ -11,6 +11,9 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
+
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	"github.com/tendermint/tendermint/libs/log"
 
@@ -104,6 +107,23 @@ func DecodeIP(remote_ip string) string {
 	// No nice joins for individual bytes, bytes.Join only likes arrays of arrays
 	ip := BytesToIP(encoded_ip)
 	return ip
+}
+
+// DetermineIP : use remoteIP if routable, use listenAddr if not
+func DetermineIP(peer core_types.Peer) string {
+	remoteIP := peer.RemoteIP
+	firstOctet := remoteIP[:strings.Index(remoteIP, ".")]
+	if firstOctet == "10" || firstOctet == "172" || firstOctet == "192" {
+		listenAddr := peer.NodeInfo.ListenAddr
+		if len(listenAddr) > 0 {
+			if strings.Contains(listenAddr, "//") && strings.Contains(listenAddr, ":") {
+				return listenAddr[strings.LastIndex(listenAddr, "/"):strings.LastIndex(listenAddr, ":")]
+			}
+			return listenAddr[:strings.LastIndex(listenAddr, ":")]
+		}
+		return ""
+	}
+	return remoteIP
 }
 
 // BytesToIP : takes an IP byte array and converts it to corresponding dot string format
