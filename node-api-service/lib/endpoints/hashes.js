@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const restify = require('restify')
+const errors = require('restify-errors')
 const env = require('../parse-env.js')('api')
 const utils = require('../utils.js')
 const BLAKE2s = require('blake2s-js')
@@ -134,28 +134,28 @@ function generateProcessingHints(timestampDate) {
 async function postHashV1Async(req, res, next) {
   // validate content-type sent was 'application/json'
   if (req.contentType() !== 'application/json') {
-    return next(new restify.InvalidArgumentError('invalid content type'))
+    return next(new errors.InvalidArgumentError('invalid content type'))
   }
 
   // validate params has parse a 'hash' key
   if (!req.params.hasOwnProperty('hash')) {
-    return next(new restify.InvalidArgumentError('invalid JSON body: missing hash'))
+    return next(new errors.InvalidArgumentError('invalid JSON body: missing hash'))
   }
 
   // validate 'hash' is a string
   if (!_.isString(req.params.hash)) {
-    return next(new restify.InvalidArgumentError('invalid JSON body: bad hash submitted'))
+    return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
   }
 
   // validate hash param is a valid hex string
   let isValidHash = /^([a-fA-F0-9]{2}){20,64}$/.test(req.params.hash)
   if (!isValidHash) {
-    return next(new restify.InvalidArgumentError('invalid JSON body: bad hash submitted'))
+    return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
   }
 
   // validate amqp channel has been established
   if (!amqpChannel) {
-    return next(new restify.InternalServerError('Message could not be delivered'))
+    return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
   let responseObj = generatePostHashResponse(req.params.hash)
@@ -171,7 +171,7 @@ async function postHashV1Async(req, res, next) {
     })
   } catch (error) {
     console.error(env.RMQ_WORK_OUT_AGG_QUEUE, 'publish message nacked')
-    return next(new restify.InternalServerError('Message could not be delivered'))
+    return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
   res.send(responseObj)

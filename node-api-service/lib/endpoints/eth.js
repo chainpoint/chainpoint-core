@@ -14,9 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const restify = require('restify')
 const ethers = require('ethers')
 const env = require('../parse-env.js')('api')
+const errors = require('restify-errors')
 
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
@@ -27,7 +27,7 @@ async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
   // ensure that addr represents a valid, well formatted ETH address
   if (!/^0x[0-9a-fA-F]{40}$/i.test(ethAddress)) {
-    return next(new restify.InvalidArgumentError('invalid request, invalid ethereum address supplied'))
+    return next(new errors.InvalidArgumentError('invalid request, invalid ethereum address supplied'))
   }
 
   let result = {}
@@ -36,21 +36,21 @@ async function getEthStatsAsync(req, res, next) {
     result.creditPrice = creditPrice
   } catch (error) {
     console.error(`Error when attempting to retrieve credit price : ${error.message}`)
-    return next(new restify.InternalServerError('Error when attempting to retrieve credit price'))
+    return next(new errors.InternalServerError('Error when attempting to retrieve credit price'))
   }
   try {
     let gasPrice = await fallbackProvider.getGasPrice()
     result.gasPrice = gasPrice.toNumber()
   } catch (error) {
     console.error(`Error when attempting to retrieve gas price : ${error.message}`)
-    return next(new restify.InternalServerError('Error when attempting to retrieve gas price'))
+    return next(new errors.InternalServerError('Error when attempting to retrieve gas price'))
   }
   try {
     let transactionCount = await fallbackProvider.getTransactionCount(ethAddress)
     result.transactionCount = transactionCount
   } catch (error) {
     console.error(`Error when attempting to retrieve transaction count : ${ethAddress} : ${error.message}`)
-    return next(new restify.InternalServerError('Error when attempting to retrieve transaction count'))
+    return next(new errors.InternalServerError('Error when attempting to retrieve transaction count'))
   }
 
   res.contentType = 'application/json'
@@ -72,7 +72,7 @@ async function postEthBroadcastAsync(req, res, next) {
     result = { transactionHash, blockHash, blockNumber, gasUsed }
   } catch (error) {
     console.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
-    return next(new restify.InternalServerError(error.message))
+    return next(new errors.InternalServerError(error.message))
   }
 
   res.contentType = 'application/json'

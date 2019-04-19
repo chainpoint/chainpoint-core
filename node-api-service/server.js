@@ -57,12 +57,12 @@ const server = restify.createServer({
 // })
 
 // Clean up sloppy paths like //todo//////1//
-server.pre(restify.pre.sanitizePath())
+server.pre(restify.plugins.pre.sanitizePath())
 
 // Checks whether the user agent is curl. If it is, it sets the
 // Connection header to "close" and removes the "Content-Length" header
 // See : http://restify.com/#server-api
-server.pre(restify.pre.userAgentConnection())
+server.pre(restify.plugins.pre.userAgentConnection())
 
 // CORS
 // See : https://github.com/TabDigital/restify-cors-middleware
@@ -85,13 +85,9 @@ var cors = corsMiddleware({
 server.pre(cors.preflight)
 server.use(cors.actual)
 
-server.use(restify.gzipResponse())
-server.use(restify.queryParser())
-server.use(
-  restify.bodyParser({
-    maxBodySize: env.MAX_BODY_SIZE
-  })
-)
+server.use(restify.plugins.gzipResponse())
+server.use(restify.plugins.queryParser())
+server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
 
 // API RESOURCES
 
@@ -119,7 +115,7 @@ server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxW
 server.get({ path: '/', version: '1.0.0' }, root.getV1)
 
 function throttle(burst, rate, opts = { ip: true }) {
-  return restify.throttle(Object.assign({}, { burst, rate }, opts))
+  return restify.plugins.throttle(Object.assign({}, { burst, rate }, opts))
 }
 
 /**

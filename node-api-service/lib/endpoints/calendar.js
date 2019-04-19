@@ -14,20 +14,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const restify = require('restify')
 const tmRpc = require('../tendermint-rpc.js')
+const errors = require('restify-errors')
 
 async function getTransactionAsync(txID) {
   let txResponse = await tmRpc.getTransactionAsync(txID)
   if (txResponse.error) {
     switch (txResponse.error.responseCode) {
       case 404:
-        return { tx: null, error: new restify.NotFoundError(`Could not find transaction with id = '${txID}'`) }
+        return { tx: null, error: new errors.NotFoundError(`Could not find transaction with id = '${txID}'`) }
       case 409:
-        return { tx: null, error: new restify.InvalidArgumentError(txResponse.error.message) }
+        return { tx: null, error: new errors.InvalidArgumentError(txResponse.error.message) }
       default:
         console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
-        return { tx: null, error: new restify.InternalServerError('Could not query for tx by hash') }
+        return { tx: null, error: new errors.InternalServerError('Could not query for tx by hash') }
     }
   }
   return { tx: txResponse.result, error: null }

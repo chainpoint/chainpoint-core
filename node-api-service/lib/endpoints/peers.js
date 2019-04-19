@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const restify = require('restify')
+const errors = require('restify-errors')
 const tmRpc = require('../tendermint-rpc.js')
 
 async function getPeersAsync(req, res, next) {
@@ -22,12 +22,12 @@ async function getPeersAsync(req, res, next) {
   if (netResponse.error) {
     switch (netResponse.error.responseCode) {
       case 404:
-        return next(new restify.NotFoundError(`Resource not found`))
+        return next(new errors.NotFoundError(`Resource not found`))
       case 409:
-        return next(new restify.InvalidArgumentError(netResponse.error.message))
+        return next(new errors.InvalidArgumentError(netResponse.error.message))
       default:
         console.error(`RPC error communicating with Tendermint : ${netResponse.error.message}`)
-        return next(new restify.InternalServerError('Could not query for net info'))
+        return next(new errors.InternalServerError('Could not query for net info'))
     }
   }
 

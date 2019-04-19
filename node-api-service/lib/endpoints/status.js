@@ -14,10 +14,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const restify = require('restify')
+const errors = require('restify-errors')
 const tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
 const env = require('../parse-env.js')('api')
+const jose = require('node-jose')
 
 let coreEthAddress = env.ETH_TNT_LISTEN_ADDR
 
@@ -26,21 +27,25 @@ async function getCoreStatusAsync(req, res, next) {
   if (statusResponse.error) {
     switch (statusResponse.error.responseCode) {
       case 404:
-        return next(new restify.NotFoundError(`Resource not found`))
+        return next(new errors.NotFoundError(`Resource not found`))
       case 409:
-        return next(new restify.InvalidArgumentError(statusResponse.error.message))
+        return next(new errors.InvalidArgumentError(statusResponse.error.message))
       default:
         console.error(`RPC error communicating with Tendermint : ${statusResponse.error.message}`)
-        return next(new restify.InternalServerError('Could not query for status'))
+        return next(new errors.InternalServerError('Could not query for status'))
     }
   }
+
+  let privateKeyPEM = env.ECDSA_KEYPAIR
+  let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
 
   let result = Object.assign(
     {
       version: version,
       time: new Date().toISOString(),
       base_uri: env.CHAINPOINT_CORE_BASE_URI,
-      eth_address: coreEthAddress
+      eth_address: coreEthAddress,
+      jwk: jwk.toJSON()
     },
     statusResponse.result
   )

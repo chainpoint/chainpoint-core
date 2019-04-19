@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const restify = require('restify')
+const errors = require('restify-errors')
 
 /**
  * GET / handler
@@ -23,7 +23,7 @@ const restify = require('restify')
  *
  */
 function getV1(req, res, next) {
-  return next(new restify.ImATeapotError('This is an API endpoint. Please consult https://chainpoint.org'))
+  return next(new errors.ImATeapotError('This is an API endpoint. Please consult https://chainpoint.org'))
 }
 
 module.exports = {
