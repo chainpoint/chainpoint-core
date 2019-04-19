@@ -235,6 +235,24 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 		}
 		fmt.Printf("Inserted Update for %#v: %t\n", newNode, inserted)
 	}
+
+	//Consume unstake events and delete nodes where the blockNumber of this event is higher than the last stake or update
+	nodesUnstaked, err := app.ethClient.GetPastNodesUnstakeEvents()
+	if util.LoggerError(app.logger, err) != nil {
+		return err
+	}
+	for _, node := range nodesUnstaked {
+		newNode := types.Node{
+			EthAddr:     node.Sender.Hex(),
+			PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
+			BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+		}
+		deleted, err := app.pgClient.NodeDelete(newNode)
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
+		fmt.Printf("Deleted node for %#v: %t\n", newNode, deleted)
+	}
 	return nil
 }
 
@@ -246,6 +264,7 @@ func (app *AnchorApplication) WatchNodesFromContract() error {
 	}
 	go app.ethClient.WatchNodeStakeEvents(app.pgClient.HandleNodeStaking, *highestBlock)
 	go app.ethClient.WatchNodeStakeUpdatedEvents(app.pgClient.HandleNodeStakeUpdating, *highestBlock)
+	go app.ethClient.WatchNodeUnstakeEvents(app.pgClient.HandleNodeUnstake, *highestBlock)
 	return nil
 }
 

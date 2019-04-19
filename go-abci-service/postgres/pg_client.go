@@ -52,7 +52,7 @@ func NewPGFromURI(connStr string, logger log.Logger) (*Postgres, error) {
 	}, nil
 }
 
-//Inserts a new node row if it doesn't exist, other wise updates it on conflict
+//NodeUpsert : Inserts a new node row if it doesn't exist, other wise updates it on conflict
 func (pg *Postgres) NodeUpsert(node types.Node) (bool, error) {
 	stmt := "INSERT INTO node_state (eth_addr, public_ip, block_number, created_at, updated_at) " +
 		"VALUES ($1, $2, $3, now(), now()) " +
@@ -63,6 +63,23 @@ func (pg *Postgres) NodeUpsert(node types.Node) (bool, error) {
 		"block_number = $3 " +
 		"WHERE $3 > node_state.block_number OR $2 <> node_state.public_ip;"
 	res, err := pg.DB.Exec(stmt, node.EthAddr, node.PublicIP, node.BlockNumber)
+	if util.LoggerError(pg.Logger, err) != nil {
+		return false, err
+	}
+	affect, err := res.RowsAffected()
+	if util.LoggerError(pg.Logger, err) != nil {
+		return false, err
+	}
+	if affect > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+//NodeDelete : deletes a row if the blockNumber of the input unstake event is higher
+func (pg *Postgres) NodeDelete(node types.Node) (bool, error) {
+	stmt := "DELETE FROM node_state WHERE eth_addr = $1 AND block_number > $2;"
+	res, err := pg.DB.Exec(stmt, node.EthAddr, node.BlockNumber)
 	if util.LoggerError(pg.Logger, err) != nil {
 		return false, err
 	}
@@ -156,6 +173,7 @@ func (pg *Postgres) GetNodeByPublicIP(publicIP string) (types.Node, error) {
 	}
 }
 
+//HandleNodeStaking : receive watch event and upsert it into db
 func (pg *Postgres) HandleNodeStaking(node ethcontracts.ChpRegistryNodeStaked) error {
 	newNode := types.Node{
 		EthAddr:     node.Sender.Hex(),
@@ -170,6 +188,7 @@ func (pg *Postgres) HandleNodeStaking(node ethcontracts.ChpRegistryNodeStaked) e
 	return nil
 }
 
+//HandleNodeStakeUpdating : receive update event and upsert it into db if it supercedes the existing row
 func (pg *Postgres) HandleNodeStakeUpdating(node ethcontracts.ChpRegistryNodeStakeUpdated) error {
 	newNode := types.Node{
 		EthAddr:     node.Sender.Hex(),
@@ -181,5 +200,20 @@ func (pg *Postgres) HandleNodeStakeUpdating(node ethcontracts.ChpRegistryNodeSta
 		return err
 	}
 	pg.Logger.Info(fmt.Sprintf("Updated for %#v: %t\n", newNode, inserted))
+	return nil
+}
+
+//HandleNodeUnstaking : receive unstake event and delete it if the event is more recent than the stake or update
+func (pg *Postgres) HandleNodeUnstake(node ethcontracts.ChpRegistryNodeUnStaked) error {
+	newNode := types.Node{
+		EthAddr:     node.Sender.Hex(),
+		PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
+		BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+	}
+	inserted, err := pg.NodeDelete(newNode)
+	if util.LoggerError(pg.Logger, err) != nil {
+		return err
+	}
+	pg.Logger.Info(fmt.Sprintf("Deleted for %#v: %t\n", newNode, inserted))
 	return nil
 }
