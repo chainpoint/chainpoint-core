@@ -426,6 +426,7 @@ func verifySig(from, sigHex string, msg []byte) (bool, error) {
 	sig, err := hexutil.Decode(sigHex)
 	if err != nil {
 		util.LogError(err)
+		fmt.Printf("Can't decode signature from node %s\n", from)
 		return false, err
 	}
 	if sig[64] != 27 && sig[64] != 28 {
