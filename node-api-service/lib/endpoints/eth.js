@@ -32,7 +32,7 @@ async function getEthStatsAsync(req, res, next) {
 
   let result = {}
   try {
-    let creditPrice = 0.001 // TODO: Build and request from exchange rate service
+    let creditPrice = 0.1 // TODO: Build and request from exchange rate service
     result.creditPrice = creditPrice
   } catch (error) {
     console.error(`Error when attempting to retrieve credit price : ${error.message}`)
