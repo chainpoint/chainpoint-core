@@ -43,6 +43,7 @@ func (app *AnchorApplication) SaveJWT(jwk types.Jwk) error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
+		app.logger.Info(fmt.Sprintf("Set JWK cache for kid %s", jwk.Kid))
 	}
 	return nil
 }
