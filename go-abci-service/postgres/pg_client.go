@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
 
@@ -85,6 +87,38 @@ func (pg *Postgres) NodeDelete(node types.Node) (bool, error) {
 	}
 	affect, err := res.RowsAffected()
 	if util.LoggerError(pg.Logger, err) != nil {
+		return false, err
+	}
+	if affect > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+//TokenHashUpsert : insert new token hash when received by the network
+func (pg *Postgres) TokenHashUpsert(data string) (bool, error) {
+	payloadSlice := strings.Split(data, "|")
+	if len(payloadSlice) != 2 {
+		pg.Logger.Error(fmt.Sprintf("Error: Token payload %s is malformed", data))
+		return false, errors.New("TOKEN tx is malformed")
+	}
+	nodeIP := payloadSlice[0]
+	tokenHash := payloadSlice[1]
+	stmt := "INSERT INTO active_token (node_ip, token_hash, created_at, updated_at) " +
+		"VALUES ($1, $2, now(), now()) " +
+		"ON CONFLICT (node_ip) " +
+		"DO UPDATE " +
+		"SET " +
+		"node_ip = $1, " +
+		"token_hash = $2;"
+	res, err := pg.DB.Exec(stmt, nodeIP, tokenHash)
+	if util.LoggerError(pg.Logger, err) != nil {
+		pg.Logger.Error("Unable to execute upsert on active_token table")
+		return false, err
+	}
+	affect, err := res.RowsAffected()
+	if util.LoggerError(pg.Logger, err) != nil {
+		pg.Logger.Error("Unable to obtain rows affected by postgres upsert")
 		return false, err
 	}
 	if affect > 0 {
