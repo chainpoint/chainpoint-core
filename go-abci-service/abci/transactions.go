@@ -1,9 +1,12 @@
 package abci
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
 	types2 "github.com/tendermint/tendermint/abci/types"
 
@@ -71,8 +74,15 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		if err != nil {
 			app.logger.Debug("Parsing MINT tx failed")
 		} else {
+			app.state.PrevMintedAtBlock = app.state.LastMintedAtBlock
 			app.state.LastMintedAtBlock = lastMintedAtBlock
 		}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		break
+	case "JWK":
+		var jwk types.Jwk
+		json.Unmarshal([]byte(tx.Data), &jwk)
+		go app.SaveJWT(jwk)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "SIGN":

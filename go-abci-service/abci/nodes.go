@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -27,6 +29,23 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
+
+//SaveJWT : save the JWT value retrieved
+func (app *AnchorApplication) SaveJWT(jwk types.Jwk) error {
+	key := fmt.Sprintf("CorePublicKey:%s", jwk.Kid)
+	jsonJwk, err := json.Marshal(jwk)
+	if util.LoggerError(app.logger, err) != nil {
+		return err
+	}
+	value, err := app.redisClient.Get(key).Result()
+	if err == redis.Nil || value != string(jsonJwk) {
+		err = app.redisClient.Set(key, value, 0).Err()
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 //MintRewardNodes : mint rewards for nodes
 func (app *AnchorApplication) MintRewardNodes(sig []string) error {

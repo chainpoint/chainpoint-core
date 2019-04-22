@@ -59,6 +59,7 @@ type AnchorState struct {
 	LatestBtccHeight  int64  `json:"latest_btcc_height"`
 	LatestNistRecord  string `json:"latest_nist_record"`
 	LastMintedAtBlock int64  `json:"last_mint_block"`
+	PrevMintedAtBlock int64  `json:"prev_mint_block"`
 }
 
 // Tx holds custom transaction data and metadata for the Chainpoint Calendar
@@ -256,20 +257,23 @@ type NodeProofResponse []struct {
 	AnchorsComplete []string `json:"anchors_complete"`
 }
 
+//Jwk : holds key info for validating node requests
+type Jwk struct {
+	Kty string `json:"kty"`
+	Kid string `json:"kid"`
+	Crv string `json:"crv"`
+	X   string `json:"x"`
+	Y   string `json:"y"`
+}
+
 //CoreAPIStatus : status from Core's api service. Includes pubkey
 type CoreAPIStatus struct {
 	Version    string    `json:"version"`
 	Time       time.Time `json:"time"`
 	BaseURI    string    `json:"base_uri"`
 	EthAddress string    `json:"eth_address"`
-	Jwk        struct {
-		Kty string `json:"kty"`
-		Kid string `json:"kid"`
-		Crv string `json:"crv"`
-		X   string `json:"x"`
-		Y   string `json:"y"`
-	} `json:"jwk"`
-	NodeInfo struct {
+	Jwk        Jwk       `json:"jwk"`
+	NodeInfo   struct {
 		ProtocolVersion struct {
 			P2P   string `json:"p2p"`
 			Block string `json:"block"`
