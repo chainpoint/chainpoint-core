@@ -25,8 +25,10 @@ const uuidv1 = require('uuid/v1')
 const jose = require('node-jose')
 const rp = require('request-promise-native')
 const retry = require('async-retry')
+const tmRpc = require('../tendermint-rpc.js')
 
 const CORE_JWK_KEY_PREFIX = 'CoreJWK'
+const CORE_ID_KEY = 'CoreID'
 
 /*
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
@@ -125,10 +127,28 @@ async function postTokenRefreshAsync(req, res, next) {
     return next(new errors.InternalServerError('server error, could not sign refreshed token'))
   }
 
-  // TODO: broadcast Node IP and new token hash for Cores to update their local active token table
-
   // calculate hash of new token
-  // let refreshTokenHash = crypto.createHash('sha256').update(refreshedTokenString).digest('hex')
+  let refreshTokenHash = crypto
+    .createHash('sha256')
+    .update(refreshedTokenString)
+    .digest('hex')
+
+  // broadcast Node IP and new token hash for Cores to update their local active token table
+  let coreId = await getCachedCoreIDAsync()
+  let tokenTx = {
+    type: 'TOKEN',
+    data: `${submittingNodeIP}|${refreshTokenHash}`,
+    version: 2,
+    time: Math.ceil(Date.now() / 1000),
+    core_id: coreId
+  }
+  let tokenTxString = JSON.stringify(tokenTx)
+  let tokenTxB64 = Buffer.from(tokenTxString).toString('base64')
+  try {
+    await broadcastTxAsync(tokenTxB64)
+  } catch (error) {
+    return next(new errors.InternalServerError(`server error on transaction broadcast, ${error.message}`))
+  }
 
   res.contentType = 'application/json'
   res.send({ token: refreshedTokenString })
@@ -203,6 +223,52 @@ async function coreStatusRequestAsync(coreURI, retryCount = 3) {
   )
 
   return response.body
+}
+
+async function broadcastTxAsync(txBase64) {
+  let txResponse = await tmRpc.broadcastTxAsync(txBase64)
+  if (txResponse.error) {
+    switch (txResponse.error.responseCode) {
+      case 409:
+        throw new Error(txResponse.error.message)
+      default:
+        console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+        throw new Error('Could not broadcast transaction')
+    }
+  }
+  return null
+}
+
+async function getCachedCoreIDAsync() {
+  // first, attempt to read value from Redis
+  if (redis) {
+    try {
+      let cacheResult = await redis.get(CORE_ID_KEY)
+      if (cacheResult) return cacheResult
+    } catch (error) {
+      console.error(`Redis read error : getCachedCoreIDAsync : ${error.message}`)
+    }
+  }
+  // a value was not found in Redis, so ask the specific Core directly
+  let result = null
+  try {
+    let coreStatus = await coreStatusRequestAsync(env.CHAINPOINT_CORE_BASE_URI)
+    if (!coreStatus) return null
+    if (!coreStatus.node_info || !coreStatus.node_info.id) return null
+    result = coreStatus.node_info.id
+  } catch (error) {
+    console.error(`Core request error : getCachedCoreIDAsync : ${error.message}`)
+  }
+  // if a non cached value was found, add to the cache
+  if (result && redis) {
+    try {
+      await redis.set(CORE_ID_KEY, result)
+    } catch (error) {
+      console.error(`Redis write error : getCachedCoreIDAsync : ${error.message}`)
+    }
+  }
+
+  return result
 }
 
 async function postTokenCreditAsync(req, res, next) {
