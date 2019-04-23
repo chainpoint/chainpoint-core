@@ -37,8 +37,6 @@ const tokenContractAddress = fs.readFileSync(
   'utf8'
 )
 
-const burnAddress = '0x0000000000000000000000000000000000000000' // TODO: Update this
-
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
@@ -324,25 +322,18 @@ async function postTokenCreditAsync(req, res, next) {
     )
   }
 
-  // ensure that this is a 'transfer' method call
-  let parsedTx = tokenContractInterface.parseTransaction(rawTx)
-  if (parsedTx.name !== 'transfer') {
-    return next(new errors.InvalidArgumentError(`invalid request, transaction may only make a call to 'transfer'`))
+  // ensure that this is a 'purchaseUsage' method call
+  let parsedTx = tokenContractInterface.parseTransaction(decodedTx)
+  // TODO: Fix name when MI fixes contract
+  if (parsedTx.name !== 'puchaseUsage') {
+    return next(new errors.InvalidArgumentError(`invalid request, transaction may only make a call to 'purchaseUsage'`))
   }
 
-  // ensure this is a $TKN spend to the proper address // TODO: define 'proper' address
+  // ensure the purchaseUsage amount is valid
   let txDataArgs = parsedTx.args
-  let payeeAddress = txDataArgs[0]
-  if (payeeAddress !== burnAddress) {
-    return next(new errors.InvalidArgumentError(`invalid request, transaction must transfer to '${burnAddress}'`))
-  }
-
-  // ensure the transfer amount is valid
-  let transferAmount = txDataArgs[1].toNumber()
-  if (transferAmount < 10 ** 8) {
-    return next(
-      new errors.InvalidArgumentError(`invalid request, transaction must transfer at least '${10 ** 8}' $TKN`)
-    )
+  let spendAmount = txDataArgs[0].toNumber()
+  if (spendAmount < 10 ** 8) {
+    return next(new errors.InvalidArgumentError(`invalid request, must purchase with at least ${10 ** 8} $TKN`))
   }
 
   // ensure that we can retrieve the Node IP from the request
@@ -361,7 +352,7 @@ async function postTokenCreditAsync(req, res, next) {
   let creditPrice = 0.1 // TODO: Build and request from exchange rate service
 
   // determine the number of credits to issue in new token
-  let bal = Math.floor(transferAmount / 10 ** 8) / creditPrice
+  let bal = Math.floor(spendAmount / 10 ** 8) / creditPrice - 1
 
   // construct the token payload
   // set the expiration time to an hour in the future
