@@ -1,3 +1,4 @@
 [submodule "go-abci-service/ethcontracts"]
 	path = go-abci-service/ethcontracts
 	url = https://source.developers.google.com/p/chainpoint-registry/r/github_chainpoint_go-hydra-smart-contract-files
+	branch = preprod
