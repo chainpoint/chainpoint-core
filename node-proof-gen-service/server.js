@@ -362,13 +362,14 @@ async function openPostgresConnectionAsync() {
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   cachedProofState.setDatabase(
     cxObjects.sequelize,
+    cxObjects.op,
     cxObjects.models[0],
     cxObjects.models[1],
     cxObjects.models[2],
     cxObjects.models[3],
     cxObjects.models[4]
   )
-  proof.setDatabase(cxObjects.sequelize, cxObjects.models[5])
+  proof.setDatabase(cxObjects.sequelize, cxObjects.op, cxObjects.models[5])
 }
 
 function startIntervals() {

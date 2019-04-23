@@ -20,6 +20,7 @@ const BTC_TX_STATE_KEY_PREFIX = 'BtcTxState'
 const BTC_HEAD_STATE_KEY_PREFIX = 'BtcHeadState'
 
 let sequelize
+let Op
 let AggState
 let CalState
 let AnchorBtcAggState
@@ -52,7 +53,7 @@ async function getHashIdsByAggIdsAsync(aggIds) {
   let results = await AggState.findAll({
     attributes: ['hash_id'],
     where: {
-      agg_id: { [sequelize.Op.in]: aggIds }
+      agg_id: { [Op.in]: aggIds }
     },
     raw: true
   })
@@ -74,7 +75,7 @@ async function getHashIdsByBtcTxIdAsync(btcTxId) {
 async function getAggStateObjectsByHashIdsAsync(hashIds) {
   let results = await AggState.findAll({
     where: {
-      hash_id: { [sequelize.Op.in]: hashIds }
+      hash_id: { [Op.in]: hashIds }
     },
     raw: true
   })
@@ -126,7 +127,7 @@ async function getCalStateObjectsByAggIdsAsync(aggIds) {
   let aggIdsNullData = aggIdData.filter(item => item.data === null).map(item => item.aggId)
   let dbResult = await CalState.findAll({
     where: {
-      agg_id: { [sequelize.Op.in]: aggIdsNullData }
+      agg_id: { [Op.in]: aggIdsNullData }
     },
     raw: true
   })
@@ -193,7 +194,7 @@ async function getAnchorBTCAggStateObjectsByCalIdsAsync(calIds) {
   let calIdsNullData = calIdData.filter(item => item.data === null).map(item => item.calId)
   let dbResult = await AnchorBtcAggState.findAll({
     where: {
-      cal_id: { [sequelize.Op.in]: calIdsNullData }
+      cal_id: { [Op.in]: calIdsNullData }
     },
     raw: true
   })
@@ -434,7 +435,7 @@ async function writeBTCHeadStateObjectAsync(stateObject) {
 
 async function pruneProofStateTableAsync(model) {
   let pruneCutoffDate = new Date(Date.now() - PROOF_STATE_EXPIRE_HOURS * 60 * 60 * 1000)
-  let pruneCount = await model.destroy({ where: { created_at: { [sequelize.Op.lte]: pruneCutoffDate } } })
+  let pruneCount = await model.destroy({ where: { created_at: { [Op.lte]: pruneCutoffDate } } })
   return pruneCount
 }
 
@@ -481,8 +482,9 @@ module.exports = {
   setRedis: r => {
     redis = r
   },
-  setDatabase: (sqlz, agg, cal, anchorBtc, btcTx, btcHead) => {
+  setDatabase: (sqlz, op, agg, cal, anchorBtc, btcTx, btcHead) => {
     sequelize = sqlz
+    Op = op
     AggState = agg
     CalState = cal
     AnchorBtcAggState = anchorBtc

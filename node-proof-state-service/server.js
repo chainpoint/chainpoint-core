@@ -309,6 +309,7 @@ async function openPostgresConnectionAsync() {
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   cachedProofState.setDatabase(
     cxObjects.sequelize,
+    cxObjects.op,
     cxObjects.models[0],
     cxObjects.models[1],
     cxObjects.models[2],

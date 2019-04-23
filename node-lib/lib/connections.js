@@ -137,6 +137,7 @@ async function openPostgresConnectionAsync(modelSqlzArray, debug) {
 
   return {
     sequelize: sequelize,
+    op: Sequelize.Op,
     models: synchedModels
   }
 }
