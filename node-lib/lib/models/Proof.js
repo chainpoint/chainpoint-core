@@ -20,6 +20,7 @@ const envalid = require('envalid')
 
 let sequelize
 let Proof
+let Op
 
 // How many hours a proof is retained before pruning
 const PROOF_EXPIRE_HOURS = 24
@@ -75,7 +76,7 @@ async function writeProofsBulkAsync(proofs) {
 async function getProofsByHashIdsAsync(hashIds) {
   let results = await Proof.findAll({
     where: {
-      hash_id: { [sequelize.Op.in]: hashIds }
+      hash_id: { [Op.in]: hashIds }
     },
     raw: true
   })
@@ -85,7 +86,7 @@ async function getProofsByHashIdsAsync(hashIds) {
 async function pruneExpiredProofsAsync() {
   let pruneCutoffDate = new Date(Date.now() - PROOF_EXPIRE_HOURS * 60 * 60 * 1000)
   let deleteCount = await Proof.destroy({
-    where: { created_at: { [sequelize.Op.lte]: pruneCutoffDate } }
+    where: { created_at: { [Op.lte]: pruneCutoffDate } }
   })
   return deleteCount
 }
@@ -95,8 +96,9 @@ module.exports = {
   writeProofsBulkAsync: writeProofsBulkAsync,
   getProofsByHashIdsAsync: getProofsByHashIdsAsync,
   pruneExpiredProofsAsync: pruneExpiredProofsAsync,
-  setDatabase: (sqlz, proof) => {
+  setDatabase: (sqlz, op, proof) => {
     sequelize = sqlz
+    Op = op
     Proof = proof
   }
 }
