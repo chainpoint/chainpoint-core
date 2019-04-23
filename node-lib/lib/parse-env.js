@@ -145,7 +145,7 @@ let envDefinitions = {
   }),
 
   // Tendermint RPC URI
-  TENDERMINT_URI: envalid.str({ default: 'http://tendermint:26657', desc: 'Tendermint RPC URI' })
+  TENDERMINT_URI: envalid.str({ default: 'http://abci:26657', desc: 'Tendermint RPC URI' })
 }
 
 module.exports = service => {
