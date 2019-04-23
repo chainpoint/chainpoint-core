@@ -7,15 +7,22 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tendermint/tendermint/node"
+	"github.com/tendermint/tendermint/proxy"
+
+	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/privval"
+
 	"github.com/knq/pemutil"
+	"github.com/spf13/viper"
 
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-
-	"github.com/tendermint/tendermint/abci/server"
+	cfg "github.com/tendermint/tendermint/config"
+	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
@@ -33,9 +40,11 @@ func main() {
 	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x2Cfa392F736C1f562C5aA3D62226a29b7D1517b6")
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
 	tendermintRPC := types.TendermintURI{
-		TMServer: util.GetEnv("TENDERMINT_HOST", "tendermint"),
+		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 	}
+	tendermintPeers := util.GetEnv("PEERS", "")
+	tendermintSeeds := util.GetEnv("SEEDS", "")
 	postgresUser := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
 	postgresPw := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")
 	postgresHost := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
@@ -81,22 +90,86 @@ func main() {
 
 	//Instantiate ABCI application
 	app := abci.NewAnchorApplication(config)
-
-	// Start the ABCI connection to the Tendermint Node
-	srv, err := server.NewServer("tcp://0.0.0.0:26658", "socket", app)
+	defaultConfig := cfg.DefaultConfig()
+	err = viper.Unmarshal(defaultConfig)
 	if err != nil {
 		return
 	}
-	srv.SetLogger(tmLogger.With("module", "abci-server"))
-	if err := srv.Start(); err != nil {
+	defaultConfig.SetRoot("/tendermint")
+	cfg.EnsureRoot(defaultConfig.RootDir)
+	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+	if err != nil {
+		util.LogError(err)
+		return
+	}
+	if defaultConfig.LogFormat == cfg.LogFormatJSON {
+		logger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
+	}
+	logger, err = tmflags.ParseLogLevel(defaultConfig.LogLevel, logger, cfg.DefaultLogLevel())
+	if err != nil {
+		util.LogError(err)
+		return
+	}
+	logger = logger.With("module", "main")
+
+	nodeKey, err := p2p.LoadOrGenNodeKey(defaultConfig.NodeKeyFile())
+	if err != nil {
+		util.LogError(err)
+		return
+	}
+
+	if tendermintPeers != "" {
+		defaultConfig.P2P.PersistentPeers = tendermintPeers
+	}
+	if tendermintSeeds != "" {
+		defaultConfig.P2P.Seeds = tendermintSeeds
+	}
+
+	// Convert old PrivValidator if it exists.
+	oldPrivVal := defaultConfig.OldPrivValidatorFile()
+	newPrivValKey := defaultConfig.PrivValidatorKeyFile()
+	newPrivValState := defaultConfig.PrivValidatorStateFile()
+	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
+		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
+		if err != nil {
+			util.LogError(err)
+			return
+		}
+		logger.Info("Upgrading PrivValidator file",
+			"old", oldPrivVal,
+			"newKey", newPrivValKey,
+			"newState", newPrivValState,
+		)
+		oldPV.Upgrade(newPrivValKey, newPrivValState)
+	}
+	appProxy := proxy.NewLocalClientCreator(app)
+	n, err := node.NewNode(defaultConfig,
+		privval.LoadOrGenFilePV(newPrivValKey, newPrivValState),
+		nodeKey,
+		appProxy,
+		node.DefaultGenesisDocProviderFunc(defaultConfig),
+		node.DefaultDBProvider,
+		node.DefaultMetricsProvider(defaultConfig.Instrumentation),
+		logger,
+	)
+	if err != nil {
+		util.LogError(err)
 		return
 	}
 
 	// Wait forever
 	cmn.TrapSignal(tmLogger, func() {
-		// Cleanup
-		srv.Stop()
+		if n.IsRunning() {
+			n.Stop()
+		}
 	})
+
+	if err := n.Start(); err != nil {
+		util.LogError(err)
+		return
+	}
+	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 	select {}
+
 	return
 }

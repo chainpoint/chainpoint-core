@@ -1,5 +1,5 @@
 hash: 2d515a802a372f14e3dba5dcd485d5e1b36f3859c9ec8a9f3e6f37691c7649d2
-updated: 2019-04-18T12:22:37.541226992-07:00
+updated: 2019-04-22T17:30:49.492500208-07:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
@@ -50,6 +50,8 @@ imports:
   - rlp
   - rpc
   - trie
+- name: github.com/fsnotify/fsnotify
+  version: 1485a34d5d5723fea214f5710708e19a831720e4
 - name: github.com/go-kit/kit
   version: 102522abed87468226354b1a1c8c588c81313822
   subpackages:
@@ -63,7 +65,7 @@ imports:
 - name: github.com/go-logfmt/logfmt
   version: 07c9b44f60d7ffdfb7d8efe1ad539965737836dc
 - name: github.com/go-redis/redis
-  version: 3f9b4d7004b1270253e54665d3b233afb06e9784
+  version: 32270910878445e8a59872fd11a8a734db16a1b5
   subpackages:
   - internal
   - internal/consistenthash
@@ -96,6 +98,20 @@ imports:
   version: 0cd6bf5da1e1c83f8b45653022c74f71af0538a4
 - name: github.com/gorilla/websocket
   version: 7c8e298727d149d7c329b4dec7e94e1932ac5c11
+- name: github.com/hashicorp/hcl
+  version: 65a6292f0157eff210d03ed1bf6c59b190b8b906
+  subpackages:
+  - hcl/ast
+  - hcl/parser
+  - hcl/printer
+  - hcl/scanner
+  - hcl/strconv
+  - hcl/token
+  - json/parser
+  - json/scanner
+  - json/token
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jasonlvhit/gocron
   version: 6771d4b492ba2d5f57919c04b4cddb3735365120
 - name: github.com/jmhodges/levigo
@@ -109,14 +125,20 @@ imports:
   subpackages:
   - oid
   - scram
+- name: github.com/magiconair/properties
+  version: 7757cc9fdb852f7579b24170bcacda2c7471bb6a
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c182affec369e30f25d3eb8cd8a478dee585ae7d
   subpackages:
   - pbutil
 - name: github.com/miguelmota/go-solidity-sha3
   version: 9010f21d6cc16dbf3856ba0bd889720b973e7501
+- name: github.com/mitchellh/mapstructure
+  version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/pborman/uuid
   version: 8b1b92947f46224e3b97bb1a3a5b0382be00d31e
+- name: github.com/pelletier/go-toml
+  version: 65b27e6823c427415d156c92d7034dd57a154cf8
 - name: github.com/pkg/errors
   version: 27936f6d90f9c8e1145f11ed52ffffbfdb9e0af7
 - name: github.com/prometheus/client_golang
@@ -148,6 +170,20 @@ imports:
   version: 629144ba06a1c6af28c1e42c228e3d42594ce081
 - name: github.com/rs/cors
   version: 76f58f330d76a55c5badc74f6212e8a15e742c77
+- name: github.com/spf13/afero
+  version: 588a75ec4f32903aa5e39a2619ba6a4631e28424
+  subpackages:
+  - mem
+- name: github.com/spf13/cast
+  version: 8c9545af88b134710ab1cd196795e7f2388358d7
+- name: github.com/spf13/cobra
+  version: 67fc4837d267bc9bfd6e47f77783fcc3dffc68de
+- name: github.com/spf13/jwalterweatherman
+  version: 94f6ae3ed3bceceafa716478c5fbf8d29ca601a1
+- name: github.com/spf13/pflag
+  version: 24fa6976df40757dce6aea913e7b81ade90530e1
+- name: github.com/spf13/viper
+  version: 7a605a50e69cd1ea431c4a1e6eebe9b287ef6de4
 - name: github.com/streadway/amqp
   version: 30f8ed68076eedf14990dafc696f469f58fc1342
 - name: github.com/syndtr/goleveldb
@@ -168,7 +204,7 @@ imports:
 - name: github.com/tendermint/go-amino
   version: dc14acf9ef15f85828bfbc561ed9dd9d2a284885
 - name: github.com/tendermint/tendermint
-  version: 1c6d9d20e4f474e9eed5c8f8c3f6b4761626d1f8
+  version: 4253e67c07c69be6d7f7263ab03944ce30a9fc90
   subpackages:
   - abci/client
   - abci/example/code
@@ -177,6 +213,7 @@ imports:
   - abci/server
   - abci/types
   - blockchain
+  - cmd/tendermint/commands
   - config
   - consensus
   - consensus/types
@@ -190,6 +227,8 @@ imports:
   - crypto/tmhash
   - evidence
   - libs/autofile
+  - libs/cli
+  - libs/cli/flags
   - libs/clist
   - libs/common
   - libs/db
@@ -199,11 +238,16 @@ imports:
   - libs/log
   - libs/pubsub
   - libs/pubsub/query
+  - lite
+  - lite/client
+  - lite/errors
+  - lite/proxy
   - mempool
   - node
   - p2p
   - p2p/conn
   - p2p/pex
+  - p2p/upnp
   - privval
   - proxy
   - rpc/client
@@ -305,6 +349,8 @@ imports:
   version: c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6
 - name: gopkg.in/robfig/cron.v3
   version: dbf322045545dc016828ed3581ae310a1fc1152e
+- name: gopkg.in/yaml.v2
+  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 testImports:
 - name: github.com/pmezard/go-difflib
   version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
