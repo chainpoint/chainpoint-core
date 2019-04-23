@@ -43,7 +43,7 @@ const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
-const tokenABI = require('../../../artifacts/ethcontracts/TierionNetworkToken.json').abi
+const tokenABI = require(path.resolve(__dirname + '../../../artifacts/ethcontracts/TierionNetworkToken.json')).abi
 const tokenContractInterface = new ethers.utils.Interface(tokenABI)
 
 // The redis connection used for all redis communication
