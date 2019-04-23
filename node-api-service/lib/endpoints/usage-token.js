@@ -15,7 +15,7 @@
  */
 
 const errors = require('restify-errors')
-// const ethers = require('ethers')
+const ethers = require('ethers')
 const env = require('../parse-env.js')('api')
 const utils = require('../utils.js')
 const activeToken = require('../models/ActiveToken.js')
@@ -26,16 +26,25 @@ const jose = require('node-jose')
 const rp = require('request-promise-native')
 const retry = require('async-retry')
 const tmRpc = require('../tendermint-rpc.js')
+const fs = require('fs')
+const path = require('path')
 
 const CORE_JWK_KEY_PREFIX = 'CoreJWK'
 const CORE_ID_KEY = 'CoreID'
 
-/*
+const tokenContractAddress = fs.readFileSync(
+  path.resolve(__dirname + '../../../artifacts/ethcontracts/token.txt'),
+  'utf8'
+)
+
+const burnAddress = '0x0000000000000000000000000000000000000000' // TODO: Update this
+
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
-*/
+const tokenABI = require(path.resolve(__dirname + '../../../artifacts/ethcontracts/TierionNetworkToken.json')).abi
+const tokenContractInterface = new ethers.utils.Interface(tokenABI)
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
@@ -100,12 +109,7 @@ async function postTokenRefreshAsync(req, res, next) {
   // At this point, we've established that the submitted token is a valid JWT with valid signature,
   // it has a balance > 0, and it is the active token. Proceed with refresh.
 
-  // create a new JWT id
-  let jti = uuidv1()
-  // set the issuer (this Core's identifier)
-  let iss = env.CHAINPOINT_CORE_BASE_URI
-  // set the subject (the Node IP)
-  let sub = submittingNodeIP
+  // construct the token payload
   // set the expiration time to an hour in the future
   // if active token has time remaining, add one hour to existing expiration
   let nowSeconds = Math.ceil(Date.now() / 1000)
@@ -113,16 +117,13 @@ async function postTokenRefreshAsync(req, res, next) {
   let exp = base + 60 * 60 // 1 hour in the future from base time
   // set new balance value
   let bal = decodedToken.payload.bal - 1
-
-  // construct JWT payload
-  const payload = { jti, iss, sub, exp, bal }
+  // set the expiration time to an hour in the future
+  let payload = constructTokenPayload(submittingNodeIP, exp, bal)
 
   // Create token
   let refreshedTokenString = null
   try {
-    let privateKeyPEM = env.ECDSA_KEYPAIR
-    let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
-    refreshedTokenString = jwt.sign(payload, privateKeyPEM, { algorithm: 'ES256', keyid: jwk.toJSON().kid })
+    refreshedTokenString = await createAndSignJWTAsync(payload)
   } catch (error) {
     return next(new errors.InternalServerError('server error, could not sign refreshed token'))
   }
@@ -134,18 +135,9 @@ async function postTokenRefreshAsync(req, res, next) {
     .digest('hex')
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
-  let coreId = await getCachedCoreIDAsync()
-  let tokenTx = {
-    type: 'TOKEN',
-    data: `${submittingNodeIP}|${refreshTokenHash}`,
-    version: 2,
-    time: Math.ceil(Date.now() / 1000),
-    core_id: coreId
-  }
-  let tokenTxString = JSON.stringify(tokenTx)
-  let tokenTxB64 = Buffer.from(tokenTxString).toString('base64')
   try {
-    await broadcastTxAsync(tokenTxB64)
+    let coreId = await getCachedCoreIDAsync()
+    await broadcastCoreTxAsync(coreId, submittingNodeIP, refreshTokenHash)
   } catch (error) {
     return next(new errors.InternalServerError(`server error on transaction broadcast, ${error.message}`))
   }
@@ -153,6 +145,12 @@ async function postTokenRefreshAsync(req, res, next) {
   res.contentType = 'application/json'
   res.send({ token: refreshedTokenString })
   return next()
+}
+
+async function createAndSignJWTAsync(payload) {
+  let privateKeyPEM = env.ECDSA_KEYPAIR
+  let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
+  return jwt.sign(payload, privateKeyPEM, { algorithm: 'ES256', keyid: jwk.toJSON().kid })
 }
 
 async function getCachedJWKAsync(kid, iss) {
@@ -225,18 +223,30 @@ async function coreStatusRequestAsync(coreURI, retryCount = 3) {
   return response.body
 }
 
-async function broadcastTxAsync(txBase64) {
-  let txResponse = await tmRpc.broadcastTxAsync(txBase64)
-  if (txResponse.error) {
-    switch (txResponse.error.responseCode) {
-      case 409:
-        throw new Error(txResponse.error.message)
-      default:
-        console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
-        throw new Error('Could not broadcast transaction')
-    }
+async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
+  let tokenTx = {
+    type: 'TOKEN',
+    data: `${submittingNodeIP}|${tokenHash}`,
+    version: 2,
+    time: Math.ceil(Date.now() / 1000),
+    core_id: coreId
   }
-  return null
+  let tokenTxString = JSON.stringify(tokenTx)
+  let tokenTxB64 = Buffer.from(tokenTxString).toString('base64')
+  try {
+    let txResponse = await tmRpc.broadcastTxAsync(tokenTxB64)
+    if (txResponse.error) {
+      switch (txResponse.error.responseCode) {
+        case 409:
+          throw new Error(txResponse.error.message)
+        default:
+          console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+          throw new Error('Could not broadcast transaction')
+      }
+    }
+  } catch (error) {
+    throw new Error(`server error on transaction broadcast, ${error.message}`)
+  }
 }
 
 async function getCachedCoreIDAsync() {
@@ -271,15 +281,117 @@ async function getCachedCoreIDAsync() {
   return result
 }
 
+function constructTokenPayload(submittingNodeIP, exp, bal) {
+  // create a new JWT id
+  let jti = uuidv1()
+  // set the issuer (this Core's identifier)
+  let iss = env.CHAINPOINT_CORE_BASE_URI
+  // set the subject (the Node IP)
+  let sub = submittingNodeIP
+  // construct and return a JWT payload
+  return { jti, iss, sub, exp, bal }
+}
+
 async function postTokenCreditAsync(req, res, next) {
   const rawTx = req.params.tx
 
-  let result = rawTx
+  // ensure that rawTx was supplied
+  if (!rawTx) {
+    return next(new errors.InvalidArgumentError('invalid request, tx must be supplied'))
+  }
+  // ensure that rawTx represents a valid hex value starting wiht 0x
+  if (!rawTx.startsWith('0x')) {
+    return next(new errors.InvalidArgumentError('invalid request, tx must begin with 0x'))
+  }
+  // ensure that rawTx represents a valid hex value
+  let txContent = rawTx.slice(2)
+  if (!utils.isHex(txContent)) {
+    return next(new errors.InvalidArgumentError('invalid request, non hex tx value supplied'))
+  }
 
-  // TODO: Implmement me
+  // ensure that rawTx represents a valid ethereum transaction
+  let decodedTx = null
+  try {
+    decodedTx = ethers.utils.parseTransaction(rawTx)
+  } catch (error) {
+    return next(new errors.InvalidArgumentError('invalid request, invalid ethereum tx body supplied'))
+  }
+
+  // ensure that the raw Eth Tx provided is interacting with the Chainpoint Token Contract
+  if (decodedTx.to !== tokenContractAddress) {
+    return next(
+      new errors.InvalidArgumentError('invalid request, transaction must interact with Chainpoint token contract')
+    )
+  }
+
+  // ensure that this is a 'transfer' method call
+  let parsedTx = tokenContractInterface.parseTransaction(rawTx)
+  if (parsedTx.name !== 'transfer') {
+    return next(new errors.InvalidArgumentError(`invalid request, transaction may only make a call to 'transfer'`))
+  }
+
+  // ensure this is a $TKN spend to the proper address // TODO: define 'proper' address
+  let txDataArgs = parsedTx.args
+  let payeeAddress = txDataArgs[0]
+  if (payeeAddress !== burnAddress) {
+    return next(new errors.InvalidArgumentError(`invalid request, transaction must transfer to '${burnAddress}'`))
+  }
+
+  // ensure the transfer amount is valid
+  let transferAmount = txDataArgs[1].toNumber()
+  if (transferAmount < 10 ** 8) {
+    return next(
+      new errors.InvalidArgumentError(`invalid request, transaction must transfer at least '${10 ** 8}' $TKN`)
+    )
+  }
+
+  // ensure that we can retrieve the Node IP from the request
+  let submittingNodeIP = utils.getRequestSourceIP(req)
+  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+
+  // broadcast the ETH transaction and await inclusion in a block
+  try {
+    let sendResponse = await fallbackProvider.sendTransaction(rawTx)
+    await fallbackProvider.waitForTransaction(sendResponse.hash)
+  } catch (error) {
+    console.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
+    return next(new errors.InternalServerError(error.message))
+  }
+
+  let creditPrice = 0.1 // TODO: Build and request from exchange rate service
+
+  // determine the number of credits to issue in new token
+  let bal = Math.floor(transferAmount / 10 ** 8) / creditPrice
+
+  // construct the token payload
+  // set the expiration time to an hour in the future
+  let exp = Math.ceil(Date.now() / 1000) + 60 * 60 // 1 hour in the future from now
+  let payload = constructTokenPayload(submittingNodeIP, exp, bal)
+
+  // Create token
+  let newTokenString = null
+  try {
+    newTokenString = await createAndSignJWTAsync(payload)
+  } catch (error) {
+    return next(new errors.InternalServerError('server error, could not sign new token'))
+  }
+
+  // calculate hash of new token
+  let newTokenHash = crypto
+    .createHash('sha256')
+    .update(newTokenString)
+    .digest('hex')
+
+  // broadcast Node IP and new token hash for Cores to update their local active token table
+  try {
+    let coreId = await getCachedCoreIDAsync()
+    await broadcastCoreTxAsync(coreId, submittingNodeIP, newTokenHash)
+  } catch (error) {
+    return next(new errors.InternalServerError(`server error on transaction broadcast, ${error.message}`))
+  }
 
   res.contentType = 'application/json'
-  res.send(result)
+  res.send({ token: newTokenString })
   return next()
 }
 
