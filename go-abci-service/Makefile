@@ -1,4 +1,6 @@
 DEP := $(shell command -v dep 2> /dev/null)
+BUILD_TAGS?='tendermint'
+BUILD_FLAGS = -ldflags "-X github.com/tendermint/tendermint/version.GitCommit=`git rev-parse --short=8 HEAD`"
 
 get_tools:
 ifndef DEP
@@ -19,4 +21,4 @@ update_vendor_deps:
 	@dep ensure -v -update
 
 install:
-	go install abci-service.go
+	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) gcc" abci-service.go

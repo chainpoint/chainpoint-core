@@ -1,4 +1,15 @@
 FROM golang:latest
+ENV TMHOME /tendermint
+RUN apt-get update -y && apt-get install -y wget build-essential libsnappy-dev
+RUN wget https://github.com/google/leveldb/archive/v1.20.tar.gz && \
+  tar -zxvf v1.20.tar.gz && \
+  cd leveldb-1.20/ && \
+  make && \
+  cp -r out-static/lib* out-shared/lib* /usr/local/lib/ && \
+  cd include/ && \
+  cp -r leveldb /usr/local/include/ && \
+  ldconfig && \
+  rm -f v1.20.tar.gz
 RUN curl https://glide.sh/get | sh
 ENV GOBIN /go/bin
 ENV PKG_NAME=github.com/chainpoint/chainpoint-core/go-abci-service
