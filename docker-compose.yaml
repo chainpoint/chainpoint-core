@@ -15,10 +15,11 @@ services:
     - rabbitmq
     - api
     environment:
+      PEERS: ${PEERS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
       ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
-      TENDERMINT_HOST: tendermint
+      TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       AUDIT: "true"
       NODE_MANAGEMENT: "true"
@@ -30,27 +31,12 @@ services:
       LOG_LEVEL: "DEBUG"
     volumes:
     - ${PWD}/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_KEYPAIR
-    ports:
-    - "26658"
-    command: bash -c "abci-service"
-    networks:
-    - chainpoint
-
-
-  tendermint:
-    depends_on:
-    - abci
-    image: tierion/tendermint-cleveldb:latest
-    entrypoint: ''
-    environment:
-      PEERS: ${PEERS}
-    volumes:
     - ./config/node_1:/tendermint/config:Z
     - ./config/node_1/data:/tendermint/data:Z
-    command: sh -c "tendermint node $PEERS --moniker=`hostname` --proxy_app=abci:26658"
     ports:
     - "26656:26656"
     - "26657:26657"
+    command: bash -c "abci-service"
     networks:
     - chainpoint
 

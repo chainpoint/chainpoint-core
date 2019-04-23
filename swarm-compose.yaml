@@ -28,6 +28,7 @@ services:
     - rabbitmq
     - api
     environment:
+      PEERS: ${PEERS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
       ETH_ETHERSCAN_API_KEY: DOCKER-SECRET->ETH_ETHERSCAN_API_KEY
@@ -44,24 +45,6 @@ services:
       HASHES_PER_MERKLE_TREE: "200"
       ANCHOR_BLOCK_INTERVAL: "3"
       LOG_LEVEL: "DEBUG"
-    ports:
-    - "26658"
-    networks:
-    - chainpoint
-    secrets:
-      - ETH_INFURA_API_KEY
-      - ETH_ETHERSCAN_API_KEY
-      - ETH_PRIVATE_KEY
-      - ETH_ADDRESS
-      - ECDSA_KEYPAIR
-
-  tendermint:
-    depends_on:
-    - abci
-    image: tierion/tendermint-cleveldb:latest
-    entrypoint: ["sh", "-c", "tendermint node $PEERS --moniker=`hostname` --proxy_app=abci:26658"]
-    environment:
-      PEERS: ${PEERS}
     volumes:
     - ./config/node_1:/tendermint/config:Z
     - ./config/node_1/data:/tendermint/data:Z
@@ -70,6 +53,12 @@ services:
     - "26657:26657"
     networks:
     - chainpoint
+    secrets:
+      - ETH_INFURA_API_KEY
+      - ETH_ETHERSCAN_API_KEY
+      - ETH_PRIVATE_KEY
+      - ETH_ADDRESS
+      - ECDSA_KEYPAIR
 
   # NGINX Proxy
   #
