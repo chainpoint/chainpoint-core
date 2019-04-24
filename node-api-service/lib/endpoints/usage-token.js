@@ -29,7 +29,7 @@ const tmRpc = require('../tendermint-rpc.js')
 const fs = require('fs')
 const path = require('path')
 
-const CORE_JWK_KEY_PREFIX = 'CoreJWK'
+const CORE_JWK_KEY_PREFIX = 'CorePublicKey'
 const CORE_ID_KEY = 'CoreID'
 
 const tokenContractAddress = fs.readFileSync(
