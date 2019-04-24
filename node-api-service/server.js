@@ -145,6 +145,7 @@ async function openPostgresConnectionAsync() {
   let sqlzModelArray = [proof, stakedNode, activeToken]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.op, cxObjects.models[0])
+  activeToken.setDatabase(cxObjects.sequelize, cxObjects.models[2])
 }
 
 /**
