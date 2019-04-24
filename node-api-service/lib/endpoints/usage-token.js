@@ -60,6 +60,7 @@ async function postTokenRefreshAsync(req, res, next) {
   // attempt to parse token, if not valid, return error
   try {
     decodedToken = jwt.decode(tokenString, { complete: true })
+    if (!decodedToken) throw new Error()
   } catch (error) {
     return next(new errors.InvalidArgumentError('invalid request, token cannot be decoded'))
   }
@@ -73,8 +74,10 @@ async function postTokenRefreshAsync(req, res, next) {
     let iss = decodedToken.payload.iss
     if (!iss) return next(new errors.InvalidArgumentError('invalid request, token missing `iss` value'))
     // get the JWK for the given token
-    let jwk = await getCachedJWKAsync(kid, iss)
-    if (!jwk) return next(new errors.InvalidArgumentError('invalid request, unable to find public key for given kid'))
+    let jwkObj = await getCachedJWKAsync(kid, iss)
+    if (!jwkObj)
+      return next(new errors.InvalidArgumentError('invalid request, unable to find public key for given kid'))
+    let jwk = await jose.JWK.asKey(jwkObj, 'json')
     jwt.verify(tokenString, jwk.toPEM(), { complete: true })
   } catch (error) {
     return next(new errors.InvalidArgumentError('invalid request, token signature cannot be verified'))
