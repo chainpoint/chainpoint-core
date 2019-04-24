@@ -88,7 +88,7 @@ async function postTokenRefreshAsync(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid request, token with 0 balance cannot be refreshed'))
 
   // ensure that we can retrieve the Node IP from the request
-  let submittingNodeIP = utils.getRequestSourceIP(req)
+  let submittingNodeIP = req.clientIp
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
 
   // ensure that the submitted token is the active token for the Node
@@ -346,7 +346,7 @@ async function postTokenCreditAsync(req, res, next) {
   }
 
   // ensure that we can retrieve the Node IP from the request
-  let submittingNodeIP = utils.getRequestSourceIP(req)
+  let submittingNodeIP = req.clientIp
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
 
   // broadcast the ETH transaction and await inclusion in a block

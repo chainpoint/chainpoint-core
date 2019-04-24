@@ -36,6 +36,8 @@ async function getCoreStatusAsync(req, res, next) {
     }
   }
 
+  console.log(req.clientIp)
+
   res.contentType = 'application/json'
   res.send(result.status)
   return next()
