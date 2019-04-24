@@ -26,8 +26,6 @@ const jose = require('node-jose')
 const rp = require('request-promise-native')
 const retry = require('async-retry')
 const tmRpc = require('../tendermint-rpc.js')
-const fs = require('fs')
-const path = require('path')
 const status = require('./status.js')
 
 const CORE_JWK_KEY_PREFIX = 'CorePublicKey'
