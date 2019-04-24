@@ -23,16 +23,35 @@ const jose = require('node-jose')
 let coreEthAddress = env.ETH_TNT_LISTEN_ADDR
 
 async function getCoreStatusAsync(req, res, next) {
+  let result = await buildStatusObjectAsync()
+
+  if (result.errorCode) {
+    switch (result.errorCode) {
+      case 404:
+        return next(new errors.NotFoundError(result.errorMessage))
+      case 409:
+        return next(new errors.InvalidArgumentError(result.errorMessage))
+      default:
+        return next(new errors.InternalError(result.errorMessage))
+    }
+  }
+
+  res.contentType = 'application/json'
+  res.send(result.status)
+  return next()
+}
+
+async function buildStatusObjectAsync() {
   let statusResponse = await tmRpc.getStatusAsync()
   if (statusResponse.error) {
     switch (statusResponse.error.responseCode) {
       case 404:
-        return next(new errors.NotFoundError(`Resource not found`))
+        return { status: null, errorCode: 404, errorMessage: `Resource not found` }
       case 409:
-        return next(new errors.InvalidArgumentError(statusResponse.error.message))
+        return { status: null, errorCode: 409, errorMessage: statusResponse.error.message }
       default:
         console.error(`RPC error communicating with Tendermint : ${statusResponse.error.message}`)
-        return next(new errors.InternalServerError('Could not query for status'))
+        return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
     }
   }
 
@@ -45,21 +64,21 @@ async function getCoreStatusAsync(req, res, next) {
     console.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
   }
 
-  let result = Object.assign(
-    {
-      version: version,
-      time: new Date().toISOString(),
-      base_uri: env.CHAINPOINT_CORE_BASE_URI,
-      eth_address: coreEthAddress,
-      jwk: jwkJSON
-    },
-    statusResponse.result
-  )
-  res.contentType = 'application/json'
-  res.send(result)
-  return next()
+  return {
+    status: Object.assign(
+      {
+        version: version,
+        time: new Date().toISOString(),
+        base_uri: env.CHAINPOINT_CORE_BASE_URI,
+        eth_address: coreEthAddress,
+        jwk: jwkJSON
+      },
+      statusResponse.result
+    )
+  }
 }
 
 module.exports = {
-  getCoreStatusAsync: getCoreStatusAsync
+  getCoreStatusAsync: getCoreStatusAsync,
+  buildStatusObjectAsync: buildStatusObjectAsync
 }

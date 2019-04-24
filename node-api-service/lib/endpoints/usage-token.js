@@ -28,6 +28,7 @@ const retry = require('async-retry')
 const tmRpc = require('../tendermint-rpc.js')
 const fs = require('fs')
 const path = require('path')
+const status = require('./status.js')
 
 const CORE_JWK_KEY_PREFIX = 'CorePublicKey'
 const CORE_ID_KEY = 'CoreID'
@@ -185,6 +186,11 @@ async function getCachedJWKAsync(kid, iss) {
 }
 
 async function coreStatusRequestAsync(coreURI, retryCount = 3) {
+  // if we need /status from ourselves, skip the HTTP call and attain directly
+  if (coreURI === env.CHAINPOINT_CORE_BASE_URI) {
+    let result = await status.buildStatusObjectAsync()
+    return result.status
+  }
   let options = {
     method: 'GET',
     uri: `${coreURI}/status`,
