@@ -1,14 +1,11 @@
-const fs = require('fs')
-const path = require('path')
 const ethers = require('ethers')
 const errors = require('restify-errors')
 const utils = require('../utils.js')
 
-const tokenAddress = fs.readFileSync(path.resolve(__dirname + '../../../artifacts/ethcontracts/token.txt'), 'utf8')
-const registryAddress = fs.readFileSync(
-  path.resolve(__dirname + '../../../artifacts/ethcontracts/registry.txt'),
-  'utf8'
-)
+const tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
+const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.json')
+const tokenAddress = tknDefinition.networks['3'].address
+const registryAddress = regDefinition.networks['3'].address
 
 module.exports = function(req, res, next) {
   const rawTx = req.params.tx

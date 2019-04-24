@@ -33,17 +33,15 @@ const status = require('./status.js')
 const CORE_JWK_KEY_PREFIX = 'CorePublicKey'
 const CORE_ID_KEY = 'CoreID'
 
-const tokenContractAddress = fs.readFileSync(
-  path.resolve(__dirname + '../../../artifacts/ethcontracts/token.txt'),
-  'utf8'
-)
-
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
-const tokenABI = require('../../artifacts/ethcontracts/TierionNetworkToken.json').abi
+
+let tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
+const tokenABI = tknDefinition.abi
 const tokenContractInterface = new ethers.utils.Interface(tokenABI)
+const tokenContractAddress = tknDefinition.networks['3'].address
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
