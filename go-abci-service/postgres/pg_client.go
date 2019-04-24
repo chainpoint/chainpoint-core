@@ -161,6 +161,31 @@ func (pg *Postgres) GetSeededRandomNodes(seed []byte) ([]types.Node, error) {
 	return nodes, nil
 }
 
+//GetRandomNodes : Get random sequence of 3 nodes from the node_states table
+func (pg *Postgres) GetRandomNodes() ([]types.Node, error) {
+	randomStmt := "SELECT eth_addr, public_ip,block_number FROM node_state ORDER BY random() LIMIT 3;"
+	rows, err := pg.DB.Query(randomStmt)
+	if util.LoggerError(pg.Logger, err) != nil {
+		return []types.Node{}, err
+	}
+	defer rows.Close()
+	nodes := make([]types.Node, 0)
+	for rows.Next() {
+		var node types.Node
+		switch err := rows.Scan(&node.EthAddr, &node.PublicIP, &node.BlockNumber); err {
+		case sql.ErrNoRows:
+			return []types.Node{}, nil
+		case nil:
+			nodes = append(nodes, node)
+			break
+		default:
+			util.LoggerError(pg.Logger, err)
+			return []types.Node{}, err
+		}
+	}
+	return nodes, nil
+}
+
 func (pg *Postgres) GetNodeCount() (int, error) {
 	stmt := "SELECT count(*) FROM node_state;" //WHERE (node_state.public_ip <> NULL) AND (node_state.public_ip <> '');"
 	row := pg.DB.QueryRow(stmt)
