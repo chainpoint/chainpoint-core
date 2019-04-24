@@ -73,9 +73,19 @@ async function getNetInfoAsync() {
   return { result: netInfo, error: null }
 }
 
+async function broadcastTxAsync(tx) {
+  try {
+    await rpcClient.broadcastTxAsync({ tx: `"${tx}"` }) // API requires double quotes to be explicitly added
+  } catch (error) {
+    return parseRpcError(error)
+  }
+  return { result: true, error: null }
+}
+
 module.exports = {
   setRpcClient: setRpcClient,
   getTransactionAsync: getTransactionAsync,
   getNetInfoAsync: getNetInfoAsync,
-  getStatusAsync: getStatusAsync
+  getStatusAsync: getStatusAsync,
+  broadcastTxAsync: broadcastTxAsync
 }
