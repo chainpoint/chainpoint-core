@@ -131,34 +131,28 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 //AuditNodes : Audit nodes for reputation chain and hash submission validity. Submits reward tx with info if successful
 func (app *AnchorApplication) AuditNodes() error {
 	if leader, _ := app.ElectLeader(1); leader {
-		status, err := app.rpc.GetStatus()
-		if util.LoggerError(app.logger, err) != nil {
-			return err
-		}
-		blockHash := status.SyncInfo.LatestBlockHash.String()
 		rewardCandidates := make([]types.NodeJSON, 0)
 		deadline := time.Now().Add(1 * time.Minute)
 		var wg sync.WaitGroup
 		var mux sync.Mutex
 		for len(rewardCandidates) < 3 && !time.Now().After(deadline) {
-			nodes, err := app.pgClient.GetSeededRandomNodes([]byte(blockHash))
+			nodes, err := app.pgClient.GetRandomNodes()
 			if util.LoggerError(app.logger, err) != nil {
 				return err
 			}
 			for _, nodeCandidate := range nodes {
+				if strings.HasPrefix(nodeCandidate.PublicIP.String, "10") ||
+					strings.HasPrefix(nodeCandidate.PublicIP.String, "127") ||
+					strings.HasPrefix(nodeCandidate.PublicIP.String, "192") ||
+					strings.HasPrefix(nodeCandidate.PublicIP.String, "172") {
+					continue
+				}
 				wg.Add(1)
 				go func(node types.Node) {
 					defer wg.Done()
-					app.logger.Info(fmt.Sprintf("Auditing Node IP %s\n", node.PublicIP.String))
-					if strings.HasPrefix(node.PublicIP.String, "10") ||
-						strings.HasPrefix(node.PublicIP.String, "127") ||
-						strings.HasPrefix(node.PublicIP.String, "192") ||
-						strings.HasPrefix(node.PublicIP.String, "172") {
-						app.logger.Info(fmt.Sprintf("IP address %s is not routable", node.PublicIP.String))
-						return
-					}
+					app.logger.Info(fmt.Sprintf("Auditing Node IP %s", node.PublicIP.String))
 					if err := app.AuditNode(node); err != nil {
-						app.logger.Debug(fmt.Sprintf("Audit of node IP %s unsuccessful: %s\n", node.PublicIP.String, err.Error()))
+						app.logger.Debug(fmt.Sprintf("Audit of node IP %s unsuccessful: %s", node.PublicIP.String, err.Error()))
 						return
 					}
 					nodeJSON := types.NodeJSON{
@@ -176,7 +170,7 @@ func (app *AnchorApplication) AuditNodes() error {
 			rewardCandidates = rewardCandidates[0:3]
 		}
 		if len(rewardCandidates) == 0 {
-			err = errors.New("Unspecified reward candidate collation failure")
+			err := errors.New("Unspecified reward candidate collation failure")
 			util.LoggerError(app.logger, err)
 			return err
 		}
@@ -235,7 +229,7 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
-		app.logger.Info(fmt.Sprintf("Inserted for %#v: %t\n", newNode, inserted))
+		app.logger.Info(fmt.Sprintf("Inserted for %#v: %t", newNode, inserted))
 	}
 
 	//Consume all updated events and reconcile them with the previous states
@@ -253,7 +247,7 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
-		fmt.Printf("Inserted Update for %#v: %t\n", newNode, inserted)
+		fmt.Printf("Inserted Update for %#v: %t", newNode, inserted)
 	}
 
 	//Consume unstake events and delete nodes where the blockNumber of this event is higher than the last stake or update
@@ -271,7 +265,7 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
-		fmt.Printf("Deleted node for %#v: %t\n", newNode, deleted)
+		fmt.Printf("Deleted node for %#v: %t", newNode, deleted)
 	}
 	return nil
 }
