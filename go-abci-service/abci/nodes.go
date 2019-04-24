@@ -30,8 +30,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
-//SaveJWT : save the JWT value retrieved
-func (app *AnchorApplication) SaveJWT(jwk types.Jwk) error {
+//SaveJWK : save the JWT value retrieved
+func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 	key := fmt.Sprintf("CorePublicKey:%s", jwk.Kid)
 	jsonJwk, err := json.Marshal(jwk)
 	if util.LoggerError(app.logger, err) != nil {

@@ -3,33 +3,27 @@
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint Core is at the heart of the Chainpoint Network and
-built as a modern [microservices architecture](https://martinfowler.com/articles/microservices.html).
-
-The services provided are generally composed of Node.js applications
-running within Alpine Linux Docker containers. These containers,
-while intended to be run within a full Docker orchestration
-system such as Kubernetes in production, run well on a single host
-using [Docker Compose](https://docs.docker.com/compose/overview/).
-This run method is suitable for development only.
+Chainpoint Core is an aggregation and anchoring service that collects hash input from Chainpoint Nodes, aggregates the hashes into a single hash, then periodically commits the data to the Bitcoin blockchain. 
 
 ## Important Notice
 
 This software is intended to be run as the Core of the Chainpoint Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
 
-[https://github.com/chainpoint/chainpoint-node](https://github.com/chainpoint/chainpoint-node)
+[https://github.com/chainpoint/chainpoint-node-src](https://github.com/chainpoint/chainpoint-node-src)
 
 [https://github.com/chainpoint/chainpoint-cli](https://github.com/chainpoint/chainpoint-cli)
 
-## TL;DR
+## Quick Start
 
-Build and start the whole system locally with `make up`. Running `make help`
+Build and start the whole system locally with `make`. Running `make help`
 will display additional `Makefile` commands that are available.
 
 ```sh
 git clone https://github.com/chainpoint/chainpoint-core
 cd chainpoint-core
-make
+make init
+make register
+make deploy
 ```
 
 ## Getting Started
@@ -37,15 +31,7 @@ make
 This repository contains all of the code needed to
 run the full application stack locally.
 
-To do so you'll only need a functional Docker environment with the `docker`
-and `docker-compose` commands available. In addition you'll need the `make`
-utility.
-
-On `macOS` the easiest way to install Docker is from the official
-installation package which can be found [here](https://www.docker.com/docker-mac).
-
-On Linux systems you may need to [install](https://docs.docker.com/compose/install/) `docker-compose`
-separately in addition to Docker.
+You can find a script that will install all prerequisite dependencies on Mac and Linux [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
 
 ### Setup Environment Variables
 
@@ -57,50 +43,28 @@ You can modify the `.env` as needed, any changes will be ignored by Git.
 
 ## Startup
 
-Running `make up` should build and start all services for you. 
+Running `make deploy` should download all contaienrs and start all services for you. 
 
-Running `make up-no-build` will pull docker images from Tierion's docker repository and start all services for you.
+Running `make pull` will pull docker images from the Chainpoint docker repository and start all services for you. 
+
+Alternatively, `make build` will build all images locally.
 
 ## Build
 
 ### Build for local `docker-compose`
 
-```sh
-make build
-```
+`make build`
 
-### Build for Google Container Repository
+### Build for GCR / DockerHub
 
-The normal build process for Docker images for production is to
-simply `git push` commits which will trigger Google Container Repository (gcr.io)
-to build and tag those images for use by GKE.
+Edit the `image:` keys for each service in the docker-compose file to reflect your desired docker repo. Run `make build`, authenticate with your docker host service, then run `docker-compose push`. 
 
-Alternatively, you can manually run test builds without using the triggers.
+## Development
 
-```sh
-gcloud config set project chainpoint-registry
+We encourage anyone interested in contributing to fork this repo and submit a pull-request with desired changes. 
 
-# remote build : will build and push to gcr.io, substituting variables present for triggers.
-gcloud container builds submit --config cloudbuild.yaml --substitutions=REPO_NAME=delete-me,COMMIT_SHA=deadbeef .
-```
+`make dev` will bring up a docker-compose instance geared toward development. API will be accessible on port 80, while Tendermint is accessible on ports 26656-26657. 
 
 ## License
 
 [GNU Affero General Public License v3.0](http://www.gnu.org/licenses/agpl-3.0.txt)
-
-```text
-Copyright (C) 2019 Tierion
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-```

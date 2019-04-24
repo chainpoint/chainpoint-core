@@ -3,6 +3,7 @@ package abci
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
@@ -84,26 +85,51 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	state.ChainSynced = false // False until we finish syncing
 
 	// Declare postgres connection
-	pgClient, err := postgres.NewPGFromURI(config.PostgresURI, *config.Logger)
-	if util.LoggerError(*config.Logger, err) != nil {
+	var pgClient *postgres.Postgres
+	var err error
+	deadline := time.Now().Add(1 * time.Minute)
+	for !time.Now().After(deadline) {
+		pgClient, err = postgres.NewPGFromURI(config.PostgresURI, *config.Logger)
+		if util.LoggerError(*config.Logger, err) != nil {
+			continue
+		} else {
+			break
+		}
+	}
+	if err != nil {
+		fmt.Println("Postgres not ready after 1 minute")
 		panic(err)
+	} else if pgClient != nil {
+		fmt.Println("Connection to Postgres established")
+	}
+
+	//Declare redis Client
+	var redisClient *redis.Client
+	deadline = time.Now().Add(1 * time.Minute)
+	for !time.Now().After(deadline) {
+		opt, err := redis.ParseURL(config.RedisURI)
+		if util.LoggerError(*config.Logger, err) != nil {
+			continue
+		}
+		redisClient = redis.NewClient(opt)
+		_, err = redisClient.Ping().Result()
+		if util.LoggerError(*config.Logger, err) != nil {
+			continue
+		} else {
+			break
+		}
+	}
+	if err != nil {
+		fmt.Println("Redis not ready after 1 minute")
+		panic(err)
+	} else if redisClient != nil {
+		fmt.Println("Connection to Redis established")
 	}
 
 	//Declare ethereum Client
 	ethClient, err := ethcontracts.NewClient(config.EthConfig.EthereumURL, config.EthConfig.EthPrivateKey,
 		config.EthConfig.TokenContractAddr, config.EthConfig.RegistryContractAddr,
 		*config.Logger)
-	if util.LoggerError(*config.Logger, err) != nil {
-		panic(err)
-	}
-
-	//Declare redis Client
-	opt, err := redis.ParseURL(config.RedisURI)
-	if util.LoggerError(*config.Logger, err) != nil {
-		panic(err)
-	}
-	redisClient := redis.NewClient(opt)
-	_, err = redisClient.Ping().Result()
 	if util.LoggerError(*config.Logger, err) != nil {
 		panic(err)
 	}
