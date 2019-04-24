@@ -104,7 +104,7 @@ func (pg *Postgres) TokenHashUpsert(data string) (bool, error) {
 	}
 	nodeIP := payloadSlice[0]
 	tokenHash := payloadSlice[1]
-	stmt := "INSERT INTO active_token (node_ip, token_hash, created_at, updated_at) " +
+	stmt := "INSERT INTO active_tokens (node_ip, token_hash, created_at, updated_at) " +
 		"VALUES ($1, $2, now(), now()) " +
 		"ON CONFLICT (node_ip) " +
 		"DO UPDATE " +
@@ -113,7 +113,7 @@ func (pg *Postgres) TokenHashUpsert(data string) (bool, error) {
 		"token_hash = $2;"
 	res, err := pg.DB.Exec(stmt, nodeIP, tokenHash)
 	if util.LoggerError(pg.Logger, err) != nil {
-		pg.Logger.Error("Unable to execute upsert on active_token table")
+		pg.Logger.Error("Unable to execute upsert on active_tokens table")
 		return false, err
 	}
 	affect, err := res.RowsAffected()
