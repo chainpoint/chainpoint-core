@@ -78,7 +78,7 @@ async function postTokenRefreshAsync(req, res, next) {
     if (!jwkObj)
       return next(new errors.InvalidArgumentError('invalid request, unable to find public key for given kid'))
     let jwk = await jose.JWK.asKey(jwkObj, 'json')
-    jwt.verify(tokenString, jwk.toPEM(), { complete: true })
+    jwt.verify(tokenString, jwk.toPEM(), { complete: true, ignoreExpiration: true })
   } catch (error) {
     return next(new errors.InvalidArgumentError('invalid request, token signature cannot be verified'))
   }
