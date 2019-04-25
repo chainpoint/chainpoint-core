@@ -26,24 +26,20 @@ const jose = require('node-jose')
 const rp = require('request-promise-native')
 const retry = require('async-retry')
 const tmRpc = require('../tendermint-rpc.js')
-const fs = require('fs')
-const path = require('path')
 const status = require('./status.js')
 
 const CORE_JWK_KEY_PREFIX = 'CorePublicKey'
 const CORE_ID_KEY = 'CoreID'
 
-const tokenContractAddress = fs.readFileSync(
-  path.resolve(__dirname + '../../../artifacts/ethcontracts/token.txt'),
-  'utf8'
-)
-
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
-const tokenABI = require('../../artifacts/ethcontracts/TierionNetworkToken.json').abi
+
+let tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
+const tokenABI = tknDefinition.abi
 const tokenContractInterface = new ethers.utils.Interface(tokenABI)
+const tokenContractAddress = tknDefinition.networks['3'].address
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
@@ -88,7 +84,7 @@ async function postTokenRefreshAsync(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid request, token with 0 balance cannot be refreshed'))
 
   // ensure that we can retrieve the Node IP from the request
-  let submittingNodeIP = utils.getRequestSourceIP(req)
+  let submittingNodeIP = req.clientIp
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
 
   // ensure that the submitted token is the active token for the Node
@@ -346,7 +342,7 @@ async function postTokenCreditAsync(req, res, next) {
   }
 
   // ensure that we can retrieve the Node IP from the request
-  let submittingNodeIP = utils.getRequestSourceIP(req)
+  let submittingNodeIP = req.clientIp
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
 
   // broadcast the ETH transaction and await inclusion in a block

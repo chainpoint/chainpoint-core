@@ -35,6 +35,7 @@ const stakedNode = require('./lib/models/NodeState.js')
 const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const ethTxWhitelist = require('./lib/middleware/checkEthTxWhitelist')
+const requestIp = require('request-ip')
 
 const bunyan = require('bunyan')
 
@@ -89,6 +90,7 @@ server.use(cors.actual)
 server.use(restify.plugins.gzipResponse())
 server.use(restify.plugins.queryParser())
 server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
+server.use(requestIp.mw())
 
 // API RESOURCES
 

@@ -33,6 +33,12 @@ build:
 pull:
 	docker-compose pull
 
+## git-pull        : Git pull latest & submodule update
+.PHONY : git-pull
+git-pull:
+	@git pull --all
+	@git submodule update --init --remote --recursive
+
 ## test-api                  : Run API test suite with Mocha
 .PHONY : test-api
 test-api: 
