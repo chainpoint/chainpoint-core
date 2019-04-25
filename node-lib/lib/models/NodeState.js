@@ -82,15 +82,15 @@ function defineFor(sqlz) {
 }
 
 async function getRandomNodes() {
-    let results = await StakedNode.findAll({ order: Sequelize.literal('random()'), limit: 25, raw: true })
-    return results
+  let results = await StakedNode.findAll({ order: Sequelize.literal('random()'), limit: 25, raw: true })
+  return results
 }
 
 module.exports = {
   defineFor: defineFor,
   getRandomNodes: getRandomNodes,
   setDatabase: (sqlz, stakedNode) => {
-      // sequelize = sqlz
-      StakedNode = stakedNode
+    // sequelize = sqlz
+    StakedNode = stakedNode
   }
 }
