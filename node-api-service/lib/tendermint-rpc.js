@@ -53,12 +53,12 @@ async function getTransactionAsync(txID) {
   return { result: tx, error: null }
 }
 
-async function getTxSearch(tag, page, perPage){
+async function getTxSearch(tag, page, perPage) {
   let txResults
   try {
-      txResults = await rpcClient.tx_search({query: tag, prove: false, page: page, per_page: perPage})
+    txResults = await rpcClient.tx_search({ query: tag, prove: false, page: page, per_page: perPage })
   } catch (error) {
-      return parseRpcError(error)
+    return parseRpcError(error)
   }
   return { result: txResults, error: null }
 }
@@ -83,12 +83,12 @@ async function getNetInfoAsync() {
   return { result: netInfo, error: null }
 }
 
-async function getAbciInfo(){
+async function getAbciInfo() {
   let abciInfo
   try {
-      abciInfo = await rpcClient.abciInfo({})
+    abciInfo = await rpcClient.abciInfo({})
   } catch (error) {
-      return parseRpcError(error)
+    return parseRpcError(error)
   }
   return { result: abciInfo, error: null }
 }

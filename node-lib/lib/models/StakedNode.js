@@ -19,8 +19,8 @@ const Sequelize = require('sequelize')
 const envalid = require('envalid')
 
 const env = envalid.cleanEnv(process.env, {
-  NODE_STATE_TABLE_NAME: envalid.str({
-    default: 'node_state'
+  STAKED_NODE_TABLE_NAME: envalid.str({
+    default: 'staked_nodes'
   })
 })
 
@@ -28,7 +28,7 @@ let StakedNode
 
 function defineFor(sqlz) {
   let StakedNode = sqlz.define(
-    env.NODE_STATE_TABLE_NAME,
+    env.STAKED_NODE_TABLE_NAME,
     {
       ethAddr: {
         comment: 'A seemingly valid Ethereum address that the Node will send TNT from, or receive rewards with.',
@@ -82,15 +82,15 @@ function defineFor(sqlz) {
 }
 
 async function getRandomNodes() {
-    let results = await StakedNode.findAll({ order: Sequelize.literal('random()'), limit: 25, raw: true })
-    return results
+  let results = await StakedNode.findAll({ order: Sequelize.literal('random()'), limit: 25, raw: true })
+  return results
 }
 
 module.exports = {
   defineFor: defineFor,
   getRandomNodes: getRandomNodes,
   setDatabase: (sqlz, stakedNode) => {
-      // sequelize = sqlz
-      StakedNode = stakedNode
+    // sequelize = sqlz
+    StakedNode = stakedNode
   }
 }
