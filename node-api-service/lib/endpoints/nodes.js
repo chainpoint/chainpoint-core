@@ -16,7 +16,7 @@
 
 const errors = require('restify-errors')
 const tmRpc = require('../tendermint-rpc.js')
-const stakedNodes = require('../models/NodeState.js')
+const stakedNode = require('../models/StakedNode.js')
 
 async function getNodesAsync(req, res, next) {
   let nodes = []
@@ -45,7 +45,7 @@ async function getNodesAsync(req, res, next) {
   } catch (error) {
     console.error(`Tendermint RPC error, falling back to random nodes list : ${error.message}`)
     try {
-      let nodesResponse = await stakedNodes.getRandomNodes() //get random nodes if we can't get reward-candidates
+      let nodesResponse = await stakedNode.getRandomNodes() //get random nodes if we can't get reward-candidates
       nodes = nodesResponse.map(row => {
         console.log(row)
         return row.public_ip
