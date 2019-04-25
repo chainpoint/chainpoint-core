@@ -22,10 +22,18 @@ async function getNodesAsync(req, res, next) {
   let nodes = []
   try {
     let abciResponse = await tmRpc.getAbciInfo()
+    if (abciResponse.error) {
+      console.error(`RPC error communicating with Tendermint : ${abciResponse.error.message}`)
+      throw new Error('Could not get abci info')
+    }
     let prevEpoch = JSON.parse(abciResponse.result.response.data).prev_mint_block
     if (prevEpoch != 0) {
       let tag = `NODERC=${prevEpoch}`
       let txResponse = await tmRpc.getTxSearch(tag, 1, 25) //get NODE-RC transactions from past 24 hours
+      if (txResponse.error) {
+        console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+        throw new Error('Could not get NODE-RC transactions')
+      }
       let nodeArrays = txResponse.result.txs.map(tx => {
         let txText = new Buffer(new Buffer(tx, 'base64').toString('ascii'), 'base64').toString('ascii')
         return JSON.parse(txText).data.map(node => {
@@ -35,7 +43,7 @@ async function getNodesAsync(req, res, next) {
       nodes = [].concat.apply([], nodeArrays) //flatten
     }
   } catch (error) {
-    console.error(`abciInfo/txSearch RPC error, falling back to random nodes list : ${error.message}`)
+    console.error(`Tendermint RPC error, falling back to random nodes list : ${error.message}`)
     try {
       let nodesResponse = await stakedNodes.getRandomNodes() //get random nodes if we can't get reward-candidates
       nodes = nodesResponse.map(row => {
