@@ -27,6 +27,7 @@ const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
 const eth = require('./lib/endpoints/eth.js')
+const nodes = require('./lib/endpoints/nodes.js')
 const usageToken = require('./lib/endpoints/usage-token.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
@@ -99,6 +100,8 @@ server.get({ path: '/calendar/:txid', version: '1.0.0' }, throttle(50, 10), cale
 server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxDataAsync)
 // get proofs from storage
 server.get({ path: '/proofs', version: '1.0.0' }, throttle(50, 10), proofs.getProofsByIDsAsync)
+// get nodes from core
+server.get({ path: '/nodes', version: '1.0.0' }, throttle(15, 3), nodes.getNodesAsync)
 // get random core peers
 server.get({ path: '/peers', version: '1.0.0' }, throttle(15, 3), peers.getPeersAsync)
 // get status
@@ -145,6 +148,7 @@ async function openPostgresConnectionAsync() {
   let sqlzModelArray = [proof, stakedNode, activeToken]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.op, cxObjects.models[0])
+  stakedNode.setDatabase(cxObjects.sequelize, cxObjects.models[1])
   activeToken.setDatabase(cxObjects.sequelize, cxObjects.models[2])
 }
 

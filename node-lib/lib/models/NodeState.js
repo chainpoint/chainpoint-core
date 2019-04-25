@@ -24,6 +24,8 @@ const env = envalid.cleanEnv(process.env, {
   })
 })
 
+let StakedNode
+
 function defineFor(sqlz) {
   let StakedNode = sqlz.define(
     env.NODE_STATE_TABLE_NAME,
@@ -79,6 +81,16 @@ function defineFor(sqlz) {
   return StakedNode
 }
 
+async function getRandomNodes() {
+    let results = await StakedNode.findAll({ order: Sequelize.literal('random()'), limit: 25, raw: true })
+    return results
+}
+
 module.exports = {
-  defineFor: defineFor
+  defineFor: defineFor,
+  getRandomNodes: getRandomNodes,
+  setDatabase: (sqlz, stakedNode) => {
+      // sequelize = sqlz
+      StakedNode = stakedNode
+  }
 }

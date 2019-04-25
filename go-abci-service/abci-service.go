@@ -37,8 +37,8 @@ func main() {
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
 	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
 	ethereumURL := util.GetEnv("ETH_URI", fmt.Sprintf("https://ropsten.infura.io/v3/%s", ethInfuraApiKey))
-	ethTokenContract := util.GetEnv("TokenContractAddr", "0xB439eBe79cAeaA92C8E8813cEF14411B80bB8ef0")
-	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x2Cfa392F736C1f562C5aA3D62226a29b7D1517b6")
+	ethTokenContract := util.GetEnv("TokenContractAddr", "0xFE5A56729E47C9E7D6CC31E7796faAD98621C65B")
+	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0xFc3AC4D15C5Bc0E4d89ddDD7Cf5e992A875BaB39")
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
 	tendermintRPC := types.TendermintURI{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),

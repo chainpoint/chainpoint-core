@@ -217,8 +217,10 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 	//Consume all past node events from this contract and import them into the local postgres instance
 	nodesStaked, err := app.ethClient.GetPastNodesStakedEvents()
 	if util.LoggerError(app.logger, err) != nil {
+		app.logger.Info("error in finding past staked nodes")
 		return err
 	}
+	app.logger.Info(fmt.Sprintf("nodesStaked: %#v", nodesStaked))
 	for _, node := range nodesStaked {
 		newNode := types.Node{
 			EthAddr:     node.Sender.Hex(),

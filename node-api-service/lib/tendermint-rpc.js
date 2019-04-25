@@ -53,6 +53,16 @@ async function getTransactionAsync(txID) {
   return { result: tx, error: null }
 }
 
+async function getTxSearch(tag, page, perPage){
+  let txResults
+  try {
+      txResults = await rpcClient.tx_search({query: tag, prove: false, page: page, per_page: perPage})
+  } catch (error) {
+      return parseRpcError(error)
+  }
+  return { result: txResults, error: null }
+}
+
 async function getStatusAsync() {
   let status
   try {
@@ -73,6 +83,16 @@ async function getNetInfoAsync() {
   return { result: netInfo, error: null }
 }
 
+async function getAbciInfo(){
+  let abciInfo
+  try {
+      abciInfo = await rpcClient.abciInfo({})
+  } catch (error) {
+      return parseRpcError(error)
+  }
+  return { result: abciInfo, error: null }
+}
+
 async function broadcastTxAsync(tx) {
   try {
     await rpcClient.broadcastTxAsync({ tx: `"${tx}"` }) // API requires double quotes to be explicitly added
@@ -87,5 +107,7 @@ module.exports = {
   getTransactionAsync: getTransactionAsync,
   getNetInfoAsync: getNetInfoAsync,
   getStatusAsync: getStatusAsync,
-  broadcastTxAsync: broadcastTxAsync
+  broadcastTxAsync: broadcastTxAsync,
+  getAbciInfo: getAbciInfo,
+  getTxSearch: getTxSearch
 }

@@ -20,7 +20,7 @@ secrets:
 services:
 
   abci:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG:-latest}
+    image: abci:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.abci
