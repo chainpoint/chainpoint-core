@@ -20,12 +20,16 @@ const stakedNode = require('../models/StakedNode.js')
 
 async function getNodesAsync(req, res, next) {
   let nodes = []
+
   try {
+    //get the minting epoch which will tell us how to retrieve known good nodes from tendermint
     let abciResponse = await tmRpc.getAbciInfo()
     if (abciResponse.error) {
       console.error(`RPC error communicating with Tendermint : ${abciResponse.error.message}`)
       throw new Error('Could not get abci info')
     }
+
+    //create tx query tag and query TM for transactions containing reward candidate nodes
     let prevEpoch = JSON.parse(abciResponse.result.response.data).prev_mint_block
     if (prevEpoch != 0) {
       let tag = `NODERC=${prevEpoch}`
@@ -34,26 +38,32 @@ async function getNodesAsync(req, res, next) {
         console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
         throw new Error('Could not get NODE-RC transactions')
       }
+
+      //retrieve IPs from reward candidate arrays
       let nodeArrays = txResponse.result.txs.map(tx => {
         let txText = new Buffer(new Buffer(tx, 'base64').toString('ascii'), 'base64').toString('ascii')
         return JSON.parse(txText).data.map(node => {
           return node.node_ip
         })
       })
-      nodes = [].concat.apply([], nodeArrays) //flatten
+      nodes = [].concat.apply([], nodeArrays) //flatten array
     }
   } catch (error) {
     console.error(`Tendermint RPC error, falling back to random nodes list : ${error.message}`)
-    try {
-      let nodesResponse = await stakedNode.getRandomNodes() //get random nodes if we can't get reward-candidates
-      nodes = nodesResponse.map(row => {
-        console.log(row)
-        return row.public_ip
-      })
-    } catch (error) {
-      console.error(`database node retrieval error : ${error.message}`)
-      return next(new errors.InternalServerError('Could not query for nodes'))
-    }
+  }
+
+  //If we retrieved nothing from tendermint, retrieve some random nodes
+  if (nodes.length == 0) {
+      try {
+          let nodesResponse = await stakedNode.getRandomNodes() //get random nodes if we can't get reward-candidates
+          console.log(nodesResponse)
+          nodes = nodesResponse.map(row => {
+              return row.publicIp
+          })
+      } catch (error) {
+          console.error(`database node retrieval error : ${error.message}`)
+          return next(new errors.InternalServerError('Could not query for nodes'))
+      }
   }
   res.contentType = 'application/json'
   res.send(nodes)
