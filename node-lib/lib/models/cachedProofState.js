@@ -107,7 +107,8 @@ async function getCalStateObjectsByAggIdsAsync(aggIds) {
 
     let redisResults
     try {
-      redisResults = await multi.exec().map(result => result[1])
+      redisResults = await multi.exec()
+      redisResults = redisResults.map(result => result[1])
     } catch (error) {
       console.error(`Redis read error : getCalStateObjectsByAggIdsAsync : ${error.message}`)
     }
@@ -174,7 +175,8 @@ async function getAnchorBTCAggStateObjectsByCalIdsAsync(calIds) {
 
     let redisResults
     try {
-      redisResults = await multi.exec().map(result => result[1])
+      redisResults = await multi.exec()
+      redisResults = redisResults.map(result => result[1])
     } catch (error) {
       console.error(`Redis read error : getAnchorBTCAggStateObjectsByCalIdsAsync : ${error.message}`)
     }

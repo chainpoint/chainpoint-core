@@ -151,6 +151,12 @@ services:
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
       ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
       VIRTUAL_HOST: api.local
+      TENDERMINT_URI: http://abci:26657
+      ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
+      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
+      ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
+      ETH_ADDRESS: ${ETH_ADDRESS}
+      ECDSA_KEYPAIR: ${ECDSA_KEYPAIR}
 
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.

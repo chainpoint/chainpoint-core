@@ -95,7 +95,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "TOKEN":
-		tags = app.incrementTxInt(tags)
 		go app.pgClient.TokenHashUpsert(tx.Data)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
