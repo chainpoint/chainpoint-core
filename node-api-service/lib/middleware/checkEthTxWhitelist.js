@@ -8,12 +8,12 @@ const tokenAddress = tknDefinition.networks['3'].address
 const registryAddress = regDefinition.networks['3'].address
 
 module.exports = function(req, res, next) {
-  const rawTx = req.params.tx
-
-  // ensure that rawTx was supplied
-  if (!rawTx) {
+  // ensure that tx was supplied
+  if (!req.params.tx) {
     return next(new errors.InvalidArgumentError('invalid request, tx must be supplied'))
   }
+
+  const rawTx = req.params.tx.toString()
   // ensure that rawTx represents a valid hex value starting wiht 0x
   if (!rawTx.startsWith('0x')) {
     return next(new errors.InvalidArgumentError('invalid request, tx must begin with 0x'))
