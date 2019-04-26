@@ -329,8 +329,7 @@ async function postTokenCreditAsync(req, res, next) {
 
   // ensure that this is a 'purchaseUsage' method call
   let parsedTx = tokenContractInterface.parseTransaction(decodedTx)
-  // TODO: Fix name when MI fixes contract
-  if (parsedTx.name !== 'puchaseUsage') {
+  if (parsedTx.name !== 'purchaseUsage') {
     return next(new errors.InvalidArgumentError(`invalid request, transaction may only make a call to 'purchaseUsage'`))
   }
 
