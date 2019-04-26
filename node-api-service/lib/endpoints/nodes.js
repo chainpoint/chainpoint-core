@@ -54,16 +54,16 @@ async function getNodesAsync(req, res, next) {
 
   //If we retrieved nothing from tendermint, retrieve some random nodes
   if (nodes.length == 0) {
-      try {
-          let nodesResponse = await stakedNode.getRandomNodes() //get random nodes if we can't get reward-candidates
-          console.log(nodesResponse)
-          nodes = nodesResponse.map(row => {
-              return row.publicIp
-          })
-      } catch (error) {
-          console.error(`database node retrieval error : ${error.message}`)
-          return next(new errors.InternalServerError('Could not query for nodes'))
-      }
+    try {
+      let nodesResponse = await stakedNode.getRandomNodes() //get random nodes if we can't get reward-candidates
+      console.log(nodesResponse)
+      nodes = nodesResponse.map(row => {
+        return row.publicIp
+      })
+    } catch (error) {
+      console.error(`database node retrieval error : ${error.message}`)
+      return next(new errors.InternalServerError('Could not query for nodes'))
+    }
   }
   res.contentType = 'application/json'
   res.send(nodes)
