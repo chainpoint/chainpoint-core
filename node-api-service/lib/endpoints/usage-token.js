@@ -39,7 +39,7 @@ const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, 
 let tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
 const tokenABI = tknDefinition.abi
 const tokenContractInterface = new ethers.utils.Interface(tokenABI)
-const tokenContractAddress = tknDefinition.networks['3'].address
+const tokenContractAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established

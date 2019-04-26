@@ -19,14 +19,16 @@ const path = require('path')
 const { pipeP } = require('ramda')
 const ethers = require('ethers')
 const { getETHStatsByAddressAsync, broadcastEthTxAsync } = require('../../lib/cores')
+const env = require('../../lib/parse-env.js')
 
 let tknDefinition = require('../../go-abci-service/ethcontracts/TierionNetworkToken.json')
 let regDefinition = require('../../go-abci-service/ethcontracts/ChainpointRegistry.json')
 
+const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const TierionNetworkTokenABI = tknDefinition.abi
 // const ChainpointRegistryABI = regDefinition.abi
-const tokenAddress = tknDefinition.networks['3'].address
-const registryAddress = regDefinition.networks['3'].address
+const tokenAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
+const registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
 
 const privateKey = fs.readFileSync(path.resolve('/run/secrets/ETH_PRIVATE_KEY', 'utf8'))
 const wallet = new ethers.Wallet(privateKey)
