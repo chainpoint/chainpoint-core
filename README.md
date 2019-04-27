@@ -15,31 +15,37 @@ This software is intended to be run as the Core of the Chainpoint Network. It is
 
 ## Quick Start
 
+You can find a script that will install all prerequisite dependencies on Mac and Linux [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
+
 Build and start the whole system locally with `make`. Running `make help`
 will display additional `Makefile` commands that are available.
 
 ```sh
 git clone https://github.com/chainpoint/chainpoint-core
 cd chainpoint-core
-make init
-make register
-make deploy
+make init           #interactive
+make register   #Stake with public smart contract
+make deploy     #Deploy Chainpoint Core to docker swarm
 ```
 
-## Getting Started
+## Introduction
 
-This repository contains all of the code needed to
-run the full application stack locally.
+Chainpoint-Core serves as an intermediate layer between hash aggregators (Chainpoint Nodes) and Bitcoin. 
+Hashes submitted by Nodes are aggregated and periodically broadcast to a Tendermint-based blockchain, the Calendar, created by consensus of all Cores. 
+Every hour, a Core is elected to anchor the state of the Calendar to Bitcoin. 
 
-You can find a script that will install all prerequisite dependencies on Mac and Linux [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
+To connect to an existing Chainpoint blockchain, set the PEERS environment variable in the .env file to a comma-delimited list of `<tendermint ID>@<ip>` pairs. The ID of a given Core can be found by visiting `<ip>/status`
 
-### Setup Environment Variables
+### Configuration
 
-You will need to set up environment variables before building.
+You will need to set up a configuration and secrets (bitcoin and ethereum) before running.
 
-Running `make build-config` will copy `.env.sample` to `.env`. This file will be used by `docker-compose` to set required environment variables.
+Running `make init` will prompt for secrets to be stored in the docker secrets system. 
+This command will also copy `.env.sample` to `.env`. The `.env` file will be used by `docker-compose` to set required environment variables.
 
-You can modify the `.env` as needed, any changes will be ignored by Git.
+There are further settings found in the `swarm-compose.yaml` file. 
+These are more permanent and altering them may cause problems connecting to the public Chainpoint testnets and mainnet. 
+However, they may be invaluable for setting up a private Chainpoint Network with different parameters, for example by configuring more frequent bitcoin anchoring or excluding the smart contract registration requirement.
 
 ## Startup
 
