@@ -1,11 +1,14 @@
 const ethers = require('ethers')
 const errors = require('restify-errors')
 const utils = require('../utils.js')
+const env = require('../parse-env.js')
 
 const tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
 const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.json')
-const tokenAddress = tknDefinition.networks['3'].address
-const registryAddress = regDefinition.networks['3'].address
+
+const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
+const tokenAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
+const registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
 
 module.exports = function(req, res, next) {
   // ensure that tx was supplied
