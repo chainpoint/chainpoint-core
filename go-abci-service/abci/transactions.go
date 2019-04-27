@@ -45,7 +45,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	case "BTC-M":
 		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
 		app.state.LatestBtcmHeight = app.state.Height + 1
-		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcmTxInt = app.state.TxInt
 		app.ConsumeBtcTxMsg([]byte(tx.Data))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}

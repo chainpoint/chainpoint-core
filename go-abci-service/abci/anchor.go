@@ -71,7 +71,10 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		}
 		app.state.LatestBtcaHeight = app.state.Height //So no one will try to re-anchor while processing the btc tx
 
-		time.Sleep(120 * time.Second) // wait for a BTC-M tx
+		// wait for a BTC-M tx
+		deadline := time.Now().Add(2 * time.Minute)
+		for app.state.LatestBtcmTxInt < startTxRange && !time.Now().After(deadline) {
+		}
 
 		// A BTC-M tx should have hit by now
 		if app.state.LatestBtcmTxInt < startTxRange { //If not, it'll be less than the start of the current range.
