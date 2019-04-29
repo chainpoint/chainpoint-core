@@ -15,7 +15,7 @@
  */
 
 const errors = require('restify-errors')
-const tmRpc = require('../tendermint-rpc.js')
+let tmRpc = require('../tendermint-rpc.js')
 
 async function getPeersAsync(req, res, next) {
   let netResponse = await tmRpc.getNetInfoAsync()
@@ -36,10 +36,10 @@ async function getPeersAsync(req, res, next) {
       let remoteIP = peer.remote_ip
       let firstOctet = remoteIP.substring(0, remoteIP.indexOf('.'))
       //use listen_addr if there are non-routable peer exchange IPs when behind NATs
-      if (firstOctet == '10' || firstOctet == '172' || firstOctet == '192') {
+      if (firstOctet === '10' || firstOctet === '172' || firstOctet === '192') {
         let listenAddr = peer.node_info.listen_addr
         if (listenAddr.includes('//')) {
-          return listenAddr.substring(listenAddr.lastIndexOf('/'), listenAddr.lastIndexOf(':'))
+          return listenAddr.substring(listenAddr.lastIndexOf('/') + 1, listenAddr.lastIndexOf(':'))
         }
         return listenAddr.substring(0, listenAddr.lastIndexOf(':'))
       }
@@ -48,7 +48,7 @@ async function getPeersAsync(req, res, next) {
     .filter(ip => {
       //filter out non-routable IPs that slipped through the above fallback
       let firstOctet = ip.substring(0, ip.indexOf('.'))
-      return firstOctet != '0' || firstOctet != '10' || firstOctet != '172' || firstOctet != '192'
+      return firstOctet != '0' && firstOctet != '10' && firstOctet != '172' && firstOctet != '192'
     })
   res.contentType = 'application/json'
   res.send(decodedPeers)
@@ -56,5 +56,9 @@ async function getPeersAsync(req, res, next) {
 }
 
 module.exports = {
-  getPeersAsync: getPeersAsync
+  getPeersAsync: getPeersAsync,
+  // additional functions for testing purposes
+  setTmRpc: rpc => {
+    tmRpc = rpc
+  }
 }
