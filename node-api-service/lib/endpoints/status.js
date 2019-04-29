@@ -15,12 +15,10 @@
  */
 
 const errors = require('restify-errors')
-const tmRpc = require('../tendermint-rpc.js')
+let tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
-const env = require('../parse-env.js')('api')
+let env = require('../parse-env.js')('api')
 const jose = require('node-jose')
-
-let coreEthAddress = env.ETH_TNT_LISTEN_ADDR
 
 async function getCoreStatusAsync(req, res, next) {
   let result = await buildStatusObjectAsync()
@@ -70,7 +68,7 @@ async function buildStatusObjectAsync() {
         version: version,
         time: new Date().toISOString(),
         base_uri: env.CHAINPOINT_CORE_BASE_URI,
-        eth_address: coreEthAddress,
+        eth_address: env.ETH_TNT_LISTEN_ADDR,
         jwk: jwkJSON
       },
       statusResponse.result
@@ -80,5 +78,12 @@ async function buildStatusObjectAsync() {
 
 module.exports = {
   getCoreStatusAsync: getCoreStatusAsync,
-  buildStatusObjectAsync: buildStatusObjectAsync
+  buildStatusObjectAsync: buildStatusObjectAsync,
+  // additional functions for testing purposes
+  setENV: obj => {
+    env = obj
+  },
+  setTmRpc: rpc => {
+    tmRpc = rpc
+  }
 }
