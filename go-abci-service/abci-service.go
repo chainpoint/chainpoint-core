@@ -63,7 +63,7 @@ func main() {
 		RegistryContractAddr: ethRegistryContract,
 	}
 
-	store, err := pemutil.LoadFile("/run/secrets/ECDSA_KEYPAIR")
+	store, err := pemutil.LoadFile("/run/secrets/ECDSA_PKPEM")
 	if err != nil {
 		util.LogError(err)
 	}

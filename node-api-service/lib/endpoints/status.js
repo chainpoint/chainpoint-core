@@ -53,7 +53,7 @@ async function buildStatusObjectAsync() {
     }
   }
 
-  let privateKeyPEM = env.ECDSA_KEYPAIR
+  let privateKeyPEM = env.ECDSA_PKPEM
   let jwkJSON = null
   try {
     let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')

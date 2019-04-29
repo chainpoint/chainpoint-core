@@ -146,7 +146,7 @@ async function postTokenRefreshAsync(req, res, next) {
 }
 
 async function createAndSignJWTAsync(payload) {
-  let privateKeyPEM = env.ECDSA_KEYPAIR
+  let privateKeyPEM = env.ECDSA_PKPEM
   let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
   return jwt.sign(payload, privateKeyPEM, { algorithm: 'ES256', keyid: jwk.toJSON().kid })
 }

@@ -161,7 +161,7 @@ module.exports = service => {
       })
       envDefinitions.ETH_INFURA_API_KEY = envalid.str({ desc: 'Infura API Key' })
       envDefinitions.ETH_ETHERSCAN_API_KEY = envalid.str({ desc: 'Etherscan API Key' })
-      envDefinitions.ECDSA_KEYPAIR = envalid.str({ desc: 'ECDSA key pair used for JWT generation' })
+      envDefinitions.ECDSA_PKPEM = envalid.str({ desc: 'ECDSA private key in PEM format' })
       break
     case 'btc-mon':
       envDefinitions.INSIGHT_API_BASE_URI = envalid.url({ desc: 'The Bitcore Insight-API base URI' })
