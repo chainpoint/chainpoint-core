@@ -1,7 +1,21 @@
 # Mocha Test Runner for API test suite
 # See : https://dzone.com/articles/testing-nodejs-application-using-mocha-and-docker
 
-FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service
+FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base
+
+COPY node-lib/lib /home/node/app/lib
+COPY go-abci-service/ethcontracts /home/node/app/artifacts/ethcontracts/
+
+# Define and install dependencies
+COPY node-api-service/package.json node-api-service/yarn.lock /home/node/app/
+RUN yarn
+
+RUN mkdir /home/node/app/lib/endpoints
+COPY node-api-service/lib/endpoints /home/node/app/lib/endpoints/
+COPY node-api-service/lib /home/node/app/lib/
+COPY node-api-service/server.js /home/node/app/
+COPY node-api-service/env_secrets_expand.sh /home/node/app
+COPY node-api-service/run.sh /home/node/app
 
 # Copy the test files
 COPY node-api-service/test test

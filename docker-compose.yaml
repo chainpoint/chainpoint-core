@@ -141,13 +141,10 @@ services:
       dockerfile: docker/Dockerfile.api-test
     depends_on:
       - base
-      - redis
-      - rabbitmq
-      - postgres
     networks:
       - chainpoint
     environment:
-      NODE_ENV: test
+      NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
       ETH_TNT_LISTEN_ADDR: ${ETH_TNT_LISTEN_ADDR}
       VIRTUAL_HOST: api.local
