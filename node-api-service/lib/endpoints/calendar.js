@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const tmRpc = require('../tendermint-rpc.js')
+let tmRpc = require('../tendermint-rpc.js')
 const errors = require('restify-errors')
 
 async function getTransactionAsync(txID) {
@@ -67,5 +67,9 @@ async function getCalTxDataAsync(req, res, next) {
 
 module.exports = {
   getCalTxAsync: getCalTxAsync,
-  getCalTxDataAsync: getCalTxDataAsync
+  getCalTxDataAsync: getCalTxDataAsync,
+  // additional functions for testing purposes
+  setTmRpc: rpc => {
+    tmRpc = rpc
+  }
 }
