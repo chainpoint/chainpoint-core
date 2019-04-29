@@ -154,6 +154,7 @@ services:
       ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
       ETH_ADDRESS: ${ETH_ADDRESS}
       ECDSA_PKPEM: ${ECDSA_PKPEM}
+    tty: true
 
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
