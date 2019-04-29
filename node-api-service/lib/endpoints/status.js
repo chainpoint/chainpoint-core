@@ -30,7 +30,7 @@ async function getCoreStatusAsync(req, res, next) {
       case 409:
         return next(new errors.InvalidArgumentError(result.errorMessage))
       default:
-        return next(new errors.InternalError(result.errorMessage))
+        return next(new errors.InternalServerError(result.errorMessage))
     }
   }
 

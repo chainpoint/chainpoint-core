@@ -38,7 +38,7 @@ describe('Status Controller', () => {
           expect(res.body)
             .to.have.property('code')
             .and.to.be.a('string')
-            .and.to.equal('Internal')
+            .and.to.equal('InternalServer')
           expect(res.body)
             .to.have.property('message')
             .and.to.be.a('string')

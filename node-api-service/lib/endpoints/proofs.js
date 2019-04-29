@@ -59,7 +59,7 @@ async function getProofsByIDsAsync(req, res, next) {
   try {
     queryResults = await proof.getProofsByHashIdsAsync(hashIds)
   } catch (error) {
-    return next(new errors.InternalError('error retrieving proofs'))
+    return next(new errors.InternalServerError('error retrieving proofs'))
   }
 
   // create proof lookup table keyed by hashId
