@@ -200,7 +200,7 @@ async function listenRestifyAsync(server, port, debug) {
   return new Promise((resolve, reject) => {
     server.listen(port, err => {
       if (err) return reject(err)
-      logMessage(`${server.name} listening at ${server.url}`, debug, 'general')
+      if (process.env.NODE_ENV !== 'test') logMessage(`${server.name} listening at ${server.url}`, debug, 'general')
       return resolve()
     })
   })

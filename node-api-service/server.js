@@ -46,81 +46,93 @@ var logger = bunyan.createLogger({
 
 // RESTIFY SETUP
 // 'version' : all routes will default to this version
-const server = restify.createServer({
+const httpOptions = {
   name: 'chainpoint',
   version: '1.0.0',
   log: logger
-})
+}
 
-// LOG EVERY REQUEST
-// server.pre(function (request, response, next) {
-//   request.log.info({ req: [request.url, request.method, request.rawHeaders] }, 'API-REQUEST')
-//   next()
-// })
-
-// Clean up sloppy paths like //todo//////1//
-server.pre(restify.plugins.pre.sanitizePath())
-
-// Checks whether the user agent is curl. If it is, it sets the
-// Connection header to "close" and removes the "Content-Length" header
-// See : http://restify.com/#server-api
-server.pre(restify.plugins.pre.userAgentConnection())
-
-// CORS
-// See : https://github.com/TabDigital/restify-cors-middleware
-// See : https://github.com/restify/node-restify/issues/1151#issuecomment-271402858
-//
-// Test w/
-//
-// curl \
-// --verbose \
-// --request OPTIONS \
-// http://127.0.0.1/hashes \
-// --header 'Origin: http://localhost:9292' \
-// --header 'Access-Control-Request-Headers: Origin, Accept, Content-Type' \
-// --header 'Access-Control-Request-Method: POST'
-//
-var cors = corsMiddleware({
-  preflightMaxAge: 600,
-  origins: ['*']
-})
-server.pre(cors.preflight)
-server.use(cors.actual)
-
-server.use(restify.plugins.gzipResponse())
-server.use(restify.plugins.queryParser())
-server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
-server.use(requestIp.mw())
-
-// API RESOURCES
-
-// submit hash(es)
-server.post({ path: '/hashes', version: '1.0.0' }, throttle(5, 1), hashes.postHashV1Async)
-// get the block objects for the calendar in the specified block range
-server.get({ path: '/calendar/:txid', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxAsync)
-// get the data value of a txId
-server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxDataAsync)
-// get proofs from storage
-server.get({ path: '/proofs', version: '1.0.0' }, throttle(50, 10), proofs.getProofsByIDsAsync)
-// get nodes from core
-server.get({ path: '/nodes', version: '1.0.0' }, throttle(15, 3), nodes.getNodesAsync)
-// get random core peers
-server.get({ path: '/peers', version: '1.0.0' }, throttle(15, 3), peers.getPeersAsync)
-// get status
-server.get({ path: '/status', version: '1.0.0' }, throttle(15, 3), status.getCoreStatusAsync)
-// get eth tx data
-server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
-// post eth broadcast
-server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
-// post token refresh
-server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
-// post token credit
-server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
-// teapot
-server.get({ path: '/', version: '1.0.0' }, root.getV1)
-
-function throttle(burst, rate, opts = { ip: true }) {
+let throttle = (burst, rate, opts = { ip: true }) => {
   return restify.plugins.throttle(Object.assign({}, { burst, rate }, opts))
+}
+
+function setupRestifyConfigAndRoutes(server) {
+  // LOG EVERY REQUEST
+  // server.pre(function (request, response, next) {
+  //   request.log.info({ req: [request.url, request.method, request.rawHeaders] }, 'API-REQUEST')
+  //   next()
+  // })
+
+  // Clean up sloppy paths like //todo//////1//
+  server.pre(restify.plugins.pre.sanitizePath())
+
+  // Checks whether the user agent is curl. If it is, it sets the
+  // Connection header to "close" and removes the "Content-Length" header
+  // See : http://restify.com/#server-api
+  server.pre(restify.plugins.pre.userAgentConnection())
+
+  // CORS
+  // See : https://github.com/TabDigital/restify-cors-middleware
+  // See : https://github.com/restify/node-restify/issues/1151#issuecomment-271402858
+  //
+  // Test w/
+  //
+  // curl \
+  // --verbose \
+  // --request OPTIONS \
+  // http://127.0.0.1/hashes \
+  // --header 'Origin: http://localhost:9292' \
+  // --header 'Access-Control-Request-Headers: Origin, Accept, Content-Type' \
+  // --header 'Access-Control-Request-Method: POST'
+  //
+  var cors = corsMiddleware({
+    preflightMaxAge: 600,
+    origins: ['*']
+  })
+  server.pre(cors.preflight)
+  server.use(cors.actual)
+
+  server.use(restify.plugins.gzipResponse())
+  server.use(restify.plugins.queryParser())
+  server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
+  server.use(requestIp.mw())
+
+  // API RESOURCES
+
+  // submit hash(es)
+  server.post({ path: '/hashes', version: '1.0.0' }, throttle(5, 1), hashes.postHashV1Async)
+  // get the block objects for the calendar in the specified block range
+  server.get({ path: '/calendar/:txid', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxAsync)
+  // get the data value of a txId
+  server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxDataAsync)
+  // get proofs from storage
+  server.get({ path: '/proofs', version: '1.0.0' }, throttle(50, 10), proofs.getProofsByIDsAsync)
+  // get nodes from core
+  server.get({ path: '/nodes', version: '1.0.0' }, throttle(15, 3), nodes.getNodesAsync)
+  // get random core peers
+  server.get({ path: '/peers', version: '1.0.0' }, throttle(15, 3), peers.getPeersAsync)
+  // get status
+  server.get({ path: '/status', version: '1.0.0' }, throttle(15, 3), status.getCoreStatusAsync)
+  // get eth tx data
+  server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
+  // post eth broadcast
+  server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
+  // post token refresh
+  server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
+  // post token credit
+  server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
+  // teapot
+  server.get({ path: '/', version: '1.0.0' }, root.getV1)
+}
+
+// HTTP Server
+async function startInsecureRestifyServerAsync() {
+  let restifyServer = restify.createServer(httpOptions)
+  setupRestifyConfigAndRoutes(restifyServer)
+
+  // Begin listening for requests
+  await connections.listenRestifyAsync(restifyServer, 8080)
+  return restifyServer
 }
 
 /**
@@ -200,7 +212,7 @@ async function start() {
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
-    await connections.listenRestifyAsync(server, 8080)
+    await startInsecureRestifyServerAsync()
     console.log('startup completed successfully')
   } catch (error) {
     console.error(`An error has occurred on startup: ${error.message}`)
@@ -216,5 +228,9 @@ module.exports = {
   setAMQPChannel: chan => {
     hashes.setAMQPChannel(chan)
   },
-  server: server
+  // additional functions for testing purposes
+  startInsecureRestifyServerAsync: startInsecureRestifyServerAsync,
+  setThrottle: t => {
+    throttle = t
+  }
 }
