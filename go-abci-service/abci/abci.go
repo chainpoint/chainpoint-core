@@ -91,8 +91,15 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	for !time.Now().After(deadline) {
 		pgClient, err = postgres.NewPGFromURI(config.PostgresURI, *config.Logger)
 		if util.LoggerError(*config.Logger, err) != nil {
+			time.Sleep(5 * time.Second)
 			continue
 		} else {
+			_, err = pgClient.GetNodeCount()
+			if util.LoggerError(*config.Logger, err) != nil {
+				(*config.Logger).Info("table 'staked_nodes' doesn't exist, did API start successfully?")
+				time.Sleep(5 * time.Second)
+				continue
+			}
 			break
 		}
 	}
@@ -188,8 +195,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if config.DoNodeManagement {
 		//Initialize node state
 		go app.KeyMonitor()
-		go app.LoadNodesFromContract()
-		go app.WatchNodesFromContract()
+		go app.PollNodesFromContract()
 	}
 
 	//Start scheduled cron tasks
