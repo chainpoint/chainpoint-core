@@ -214,7 +214,6 @@ func (app *AnchorApplication) LoadNodesFromContract() error {
 		app.logger.Info("error in finding past staked nodes")
 		return err
 	}
-	app.logger.Info(fmt.Sprintf("nodesStaked: %#v", nodesStaked))
 	for _, node := range nodesStaked {
 		newNode := types.Node{
 			EthAddr:     node.Sender.Hex(),
