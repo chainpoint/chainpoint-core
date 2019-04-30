@@ -15,8 +15,8 @@
  */
 
 const errors = require('restify-errors')
-const tmRpc = require('../tendermint-rpc.js')
-const stakedNode = require('../models/StakedNode.js')
+let tmRpc = require('../tendermint-rpc.js')
+let stakedNode = require('../models/StakedNode.js')
 
 async function getNodesAsync(req, res, next) {
   let nodes = []
@@ -56,7 +56,6 @@ async function getNodesAsync(req, res, next) {
   if (nodes.length == 0) {
     try {
       let nodesResponse = await stakedNode.getRandomNodes() //get random nodes if we can't get reward-candidates
-      console.log(nodesResponse)
       nodes = nodesResponse.map(row => {
         return row.publicIp
       })
@@ -71,5 +70,12 @@ async function getNodesAsync(req, res, next) {
 }
 
 module.exports = {
-  getNodesAsync: getNodesAsync
+  getNodesAsync: getNodesAsync,
+  // additional functions for testing purposes
+  setTmRpc: rpc => {
+    tmRpc = rpc
+  },
+  setStakedNode: sn => {
+    stakedNode = sn
+  }
 }
