@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"os"
@@ -246,4 +247,23 @@ func RotateRight(slice interface{}, by int) error {
 // RotateLeft is an alias for Rotate
 func RotateLeft(slice interface{}, by int) error {
 	return rotate(slice, by)
+}
+
+//ReadContractJSON : reads in TierionNetworkToken and ChainpointRegistry json files
+//and extracts addresses
+func ReadContractJSON(file string, testnet bool) string {
+	jsonFile, err := os.Open(file)
+	if LogError(err) != nil {
+		return ""
+	}
+	defer jsonFile.Close()
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var jsonMap map[string]interface{}
+	if LogError(json.Unmarshal(byteValue, &jsonMap)) != nil {
+		return ""
+	}
+	if testnet {
+		return jsonMap["networks"].(map[string]interface{})["3"].(map[string]interface{})["address"].(string)
+	}
+	return jsonMap["networks"].(map[string]interface{})["1"].(map[string]interface{})["address"].(string)
 }

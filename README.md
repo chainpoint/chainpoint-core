@@ -7,7 +7,7 @@ Chainpoint Core is an aggregation and anchoring service that collects hash input
 
 ## Important Notice
 
-This software is intended to be run as the Core of the Chainpoint Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
+This software is intended to be run as part of the Core Network of the Chainpoint Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
 
 [https://github.com/chainpoint/chainpoint-node-src](https://github.com/chainpoint/chainpoint-node-src)
 
@@ -37,6 +37,8 @@ Every hour, a Core is elected to anchor the state of the Calendar to Bitcoin.
 To connect to an existing Chainpoint blockchain, set the PEERS environment variable in the .env file to a comma-delimited list of `<tendermint ID>@<ip>` pairs. The ID of a given Core can be found by visiting `<ip>/status`
 
 ### Configuration
+
+Chainpoint Core requires a minimum of 2 CPU Cores and 16 GB of RAM to run. Hard disk size should be at least 500 GB for the chain data (or be expandable). 
 
 You will need to set up a configuration and secrets (bitcoin and ethereum) before running.
 

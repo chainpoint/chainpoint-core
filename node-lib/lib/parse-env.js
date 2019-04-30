@@ -65,7 +65,7 @@ let envDefinitions = {
 
   // Redis related variables
   REDIS_CONNECT_URIS: envalid.str({
-    devDefault: 'redis://redis:6379',
+    default: 'redis://redis:6379',
     desc: 'The Redis server connection URI, or a comma separated list of Sentinel URIs'
   }),
 
