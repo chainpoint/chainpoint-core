@@ -21,7 +21,7 @@ const errors = require('restify-errors')
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
-const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
+let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
 
 async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
@@ -82,5 +82,9 @@ async function postEthBroadcastAsync(req, res, next) {
 
 module.exports = {
   getEthStatsAsync: getEthStatsAsync,
-  postEthBroadcastAsync: postEthBroadcastAsync
+  postEthBroadcastAsync: postEthBroadcastAsync,
+  // additional functions for testing purposes
+  setFP: fp => {
+    fallbackProvider = fp
+  }
 }
