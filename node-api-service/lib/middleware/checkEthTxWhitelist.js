@@ -7,10 +7,10 @@ const tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.
 const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.json')
 
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
-const tokenAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
+let tokenAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
 const registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
 
-module.exports = function(req, res, next) {
+let validate = function(req, res, next) {
   // ensure that tx was supplied
   if (!req.params.tx) {
     return next(new errors.InvalidArgumentError('invalid request, tx must be supplied'))
@@ -45,4 +45,12 @@ module.exports = function(req, res, next) {
   }
 
   return next()
+}
+
+module.exports = {
+  validate: validate,
+  // additional functions for testing purposes
+  setTA: ta => {
+    tokenAddress = ta
+  }
 }

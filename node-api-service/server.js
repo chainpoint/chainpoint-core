@@ -34,7 +34,7 @@ const proof = require('./lib/models/Proof.js')
 const stakedNode = require('./lib/models/StakedNode.js')
 const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
-const ethTxWhitelist = require('./lib/middleware/checkEthTxWhitelist')
+const ethTxWhitelist = require('./lib/middleware/checkEthTxWhitelist').validate
 const requestIp = require('request-ip')
 
 const bunyan = require('bunyan')
