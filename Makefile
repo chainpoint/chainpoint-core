@@ -131,6 +131,7 @@ clean: down
 	@sudo chmod 777 ./data/postgresql
 	@sudo chmod 777 ./data/redis
 	@sudo rm -rf ./config/node_1/data/*
+	@sudo rm -f ./config/node_1/addrbook.json
 	@sudo chmod 777 ./config/node_1
 	@sudo chmod 777 ./config/node_1/*
 	@cp config/node_1/priv_validator_key.json config/node_1/priv_validator.json
@@ -198,9 +199,9 @@ redis:
 deploy:
 	set -a && source .env && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
 
-## stop-swarm				: stops a swarm stack
-stop-swarm:
+## stop						: stops a swarm stack
+stop:
 	docker stack rm chainpoint-core
 
 ## remove 					: stops, removes, and cleans a swarm
-remove: stop-swarm clean
+remove: stop clean
