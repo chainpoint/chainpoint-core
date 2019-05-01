@@ -25,7 +25,7 @@ const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFU
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
 
-const privKey = env.ETH_PRIVATE_KEY || fs.readFileSync(path.resolve('/run/secrets/ETH_PRIVATE_KEY'), 'utf-8')
+const privKey = process.env.ETH_PRIVATE_KEY || fs.readFileSync(path.resolve('/run/secrets/ETH_PRIVATE_KEY'), 'utf-8')
 let wallet = new ethers.Wallet(privKey)
 wallet = wallet.connect(fallbackProvider)
 
