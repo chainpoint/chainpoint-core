@@ -181,6 +181,7 @@ async function postHashV1Async(req, res, next) {
 module.exports = {
   postHashV1Async: postHashV1Async,
   generatePostHashResponse: generatePostHashResponse,
+  // additional functions for testing purposes
   setAMQPChannel: chan => {
     amqpChannel = chan
   }
