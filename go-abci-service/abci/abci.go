@@ -91,8 +91,15 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	for !time.Now().After(deadline) {
 		pgClient, err = postgres.NewPGFromURI(config.PostgresURI, *config.Logger)
 		if util.LoggerError(*config.Logger, err) != nil {
+			time.Sleep(5 * time.Second)
 			continue
 		} else {
+			_, err = pgClient.GetNodeCount()
+			if util.LoggerError(*config.Logger, err) != nil {
+				(*config.Logger).Info("table 'staked_nodes' doesn't exist, did API start successfully?")
+				time.Sleep(5 * time.Second)
+				continue
+			}
 			break
 		}
 	}
@@ -188,8 +195,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if config.DoNodeManagement {
 		//Initialize node state
 		go app.KeyMonitor()
-		go app.LoadNodesFromContract()
-		go app.WatchNodesFromContract()
+		go app.PollNodesFromContract()
 	}
 
 	//Start scheduled cron tasks
@@ -252,7 +258,6 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 
 //Commit is called at the end of every block to finalize and save chain state
 func (app *AnchorApplication) Commit() types2.ResponseCommit {
-
 	// Anchor every anchorInterval of blocks
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {

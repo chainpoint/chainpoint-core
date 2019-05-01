@@ -23,7 +23,7 @@ const errors = require('restify-errors')
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
-const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
+let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
 
 const privKey = env.ETH_PRIVATE_KEY || fs.readFileSync(path.resolve('/run/secrets/ETH_PRIVATE_KEY'), 'utf-8')
 let wallet = new ethers.Wallet(privKey)
@@ -107,5 +107,9 @@ async function postEthBroadcastAsync(req, res, next) {
 
 module.exports = {
   getEthStatsAsync: getEthStatsAsync,
-  postEthBroadcastAsync: postEthBroadcastAsync
+  postEthBroadcastAsync: postEthBroadcastAsync,
+  // additional functions for testing purposes
+  setFP: fp => {
+    fallbackProvider = fp
+  }
 }

@@ -60,6 +60,9 @@ type AnchorState struct {
 	LatestNistRecord  string `json:"latest_nist_record"`
 	LastMintedAtBlock int64  `json:"last_mint_block"`
 	PrevMintedAtBlock int64  `json:"prev_mint_block"`
+	LastAnchorCoreID  string `json:"last_anchor_core_id"`
+	LastMintCoreID    string `json:"last_mint_core_id"`
+	LastAuditCoreID   string `json:"last_audit_core_id"`
 }
 
 // Tx holds custom transaction data and metadata for the Chainpoint Calendar

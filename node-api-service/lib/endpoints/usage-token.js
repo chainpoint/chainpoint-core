@@ -16,17 +16,17 @@
 
 const errors = require('restify-errors')
 const ethers = require('ethers')
-const env = require('../parse-env.js')('api')
+let env = require('../parse-env.js')('api')
 const utils = require('../utils.js')
-const activeToken = require('../models/ActiveToken.js')
+let activeToken = require('../models/ActiveToken.js')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const uuidv1 = require('uuid/v1')
 const jose = require('node-jose')
-const rp = require('request-promise-native')
+let rp = require('request-promise-native')
 const retry = require('async-retry')
-const tmRpc = require('../tendermint-rpc.js')
-const status = require('./status.js')
+let tmRpc = require('../tendermint-rpc.js')
+let status = require('./status.js')
 
 const CORE_JWK_KEY_PREFIX = 'CorePublicKey'
 const CORE_ID_KEY = 'CoreID'
@@ -34,12 +34,12 @@ const CORE_ID_KEY = 'CoreID'
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
-const fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
+let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
 
 let tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
 const tokenABI = tknDefinition.abi
 const tokenContractInterface = new ethers.utils.Interface(tokenABI)
-const tokenContractAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
+let tokenContractAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
@@ -137,7 +137,7 @@ async function postTokenRefreshAsync(req, res, next) {
     let coreId = await getCachedCoreIDAsync()
     await broadcastCoreTxAsync(coreId, submittingNodeIP, refreshTokenHash)
   } catch (error) {
-    return next(new errors.InternalServerError(`server error on transaction broadcast, ${error.message}`))
+    return next(new errors.InternalServerError(`server error, ${error.message}`))
   }
 
   res.contentType = 'application/json'
@@ -382,7 +382,7 @@ async function postTokenCreditAsync(req, res, next) {
     let coreId = await getCachedCoreIDAsync()
     await broadcastCoreTxAsync(coreId, submittingNodeIP, newTokenHash)
   } catch (error) {
-    return next(new errors.InternalServerError(`server error on transaction broadcast, ${error.message}`))
+    return next(new errors.InternalServerError(`server error, ${error.message}`))
   }
 
   res.contentType = 'application/json'
@@ -395,5 +395,27 @@ module.exports = {
   postTokenCreditAsync: postTokenCreditAsync,
   setRedis: r => {
     redis = r
+  },
+  // additional functions for testing purposes
+  setFP: fp => {
+    fallbackProvider = fp
+  },
+  setRP: r => {
+    rp = r
+  },
+  setAT: at => {
+    activeToken = at
+  },
+  setENV: e => {
+    env = e
+  },
+  setStatus: s => {
+    status = s
+  },
+  setTMRPC: rpc => {
+    tmRpc = rpc
+  },
+  setTA: ta => {
+    tokenContractAddress = ta
   }
 }

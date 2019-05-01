@@ -29,6 +29,7 @@ services:
       HASHES_PER_MERKLE_TREE: "200"
       ANCHOR_BLOCK_INTERVAL: "3"
       LOG_LEVEL: "DEBUG"
+      USE_TESTNETS: "true"
     volumes:
     - ${PWD}/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     - ./config/node_1:/tendermint/config:Z
@@ -131,7 +132,6 @@ services:
       ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
       ETH_ADDRESS: ${ETH_ADDRESS}
       ECDSA_PKPEM: ${ECDSA_PKPEM}
-      REDIS_CONNECT_URIS: ${REDIS_CONNECT_URIS}
 
   api-test:
     container_name: node-api-service-test

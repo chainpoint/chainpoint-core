@@ -45,6 +45,7 @@ services:
       HASHES_PER_MERKLE_TREE: "200"
       ANCHOR_BLOCK_INTERVAL: "60"
       LOG_LEVEL: "DEBUG"
+      USE_TESTNETS: "true"
     volumes:
     - ./config/node_1:/tendermint/config:Z
     - ./config/node_1/data:/tendermint/data:Z

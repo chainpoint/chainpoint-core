@@ -34,11 +34,19 @@ func main() {
 	doAuditLoop = doNodeManagement && doAuditLoop //only allow auditing if node management enabled
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
+	useTestNets, _ := strconv.ParseBool(util.GetEnv("USE_TESTNETS", "true"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
 	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
 	ethereumURL := util.GetEnv("ETH_URI", fmt.Sprintf("https://ropsten.infura.io/v3/%s", ethInfuraApiKey))
-	ethTokenContract := util.GetEnv("TokenContractAddr", "0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3")
-	ethRegistryContract := util.GetEnv("RegistryContractAddr", "0x3a8264f138489f80D9CcA443C3A534B73F4B6401")
+	ethTokenContract := util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/TierionNetworkToken.json", useTestNets)
+	fmt.Println(ethTokenContract)
+	if ethTokenContract == "" {
+		ethTokenContract = util.GetEnv("TokenContractAddr", "0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3")
+	}
+	ethRegistryContract := util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/ChainpointRegistry.json", useTestNets)
+	if ethRegistryContract == "" {
+		ethRegistryContract = util.GetEnv("RegistryContractAddr", "0x3a8264f138489f80D9CcA443C3A534B73F4B6401")
+	}
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
 	tendermintRPC := types.TendermintURI{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),

@@ -17,7 +17,7 @@
 const errors = require('restify-errors')
 const uuidValidate = require('uuid-validate')
 const _ = require('lodash')
-const proof = require('../models/Proof.js')
+let proof = require('../models/Proof.js')
 
 /**
  * GET /proofs handler
@@ -88,5 +88,9 @@ async function getProofsByIDsAsync(req, res, next) {
 }
 
 module.exports = {
-  getProofsByIDsAsync: getProofsByIDsAsync
+  getProofsByIDsAsync: getProofsByIDsAsync,
+  // additional functions for testing purposes
+  setProof: p => {
+    proof = p
+  }
 }
