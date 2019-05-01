@@ -106,6 +106,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 					app.resetAnchor(startTxRange)
 					return err
 				}
+				app.state.LastAnchorCoreID = app.ID
 			}
 		}
 		return nil

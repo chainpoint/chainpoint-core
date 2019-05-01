@@ -51,6 +51,7 @@ func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 //MintRewardNodes : mint rewards for nodes
 func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 	if leader, _ := app.ElectLeader(1); leader {
+		app.state.LastMintCoreID = app.ID
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
@@ -131,6 +132,7 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 //AuditNodes : Audit nodes for reputation chain and hash submission validity. Submits reward tx with info if successful
 func (app *AnchorApplication) AuditNodes() error {
 	if leader, _ := app.ElectLeader(1); leader {
+		app.state.LastAuditCoreID = app.ID
 		rewardCandidates := make([]types.NodeJSON, 0)
 		deadline := time.Now().Add(1 * time.Minute)
 		var wg sync.WaitGroup
@@ -144,11 +146,12 @@ func (app *AnchorApplication) AuditNodes() error {
 				wg.Add(1)
 				go func(node types.Node) {
 					defer wg.Done()
-					app.logger.Info(fmt.Sprintf("Auditing Node IP %s", node.PublicIP.String))
+					app.logger.Info(fmt.Sprintf("node audit IP %s", node.PublicIP.String))
 					if err := app.AuditNode(node); err != nil {
-						app.logger.Debug(fmt.Sprintf("Audit of node IP %s unsuccessful: %s", node.PublicIP.String, err.Error()))
+						app.logger.Debug(fmt.Sprintf("node audit of node IP %s unsuccessful: %s", node.PublicIP.String, err.Error()))
 						return
 					}
+					app.logger.Info(fmt.Sprintf("Node IP %s passed node audit", node.PublicIP.String))
 					nodeJSON := types.NodeJSON{
 						EthAddr:  node.EthAddr,
 						PublicIP: node.PublicIP.String,
@@ -160,28 +163,33 @@ func (app *AnchorApplication) AuditNodes() error {
 			}
 			wg.Wait()
 		}
+		if time.Now().After(deadline) {
+			app.logger.Info("node audit collation deadline passed")
+		}
 		if len(rewardCandidates) > 3 {
 			rewardCandidates = rewardCandidates[0:3]
 		}
 		if len(rewardCandidates) == 0 {
-			err := errors.New("Unspecified reward candidate collation failure")
+			err := errors.New("Unspecified reward candidate collation failure for node audit")
 			util.LoggerError(app.logger, err)
 			return err
 		}
 		rcJSON, err := json.Marshal(rewardCandidates)
-		if err != nil {
+		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
 		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJSON), 2, time.Now().Unix(), app.ID)
-		if err != nil {
+		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
 		if res.Code == 0 {
+			app.logger.Info("node audit success, NODE-RC tx issued")
 			return nil
 		}
-		return errors.New("problem validating and submitting nodes for rewards")
+		err = util.LoggerError(app.logger, errors.New("problem validating and submitting nodes for rewards after node audit process"))
+		return err
 	}
-	app.logger.Info("Not leader")
+	app.logger.Info("Not leader for node audits")
 	return nil
 }
 
@@ -189,12 +197,12 @@ func (app *AnchorApplication) AuditNodes() error {
 func (app *AnchorApplication) AuditNode(node types.Node) error {
 	err := ValidateNodeRecentReputation(node)
 	if util.LoggerError(app.logger, err) != nil {
-		app.logger.Info("unable to validate node reputation")
+		app.logger.Info("unable to validate node audit reputation")
 		return err
 	}
 	nodeResp, err := SendNodeHash(node)
 	if util.LoggerError(app.logger, err) != nil && len(nodeResp.Hashes) == 0 {
-		app.logger.Info("node hash post failed")
+		app.logger.Info("node audit hash post failed")
 		return err
 	}
 	time.Sleep(180 * time.Second)
