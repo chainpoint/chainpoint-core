@@ -43,7 +43,7 @@ async function getNodesAsync(req, res, next) {
       let nodeArrays = txResponse.result.txs.map(tx => {
         let txText = new Buffer(new Buffer(tx, 'base64').toString('ascii'), 'base64').toString('ascii')
         return JSON.parse(txText).data.map(node => {
-          return {"public_uri": "http://" + node.node_ip}
+          return { public_uri: 'http://' + node.node_ip }
         })
       })
       nodes = [].concat.apply([], nodeArrays) //flatten array
@@ -57,7 +57,7 @@ async function getNodesAsync(req, res, next) {
     try {
       let nodesResponse = await stakedNode.getRandomNodes() //get random nodes if we can't get reward-candidates
       nodes = nodesResponse.map(row => {
-        return {"public_uri": "http://" + row.publicIp}
+        return { public_uri: 'http://' + row.publicIp }
       })
     } catch (error) {
       console.error(`database node retrieval error : ${error.message}`)
