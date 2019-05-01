@@ -26,8 +26,6 @@ const updateOrCreateEnv = require('./scripts/2_update_env')
 async function main() {
   cliHelloLogger()
 
-  console.log(fs.readFileSync(path.resolve('/run/secrets/ETH_ADDRESS'), 'utf-8'))
-
   console.log(chalk.bold.yellow('Stake your Core:'))
 
   try {

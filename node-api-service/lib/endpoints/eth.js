@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+const fs = require('fs')
+const path = require('path')
 const ethers = require('ethers')
 const env = require('../parse-env.js')('api')
 const errors = require('restify-errors')
@@ -22,6 +24,14 @@ const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
+
+const privKey = fs.readFileSync(path.resolve('/run/secrets/ETH_PRIVATE_KEY'), 'utf-8')
+let wallet = new ethers.Wallet(privKey)
+wallet = wallet.connect(fallbackProvider)
+
+const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.json')
+const registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
+const registryContract = new ethers.Contract(registryAddress, regDefinition.abi, wallet)
 
 async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
@@ -51,6 +61,21 @@ async function getEthStatsAsync(req, res, next) {
   } catch (error) {
     console.error(`Error when attempting to retrieve transaction count : ${ethAddress} : ${error.message}`)
     return next(new errors.InternalServerError('Error when attempting to retrieve transaction count'))
+  }
+
+  if (req.query.verbose && (req.query.verbose === 'true' || req.query.verbose === true)) {
+    try {
+      let registrationResult = await registryContract.nodes(ethAddress)
+
+      result.registration = {
+        isStaked: registrationResult.isStaked,
+        amountStaked: registrationResult.amountStaked.toNumber(),
+        stakeLockedUntil: registrationResult.stakeLockedUntil.toNumber()
+      }
+    } catch (error) {
+      console.error(`Error when attempting to retrieve Chainpoint Registry info : ${ethAddress} : ${error.message}`)
+      return next(new errors.InternalServerError('Error when attempting to retrieve Chainpoint Registry info'))
+    }
   }
 
   res.contentType = 'application/json'

@@ -108,7 +108,7 @@ function setupRestifyConfigAndRoutes(server) {
   // get proofs from storage
   server.get({ path: '/proofs', version: '1.0.0' }, throttle(50, 10), proofs.getProofsByIDsAsync)
   // get nodes from core
-  server.get({ path: '/nodes', version: '1.0.0' }, throttle(15, 3), nodes.getNodesAsync)
+  server.get({ path: '/nodes/random', version: '1.0.0' }, throttle(15, 3), nodes.getNodesAsync)
   // get random core peers
   server.get({ path: '/peers', version: '1.0.0' }, throttle(15, 3), peers.getPeersAsync)
   // get status

@@ -206,76 +206,78 @@ func (app *AnchorApplication) AuditNode(node types.Node) error {
 	return nil
 }
 
-//LoadNodesFromContract : load all past node staking events and update events
-func (app *AnchorApplication) LoadNodesFromContract() error {
-	//Consume all past node events from this contract and import them into the local postgres instance
-	nodesStaked, err := app.ethClient.GetPastNodesStakedEvents()
-	if util.LoggerError(app.logger, err) != nil {
-		app.logger.Info("error in finding past staked nodes")
-		return err
-	}
-	app.logger.Info(fmt.Sprintf("nodesStaked: %#v", nodesStaked))
-	for _, node := range nodesStaked {
-		newNode := types.Node{
-			EthAddr:     node.Sender.Hex(),
-			PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
-			BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+//PollNodesFromContract : load all past node staking events and update events
+func (app *AnchorApplication) PollNodesFromContract() {
+	highestBlock := big.NewInt(0)
+	first := true
+	for {
+		app.logger.Info(fmt.Sprintf("Polling for Registry events after block %d", highestBlock.Int64()))
+		if first {
+			first = false
+		} else {
+			time.Sleep(30 * time.Second)
 		}
-		inserted, err := app.pgClient.NodeUpsert(newNode)
-		if util.LoggerError(app.logger, err) != nil {
-			return err
-		}
-		app.logger.Info(fmt.Sprintf("Inserted for %#v: %t", newNode, inserted))
-	}
 
-	//Consume all updated events and reconcile them with the previous states
-	nodesStakedUpdated, err := app.ethClient.GetPastNodesStakeUpdatedEvents()
-	if util.LoggerError(app.logger, err) != nil {
-		return err
-	}
-	for _, node := range nodesStakedUpdated {
-		newNode := types.Node{
-			EthAddr:     node.Sender.Hex(),
-			PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
-			BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
-		}
-		inserted, err := app.pgClient.NodeUpsert(newNode)
+		//Consume all past node events from this contract and import them into the local postgres instance
+		nodesStaked, err := app.ethClient.GetPastNodesStakedEvents(*highestBlock)
 		if util.LoggerError(app.logger, err) != nil {
-			return err
+			app.logger.Info("error in finding past staked nodes")
+			continue
 		}
-		fmt.Printf("Inserted Update for %#v: %t", newNode, inserted)
-	}
+		for _, node := range nodesStaked {
+			newNode := types.Node{
+				EthAddr:     node.Sender.Hex(),
+				PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
+				BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+			}
+			inserted, err := app.pgClient.NodeUpsert(newNode)
+			if util.LoggerError(app.logger, err) != nil {
+				continue
+			}
+			app.logger.Info(fmt.Sprintf("Inserted for %#v: %t", newNode, inserted))
+		}
 
-	//Consume unstake events and delete nodes where the blockNumber of this event is higher than the last stake or update
-	nodesUnstaked, err := app.ethClient.GetPastNodesUnstakeEvents()
-	if util.LoggerError(app.logger, err) != nil {
-		return err
-	}
-	for _, node := range nodesUnstaked {
-		newNode := types.Node{
-			EthAddr:     node.Sender.Hex(),
-			PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
-			BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
-		}
-		deleted, err := app.pgClient.NodeDelete(newNode)
+		//Consume all updated events and reconcile them with the previous states
+		nodesStakedUpdated, err := app.ethClient.GetPastNodesStakeUpdatedEvents(*highestBlock)
 		if util.LoggerError(app.logger, err) != nil {
-			return err
+			continue
 		}
-		fmt.Printf("Deleted node for %#v: %t", newNode, deleted)
-	}
-	return nil
-}
+		for _, node := range nodesStakedUpdated {
+			newNode := types.Node{
+				EthAddr:     node.Sender.Hex(),
+				PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
+				BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+			}
+			inserted, err := app.pgClient.NodeUpsert(newNode)
+			if util.LoggerError(app.logger, err) != nil {
+				continue
+			}
+			app.logger.Info(fmt.Sprintf("Updated for %#v: %t", newNode, inserted))
+		}
 
-//WatchNodesFromContract : get all future node staking events and updates
-func (app *AnchorApplication) WatchNodesFromContract() error {
-	highestBlock, err := app.ethClient.HighestBlock()
-	if util.LoggerError(app.logger, err) != nil {
-		highestBlock = big.NewInt(0)
+		//Consume unstake events and delete nodes where the blockNumber of this event is higher than the last stake or update
+		nodesUnstaked, err := app.ethClient.GetPastNodesUnstakeEvents(*highestBlock)
+		if util.LoggerError(app.logger, err) != nil {
+			continue
+		}
+		for _, node := range nodesUnstaked {
+			newNode := types.Node{
+				EthAddr:     node.Sender.Hex(),
+				PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
+				BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
+			}
+			deleted, err := app.pgClient.NodeDelete(newNode)
+			if util.LoggerError(app.logger, err) != nil {
+				continue
+			}
+			app.logger.Info(fmt.Sprintf("Deleted for %#v: %t", newNode, deleted))
+		}
+
+		highestBlock, err = app.ethClient.HighestBlock()
+		if util.LoggerError(app.logger, err) != nil {
+			continue
+		}
 	}
-	go app.ethClient.WatchNodeStakeEvents(app.pgClient.HandleNodeStaking, *highestBlock)
-	go app.ethClient.WatchNodeStakeUpdatedEvents(app.pgClient.HandleNodeStakeUpdating, *highestBlock)
-	go app.ethClient.WatchNodeUnstakeEvents(app.pgClient.HandleNodeUnstake, *highestBlock)
-	return nil
 }
 
 //ValidateNodeRecentReputation : download and verify reputation chain items from a node
