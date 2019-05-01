@@ -24,6 +24,9 @@ describe('Nodes Controller', () => {
     let dbResult = randomIps.map(ip => {
       return { publicIp: ip }
     })
+    let result = randomIps.map(ip => {
+      return { public_uri: `http://${ip}` }
+    })
     before(() => {
       nodes.setTmRpc({
         getAbciInfo: async () => {
@@ -34,14 +37,14 @@ describe('Nodes Controller', () => {
     })
     it('should return random nodes', done => {
       request(insecureServer)
-        .get('/nodes')
+        .get('/nodes/random')
         .expect('Content-type', /json/)
         .expect(200)
         .end((err, res) => {
           expect(err).to.equal(null)
           expect(res.body)
             .to.be.a('array')
-            .and.to.deep.equal(randomIps)
+            .and.to.deep.equal(result)
           done()
         })
     })
@@ -51,6 +54,9 @@ describe('Nodes Controller', () => {
     let randomIps = ['65.10.123.1']
     let dbResult = randomIps.map(ip => {
       return { publicIp: ip }
+    })
+    let result = randomIps.map(ip => {
+      return { public_uri: `http://${ip}` }
     })
     before(() => {
       nodes.setTmRpc({
@@ -65,14 +71,14 @@ describe('Nodes Controller', () => {
     })
     it('should return random nodes', done => {
       request(insecureServer)
-        .get('/nodes')
+        .get('/nodes/random')
         .expect('Content-type', /json/)
         .expect(200)
         .end((err, res) => {
           expect(err).to.equal(null)
           expect(res.body)
             .to.be.a('array')
-            .and.to.deep.equal(randomIps)
+            .and.to.deep.equal(result)
           done()
         })
     })
@@ -82,6 +88,9 @@ describe('Nodes Controller', () => {
     let randomIps = ['65.10.123.1']
     let dbResult = randomIps.map(ip => {
       return { publicIp: ip }
+    })
+    let result = randomIps.map(ip => {
+      return { public_uri: `http://${ip}` }
     })
     before(() => {
       nodes.setTmRpc({
@@ -96,14 +105,14 @@ describe('Nodes Controller', () => {
     })
     it('should return random nodes', done => {
       request(insecureServer)
-        .get('/nodes')
+        .get('/nodes/random')
         .expect('Content-type', /json/)
         .expect(200)
         .end((err, res) => {
           expect(err).to.equal(null)
           expect(res.body)
             .to.be.a('array')
-            .and.to.deep.equal(randomIps)
+            .and.to.deep.equal(result)
           done()
         })
     })
@@ -113,6 +122,9 @@ describe('Nodes Controller', () => {
     let ips = ['65.10.123.1', '65.10.123.2', '65.10.123.3']
     let dataArray = ips.map(ip => {
       return { node_ip: ip }
+    })
+    let result = ips.map(ip => {
+      return { public_uri: `http://${ip}` }
     })
     let tx = { data: dataArray }
     tx = JSON.stringify(tx)
@@ -130,14 +142,14 @@ describe('Nodes Controller', () => {
     })
     it('should return correct nodes', done => {
       request(insecureServer)
-        .get('/nodes')
+        .get('/nodes/random')
         .expect('Content-type', /json/)
         .expect(200)
         .end((err, res) => {
           expect(err).to.equal(null)
           expect(res.body)
             .to.be.a('array')
-            .and.to.deep.equal(ips)
+            .and.to.deep.equal(result)
           done()
         })
     })
