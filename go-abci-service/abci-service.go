@@ -28,6 +28,87 @@ import (
 )
 
 func main() {
+
+	//Instantiate ABCI application
+	config := initABCIConfig()
+	app := abci.NewAnchorApplication(config)
+
+	//Instantiate Tendermint Node
+	defaultConfig, err := initTendermintConfig()
+	if err != nil {
+		util.LogError(err)
+		return
+	}
+	logger := initTMLogger(defaultConfig)
+	nodeKey, err := p2p.LoadOrGenNodeKey(defaultConfig.NodeKeyFile())
+	if util.LogError(err) != nil {
+		return
+	}
+	if tendermintPeers := util.GetEnv("PEERS", ""); tendermintPeers != "" {
+		defaultConfig.P2P.PersistentPeers = tendermintPeers
+	}
+	if tendermintSeeds := util.GetEnv("SEEDS", ""); tendermintSeeds != "" {
+		defaultConfig.P2P.Seeds = tendermintSeeds
+	}
+
+	// Convert old PrivValidator if it exists.
+	oldPrivVal := defaultConfig.OldPrivValidatorFile()
+	newPrivValKey := defaultConfig.PrivValidatorKeyFile()
+	newPrivValState := defaultConfig.PrivValidatorStateFile()
+	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
+		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
+		if err != nil {
+			util.LogError(err)
+			return
+		}
+		logger.Info("Upgrading PrivValidator file",
+			"old", oldPrivVal,
+			"newKey", newPrivValKey,
+			"newState", newPrivValState,
+		)
+		oldPV.Upgrade(newPrivValKey, newPrivValState)
+	}
+
+	//declare connection to abci app
+	appProxy := proxy.NewLocalClientCreator(app)
+
+	/* Declare Tendermint Node with given config and abci app */
+	n, err := node.NewNode(defaultConfig,
+		privval.LoadOrGenFilePV(newPrivValKey, newPrivValState),
+		nodeKey,
+		appProxy,
+		node.DefaultGenesisDocProviderFunc(defaultConfig),
+		node.DefaultDBProvider,
+		node.DefaultMetricsProvider(defaultConfig.Instrumentation),
+		logger,
+	)
+	if err != nil {
+		util.LogError(err)
+		return
+	}
+
+	// Wait forever, shutdown gracefully upon
+	cmn.TrapSignal(*config.Logger, func() {
+		if n.IsRunning() {
+			logger.Info("Shutting down Core...")
+			n.Stop()
+		}
+	})
+
+	// Start Tendermint Node
+	if err := n.Start(); err != nil {
+		util.LogError(err)
+		return
+	}
+	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
+
+	// Wait forever
+	select {}
+	return
+}
+
+// initABCIConfig: receives ENV variables and initializes app config struct
+func initABCIConfig() types.AnchorConfig {
 	// Perform env type conversions
 	doNodeManagement, _ := strconv.ParseBool(util.GetEnv("NODE_MANAGEMENT", "true"))
 	doAuditLoop, _ := strconv.ParseBool(util.GetEnv("AUDIT", "true"))
@@ -39,7 +120,6 @@ func main() {
 	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
 	ethereumURL := util.GetEnv("ETH_URI", fmt.Sprintf("https://ropsten.infura.io/v3/%s", ethInfuraApiKey))
 	ethTokenContract := util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/TierionNetworkToken.json", useTestNets)
-	fmt.Println(ethTokenContract)
 	if ethTokenContract == "" {
 		ethTokenContract = util.GetEnv("TokenContractAddr", "0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3")
 	}
@@ -52,8 +132,6 @@ func main() {
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 	}
-	tendermintPeers := util.GetEnv("PEERS", "")
-	tendermintSeeds := util.GetEnv("SEEDS", "")
 	postgresUser := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
 	postgresPw := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")
 	postgresHost := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
@@ -81,7 +159,7 @@ func main() {
 	}
 
 	// Create config object
-	config := types.AnchorConfig{
+	return types.AnchorConfig{
 		DBType:           "goleveldb",
 		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintRPC:    tendermintRPC,
@@ -96,77 +174,10 @@ func main() {
 		AnchorInterval:   anchorInterval,
 		Logger:           &tmLogger,
 	}
-
-	//Instantiate ABCI application
-	app := abci.NewAnchorApplication(config)
-
-	defaultConfig, err := initConfig()
-	if err != nil {
-		util.LogError(err)
-		return
-	}
-	logger := initTMLogger(defaultConfig)
-	nodeKey, err := p2p.LoadOrGenNodeKey(defaultConfig.NodeKeyFile())
-	if err != nil {
-		return
-	}
-	if tendermintPeers != "" {
-		defaultConfig.P2P.PersistentPeers = tendermintPeers
-	}
-	if tendermintSeeds != "" {
-		defaultConfig.P2P.Seeds = tendermintSeeds
-	}
-
-	// Convert old PrivValidator if it exists.
-	oldPrivVal := defaultConfig.OldPrivValidatorFile()
-	newPrivValKey := defaultConfig.PrivValidatorKeyFile()
-	newPrivValState := defaultConfig.PrivValidatorStateFile()
-	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
-		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
-		if err != nil {
-			util.LogError(err)
-			return
-		}
-		logger.Info("Upgrading PrivValidator file",
-			"old", oldPrivVal,
-			"newKey", newPrivValKey,
-			"newState", newPrivValState,
-		)
-		oldPV.Upgrade(newPrivValKey, newPrivValState)
-	}
-	appProxy := proxy.NewLocalClientCreator(app) //declare connection to abci app
-	/* Create Tendermint Node */
-	n, err := node.NewNode(defaultConfig,
-		privval.LoadOrGenFilePV(newPrivValKey, newPrivValState),
-		nodeKey,
-		appProxy,
-		node.DefaultGenesisDocProviderFunc(defaultConfig),
-		node.DefaultDBProvider,
-		node.DefaultMetricsProvider(defaultConfig.Instrumentation),
-		logger,
-	)
-	if err != nil {
-		util.LogError(err)
-		return
-	}
-	// Wait forever
-	cmn.TrapSignal(tmLogger, func() {
-		if n.IsRunning() {
-			n.Stop()
-		}
-	})
-
-	if err := n.Start(); err != nil {
-		util.LogError(err)
-		return
-	}
-	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
-	select {}
-
-	return
 }
 
-func initConfig() (*cfg.Config, error) {
+// initTendermintConfig : imports tendermint config.toml and initializes config variables
+func initTendermintConfig() (*cfg.Config, error) {
 	initEnv("TM")
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
 	homeDir := "/tendermint"
@@ -194,6 +205,7 @@ func initConfig() (*cfg.Config, error) {
 	return defaultConfig, nil
 }
 
+// initTMLogger : initializes
 func initTMLogger(defaultConfig *cfg.Config) log.Logger {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 
