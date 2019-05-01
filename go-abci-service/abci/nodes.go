@@ -50,7 +50,11 @@ func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 
 //MintRewardNodes : mint rewards for nodes
 func (app *AnchorApplication) MintRewardNodes(sig []string) error {
-	if leader, _ := app.ElectLeader(1); leader {
+	leader, ids := app.ElectLeader(1)
+	if len(ids) == 1 {
+		app.state.LastMintCoreID = app.ID
+	}
+	if leader {
 		app.state.LastMintCoreID = app.ID
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
@@ -99,7 +103,9 @@ func (app *AnchorApplication) CollectRewardNodes() error {
 		if res.Code == 0 {
 			return nil
 		}
-		return errors.New("did not successfully broadcast SIGN-RC tx")
+		err = errors.New("did not successfully broadcast SIGN-RC tx")
+		util.LoggerError(app.logger, err)
+		return err
 	}
 	return nil
 }
@@ -131,8 +137,11 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 
 //AuditNodes : Audit nodes for reputation chain and hash submission validity. Submits reward tx with info if successful
 func (app *AnchorApplication) AuditNodes() error {
-	if leader, _ := app.ElectLeader(1); leader {
+	leader, ids := app.ElectLeader(1)
+	if len(ids) == 1 {
 		app.state.LastAuditCoreID = app.ID
+	}
+	if leader {
 		rewardCandidates := make([]types.NodeJSON, 0)
 		deadline := time.Now().Add(1 * time.Minute)
 		var wg sync.WaitGroup
