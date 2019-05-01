@@ -19,6 +19,8 @@ const env = require('../parse-env.js')('api')
 const utils = require('../utils.js')
 const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
+const jwt = require('jsonwebtoken')
+const tokenUtils = require('../middleware/token-utils.js')
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -158,6 +160,37 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
+  const tokenString = req.params.token
+  // ensure that token is supplied
+  if (!tokenString) {
+    return next(new errors.InvalidArgumentError('invalid request, token must be supplied'))
+  }
+
+  let decodedToken = null
+  // attempt to parse token, if not valid, return error
+  try {
+    decodedToken = jwt.decode(tokenString, { complete: true })
+    if (!decodedToken) throw new Error()
+  } catch (error) {
+    return next(new errors.InvalidArgumentError('invalid request, token cannot be decoded'))
+  }
+
+  // verify signature of token
+  let verifyError = await tokenUtils.verifySigAsync(tokenString, decodedToken)
+  // verifyError will be a restify error on error, or null on successful verification
+  if (verifyError !== null) return next(verifyError)
+
+  // cannot accept expired token
+  let exp = decodedToken.payload.exp
+  if (!exp) return next(new errors.InvalidArgumentError('invalid request, token missing `exp` value'))
+  if (isNaN(exp)) return next(new errors.InvalidArgumentError('invalid request, `exp` value must be a number'))
+  let expMS = exp * 1000
+  if (expMS < Date.now()) return next(new errors.UnauthorizedError('not authorized, token has expired'))
+
+  // ensure that we can retrieve the Node IP from the request
+  let submittingNodeIP = req.clientIp
+  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+
   let responseObj = generatePostHashResponse(req.params.hash)
 
   let hashObj = {
@@ -184,5 +217,11 @@ module.exports = {
   // additional functions for testing purposes
   setAMQPChannel: chan => {
     amqpChannel = chan
+  },
+  setRedis: r => {
+    tokenUtils.setRedis(r)
+  },
+  setRP: rp => {
+    tokenUtils.setRP(rp)
   }
 }

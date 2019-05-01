@@ -23,13 +23,8 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const uuidv1 = require('uuid/v1')
 const jose = require('node-jose')
-let rp = require('request-promise-native')
-const retry = require('async-retry')
 let tmRpc = require('../tendermint-rpc.js')
-let status = require('./status.js')
-
-const CORE_JWK_KEY_PREFIX = 'CorePublicKey'
-const CORE_ID_KEY = 'CoreID'
+const tokenUtils = require('../middleware/token-utils.js')
 
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
@@ -40,10 +35,6 @@ let tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.js
 const tokenABI = tknDefinition.abi
 const tokenContractInterface = new ethers.utils.Interface(tokenABI)
 let tokenContractAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
-
-// The redis connection used for all redis communication
-// This value is set once the connection has been established
-let redis = null
 
 async function postTokenRefreshAsync(req, res, next) {
   const tokenString = req.params.token
@@ -62,30 +53,17 @@ async function postTokenRefreshAsync(req, res, next) {
   }
 
   // verify signature of token
-  try {
-    // get the token's key id
-    let kid = decodedToken.header.kid
-    if (!kid) return next(new errors.InvalidArgumentError('invalid request, token missing `kid` value'))
-    // get the token's issuer, the Core URI
-    let iss = decodedToken.payload.iss
-    if (!iss) return next(new errors.InvalidArgumentError('invalid request, token missing `iss` value'))
-    // get the JWK for the given token
-    let jwkObj = await getCachedJWKAsync(kid, iss)
-    if (!jwkObj)
-      return next(new errors.InvalidArgumentError('invalid request, unable to find public key for given kid'))
-    let jwk = await jose.JWK.asKey(jwkObj, 'json')
-    jwt.verify(tokenString, jwk.toPEM(), { complete: true, ignoreExpiration: true })
-  } catch (error) {
-    return next(new errors.InvalidArgumentError('invalid request, token signature cannot be verified'))
-  }
-
-  // cannot refresh a token with a balance of 0
-  if (decodedToken.payload.bal < 1)
-    return next(new errors.InvalidArgumentError('invalid request, token with 0 balance cannot be refreshed'))
+  let verifyError = await tokenUtils.verifySigAsync(tokenString, decodedToken)
+  // verifyError will be a restify error on error, or null on successful verification
+  if (verifyError !== null) return next(verifyError)
 
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = req.clientIp
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+
+  // cannot refresh a token with a balance of 0
+  if (decodedToken.payload.bal < 1)
+    return next(new errors.InvalidArgumentError('invalid request, token with 0 balance cannot be refreshed'))
 
   // ensure that the submitted token is the active token for the Node
   let activeTokenHash = null
@@ -134,7 +112,7 @@ async function postTokenRefreshAsync(req, res, next) {
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
   try {
-    let coreId = await getCachedCoreIDAsync()
+    let coreId = await tokenUtils.getCachedCoreIDAsync()
     await broadcastCoreTxAsync(coreId, submittingNodeIP, refreshTokenHash)
   } catch (error) {
     return next(new errors.InternalServerError(`server error, ${error.message}`))
@@ -149,81 +127,6 @@ async function createAndSignJWTAsync(payload) {
   let privateKeyPEM = env.ECDSA_PKPEM
   let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
   return jwt.sign(payload, privateKeyPEM, { algorithm: 'ES256', keyid: jwk.toJSON().kid })
-}
-
-async function getCachedJWKAsync(kid, iss) {
-  // first, attempt to read value from Redis
-  let redisKey = `${CORE_JWK_KEY_PREFIX}:${kid}`
-  if (redis) {
-    try {
-      let cacheResult = await redis.get(redisKey)
-      if (cacheResult) return JSON.parse(cacheResult)
-    } catch (error) {
-      console.error(`Redis read error : getTokenJWKAsync : ${error.message}`)
-    }
-  }
-  // a value was not found in Redis, so ask the specific Core directly
-  let result = null
-  try {
-    let coreStatus = await coreStatusRequestAsync(iss)
-    if (!coreStatus) return null
-    if (!coreStatus.jwk || coreStatus.jwk.kid !== kid) return null
-    result = coreStatus.jwk
-  } catch (error) {
-    console.error(`Core request error : getTokenJWKAsync : ${error.message}`)
-  }
-  // if a non cached value was found, add to the cache
-  if (result && redis) {
-    try {
-      await redis.set(redisKey, JSON.stringify(result))
-    } catch (error) {
-      console.error(`Redis write error : getTokenJWKAsync : ${error.message}`)
-    }
-  }
-
-  return result
-}
-
-async function coreStatusRequestAsync(coreURI, retryCount = 3) {
-  // if we need /status from ourselves, skip the HTTP call and attain directly
-  if (coreURI === env.CHAINPOINT_CORE_BASE_URI) {
-    let result = await status.buildStatusObjectAsync()
-    return result.status
-  }
-  let options = {
-    method: 'GET',
-    uri: `${coreURI}/status`,
-    json: true,
-    gzip: true,
-    timeout: 2000,
-    resolveWithFullResponse: true
-  }
-
-  let response
-  await retry(
-    async bail => {
-      try {
-        response = await rp(options)
-      } catch (error) {
-        // If no response was received or there is a status code >= 500, then we should retry the call, throw an error
-        if (!error.statusCode || error.statusCode >= 500) throw error
-        // errors like 409 Conflict or 400 Bad Request are not retried because the request is bad and will never succeed
-        bail(error)
-      }
-    },
-    {
-      retries: retryCount, // The maximum amount of times to retry the operation. Default is 3
-      factor: 1, // The exponential factor to use. Default is 2
-      minTimeout: 200, // The number of milliseconds before starting the first retry. Default is 200
-      maxTimeout: 400,
-      randomize: true,
-      onRetry: error => {
-        console.log(`Error on request to Core : ${error.statusCode || 'no response'} : ${error.message} : retrying`)
-      }
-    }
-  )
-
-  return response.body
 }
 
 async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
@@ -250,38 +153,6 @@ async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
   } catch (error) {
     throw new Error(`server error on transaction broadcast, ${error.message}`)
   }
-}
-
-async function getCachedCoreIDAsync() {
-  // first, attempt to read value from Redis
-  if (redis) {
-    try {
-      let cacheResult = await redis.get(CORE_ID_KEY)
-      if (cacheResult) return cacheResult
-    } catch (error) {
-      console.error(`Redis read error : getCachedCoreIDAsync : ${error.message}`)
-    }
-  }
-  // a value was not found in Redis, so ask the specific Core directly
-  let result = null
-  try {
-    let coreStatus = await coreStatusRequestAsync(env.CHAINPOINT_CORE_BASE_URI)
-    if (!coreStatus) return null
-    if (!coreStatus.node_info || !coreStatus.node_info.id) return null
-    result = coreStatus.node_info.id
-  } catch (error) {
-    console.error(`Core request error : getCachedCoreIDAsync : ${error.message}`)
-  }
-  // if a non cached value was found, add to the cache
-  if (result && redis) {
-    try {
-      await redis.set(CORE_ID_KEY, result)
-    } catch (error) {
-      console.error(`Redis write error : getCachedCoreIDAsync : ${error.message}`)
-    }
-  }
-
-  return result
 }
 
 function constructTokenPayload(submittingNodeIP, exp, bal) {
@@ -379,7 +250,7 @@ async function postTokenCreditAsync(req, res, next) {
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
   try {
-    let coreId = await getCachedCoreIDAsync()
+    let coreId = await tokenUtils.getCachedCoreIDAsync()
     await broadcastCoreTxAsync(coreId, submittingNodeIP, newTokenHash)
   } catch (error) {
     return next(new errors.InternalServerError(`server error, ${error.message}`))
@@ -393,15 +264,9 @@ async function postTokenCreditAsync(req, res, next) {
 module.exports = {
   postTokenRefreshAsync: postTokenRefreshAsync,
   postTokenCreditAsync: postTokenCreditAsync,
-  setRedis: r => {
-    redis = r
-  },
   // additional functions for testing purposes
   setFP: fp => {
     fallbackProvider = fp
-  },
-  setRP: r => {
-    rp = r
   },
   setAT: at => {
     activeToken = at
@@ -409,13 +274,19 @@ module.exports = {
   setENV: e => {
     env = e
   },
-  setStatus: s => {
-    status = s
-  },
   setTMRPC: rpc => {
     tmRpc = rpc
   },
   setTA: ta => {
     tokenContractAddress = ta
+  },
+  setRedis: r => {
+    tokenUtils.setRedis(r)
+  },
+  setStatus: s => {
+    tokenUtils.setStatus(s)
+  },
+  setRP: rp => {
+    tokenUtils.setRP(rp)
   }
 }

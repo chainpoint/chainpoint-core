@@ -34,7 +34,8 @@ const proof = require('./lib/models/Proof.js')
 const stakedNode = require('./lib/models/StakedNode.js')
 const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
-const ethTxWhitelist = require('./lib/middleware/checkEthTxWhitelist').validate
+const ethTxWhitelist = require('./lib/middleware/eth-tx-whitelist.js').validate
+const tokenUtils = require('./lib/middleware/token-utils.js')
 const requestIp = require('request-ip')
 
 const bunyan = require('bunyan')
@@ -144,10 +145,10 @@ function openRedisConnection(redisURIs) {
   connections.openRedisConnection(
     redisURIs,
     newRedis => {
-      usageToken.setRedis(newRedis)
+      tokenUtils.setRedis(newRedis)
     },
     () => {
-      usageToken.setRedis(null)
+      tokenUtils.setRedis(null)
       setTimeout(() => {
         openRedisConnection(redisURIs)
       }, 5000)
