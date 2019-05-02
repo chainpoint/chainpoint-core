@@ -36,7 +36,6 @@ const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const ethTxWhitelist = require('./lib/middleware/eth-tx-whitelist.js').validate
 const tokenUtils = require('./lib/middleware/token-utils.js')
-const requestIp = require('request-ip')
 
 const bunyan = require('bunyan')
 
@@ -96,7 +95,6 @@ function setupRestifyConfigAndRoutes(server) {
   server.use(restify.plugins.gzipResponse())
   server.use(restify.plugins.queryParser())
   server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
-  server.use(requestIp.mw())
 
   // API RESOURCES
 

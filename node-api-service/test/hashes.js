@@ -336,6 +336,147 @@ describe('Hashes Controller', () => {
     })
   })
 
+  describe('POST /hashes cant determine Node IP', () => {
+    let jwk = {
+      kty: 'EC',
+      kid: 'wIf_pOR22DMLqhDqqlUxA2bC0kqpndXh58O6dguUoVY',
+      crv: 'P-256',
+      x: '2uX3pg85W7sEvvvml-1pWhdZ6FfyXhUWSYbuzkjz5mo',
+      y: 'EfT6n1A7g9hcwKh_TL3-iWim7PlxvZfO1SsM68duXBc'
+    }
+    before(() => {
+      hashes.setRedis({
+        get: async () => null,
+        set: async () => null
+      })
+      hashes.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      hashes.setGetIP(() => null)
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IndJZl9wT1IyMkRNTHFoRHFxbFV4QTJiQzBrcXBuZFhoNThPNmRndVVvVlkifQ.eyJqdGkiOiJkZGFlYTcxMC02Y2Q3LTExZTktYTZjYy1iMTFlZWE2ZTA3MGYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImJhbCI6MTAsImlhdCI6MTU1NjgwMTAwMH0.rYkUwEfLVgDK14nd9sAzCVQwI1WwKDwpjKwVMXudRpxjlksNuKSJ_SXe4vw6SKKRw3PRv9b_gLpTfgrPOlMaBw'
+        })
+        .expect('Content-type', /json/)
+        .expect(400)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('BadRequest')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('bad request, unable to determine Node IP')
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes sub missing', () => {
+    let jwk = {
+      kty: 'EC',
+      kid: 'm2Z7IaIP6L747gKRsa9M6Bm2LJSbOpSouJF20pW9LRQ',
+      crv: 'P-256',
+      x: '_LjJFmsZBrct978_ojhXWyklogCaYmvZKT0sC4JPvmY',
+      y: 'JhaiIVpJ8RlLQzyksVz8oQXrJRzATzLX88XPIixsJg8'
+    }
+    before(() => {
+      hashes.setRedis({
+        get: async () => null,
+        set: async () => null
+      })
+      hashes.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      hashes.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Im0yWjdJYUlQNkw3NDdnS1JzYTlNNkJtMkxKU2JPcFNvdUpGMjBwVzlMUlEifQ.eyJqdGkiOiJhOWE4MDNmMC02ZDA3LTExZTktYWFjZC02OWMzOWFhNTRhYjIiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsImV4cCI6MTg3MjE4MTUzMCwiYmFsIjoxMCwiaWF0IjoxNTU2ODIxNTI5fQ.8VeFFh7SNCfCJlSOyovVmeNyaAdgh7V_OZTVvutdRD1y9_5JmPOvuo2xQTRLUAwFZfVWYVOms399TiosmZARww'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, token missing `sub` value')
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes Node IP and JWT sub do not match', () => {
+    let jwk = {
+      kty: 'EC',
+      kid: 'wIf_pOR22DMLqhDqqlUxA2bC0kqpndXh58O6dguUoVY',
+      crv: 'P-256',
+      x: '2uX3pg85W7sEvvvml-1pWhdZ6FfyXhUWSYbuzkjz5mo',
+      y: 'EfT6n1A7g9hcwKh_TL3-iWim7PlxvZfO1SsM68duXBc'
+    }
+    before(() => {
+      hashes.setRedis({
+        get: async () => null,
+        set: async () => null
+      })
+      hashes.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      hashes.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IndJZl9wT1IyMkRNTHFoRHFxbFV4QTJiQzBrcXBuZFhoNThPNmRndVVvVlkifQ.eyJqdGkiOiJkZGFlYTcxMC02Y2Q3LTExZTktYTZjYy1iMTFlZWE2ZTA3MGYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImJhbCI6MTAsImlhdCI6MTU1NjgwMTAwMH0.rYkUwEfLVgDK14nd9sAzCVQwI1WwKDwpjKwVMXudRpxjlksNuKSJ_SXe4vw6SKKRw3PRv9b_gLpTfgrPOlMaBw'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, token subject does not match Node IP')
+          done()
+        })
+    })
+  })
+
   describe('POST /hashes exp missing', () => {
     let cache = null
     let jwk = {
@@ -356,6 +497,7 @@ describe('Hashes Controller', () => {
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
       })
+      hashes.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       app.setAMQPChannel({
@@ -410,6 +552,7 @@ describe('Hashes Controller', () => {
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
       })
+      hashes.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       app.setAMQPChannel({
@@ -464,6 +607,7 @@ describe('Hashes Controller', () => {
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
       })
+      hashes.setGetIP(() => '24.154.21.11')
     })
     it('should return a matched set of metadata and UUID embedded timestamps', done => {
       app.setAMQPChannel({
@@ -515,6 +659,7 @@ describe('Hashes Controller', () => {
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
       })
+      hashes.setGetIP(() => '24.154.21.11')
     })
     it('should return a v1 UUID node embedded with a partial SHA256 over timestamp and hash', done => {
       app.setAMQPChannel({
@@ -577,6 +722,7 @@ describe('Hashes Controller', () => {
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
       })
+      hashes.setGetIP(() => '24.154.21.11')
     })
     it('should return proper result with valid call', done => {
       app.setAMQPChannel({
