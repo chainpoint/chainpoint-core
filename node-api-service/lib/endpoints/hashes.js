@@ -180,16 +180,16 @@ async function postHashV1Async(req, res, next) {
   // verifyError will be a restify error on error, or null on successful verification
   if (verifyError !== null) return next(verifyError)
 
+  // ensure that we can retrieve the Node IP from the request
+  let submittingNodeIP = req.clientIp
+  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+
   // cannot accept expired token
   let exp = decodedToken.payload.exp
   if (!exp) return next(new errors.InvalidArgumentError('invalid request, token missing `exp` value'))
   if (isNaN(exp)) return next(new errors.InvalidArgumentError('invalid request, `exp` value must be a number'))
   let expMS = exp * 1000
   if (expMS < Date.now()) return next(new errors.UnauthorizedError('not authorized, token has expired'))
-
-  // ensure that we can retrieve the Node IP from the request
-  let submittingNodeIP = req.clientIp
-  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
 
   let responseObj = generatePostHashResponse(req.params.hash)
 
