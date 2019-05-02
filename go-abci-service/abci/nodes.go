@@ -135,6 +135,9 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 			nodeArray = append(nodeArray, common.HexToAddress(nodeJSON.EthAddr))
 		}
 	}
+	if len(nodeArray) == 0 {
+		return []common.Address{}, []byte{}, errors.New("No NODE-RC t from the last epoch have been found")
+	}
 	addresses := uniquify(nodeArray)
 	rewardHash := ethcontracts.AddressesToHash(addresses)
 	return addresses, rewardHash, nil
