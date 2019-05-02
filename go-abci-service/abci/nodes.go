@@ -82,7 +82,7 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 func (app *AnchorApplication) CollectRewardNodes() error {
 	if leader, _ := app.ElectLeader(5); leader {
 		currentEthBlock, err := app.ethClient.HighestBlock()
-		if util.LoggerError(app.logger, err) != nil {'
+		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Error("Mint Error: problem retrieving highest block")
 			return err
 		}
