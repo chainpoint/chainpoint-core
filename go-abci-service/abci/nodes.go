@@ -59,7 +59,7 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
 			if util.LoggerError(app.logger, err) != nil {
-				app.logger.Info("mint hex decoding failed")
+				app.logger.Info("Mint Error: mint hex decoding failed")
 				continue
 			}
 			sigBytes[i] = decodedSig
@@ -70,6 +70,7 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 		}
 		err = app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
 		if util.LoggerError(app.logger, err) != nil {
+			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
 		}
 		app.RewardSignatures = make([]string, 0)
@@ -81,28 +82,33 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 func (app *AnchorApplication) CollectRewardNodes() error {
 	if leader, _ := app.ElectLeader(5); leader {
 		currentEthBlock, err := app.ethClient.HighestBlock()
-		if util.LoggerError(app.logger, err) != nil {
+		if util.LoggerError(app.logger, err) != nil {'
+			app.logger.Error("Mint Error: problem retrieving highest block")
 			return err
 		}
 		if currentEthBlock.Int64()-app.state.LastMintedAtBlock < 5760 {
+			app.logger.Info("Mint Error: Too soon for minting")
 			return errors.New("Too soon for minting")
 		}
 		_, rewardHash, err := app.GetNodeRewardCandidates()
 		if util.LoggerError(app.logger, err) != nil {
+			app.logger.Info("Mint Error: Error retrieving node reward candidates")
 			return err
 		}
 		signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
 		if util.LoggerError(app.logger, err) != nil {
+			app.logger.Info("Mint Error: Problem with signing message for minting")
 			return err
 		}
 		res, err := app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
 		if err != nil {
+			app.logger.Info("Mint Error: Error issuing SIGN tx")
 			return err
 		}
 		if res.Code == 0 {
 			return nil
 		}
-		err = errors.New("did not successfully broadcast SIGN-RC tx")
+		err = errors.New("Mint Error: did not successfully broadcast SIGN-RC tx")
 		util.LoggerError(app.logger, err)
 		return err
 	}
