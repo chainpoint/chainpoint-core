@@ -52,10 +52,9 @@ func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 	leader, ids := app.ElectLeader(1)
 	if len(ids) == 1 {
-		app.state.LastMintCoreID = app.ID
+		app.state.LastMintCoreID = ids[0]
 	}
 	if leader {
-		app.state.LastMintCoreID = app.ID
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
@@ -139,7 +138,7 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 func (app *AnchorApplication) AuditNodes() error {
 	leader, ids := app.ElectLeader(1)
 	if len(ids) == 1 {
-		app.state.LastAuditCoreID = app.ID
+		app.state.LastAuditCoreID = ids[0]
 	}
 	if leader {
 		rewardCandidates := make([]types.NodeJSON, 0)
