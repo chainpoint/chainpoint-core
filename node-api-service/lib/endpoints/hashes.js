@@ -184,6 +184,14 @@ async function postHashV1Async(req, res, next) {
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
 
+  // get the token's subject
+  let sub = decodedToken.payload.sub
+  if (!sub) return next(new errors.InvalidArgumentError('invalid request, token missing `sub` value'))
+
+  // ensure the Node IP is the subject of the JWT
+  if (sub !== submittingNodeIP)
+    return next(new errors.InvalidArgumentError('invalid request, token subject does not match Node IP'))
+
   // cannot accept expired token
   let exp = decodedToken.payload.exp
   if (!exp) return next(new errors.InvalidArgumentError('invalid request, token missing `exp` value'))
@@ -223,5 +231,8 @@ module.exports = {
   },
   setRP: rp => {
     tokenUtils.setRP(rp)
+  },
+  setGetIP: func => {
+    utils.getClientIP = func
   }
 }

@@ -194,6 +194,132 @@ describe('Usage Token Controller', () => {
     })
   })
 
+  describe('POST /usagetoken/refresh cant determine Node IP', () => {
+    let jwk = {
+      kty: 'EC',
+      kid: '6zwQfNTgA8uEN1ufatlq06VIexOZ8Z1_rOUnsvUBrr4',
+      crv: 'P-256',
+      x: 'YHkAzNJP6Ro8HtX5BBkVJdsNqsgE-EZIij1OZQMBwWA',
+      y: '9sgsYrTvZ7mEF5Bg5dwbseOU2EBij5elLzb-4mv6iHE'
+    }
+    before(() => {
+      usageToken.setRedis({
+        get: async () => null,
+        set: async () => null
+      })
+      usageToken.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      usageToken.setGetIP(() => null)
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjZ6d1FmTlRnQTh1RU4xdWZhdGxxMDZWSWV4T1o4WjFfck9VbnN2VUJycjQifQ.eyJqdGkiOiI3YjU3ZTExMC02Yjg1LTExZTktOGQxOC1kMTU1MjkwZTU5YjMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1OTI2NiwiYmFsIjowLCJpYXQiOjE1NTY2NTU2NjV9.6BMhmmSTva9HJklAPeeCf56gnwTIK31m28GtydhKexh3p9NfaMy4r-TZioILh5Tol0wOwa0vxx7WOGGg5lrZqg'
+        })
+        .expect('Content-type', /json/)
+        .expect(400)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('BadRequest')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('bad request, unable to determine Node IP')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh sub missing', () => {
+    let jwk = {
+      kty: 'EC',
+      kid: 'm2Z7IaIP6L747gKRsa9M6Bm2LJSbOpSouJF20pW9LRQ',
+      crv: 'P-256',
+      x: '_LjJFmsZBrct978_ojhXWyklogCaYmvZKT0sC4JPvmY',
+      y: 'JhaiIVpJ8RlLQzyksVz8oQXrJRzATzLX88XPIixsJg8'
+    }
+    before(() => {
+      usageToken.setRedis({
+        get: async () => null,
+        set: async () => null
+      })
+      usageToken.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      usageToken.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Im0yWjdJYUlQNkw3NDdnS1JzYTlNNkJtMkxKU2JPcFNvdUpGMjBwVzlMUlEifQ.eyJqdGkiOiJhOWE4MDNmMC02ZDA3LTExZTktYWFjZC02OWMzOWFhNTRhYjIiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsImV4cCI6MTg3MjE4MTUzMCwiYmFsIjoxMCwiaWF0IjoxNTU2ODIxNTI5fQ.8VeFFh7SNCfCJlSOyovVmeNyaAdgh7V_OZTVvutdRD1y9_5JmPOvuo2xQTRLUAwFZfVWYVOms399TiosmZARww'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, token missing `sub` value')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh Node IP and JWT sub do not match', () => {
+    let jwk = {
+      kty: 'EC',
+      kid: '6zwQfNTgA8uEN1ufatlq06VIexOZ8Z1_rOUnsvUBrr4',
+      crv: 'P-256',
+      x: 'YHkAzNJP6Ro8HtX5BBkVJdsNqsgE-EZIij1OZQMBwWA',
+      y: '9sgsYrTvZ7mEF5Bg5dwbseOU2EBij5elLzb-4mv6iHE'
+    }
+    before(() => {
+      usageToken.setRedis({
+        get: async () => null,
+        set: async () => null
+      })
+      usageToken.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      usageToken.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjZ6d1FmTlRnQTh1RU4xdWZhdGxxMDZWSWV4T1o4WjFfck9VbnN2VUJycjQifQ.eyJqdGkiOiI3YjU3ZTExMC02Yjg1LTExZTktOGQxOC1kMTU1MjkwZTU5YjMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1OTI2NiwiYmFsIjowLCJpYXQiOjE1NTY2NTU2NjV9.6BMhmmSTva9HJklAPeeCf56gnwTIK31m28GtydhKexh3p9NfaMy4r-TZioILh5Tol0wOwa0vxx7WOGGg5lrZqg'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, token subject does not match Node IP')
+          done()
+        })
+    })
+  })
+
   describe('POST /usagetoken/refresh with 0 balance', () => {
     let cache = null
     let jwk = {
@@ -214,6 +340,7 @@ describe('Usage Token Controller', () => {
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -262,6 +389,7 @@ describe('Usage Token Controller', () => {
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => null
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -308,6 +436,7 @@ describe('Usage Token Controller', () => {
           throw new Error()
         }
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -354,6 +483,7 @@ describe('Usage Token Controller', () => {
           return { tokenHash: '18ee24150dcb1d96752a4d6dd0f20dfd8ba8c38527e40aa8509b7adecf78f9c6' }
         }
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -403,6 +533,7 @@ describe('Usage Token Controller', () => {
       usageToken.setENV({
         ECDSA_PKPEM: 'badPEM'
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -471,6 +602,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           throw new Error('tm error!')
         }
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -543,6 +675,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { error: { responseCode: 409, message: 'badarg' } }
         }
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -615,6 +748,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { error: { responseCode: 500, message: 'commerr' } }
         }
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -683,6 +817,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return {}
         }
       })
+      usageToken.setGetIP(() => '24.154.21.11')
     })
     it('should return proper refresh token', done => {
       request(insecureServer)

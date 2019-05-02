@@ -17,7 +17,7 @@
 const errors = require('restify-errors')
 const ethers = require('ethers')
 let env = require('../parse-env.js')('api')
-const utils = require('../utils.js')
+let utils = require('../utils.js')
 let activeToken = require('../models/ActiveToken.js')
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
@@ -60,6 +60,14 @@ async function postTokenRefreshAsync(req, res, next) {
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+
+  // get the token's subject
+  let sub = decodedToken.payload.sub
+  if (!sub) return next(new errors.InvalidArgumentError('invalid request, token missing `sub` value'))
+
+  // ensure the Node IP is the subject of the JWT
+  if (sub !== submittingNodeIP)
+    return next(new errors.InvalidArgumentError('invalid request, token subject does not match Node IP'))
 
   // cannot refresh a token with a balance of 0
   if (decodedToken.payload.bal < 1)
@@ -288,5 +296,8 @@ module.exports = {
   },
   setRP: rp => {
     tokenUtils.setRP(rp)
+  },
+  setGetIP: func => {
+    utils.getClientIP = func
   }
 }
