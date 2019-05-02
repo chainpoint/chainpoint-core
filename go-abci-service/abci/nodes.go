@@ -143,7 +143,7 @@ func (app *AnchorApplication) AuditNodes() error {
 	}
 	if leader {
 		rewardCandidates := make([]types.NodeJSON, 0)
-		deadline := time.Now().Add(1 * time.Minute)
+		deadline := time.Now().Add(9 * time.Minute)
 		var wg sync.WaitGroup
 		var mux sync.Mutex
 		for len(rewardCandidates) < 3 && !time.Now().After(deadline) {
@@ -330,6 +330,7 @@ func SendNodeHash(node types.Node) (types.NodeHashResponse, error) {
 		if err != nil {
 			return types.NodeHashResponse{}, err
 		}
+		//fmt.Printf("node proof Response: %#v\n", nodeResponse)
 		if resp.StatusCode == http.StatusOK {
 			contents, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
@@ -361,6 +362,7 @@ func RetrieveNodeCalProof(node types.Node, hashID types.NodeHashResponse) error 
 		if err := json.Unmarshal(contents, &nodeProof); err != nil {
 			return err
 		}
+		//fmt.Printf("node proof: %#v\n", nodeProof)
 		if len(nodeProof) > 0 && len(nodeProof[0].AnchorsComplete) > 0 {
 			for _, anchor := range nodeProof[0].AnchorsComplete {
 				if anchor == "cal" {
