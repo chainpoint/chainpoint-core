@@ -32,7 +32,7 @@ async function openTendermintConnectionAsync(tendermintURI, debug) {
       tmConnected = true
     } catch (error) {
       // catch errors when attempting to establish connection
-      logger.error('Cannot establish Tendermint connection : Attempting in 5 seconds...')
+      logger.warn('Cannot establish Tendermint connection : Attempting in 5 seconds...')
       await utils.sleepAsync(5000)
     }
   }
@@ -131,7 +131,7 @@ async function openPostgresConnectionAsync(modelSqlzArray, debug) {
       dbConnected = true
     } catch (error) {
       // catch errors when attempting to establish connection
-      logger.error('Cannot establish Postgres connection : Attempting in 5 seconds...')
+      logger.warn('Cannot establish Postgres connection : Attempting in 5 seconds...')
       await utils.sleepAsync(5000)
     }
   }
@@ -190,7 +190,7 @@ async function openStandardRMQConnectionAsync(
       rmqConnected = true
     } catch (error) {
       // catch errors when attempting to establish connection
-      logger.error('Cannot establish RabbitMQ connection : Attempting in 5 seconds...')
+      logger.warn('Cannot establish RabbitMQ connection : Attempting in 5 seconds...')
       await utils.sleepAsync(5000)
     }
   }
@@ -201,14 +201,14 @@ async function listenRestifyAsync(server, port, debug) {
   return new Promise((resolve, reject) => {
     server.listen(port, err => {
       if (err) return reject(err)
-      if (process.env.NODE_ENV !== 'test') logMessage(`${server.name} listening at ${server.url}`, debug, 'general')
+      if (process.env.NODE_ENV !== 'test') logMessage(`Chainpoint Core listening at ${server.url}`, debug, 'general')
       return resolve()
     })
   })
 }
 
 function startIntervals(intervals, debug) {
-  logMessage('starting intervals', debug, 'general')
+  logMessage('Starting intervals', debug, 'general')
 
   intervals.forEach(interval => {
     if (interval.immediate) interval.function()
