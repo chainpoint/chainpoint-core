@@ -201,7 +201,15 @@ deploy:
 
 ## stop						: stops a swarm stack
 stop:
-	docker stack rm chainpoint-core
+	docker stack rm chainpoint-core || echo "removal in progress"
+
+## clean-tendermint			: removes tendermint database, leaving postgres intact
+clean-tendermint: stop
+	sudo rm -rf config/node_1/data/tx_index.db
+	sudo rm -rf config/node_1/data/state.db
+	sudo rm -rf config/node_1/data/blockstore.db
+	sudo rm -rf config/node_1/data/evidence.db
+	docker system prune -af
 
 ## remove 					: stops, removes, and cleans a swarm
 remove: stop clean
