@@ -17,6 +17,7 @@
 const ethers = require('ethers')
 const env = require('../parse-env.js')('api')
 const errors = require('restify-errors')
+const logger = require('../logger.js')
 
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
@@ -42,21 +43,21 @@ async function getEthStatsAsync(req, res, next) {
     let creditPrice = 0.1 // TODO: Build and request from exchange rate service
     result.creditPrice = creditPrice
   } catch (error) {
-    console.error(`Error when attempting to retrieve credit price : ${error.message}`)
+    logger.error(`Error when attempting to retrieve credit price : ${error.message}`)
     return next(new errors.InternalServerError('Error when attempting to retrieve credit price'))
   }
   try {
     let gasPrice = await fallbackProvider.getGasPrice()
     result.gasPrice = gasPrice.toNumber()
   } catch (error) {
-    console.error(`Error when attempting to retrieve gas price : ${error.message}`)
+    logger.error(`Error when attempting to retrieve gas price : ${error.message}`)
     return next(new errors.InternalServerError('Error when attempting to retrieve gas price'))
   }
   try {
     let transactionCount = await fallbackProvider.getTransactionCount(ethAddress)
     result.transactionCount = transactionCount
   } catch (error) {
-    console.error(`Error when attempting to retrieve transaction count : ${ethAddress} : ${error.message}`)
+    logger.error(`Error when attempting to retrieve transaction count : ${ethAddress} : ${error.message}`)
     return next(new errors.InternalServerError('Error when attempting to retrieve transaction count'))
   }
 
@@ -70,7 +71,7 @@ async function getEthStatsAsync(req, res, next) {
         stakeLockedUntil: registrationResult.stakeLockedUntil.toNumber()
       }
     } catch (error) {
-      console.error(`Error when attempting to retrieve Chainpoint Registry info : ${ethAddress} : ${error.message}`)
+      logger.error(`Error when attempting to retrieve Chainpoint Registry info : ${ethAddress} : ${error.message}`)
       return next(new errors.InternalServerError('Error when attempting to retrieve Chainpoint Registry info'))
     }
   }
@@ -93,7 +94,7 @@ async function postEthBroadcastAsync(req, res, next) {
     let gasUsed = txReceipt.gasUsed.toNumber() // convert from BigNumber to native number
     result = { transactionHash, blockHash, blockNumber, gasUsed }
   } catch (error) {
-    console.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
+    logger.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
     return next(new errors.InternalServerError(error.message))
   }
 

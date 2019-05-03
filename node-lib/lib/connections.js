@@ -16,6 +16,7 @@
 
 const { URL } = require('url')
 const utils = require('./utils.js')
+const logger = require('./logger.js')
 
 /**
  * Opens a Tendermint RPC connection
@@ -31,7 +32,7 @@ async function openTendermintConnectionAsync(tendermintURI, debug) {
       tmConnected = true
     } catch (error) {
       // catch errors when attempting to establish connection
-      console.error('Cannot establish Tendermint connection. Attempting in 5 seconds...')
+      logger.error('Cannot establish Tendermint connection : Attempting in 5 seconds...')
       await utils.sleepAsync(5000)
     }
   }
@@ -83,10 +84,10 @@ function openRedisConnection(redisURIs, onReady, onError, debug) {
   var newRedis = new Redis(redisConfigObj)
 
   newRedis.on('error', err => {
-    console.error(`A redis error has occurred: ${err}`)
+    logger.error(`A redis error has occurred : ${err}`)
     newRedis.quit()
     onError()
-    console.error('Redis connection lost. Attempting reconnect...')
+    logger.error('Redis connection lost : Attempting reconnect...')
   })
 
   newRedis.on('ready', () => {
@@ -130,7 +131,7 @@ async function openPostgresConnectionAsync(modelSqlzArray, debug) {
       dbConnected = true
     } catch (error) {
       // catch errors when attempting to establish connection
-      console.error('Cannot establish Postgres connection. Attempting in 5 seconds...')
+      logger.error('Cannot establish Postgres connection : Attempting in 5 seconds...')
       await utils.sleepAsync(5000)
     }
   }
@@ -178,18 +179,18 @@ async function openStandardRMQConnectionAsync(
       // if the channel closes for any reason, attempt to reconnect
       conn.on('close', async () => {
         onClose()
-        console.error('Connection to RabbitMQ closed.  Reconnecting in 5 seconds...')
+        logger.error('Connection to RabbitMQ closed : Reconnecting in 5 seconds...')
       })
       // if the channel closes for any reason, attempt to reconnect
       conn.on('error', async error => {
-        console.error(`Connection to RabbitMQ caught an error : ${error}`)
+        logger.error(`Connection to RabbitMQ caught an error : ${error}`)
         conn.close()
       })
       logMessage('RabbitMQ connection established', debug, 'general')
       rmqConnected = true
     } catch (error) {
       // catch errors when attempting to establish connection
-      console.error('Cannot establish RabbitMQ connection. Attempting in 5 seconds...')
+      logger.error('Cannot establish RabbitMQ connection : Attempting in 5 seconds...')
       await utils.sleepAsync(5000)
     }
   }
@@ -221,7 +222,7 @@ function logMessage(message, debug, msgType) {
   if (debug && debug[msgType]) {
     debug[msgType](message)
   } else {
-    console.log(message)
+    logger.info(message)
   }
 }
 

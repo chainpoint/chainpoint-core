@@ -26,6 +26,7 @@ const anchorBtcAggState = require('./lib/models/AnchorBtcAggState.js')
 const btcTxState = require('./lib/models/BtcTxState.js')
 const btcHeadState = require('./lib/models/BtcHeadState.js')
 const cachedProofState = require('./lib/models/cachedProofState.js')
+const logger = require('./lib/logger.js')
 
 // The channel used for all amqp communication
 // This value is set once the connection has been established
@@ -65,10 +66,10 @@ async function ConsumeAggregationMessageAsync(msg) {
 
     // New states has been written, ack consumption of original message
     amqpChannel.ack(msg)
-    console.log(`${msg.fields.routingKey} [${msg.properties.type}] consume message acked`)
+    logger.info(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message acked`)
   } catch (error) {
     amqpChannel.nack(msg)
-    console.error(`${msg.fields.routingKey} [${msg.properties.type}] consume message nacked: ${error.message}`)
+    logger.error(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message nacked : ${error.message}`)
   }
 }
 
@@ -79,7 +80,6 @@ async function ConsumeAggregationMessageAsync(msg) {
  */
 async function ConsumeCalendarBatchMessageAsync(msg) {
   let messageObj = JSON.parse(msg.content.toString())
-  //console.log(messageObj)
   // transform batch message data into cal_state objects ready for insertion
   let stateObjs = messageObj.proofData.map(proofDataItem => {
     return {
@@ -112,19 +112,19 @@ async function ConsumeCalendarBatchMessageAsync(msg) {
           type: 'cal_batch'
         })
       } catch (error) {
-        console.error(env.RMQ_WORK_OUT_GEN_QUEUE, '[cal] publish message nacked')
+        logger.error(`${env.RMQ_WORK_OUT_GEN_QUEUE} : [cal] publish message nacked`)
         throw new Error(error.message)
       }
     }
 
     // New messages have been published, ack consumption of original message
     amqpChannel.ack(msg)
-    console.log(msg.fields.routingKey, '[' + msg.properties.type + '] consume message acked')
+    logger.info(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message acked`)
   } catch (error) {
-    console.error(`Unable to process calendar message: ${error.message}`)
+    logger.error(`Unable to process calendar message : ${error.message}`)
     // An error as occurred publishing a message, nack consumption of original message
     amqpChannel.nack(msg)
-    console.error(`${msg.fields.routingKey} [${msg.properties.type}] consume message nacked: ${error.message}`)
+    logger.error(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message nacked : ${error.message}`)
   }
 }
 
@@ -155,10 +155,10 @@ async function ConsumeAnchorBTCAggBatchMessageAsync(msg) {
 
     // New message has been published and event logged, ack consumption of original message
     amqpChannel.ack(msg)
-    console.log(`${msg.fields.routingKey} [${msg.properties.type}] consume message acked`)
+    logger.info(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message acked`)
   } catch (error) {
     amqpChannel.nack(msg)
-    console.error(`${msg.fields.routingKey} [${msg.properties.type}] consume message nacked: ${error.message}`)
+    logger.error(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message nacked : ${error.message}`)
   }
 }
 
@@ -179,10 +179,10 @@ async function ConsumeBtcTxMessageAsync(msg) {
 
     // New message has been published and event logged, ack consumption of original message
     amqpChannel.ack(msg)
-    console.log(`${msg.fields.routingKey} [${msg.properties.type}] consume message acked`)
+    logger.info(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message acked`)
   } catch (error) {
     amqpChannel.nack(msg)
-    console.error(`${msg.fields.routingKey} [${msg.properties.type}] consume message nacked: ${error.message}`)
+    logger.error(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message nacked : ${error.message}`)
   }
 }
 
@@ -215,19 +215,19 @@ async function ConsumeBtcMonMessageAsync(msg) {
           type: 'btc_batch'
         })
       } catch (error) {
-        console.error(env.RMQ_WORK_OUT_GEN_QUEUE, '[cal] publish message nacked')
+        logger.error(`${env.RMQ_WORK_OUT_GEN_QUEUE} : [cal] publish message nacked`)
         throw new Error(error.message)
       }
     }
 
     // New messages have been published, ack consumption of original message
     amqpChannel.ack(msg)
-    console.log(msg.fields.routingKey, '[' + msg.properties.type + '] consume message acked')
+    logger.info(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message acked`)
   } catch (error) {
-    console.error(`Unable to process btc mon message: ${error.message}`)
+    logger.error(`Unable to process btc mon message : ${error.message}`)
     // An error as occurred publishing a message, nack consumption of original message
     amqpChannel.nack(msg)
-    console.error(`${msg.fields.routingKey} [${msg.properties.type}] consume message nacked: ${error.message}`)
+    logger.error(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message nacked : ${error.message}`)
   }
 }
 
@@ -240,21 +240,21 @@ async function PruneStateDataAsync() {
   try {
     // remove all rows from agg_states that are older than the expiration age
     let deleteCount = await cachedProofState.pruneAggStatesAsync()
-    if (deleteCount > 0) console.log(`Pruning agg_states - ${deleteCount} row(s) deleted`)
+    if (deleteCount > 0) logger.info(`Pruning agg_states : ${deleteCount} row(s) deleted`)
     // remove all rows from agg_states that are older than the expiration age
     deleteCount = await cachedProofState.pruneCalStatesAsync()
-    if (deleteCount > 0) console.log(`Pruning cal_states - ${deleteCount} row(s) deleted`)
+    if (deleteCount > 0) logger.info(`Pruning cal_states : ${deleteCount} row(s) deleted`)
     // remove all rows from agg_states that are older than the expiration age
     deleteCount = await cachedProofState.pruneAnchorBTCAggStatesAsync()
-    if (deleteCount > 0) console.log(`Pruning anchor_btc_agg_states - ${deleteCount} row(s) deleted`)
+    if (deleteCount > 0) logger.info(`Pruning anchor_btc_agg_states : ${deleteCount} row(s) deleted`)
     // remove all rows from agg_states that are older than the expiration age
     deleteCount = await cachedProofState.pruneBTCTxStatesAsync()
-    if (deleteCount > 0) console.log(`Pruning btctx_states - ${deleteCount} row(s) deleted`)
+    if (deleteCount > 0) logger.info(`Pruning btctx_states : ${deleteCount} row(s) deleted`)
     // remove all rows from agg_states that are older than the expiration age
     deleteCount = await cachedProofState.pruneBTCHeadStatesAsync()
-    if (deleteCount > 0) console.log(`Pruning btchead_states - ${deleteCount} row(s) deleted`)
+    if (deleteCount > 0) logger.info(`Pruning btchead_states : ${deleteCount} row(s) deleted`)
   } catch (error) {
-    console.error(`Unable to complete pruning process: ${error.message}`)
+    logger.warn(`Unable to complete pruning process : ${error.message}`)
   }
 }
 
@@ -294,7 +294,7 @@ function processMessage(msg) {
         break
       default:
         // This is an unknown state type
-        console.error(`Unknown state type: ${msg.properties.type}`)
+        logger.warn(`Unknown state type : ${msg.properties.type}`)
         // cannot handle unknown type messages, ack message and do nothing
         amqpChannel.ack(msg)
     }
@@ -394,9 +394,9 @@ async function start() {
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init intervals
     startIntervals()
-    console.log('startup completed successfully')
+    logger.info('Startup completed successfully')
   } catch (error) {
-    console.error(`An error has occurred on startup: ${error.message}`)
+    logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)
   }
 }

@@ -32,6 +32,7 @@ const btcTxState = require('./lib/models/BtcTxState.js')
 const btcHeadState = require('./lib/models/BtcHeadState.js')
 const proof = require('./lib/models/Proof.js')
 const cachedProofState = require('./lib/models/cachedProofState.js')
+const logger = require('./lib/logger.js')
 
 // The channel used for all amqp communication
 // This value is set once the connection has been established
@@ -123,7 +124,7 @@ async function consumeProofReadyMessageAsync(msg) {
             // ensure the proof is valid according to the defined Chainpoint v3 JSON schema
             let isValidSchema = chainpointProofSchema.validate(proof).valid
             if (!isValidSchema) {
-              console.error(`Proof ${aggStateRow.hash_id} has an invalid JSON schema`)
+              logger.error(`Proof ${aggStateRow.hash_id} has an invalid JSON schema`)
               return null
             }
             return proof
@@ -134,12 +135,12 @@ async function consumeProofReadyMessageAsync(msg) {
 
         // Proof ready message has been consumed, ack consumption of original message
         amqpChannel.ack(msg)
-        console.log(msg.fields.routingKey, '[' + msg.properties.type + '] consume message acked')
+        logger.info(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message acked`)
       } catch (error) {
-        console.error(`Unable to process proof ready message: ${error.message}`)
+        logger.error(`Unable to process proof ready message : ${error.message}`)
         // An error as occurred consuming a message, nack consumption of original message
         amqpChannel.nack(msg)
-        console.error(`${msg.fields.routingKey} [${msg.properties.type}] consume message nacked: ${error.message}`)
+        logger.error(`${msg.fields.routingKey} : [${msg.properties.type}] : consume message nacked : ${error.message}`)
       }
       break
     case 'btc_batch':
@@ -163,7 +164,7 @@ async function consumeProofReadyMessageAsync(msg) {
           btcTxStateRow = await cachedProofState.getBTCTxStateObjectByAnchorBTCAggIdAsync(anchorBTCAggId)
           btcHeadStateRow = await cachedProofState.getBTCHeadStateObjectByBTCTxIdAsync(btcTxStateRow.btctx_id)
         } catch (error) {
-          console.error(`Unrecoverable proof state read error for hash_ids ${hashIds} : ${error.message}`)
+          logger.error(`Unrecoverable proof state read error for hash_ids ${hashIds} : ${error.message}`)
           amqpChannel.ack(msg)
           return
         }
@@ -201,10 +202,9 @@ async function consumeProofReadyMessageAsync(msg) {
             // ensure the proof is valid according to the defined Chainpoint v3 JSON schema
             let isValidSchema = chainpointProofSchema.validate(proof).valid
             if (!isValidSchema) {
-              console.error(`Proof ${aggStateRow.hash_id} has an invalid JSON schema`)
+              logger.error(`Proof ${aggStateRow.hash_id} has an invalid JSON schema`)
               return null
             }
-            console.log(JSON.stringify(proof))
             return proof
           })
           .filter(proof => proof !== null)
@@ -213,21 +213,23 @@ async function consumeProofReadyMessageAsync(msg) {
 
         // Proof ready message has been consumed, ack consumption of original message
         amqpChannel.ack(msg)
-        console.log(msg.fields.routingKey, '[' + msg.properties.type + '] consume message acked')
+        logger.info(`${msg.fields.routingKey} : [${msg.fields.routingKey}] : consume message acked`)
       } catch (error) {
-        console.error(`Unable to process proof ready message: ${error.message}`)
+        logger.error(`Unable to process proof ready message : ${error.message}`)
         // An error as occurred consuming a message, nack consumption of original message
         amqpChannel.nack(msg)
-        console.error(`${msg.fields.routingKey} [${msg.properties.type}] consume message nacked: ${error.message}`)
+        logger.error(
+          `${msg.fields.routingKey} : [${msg.fields.routingKey}] : consume message nacked : ${error.message}`
+        )
       }
       break
     case 'eth':
-      console.log('building eth proof')
+      logger.info('Building eth proof')
       amqpChannel.ack(msg)
       break
     default:
       // This is an unknown proof ready type
-      console.error('Unknown proof ready type', msg.properties.type)
+      logger.error(`Unknown proof ready type : ${msg.properties.type}`)
       // cannot handle unknown type messages, ack message and do nothing
       amqpChannel.ack(msg)
   }
@@ -244,7 +246,7 @@ async function storeProofsAsync(proofs, batchType) {
   try {
     await proof.writeProofsBulkAsync(proofs)
   } catch (error) {
-    console.error(`Could not save proofs to local database : ${error.message}`)
+    logger.error(`Could not save proofs to local database : ${error.message}`)
   }
 
   if (proofs.length > 1) {
@@ -280,10 +282,10 @@ function logGenerationEvent(submitDateString, batchType, batchId, proofIndex, ba
       : batchTotalProcessingMS > 0
       ? `[${batchTotalProcessingMS || 0}ms]`
       : ``
-  console.log(
+  logger.info(
     `Generation ${
       proofIndex === 1 ? 'starting' : 'complete'
-    } for ${batchType} ${batchId} proof ${proofIndex} of ${batchSize} - ${durationString} after submission ${totalProcessingString}`
+    } for ${batchType} ${batchId} proof ${proofIndex} of ${batchSize} : ${durationString} after submission ${totalProcessingString}`
   )
 }
 
@@ -296,9 +298,9 @@ async function PruneProofsAsync() {
   try {
     // remove all rows from proofs that are older than the expiration age
     let deleteCount = await proof.pruneExpiredProofsAsync()
-    if (deleteCount > 0) console.log(`Pruning proofs - ${deleteCount} row(s) deleted`)
+    if (deleteCount > 0) logger.info(`Pruning proofs : ${deleteCount} row(s) deleted`)
   } catch (error) {
-    console.error(`Unable to complete pruning process: ${error.message}`)
+    logger.warn(`Unable to complete pruning process : ${error.message}`)
   }
 }
 
@@ -396,9 +398,9 @@ async function start() {
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init intervals
     startIntervals()
-    console.log('startup completed successfully')
+    logger.info('Startup completed successfully')
   } catch (error) {
-    console.error(`An error has occurred on startup: ${error.message}`)
+    logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)
   }
 }

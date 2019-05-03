@@ -16,6 +16,7 @@
 
 let tmRpc = require('../tendermint-rpc.js')
 const errors = require('restify-errors')
+const logger = require('../logger.js')
 
 async function getTransactionAsync(txID) {
   let txResponse = await tmRpc.getTransactionAsync(txID)
@@ -26,7 +27,7 @@ async function getTransactionAsync(txID) {
       case 409:
         return { tx: null, error: new errors.InvalidArgumentError(txResponse.error.message) }
       default:
-        console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+        logger.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
         return { tx: null, error: new errors.InternalServerError('Could not query for tx by hash') }
     }
   }

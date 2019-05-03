@@ -21,6 +21,7 @@ const MerkleTools = require('merkle-tools')
 const BlockchainAnchor = require('blockchain-anchor')
 const amqp = require('amqplib')
 const connections = require('./lib/connections.js')
+const logger = require('./lib/logger.js')
 
 // Key for the Redis set of all Bitcoin transaction id objects needing to be monitored.
 const BTC_TX_IDS_KEY = 'BTC_Mon:BTCTxIds'
@@ -58,7 +59,7 @@ async function consumeBtcTxIdMessageAsync(msg) {
       amqpChannel.ack(msg)
     } catch (error) {
       amqpChannel.nack(msg)
-      console.error(`${env.RMQ_WORK_IN_AGG_QUEUE} consume message nacked`)
+      logger.error(`${env.RMQ_WORK_IN_AGG_QUEUE} : consume message nacked`)
     }
   }
 }
@@ -73,7 +74,7 @@ let monitorTransactionsAsync = async () => {
 
   CHECKS_IN_PROGRESS = true
   let btcTxObjJSONArray = await redis.smembers(BTC_TX_IDS_KEY)
-  console.log(`Btc Tx monitoring check starting for ${btcTxObjJSONArray.length} transaction(s)`)
+  logger.info(`Btc Tx monitoring check starting for ${btcTxObjJSONArray.length} transaction(s)`)
 
   for (let btcTxObjJSON of btcTxObjJSONArray) {
     let btcTxIdObj = JSON.parse(btcTxObjJSON)
@@ -86,7 +87,7 @@ let monitorTransactionsAsync = async () => {
         throw new Error(`Could not get stats for transaction ${btcTxIdObj.tx_id}`)
       }
       if (txStats.confirmations < env.MIN_BTC_CONFIRMS) {
-        console.log(`${txStats.id} not ready : ${txStats.confirmations} of ${env.MIN_BTC_CONFIRMS} confirmations`)
+        logger.info(`${txStats.id} not ready : ${txStats.confirmations} of ${env.MIN_BTC_CONFIRMS} confirmations`)
         continue
       }
 
@@ -139,21 +140,21 @@ let monitorTransactionsAsync = async () => {
           persistent: true,
           type: 'btcmon'
         })
-        console.log(env.RMQ_WORK_OUT_CAL_QUEUE, '[btcmon] publish message acked', messageObj.btctx_id)
+        logger.info(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message acked : ${messageObj.btctx_id}`)
       } catch (error) {
-        console.error(env.RMQ_WORK_OUT_CAL_QUEUE, '[btcmon] publish message nacked', messageObj.btctx_id)
+        logger.error(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message nacked : ${messageObj.btctx_id}`)
         throw new Error(error.message)
       }
 
       await redis.srem(BTC_TX_IDS_KEY, btcTxObjJSON)
 
-      console.log(`${btcTxIdObj.tx_id} ready with ${txStats.confirmations} confirmations`)
+      logger.info(`${btcTxIdObj.tx_id} ready with ${txStats.confirmations} confirmations`)
     } catch (error) {
-      console.error(error.message)
+      logger.error(`An unexpected error occurred while monitoring : ${error.message}`)
     }
   }
 
-  console.log(`Btc Tx monitoring checks complete`)
+  logger.info(`Btc Tx monitoring checks complete`)
   CHECKS_IN_PROGRESS = false
 }
 
@@ -229,9 +230,9 @@ async function start() {
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // init interval functions
     startIntervals()
-    console.log('startup completed successfully')
+    logger.info('Startup completed successfully')
   } catch (error) {
-    console.error(`An error has occurred on startup: ${error.message}`)
+    logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)
   }
 }

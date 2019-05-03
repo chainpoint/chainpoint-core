@@ -17,6 +17,7 @@
 const errors = require('restify-errors')
 let tmRpc = require('../tendermint-rpc.js')
 let stakedNode = require('../models/StakedNode.js')
+const logger = require('../logger.js')
 
 async function getNodesAsync(req, res, next) {
   let nodes = []
@@ -25,7 +26,7 @@ async function getNodesAsync(req, res, next) {
     //get the minting epoch which will tell us how to retrieve known good nodes from tendermint
     let abciResponse = await tmRpc.getAbciInfo()
     if (abciResponse.error) {
-      console.error(`RPC error communicating with Tendermint : ${abciResponse.error.message}`)
+      logger.error(`RPC error communicating with Tendermint : ${abciResponse.error.message}`)
       throw new Error('Could not get abci info')
     }
 
@@ -35,7 +36,7 @@ async function getNodesAsync(req, res, next) {
       let tag = `NODERC=${prevEpoch}`
       let txResponse = await tmRpc.getTxSearch(tag, 1, 25) //get NODE-RC transactions from past 24 hours
       if (txResponse.error) {
-        console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+        logger.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
         throw new Error('Could not get NODE-RC transactions')
       }
 
@@ -49,7 +50,7 @@ async function getNodesAsync(req, res, next) {
       nodes = [].concat.apply([], nodeArrays) //flatten array
     }
   } catch (error) {
-    console.error(`Tendermint RPC error, falling back to random nodes list : ${error.message}`)
+    logger.error(`Tendermint RPC error : falling back to random nodes list : ${error.message}`)
   }
 
   //If we retrieved nothing from tendermint, retrieve some random nodes
@@ -60,7 +61,7 @@ async function getNodesAsync(req, res, next) {
         return { public_uri: 'http://' + row.publicIp }
       })
     } catch (error) {
-      console.error(`database node retrieval error : ${error.message}`)
+      logger.error(`Random Nodes retrieval error : ${error.message}`)
       return next(new errors.InternalServerError('Could not query for nodes'))
     }
   }

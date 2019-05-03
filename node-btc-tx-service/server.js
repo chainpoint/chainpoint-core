@@ -20,6 +20,7 @@ const env = require('./lib/parse-env.js')('btc-tx')
 const amqp = require('amqplib')
 const BlockchainAnchor = require('blockchain-anchor')
 const connections = require('./lib/connections.js')
+const logger = require('./lib/logger.js')
 
 // The channel used for all amqp communication
 // This value is set once the connection has been established
@@ -50,7 +51,7 @@ const sendTxToBTCAsync = async hash => {
     feeSatPerByte = await anchor.btcGetEstimatedFeeRateSatPerByteAsync()
     // if the fee exceeds the maximum, revert to BTC_MAX_FEE_SAT_PER_BYTE for the fee
     if (feeSatPerByte > env.BTC_MAX_FEE_SAT_PER_BYTE) {
-      console.error(
+      logger.warn(
         `Fee of ${feeSatPerByte} sat per byte exceeded BTC_MAX_FEE_SAT_PER_BYTE of ${env.BTC_MAX_FEE_SAT_PER_BYTE}`
       )
       feeSatPerByte = env.BTC_MAX_FEE_SAT_PER_BYTE
@@ -107,9 +108,9 @@ async function processIncomingAnchorBTCJobAsync(msg) {
           persistent: true,
           type: 'btctx'
         })
-        console.log(env.RMQ_WORK_OUT_CAL_QUEUE, '[btctx] publish message acked', messageObj.btctx_id)
+        logger.info(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btctx] publish message acked : ${messageObj.btctx_id}`)
       } catch (error) {
-        console.error(env.RMQ_WORK_OUT_CAL_QUEUE, '[btctx] publish message nacked', messageObj.btctx_id)
+        logger.error(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btctx] publish message nacked : ${messageObj.btctx_id}`)
         throw new Error(`Unable to publish to RMQ_WORK_OUT_CAL_QUEUE: ${error.message}`)
       }
       amqpChannel.ack(msg)
@@ -117,10 +118,10 @@ async function processIncomingAnchorBTCJobAsync(msg) {
       // An error has occurred publishing the transaction, nack consumption of message
       // set a 30 second delay for nacking this message to prevent a flood of retries hitting insight api
       let retryMS = 30000
-      console.error(`Unable to process BTC anchor message: ${error.message}: Retrying in ${retryMS / 1000} seconds`)
+      logger.error(`Unable to process BTC anchor message : ${error.message} : Retrying in ${retryMS / 1000} seconds`)
       setTimeout(() => {
         amqpChannel.nack(msg)
-        console.error(env.RMQ_WORK_IN_BTCTX_QUEUE, 'consume message nacked')
+        logger.error(`${env.RMQ_WORK_IN_BTCTX_QUEUE} : consume message nacked`)
       }, retryMS)
     }
   }
@@ -162,9 +163,9 @@ async function start() {
   try {
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
-    console.log('startup completed successfully')
+    logger.info('Startup completed successfully')
   } catch (error) {
-    console.error(`An error has occurred on startup: ${error.message}`)
+    logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)
   }
 }
