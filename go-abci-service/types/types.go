@@ -21,6 +21,7 @@ type AnchorConfig struct {
 	TendermintRPC    TendermintURI
 	PostgresURI      string
 	RedisURI         string
+	APIURI           string
 	EthConfig        EthConfig
 	ECPrivateKey     ecdsa.PrivateKey
 	DoNodeManagement bool

@@ -183,7 +183,7 @@ func (app *AnchorApplication) SyncMonitor() {
 func (app *AnchorApplication) KeyMonitor() {
 	for {
 		time.Sleep(5 * time.Second) //sleep here for continue condition
-		selfStatusURL := fmt.Sprintf("http://nginx-proxy/status")
+		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
 		response, err := http.Get(selfStatusURL)
 		if util.LoggerError(app.logger, err) != nil {
 			continue
