@@ -164,7 +164,7 @@ prune: down
 ## prune-node-modules        : Remove the node_modules sub-directory for each service
 .PHONY : prune-node-modules
 prune-node-modules:
-	find . -type d -name node_modules -mindepth 1 -maxdepth 1 -exec rm -rf {} \;
+	find . -type d -name node_modules -mindepth 1 -maxdepth 2 -exec rm -rf {} \;
 
 ## burn                      : Burn it all down and destroy the data. Start it again yourself!
 .PHONY : burn
