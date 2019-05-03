@@ -19,17 +19,18 @@ const chalk = require('chalk')
 const updateOrCreateEnv = require('./2_update_env')
 
 async function createSwarmAndSecrets(valuePairs) {
+  let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
   let wif = valuePairs.BITCOIN_WIF
   let infuraApiKey = valuePairs.INFURA_API_KEY
   let etherscanApiKey = valuePairs.ETHERSCAN_API_KEY
   let insightUri = valuePairs.INSIGHT_API_URI
-  let sed = `sed -i 's#external_address = .*#external_address = "${ip}:26656"#' config/node_1/config.toml`
+  let sed = `sed -i 's#external_address = .*#external_address = "${ip}:26656"#' ${home.stdout}/.chainpoint/core/config/node_1/config.toml`
   try {
     await exec([
       sed, //sed line needs to be first for some reason
       `docker swarm init --advertise-addr=${ip} || echo "Swarm already initialized"`,
-      `openssl ecparam -genkey -name secp256r1 -noout -out data/keys/ecdsa_key.pem`,
+      `openssl ecparam -genkey -name secp256r1 -noout -out ${home.stdout}/.chainpoint/core/data/keys/ecdsa_key.pem`,
       `cat data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`,
       `printf ${wif} | docker secret create BITCOIN_WIF -`,
       `printf ${infuraApiKey} | docker secret create ETH_INFURA_API_KEY -`,
@@ -39,6 +40,6 @@ async function createSwarmAndSecrets(valuePairs) {
   } catch (err) {
     console.log(chalk.red('Setting secrets failed (is docker installed?)'))
   }
-  return updateOrCreateEnv({ CHAINPOINT_CORE_BASE_URI: `http://${ip}`, INSIGHT_API_BASE_URI: insightUri })
+  return updateOrCreateEnv({ CHAINPOINT_CORE_BASE_URI: `http://${ip}`, INSIGHT_API_BASE_URI: insightUri, CORE_DATADIR: `${home.stdout}/.chainpoint/core` })
 }
 module.exports = createSwarmAndSecrets
