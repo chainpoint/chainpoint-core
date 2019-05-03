@@ -25,6 +25,7 @@ const uuidv1 = require('uuid/v1')
 const jose = require('node-jose')
 let tmRpc = require('../tendermint-rpc.js')
 const tokenUtils = require('../middleware/token-utils.js')
+const logger = require('../logger.js')
 
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
@@ -60,6 +61,7 @@ async function postTokenRefreshAsync(req, res, next) {
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // get the token's subject
   let sub = decodedToken.payload.sub
@@ -154,7 +156,7 @@ async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
         case 409:
           throw new Error(txResponse.error.message)
         default:
-          console.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+          logger.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
           throw new Error('Could not broadcast transaction')
       }
     }
@@ -222,13 +224,14 @@ async function postTokenCreditAsync(req, res, next) {
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // broadcast the ETH transaction and await inclusion in a block
   try {
     let sendResponse = await fallbackProvider.sendTransaction(rawTx)
     await fallbackProvider.waitForTransaction(sendResponse.hash)
   } catch (error) {
-    console.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
+    logger.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
     return next(new errors.InternalServerError(error.message))
   }
 

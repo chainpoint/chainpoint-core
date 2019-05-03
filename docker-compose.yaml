@@ -132,6 +132,7 @@ services:
       ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY}
       ETH_ADDRESS: ${ETH_ADDRESS}
       ECDSA_PKPEM: ${ECDSA_PKPEM}
+    tty: true
 
   api-test:
     container_name: node-api-service-test
@@ -176,6 +177,7 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
       BITCOIN_WIF: ${BITCOIN_WIF}
+    tty: true
 
   # Bitcoin Transmit MonitorF
   # Monitor and report on the state of BTC transactions this app has submitted.
@@ -196,6 +198,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
+    tty: true
 
   # Proof State
   # Encapsulates all persistent data storage for partial proof data.
@@ -215,6 +218,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+    tty: true
 
   # Proof Generation
   # Responsible for constructing, signing, and validating Chainpoint proofs
@@ -234,6 +238,7 @@ services:
       - chainpoint
     environment:
       NODE_ENV: ${NODE_ENV}
+    tty: true
 
   # RabbitMQ
   #

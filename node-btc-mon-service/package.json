@@ -13,6 +13,7 @@
     "blockchain-anchor": "^2.3.2",
     "envalid": "^5.0.0",
     "ioredis": "^4.9.0",
-    "merkle-tools": "^1.3.2"
+    "merkle-tools": "^1.3.2",
+    "winston": "^3.2.1"
   }
 }

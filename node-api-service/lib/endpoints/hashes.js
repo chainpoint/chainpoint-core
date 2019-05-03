@@ -21,6 +21,7 @@ const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
 const jwt = require('jsonwebtoken')
 const tokenUtils = require('../middleware/token-utils.js')
+const logger = require('../logger.js')
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -183,6 +184,7 @@ async function postHashV1Async(req, res, next) {
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // get the token's subject
   let sub = decodedToken.payload.sub
@@ -211,7 +213,7 @@ async function postHashV1Async(req, res, next) {
       persistent: true
     })
   } catch (error) {
-    console.error(env.RMQ_WORK_OUT_AGG_QUEUE, 'publish message nacked')
+    logger.error(`${env.RMQ_WORK_OUT_AGG_QUEUE} : publish message nacked`)
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 

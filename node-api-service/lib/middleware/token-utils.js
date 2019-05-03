@@ -21,6 +21,7 @@ let rp = require('request-promise-native')
 const retry = require('async-retry')
 let status = require('../endpoints/status.js')
 const env = require('../parse-env.js')('api')
+const logger = require('../logger.js')
 
 // NOTE: This is not restify middleware in the traditional sense
 // These functions contain async functions and thus cannot be directly included in Restify routes
@@ -63,7 +64,7 @@ async function getCachedJWKAsync(kid, iss) {
       let cacheResult = await redis.get(redisKey)
       if (cacheResult) return JSON.parse(cacheResult)
     } catch (error) {
-      console.error(`Redis read error : getTokenJWKAsync : ${error.message}`)
+      logger.warn(`Redis read error : getTokenJWKAsync : ${error.message}`)
     }
   }
   // a value was not found in Redis, so ask the specific Core directly
@@ -74,14 +75,14 @@ async function getCachedJWKAsync(kid, iss) {
     if (!coreStatus.jwk || coreStatus.jwk.kid !== kid) return null
     result = coreStatus.jwk
   } catch (error) {
-    console.error(`Core request error : getTokenJWKAsync : ${error.message}`)
+    logger.error(`Core request error : getTokenJWKAsync : ${error.message}`)
   }
   // if a non cached value was found, add to the cache
   if (result && redis) {
     try {
       await redis.set(redisKey, JSON.stringify(result))
     } catch (error) {
-      console.error(`Redis write error : getTokenJWKAsync : ${error.message}`)
+      logger.warn(`Redis write error : getTokenJWKAsync : ${error.message}`)
     }
   }
 
@@ -95,7 +96,7 @@ async function getCachedCoreIDAsync() {
       let cacheResult = await redis.get(CORE_ID_KEY)
       if (cacheResult) return cacheResult
     } catch (error) {
-      console.error(`Redis read error : getCachedCoreIDAsync : ${error.message}`)
+      logger.warn(`Redis read error : getCachedCoreIDAsync : ${error.message}`)
     }
   }
   // a value was not found in Redis, so ask the specific Core directly
@@ -106,14 +107,14 @@ async function getCachedCoreIDAsync() {
     if (!coreStatus.node_info || !coreStatus.node_info.id) return null
     result = coreStatus.node_info.id
   } catch (error) {
-    console.error(`Core request error : getCachedCoreIDAsync : ${error.message}`)
+    logger.error(`Core request error : getCachedCoreIDAsync : ${error.message}`)
   }
   // if a non cached value was found, add to the cache
   if (result && redis) {
     try {
       await redis.set(CORE_ID_KEY, result)
     } catch (error) {
-      console.error(`Redis write error : getCachedCoreIDAsync : ${error.message}`)
+      logger.warn(`Redis write error : getCachedCoreIDAsync : ${error.message}`)
     }
   }
 
@@ -154,7 +155,7 @@ async function coreStatusRequestAsync(coreURI, retryCount = 3) {
       maxTimeout: 400,
       randomize: true,
       onRetry: error => {
-        console.log(`Error on request to Core : ${error.statusCode || 'no response'} : ${error.message} : retrying`)
+        logger.warn(`Error on request to Core : ${error.statusCode || 'no response'} : ${error.message} : retrying`)
       }
     }
   )

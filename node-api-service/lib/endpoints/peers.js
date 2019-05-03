@@ -16,6 +16,7 @@
 
 const errors = require('restify-errors')
 let tmRpc = require('../tendermint-rpc.js')
+const logger = require('../logger.js')
 
 async function getPeersAsync(req, res, next) {
   let netResponse = await tmRpc.getNetInfoAsync()
@@ -26,7 +27,7 @@ async function getPeersAsync(req, res, next) {
       case 409:
         return next(new errors.InvalidArgumentError(netResponse.error.message))
       default:
-        console.error(`RPC error communicating with Tendermint : ${netResponse.error.message}`)
+        logger.error(`RPC error communicating with Tendermint : ${netResponse.error.message}`)
         return next(new errors.InternalServerError('Could not query for net info'))
     }
   }

@@ -36,10 +36,10 @@ const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const ethTxWhitelist = require('./lib/middleware/eth-tx-whitelist.js').validate
 const tokenUtils = require('./lib/middleware/token-utils.js')
-
+const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
 
-var logger = bunyan.createLogger({
+var apiLogs = bunyan.createLogger({
   name: 'audit',
   stream: process.stdout
 })
@@ -49,7 +49,7 @@ var logger = bunyan.createLogger({
 const httpOptions = {
   name: 'chainpoint',
   version: '1.0.0',
-  log: logger
+  log: apiLogs
 }
 
 let throttle = (burst, rate, opts = { ip: true }) => {
@@ -212,9 +212,9 @@ async function start() {
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
     await startInsecureRestifyServerAsync()
-    console.log('startup completed successfully')
+    logger.info('Startup completed successfully')
   } catch (error) {
-    console.error(`An error has occurred on startup: ${error.message}`)
+    logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)
   }
 }

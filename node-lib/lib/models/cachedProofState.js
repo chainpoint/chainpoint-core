@@ -13,6 +13,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+const logger = require('../logger.js')
 
 const CAL_STATE_KEY_PREFIX = 'CalState'
 const ANCHOR_BTC_AGG_STATE_KEY_PREFIX = 'AnchorBTCAggState'
@@ -110,7 +111,7 @@ async function getCalStateObjectsByAggIdsAsync(aggIds) {
       redisResults = await multi.exec()
       redisResults = redisResults.map(result => result[1])
     } catch (error) {
-      console.error(`Redis read error : getCalStateObjectsByAggIdsAsync : ${error.message}`)
+      logger.warn(`Redis read error : getCalStateObjectsByAggIdsAsync : ${error.message}`)
     }
 
     // assign the redis results to the corresponding item in aggIdData
@@ -155,7 +156,7 @@ async function getCalStateObjectsByAggIdsAsync(aggIds) {
     try {
       await multi.exec()
     } catch (error) {
-      console.error(`Redis write error : getCalStateObjectsByAggIdsAsync : ${error.message}`)
+      logger.warn(`Redis write error : getCalStateObjectsByAggIdsAsync : ${error.message}`)
     }
   }
   return finalResult
@@ -178,7 +179,7 @@ async function getAnchorBTCAggStateObjectsByCalIdsAsync(calIds) {
       redisResults = await multi.exec()
       redisResults = redisResults.map(result => result[1])
     } catch (error) {
-      console.error(`Redis read error : getAnchorBTCAggStateObjectsByCalIdsAsync : ${error.message}`)
+      logger.warn(`Redis read error : getAnchorBTCAggStateObjectsByCalIdsAsync : ${error.message}`)
     }
 
     // assign the redis results to the corresponding item in calIdData
@@ -223,7 +224,7 @@ async function getAnchorBTCAggStateObjectsByCalIdsAsync(calIds) {
     try {
       await multi.exec()
     } catch (error) {
-      console.error(`Redis write error : getAnchorBTCAggStateObjectsByCalIdsAsync : ${error.message}`)
+      logger.warn(`Redis write error : getAnchorBTCAggStateObjectsByCalIdsAsync : ${error.message}`)
     }
   }
   return finalResult
@@ -237,7 +238,7 @@ async function getBTCTxStateObjectByAnchorBTCAggIdAsync(anchorBTCAggId) {
       let cacheResult = await redis.get(redisKey)
       if (cacheResult) return JSON.parse(cacheResult)
     } catch (error) {
-      console.error(`Redis read error : getBTCTxStateObjectByAnchorBTCAggIdAsync : ${error.message}`)
+      logger.warn(`Redis read error : getBTCTxStateObjectByAnchorBTCAggIdAsync : ${error.message}`)
     }
   }
   let result = await BtcTxState.findOne({
@@ -253,7 +254,7 @@ async function getBTCTxStateObjectByAnchorBTCAggIdAsync(anchorBTCAggId) {
     try {
       await redis.set(redisKey, JSON.stringify(result), 'EX', PROOF_STATE_CACHE_EXPIRE_MINUTES * 60)
     } catch (error) {
-      console.error(`Redis write error : getBTCTxStateObjectByAnchorBTCAggIdAsync : ${error.message}`)
+      logger.warn(`Redis write error : getBTCTxStateObjectByAnchorBTCAggIdAsync : ${error.message}`)
     }
   }
   return result
@@ -267,7 +268,7 @@ async function getBTCHeadStateObjectByBTCTxIdAsync(btcTxId) {
       let cacheResult = await redis.get(redisKey)
       if (cacheResult) return JSON.parse(cacheResult)
     } catch (error) {
-      console.error(`Redis read error : getBTCHeadStateObjectByBTCTxIdAsync : ${error.message}`)
+      logger.warn(`Redis read error : getBTCHeadStateObjectByBTCTxIdAsync : ${error.message}`)
     }
   }
   let result = await BtcHeadState.findOne({
@@ -283,7 +284,7 @@ async function getBTCHeadStateObjectByBTCTxIdAsync(btcTxId) {
     try {
       await redis.set(redisKey, JSON.stringify(result), 'EX', PROOF_STATE_CACHE_EXPIRE_MINUTES * 60)
     } catch (error) {
-      console.error(`Redis write error : getBTCHeadStateObjectByBTCTxIdAsync : ${error.message}`)
+      logger.warn(`Redis write error : getBTCHeadStateObjectByBTCTxIdAsync : ${error.message}`)
     }
   }
   return result
@@ -344,7 +345,7 @@ async function writeCalStateObjectsBulkAsync(stateObjects) {
     try {
       await multi.exec()
     } catch (error) {
-      console.error(`Redis write error : writeCalStateObjectsBulkAsync : ${error.message}`)
+      logger.warn(`Redis write error : writeCalStateObjectsBulkAsync : ${error.message}`)
     }
   }
   return true
@@ -389,7 +390,7 @@ async function writeAnchorBTCAggStateObjectsAsync(stateObjects) {
     try {
       await multi.exec()
     } catch (error) {
-      console.error(`Redis write error : writeAnchorBTCAggStateObjectsAsync : ${error.message}`)
+      logger.warn(`Redis write error : writeAnchorBTCAggStateObjectsAsync : ${error.message}`)
     }
   }
   return true
@@ -408,7 +409,7 @@ async function writeBTCTxStateObjectAsync(stateObject) {
       let redisKey = `${BTC_TX_STATE_KEY_PREFIX}:${stateObject.anchor_btc_agg_id}`
       await redis.set(redisKey, JSON.stringify(btcTxStateObject), 'EX', PROOF_STATE_CACHE_EXPIRE_MINUTES * 60)
     } catch (error) {
-      console.error(`Redis write error : writeBTCTxStateObjectAsync : ${error.message}`)
+      logger.warn(`Redis write error : writeBTCTxStateObjectAsync : ${error.message}`)
     }
   }
   return true
@@ -429,7 +430,7 @@ async function writeBTCHeadStateObjectAsync(stateObject) {
       let redisKey = `${BTC_HEAD_STATE_KEY_PREFIX}:${stateObject.btctx_id}`
       await redis.set(redisKey, JSON.stringify(btcHeadStateObject), 'EX', PROOF_STATE_CACHE_EXPIRE_MINUTES * 60)
     } catch (error) {
-      console.error(`Redis write error : writeBTCHeadStateObjectAsync : ${error.message}`)
+      logger.warn(`Redis write error : writeBTCHeadStateObjectAsync : ${error.message}`)
     }
   }
   return true

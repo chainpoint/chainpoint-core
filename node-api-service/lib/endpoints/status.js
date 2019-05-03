@@ -19,6 +19,7 @@ let tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
 let env = require('../parse-env.js')('api')
 const jose = require('node-jose')
+const logger = require('../logger.js')
 
 async function getCoreStatusAsync(req, res, next) {
   let result = await buildStatusObjectAsync()
@@ -48,7 +49,7 @@ async function buildStatusObjectAsync() {
       case 409:
         return { status: null, errorCode: 409, errorMessage: statusResponse.error.message }
       default:
-        console.error(`RPC error communicating with Tendermint : ${statusResponse.error.message}`)
+        logger.error(`RPC error communicating with Tendermint : ${statusResponse.error.message}`)
         return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
     }
   }
@@ -59,7 +60,7 @@ async function buildStatusObjectAsync() {
     let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
     jwkJSON = jwk.toJSON()
   } catch (error) {
-    console.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
+    logger.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
   }
 
   return {
