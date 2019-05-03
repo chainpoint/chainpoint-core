@@ -128,6 +128,9 @@ func initABCIConfig() types.AnchorConfig {
 		ethRegistryContract = util.GetEnv("RegistryContractAddr", "0x3a8264f138489f80D9CcA443C3A534B73F4B6401")
 	}
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
+	if len(ethPrivateKey) > 0 && strings.Contains(ethPrivateKey, "0x") {
+		ethPrivateKey = ethPrivateKey[2:]
+	}
 	tendermintRPC := types.TendermintURI{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
