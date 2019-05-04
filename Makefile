@@ -156,13 +156,13 @@ init:
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	@cli/scripts/install_deps.sh
 	@node cli/init
-	@rsync .env ${CORE_DATADIR}/.env
+	@sudo rsync .env ${CORE_DATADIR}/.env
 
 ## init-chain                      : Pull down chainpoint network info
 .PHONY : init-chain
 init-chain:
-	@curl https://storage.googleapis.com/chp-private-testnet/config.toml > ${CORE_DATADIR}/config/node_1/config.toml
-	@curl https://storage.googleapis.com/chp-private-testnet/genesis.json > ${CORE_DATADIR}/config/node_1/genesis.json
+	@sudo bash -c "curl https://storage.googleapis.com/chp-private-testnet/config.toml > ${CORE_DATADIR}/config/node_1/config.toml"
+	@sudo bash -c "curl https://storage.googleapis.com/chp-private-testnet/genesis.json > ${CORE_DATADIR}/config/node_1/genesis.json"
 
 ## prune                     : Shutdown and destroy all docker assets
 .PHONY : prune
@@ -208,8 +208,7 @@ redis:
 
 ## deploy					: deploys a swarm stack
 deploy:
-	@rsync .env ${CORE_DATADIR}/.env
-	@set -a && source ${CORE_DATADIR}/.env && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
+	@set -a && source /home/jacob/.chainpoint/core/.env && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
 
 ## stop						: stops a swarm stack
 stop:
@@ -221,6 +220,10 @@ clean-tendermint: stop
 	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/state.db
 	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/blockstore.db
 	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/evidence.db
+	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/cs.wal
+	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/anchor.db
+	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/priv_validator_state.json
+	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -af
 
 ## remove 					: stops, removes, and cleans a swarm
