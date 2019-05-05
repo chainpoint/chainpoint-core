@@ -271,7 +271,8 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		}
 	}
 
-	if len(app.RewardSignatures) == 6 && app.config.DoNodeAudit {
+	if len(app.RewardSignatures) >= 6 && app.config.DoNodeAudit && app.state.ChainSynced {
+		app.logger.Info("Starting Mint process")
 		go app.MintRewardNodes(app.RewardSignatures)
 	}
 

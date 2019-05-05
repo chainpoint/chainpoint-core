@@ -208,7 +208,7 @@ redis:
 
 ## deploy					: deploys a swarm stack
 deploy:
-	@set -a && source /home/jacob/.chainpoint/core/.env && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
+	@set -a && source ${CORE_DATADIR}/.env && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
 
 ## stop						: stops a swarm stack
 stop:

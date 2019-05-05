@@ -55,6 +55,9 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 		app.state.LastMintCoreID = ids[0]
 	}
 	if leader {
+		if len(sig) > 6 {
+			sig = sig[0:6]
+		}
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
@@ -80,7 +83,7 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 
 //CollectRewardNodes : collate and sign reward node list
 func (app *AnchorApplication) CollectRewardNodes() error {
-	if leader, _ := app.ElectLeader(5); leader {
+	if leader, _ := app.ElectLeader(6); leader {
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Error("Mint Error: problem retrieving highest block")
@@ -136,7 +139,7 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 		}
 	}
 	if len(nodeArray) == 0 {
-		return []common.Address{}, []byte{}, errors.New("No NODE-RC t from the last epoch have been found")
+		return []common.Address{}, []byte{}, errors.New("No NODE-RC tx from the last epoch have been found")
 	}
 	addresses := uniquify(nodeArray)
 	rewardHash := ethcontracts.AddressesToHash(addresses)
