@@ -153,7 +153,7 @@ module.exports = service => {
   switch (service) {
     case 'api':
       envDefinitions.ETH_PRIVATE_KEY = envalid.str({
-        desc: `The private key for this Node's Ethereum wallet`
+        desc: `The private key for this Core's Ethereum wallet`
       })
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
