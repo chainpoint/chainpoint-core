@@ -28,10 +28,6 @@ const validateMinConfirmRange = envalid.makeValidator(x => {
   if (x >= 1 && x <= 16) return x
   else throw new Error('Value must be between 1 and 16, inclusive')
 })
-const valETHAddress = envalid.makeValidator(addr => {
-  if (!/^0x[0-9a-fA-F]{40}$/i.test(addr)) throw new Error('The Ethereum (TNT) address is invalid')
-  return addr.toLowerCase()
-})
 
 let envDefinitions = {
   // The following variables are exposed by this stack's /status endpoint
@@ -153,14 +149,10 @@ module.exports = service => {
   switch (service) {
     case 'api':
       envDefinitions.ETH_PRIVATE_KEY = envalid.str({
-        desc: `The private key for this Node's Ethereum wallet`
+        desc: `The private key for this Core's Ethereum wallet`
       })
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
-      })
-      envDefinitions.ETH_TNT_LISTEN_ADDR = valETHAddress({
-        default: '0x5702ac6389aa79dedea2b9e816a14a19dd11923f',
-        desc: 'The address used to listen for incoming TNT transfers.'
       })
       envDefinitions.ETH_INFURA_API_KEY = envalid.str({ desc: 'Infura API Key' })
       envDefinitions.ETH_ETHERSCAN_API_KEY = envalid.str({ desc: 'Etherscan API Key' })

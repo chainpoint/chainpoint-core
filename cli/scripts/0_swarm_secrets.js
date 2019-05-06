@@ -25,7 +25,9 @@ async function createSwarmAndSecrets(valuePairs) {
   let infuraApiKey = valuePairs.INFURA_API_KEY
   let etherscanApiKey = valuePairs.ETHERSCAN_API_KEY
   let insightUri = valuePairs.INSIGHT_API_URI
-  let sed = `sed -i 's#external_address = .*#external_address = "${ip}:26656"#' ${home.stdout}/.chainpoint/core/config/node_1/config.toml`
+  let sed = `sed -i 's#external_address = .*#external_address = "${ip}:26656"#' ${
+    home.stdout
+  }/.chainpoint/core/config/node_1/config.toml`
   try {
     await exec([
       sed, //sed line needs to be first for some reason
@@ -40,6 +42,10 @@ async function createSwarmAndSecrets(valuePairs) {
   } catch (err) {
     console.log(chalk.red('Setting secrets failed (is docker installed?)'))
   }
-  return updateOrCreateEnv({ CHAINPOINT_CORE_BASE_URI: `http://${ip}`, INSIGHT_API_BASE_URI: insightUri, CORE_DATADIR: `${home.stdout}/.chainpoint/core` })
+  return updateOrCreateEnv({
+    CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
+    INSIGHT_API_BASE_URI: insightUri,
+    CORE_DATADIR: `${home.stdout}/.chainpoint/core`
+  })
 }
 module.exports = createSwarmAndSecrets
