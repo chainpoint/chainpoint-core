@@ -64,7 +64,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
     }
     before(() => {
-      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ETH_TNT_LISTEN_ADDR: ethAddress, ECDSA_PKPEM: ecdsa })
+      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ECDSA_PKPEM: ecdsa })
       let statusResult = { tmresult: 1 }
       status.setTmRpc({
         getStatusAsync: async () => {

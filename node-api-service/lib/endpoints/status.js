@@ -69,7 +69,6 @@ async function buildStatusObjectAsync() {
         version: version,
         time: new Date().toISOString(),
         base_uri: env.CHAINPOINT_CORE_BASE_URI,
-        eth_address: env.ETH_TNT_LISTEN_ADDR,
         jwk: jwkJSON
       },
       statusResponse.result
