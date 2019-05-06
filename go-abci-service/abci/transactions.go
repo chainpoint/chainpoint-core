@@ -76,7 +76,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		} else {
 			app.state.PrevMintedAtBlock = app.state.LastMintedAtBlock
 			app.state.LastMintedAtBlock = lastMintedAtBlock
-			app.RewardSignatures = make([]string, 0)
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break

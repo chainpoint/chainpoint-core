@@ -262,21 +262,12 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
-			if app.config.DoNodeAudit {
+			if app.config.DoNodeAudit && !app.state.MintPending {
 				go app.AuditNodes() //retrieve, audit, and reward some nodes
-				go app.CollectRewardNodes()
+				go app.MintRewardNodes()
 			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
-		}
-	}
-
-	if app.config.DoNodeAudit && app.state.ChainSynced {
-		if len(app.RewardSignatures) >= 6 {
-			app.logger.Info("Starting Mint process")
-			go app.MintRewardNodes(util.UniquifyStrings(app.RewardSignatures))
-		} else if len(app.RewardSignatures) >= 0 {
-			app.logger.Info(fmt.Sprintf("Mint: Collecting Reward Signatures: %v", util.UniquifyStrings(app.RewardSignatures)))
 		}
 	}
 

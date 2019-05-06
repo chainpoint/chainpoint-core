@@ -59,6 +59,7 @@ type AnchorState struct {
 	LatestBtccTxInt   int64  `json:"latest_btcc_int"`
 	LatestBtccHeight  int64  `json:"latest_btcc_height"`
 	LatestNistRecord  string `json:"latest_nist_record"`
+	MintPending       bool   `json:"mint_pending"`
 	LastMintedAtBlock int64  `json:"last_mint_block"`
 	PrevMintedAtBlock int64  `json:"prev_mint_block"`
 	LastAnchorCoreID  string `json:"last_anchor_core_id"`

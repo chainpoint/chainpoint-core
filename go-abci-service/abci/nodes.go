@@ -49,7 +49,7 @@ func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 }
 
 //MintRewardNodes : mint rewards for nodes
-func (app *AnchorApplication) MintRewardNodes(sig []string) error {
+func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common.Address, rewardHash []byte) error {
 	leader, ids := app.ElectLeader(1)
 	if len(ids) == 1 {
 		app.state.LastMintCoreID = ids[0]
@@ -68,11 +68,7 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 			}
 			sigBytes[i] = decodedSig
 		}
-		rewardCandidates, rewardHash, err := app.GetNodeRewardCandidates()
-		if util.LoggerError(app.logger, err) != nil {
-			return err
-		}
-		err = app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
+		err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
@@ -82,7 +78,14 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 }
 
 //CollectRewardNodes : collate and sign reward node list
-func (app *AnchorApplication) CollectRewardNodes() error {
+func (app *AnchorApplication) MintRewardNodes() error {
+	var candidates []common.Address
+	var rewardHash []byte
+
+	//Lock the minting process
+	app.SetMintPendingState(true)
+	defer app.SetMintPendingState(false)
+
 	if leader, _ := app.ElectLeader(6); leader {
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
@@ -93,7 +96,7 @@ func (app *AnchorApplication) CollectRewardNodes() error {
 			app.logger.Info("Mint Error: Too soon for minting")
 			return errors.New("Too soon for minting")
 		}
-		_, rewardHash, err := app.GetNodeRewardCandidates()
+		candidates, rewardHash, err = app.GetNodeRewardCandidates()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Error retrieving node reward candidates")
 			return err
@@ -114,6 +117,17 @@ func (app *AnchorApplication) CollectRewardNodes() error {
 		err = errors.New("Mint Error: did not successfully broadcast SIGN-RC tx")
 		util.LoggerError(app.logger, err)
 		return err
+	}
+	// wait for 6 SIGN tx
+	deadline := time.Now().Add(3 * time.Minute)
+	for len(app.RewardSignatures) < 6 || !time.Now().After(deadline) {
+	}
+	// Mint if 6+ SIGN txs are received
+	if len(app.RewardSignatures) >= 6 {
+		err := app.MintReward(app.RewardSignatures, candidates, rewardHash)
+		if util.LoggerError(app.logger, err) != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -193,6 +207,10 @@ func (app *AnchorApplication) AuditNodes() error {
 			err := errors.New("Unspecified reward candidate collation failure for node audit")
 			util.LoggerError(app.logger, err)
 			return err
+		}
+		if app.state.MintPending {
+			app.logger.Info("Minting in progress, not auditing")
+			return nil
 		}
 		rcJSON, err := json.Marshal(rewardCandidates)
 		if util.LoggerError(app.logger, err) != nil {
