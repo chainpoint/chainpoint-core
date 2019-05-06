@@ -31,7 +31,7 @@ async function createSwarmAndSecrets(valuePairs) {
       sed, //sed line needs to be first for some reason
       `docker swarm init --advertise-addr=${ip} || echo "Swarm already initialized"`,
       `openssl ecparam -genkey -name secp256r1 -noout -out ${home.stdout}/.chainpoint/core/data/keys/ecdsa_key.pem`,
-      `cat data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`,
+      `cat ${home.stdout}/.chainpoint/core/data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`,
       `printf ${wif} | docker secret create BITCOIN_WIF -`,
       `printf ${infuraApiKey} | docker secret create ETH_INFURA_API_KEY -`,
       `printf ${etherscanApiKey} | docker secret create ETH_ETHERSCAN_API_KEY -`
