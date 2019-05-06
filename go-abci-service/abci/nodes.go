@@ -58,6 +58,7 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 		if len(sig) > 6 {
 			sig = sig[0:6]
 		}
+		app.logger.Info(fmt.Sprintf("Mint Signatures: %v", sig))
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
@@ -141,7 +142,7 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 	if len(nodeArray) == 0 {
 		return []common.Address{}, []byte{}, errors.New("No NODE-RC tx from the last epoch have been found")
 	}
-	addresses := uniquify(nodeArray)
+	addresses := util.UniquifyAddresses(nodeArray)
 	rewardHash := ethcontracts.AddressesToHash(addresses)
 	return addresses, rewardHash, nil
 }
@@ -506,18 +507,4 @@ func verifySig(from, sigHex string, msg []byte) (bool, error) {
 func signHash(data []byte) []byte {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 	return crypto.Keccak256([]byte(msg))
-}
-
-func uniquify(s []common.Address) []common.Address {
-	seen := make(map[common.Address]struct{}, len(s))
-	j := 0
-	for _, v := range s {
-		if _, ok := seen[v]; ok {
-			continue
-		}
-		seen[v] = struct{}{}
-		s[j] = v
-		j++
-	}
-	return s[:j]
 }

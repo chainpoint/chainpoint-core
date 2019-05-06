@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	"github.com/tendermint/tendermint/libs/log"
@@ -266,4 +268,34 @@ func ReadContractJSON(file string, testnet bool) string {
 		return jsonMap["networks"].(map[string]interface{})["3"].(map[string]interface{})["address"].(string)
 	}
 	return jsonMap["networks"].(map[string]interface{})["1"].(map[string]interface{})["address"].(string)
+}
+
+//UniquifyAddresses: make unique array of addresses
+func UniquifyAddresses(s []common.Address) []common.Address {
+	seen := make(map[common.Address]struct{}, len(s))
+	j := 0
+	for _, v := range s {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		s[j] = v
+		j++
+	}
+	return s[:j]
+}
+
+//UniquifyStrings : make unique array of strings
+func UniquifyStrings(s []string) []string {
+	seen := make(map[string]struct{}, len(s))
+	j := 0
+	for _, v := range s {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		s[j] = v
+		j++
+	}
+	return s[:j]
 }
