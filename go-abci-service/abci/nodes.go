@@ -87,6 +87,7 @@ func (app *AnchorApplication) MintRewardNodes() error {
 	defer app.SetMintPendingState(false)
 
 	if leader, _ := app.ElectLeader(6); leader {
+		app.logger.Info("Elected Leader for Minting")
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Error("Mint Error: problem retrieving highest block")
@@ -106,17 +107,11 @@ func (app *AnchorApplication) MintRewardNodes() error {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
 			return err
 		}
-		res, err := app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
+		_, err = app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
 		if err != nil {
 			app.logger.Info("Mint Error: Error issuing SIGN tx")
 			return err
 		}
-		if res.Code == 0 {
-			return nil
-		}
-		err = errors.New("Mint Error: did not successfully broadcast SIGN-RC tx")
-		util.LoggerError(app.logger, err)
-		return err
 	}
 	// wait for 6 SIGN tx
 	deadline := time.Now().Add(3 * time.Minute)
