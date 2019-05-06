@@ -271,11 +271,13 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		}
 	}
 
-	if len(app.RewardSignatures) >= 6 && app.config.DoNodeAudit && app.state.ChainSynced {
-		app.logger.Info("Starting Mint process")
-		go app.MintRewardNodes(util.UniquifyStrings(app.RewardSignatures))
-	} else if len(app.RewardSignatures) >= 0 {
-		app.logger.Info(fmt.Sprintf("Mint: Collecting Reward Signatures: %v", util.UniquifyStrings(app.RewardSignatures)))
+	if app.config.DoNodeAudit && app.state.ChainSynced {
+		if len(app.RewardSignatures) >= 6 {
+			app.logger.Info("Starting Mint process")
+			go app.MintRewardNodes(util.UniquifyStrings(app.RewardSignatures))
+		} else if len(app.RewardSignatures) >= 0 {
+			app.logger.Info(fmt.Sprintf("Mint: Collecting Reward Signatures: %v", util.UniquifyStrings(app.RewardSignatures)))
+		}
 	}
 
 	// Finalize new block by calculating appHash and incrementing height
