@@ -50,7 +50,6 @@ describe('Status Controller', () => {
 
   describe('GET /status', () => {
     let baseURI = 'http://base.uri'
-    let ethAddress = '0xdeadbeefcafe'
     let ecdsa = `-----BEGIN PRIVATE KEY-----
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgnwHQZK/KRmLIlm3l
 zfB8ygE3fGv5tKTCVQUg8I/gB8OhRANCAATQppszaJzIR+Ri1L7LgyVqEkUFsfAO
@@ -90,10 +89,6 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
             .to.have.property('base_uri')
             .and.to.be.a('string')
             .and.to.equal(baseURI)
-          expect(res.body)
-            .to.have.property('eth_address')
-            .and.to.be.a('string')
-            .and.to.equal(ethAddress)
           expect(res.body)
             .to.have.property('jwk')
             .and.to.be.a('object')
