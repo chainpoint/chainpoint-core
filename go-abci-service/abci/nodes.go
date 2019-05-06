@@ -77,7 +77,6 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
 		}
-		app.RewardSignatures = make([]string, 0)
 	}
 	return nil
 }
