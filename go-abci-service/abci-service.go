@@ -141,6 +141,7 @@ func initABCIConfig() types.AnchorConfig {
 	postgresPort := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
 	postgresDb := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
+	apiURI := util.GetEnv("API_URI", "http://api:8080")
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
@@ -168,6 +169,7 @@ func initABCIConfig() types.AnchorConfig {
 		TendermintRPC:    tendermintRPC,
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,
+		APIURI:           apiURI,
 		EthConfig:        ethConfig,
 		ECPrivateKey:     *ecPrivKey,
 		DoNodeAudit:      doAuditLoop,

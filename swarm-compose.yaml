@@ -29,6 +29,7 @@ services:
     - api
     environment:
       PEERS: ${PEERS}
+      SEEDS: ${SEEDS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
       ETH_ETHERSCAN_API_KEY: DOCKER-SECRET->ETH_ETHERSCAN_API_KEY
@@ -47,8 +48,8 @@ services:
       LOG_LEVEL: "DEBUG"
       USE_TESTNETS: "true"
     volumes:
-    - ./config/node_1:/tendermint/config:Z
-    - ./config/node_1/data:/tendermint/data:Z
+    - ${CORE_DATADIR}/config/node_1:/tendermint/config:Z
+    - ${CORE_DATADIR}/config/node_1/data:/tendermint/data:Z
     ports:
     - target: 26656
       published: 26656
@@ -67,41 +68,6 @@ services:
       - ETH_ADDRESS
       - ECDSA_PKPEM
 
-  # NGINX Proxy
-  #
-  # An auto-scaling reverse proxy that reconfigures
-  # itself based on which API services are available
-  # for requests.
-  #
-  # See : https://github.com/jwilder/nginx-proxy
-  #
-  # SCALED : false
-  #
-  # PORTS:
-  # http : 80
-  #
-  nginx-proxy:
-    restart: always
-    image: jwilder/nginx-proxy
-    container_name: nginx-proxy-core
-    ports:
-    - target: 80
-      published: 80
-      protocol: tcp
-      mode: host
-    - target: 443
-      published: 443
-      protocol: tcp
-      mode: host
-    volumes:
-    - /var/run/docker.sock:/tmp/docker.sock:ro
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      DEFAULT_HOST: api.local
-    depends_on:
-    - api
-    networks:
-    - chainpoint
 
   # HTTP API
   # Restify Node public web API service.
@@ -134,6 +100,15 @@ services:
       - postgres
     networks:
       - chainpoint
+    ports:
+      - target: 8080
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 8443
+        published: 443
+        protocol: tcp
+        mode: host
     environment:
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -268,7 +243,7 @@ services:
       - "6382:6379"
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
-      - ./data/redis:/data
+      - ${CORE_DATADIR}/data/redis:/data
     networks:
       - chainpoint
     command:
@@ -291,7 +266,7 @@ services:
     image: postgres:11.2-alpine
     container_name: postgres-core
     volumes:
-      - ./data/postgresql:/var/lib/postgresql/data
+      - ${CORE_DATADIR}/data/postgresql:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: chainpoint
       POSTGRES_PASSWORD: chainpoint

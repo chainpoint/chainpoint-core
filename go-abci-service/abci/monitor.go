@@ -183,7 +183,7 @@ func (app *AnchorApplication) SyncMonitor() {
 func (app *AnchorApplication) KeyMonitor() {
 	for {
 		time.Sleep(5 * time.Second) //sleep here for continue condition
-		selfStatusURL := fmt.Sprintf("http://nginx-proxy/status")
+		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
 		response, err := http.Get(selfStatusURL)
 		if util.LoggerError(app.logger, err) != nil {
 			continue
@@ -233,6 +233,7 @@ func (app *AnchorApplication) MintMonitor() {
 			return
 		}
 		if lastMintedAt.Int64() > app.state.LastMintedAtBlock {
+			app.logger.Info("Mint success, sending MINT tx")
 			_, err = app.rpc.BroadcastTx("MINT", strconv.FormatInt(lastMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID) // elect a leader to send a NIST tx
 			if err != nil {
 				app.logger.Debug("Failed to gossip MINT for LastMintedAtBlock gossip")
