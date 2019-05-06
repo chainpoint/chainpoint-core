@@ -58,7 +58,7 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 		if len(sig) > 6 {
 			sig = sig[0:6]
 		}
-		app.logger.Info(fmt.Sprintf("Mint Signatures: %v", sig))
+		app.logger.Info(fmt.Sprintf("Mint Signatures: %v\nReward Candidates: %#v\nReward Hash: %x\n", sig, rewardCandidates, rewardHash))
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
@@ -68,10 +68,12 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 			}
 			sigBytes[i] = decodedSig
 		}
-		err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
+		ethTx, err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
+		} else {
+			app.logger.Info(fmt.Sprintf("Mint Tx: %#v", ethTx))
 		}
 	}
 	return nil
