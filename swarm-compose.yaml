@@ -48,8 +48,8 @@ services:
       LOG_LEVEL: "DEBUG"
       USE_TESTNETS: "true"
     volumes:
-    - ${CORE_DATADIR}/config/node_1:/tendermint/config:Z
-    - ${CORE_DATADIR}/config/node_1/data:/tendermint/data:Z
+    - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
+    - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
     ports:
     - target: 26656
       published: 26656
@@ -242,7 +242,7 @@ services:
       - "6382:6379"
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
-      - ${CORE_DATADIR}/data/redis:/data
+      - ~/.chainpoint/core/data/redis:/data
     networks:
       - chainpoint
     command:
@@ -265,7 +265,7 @@ services:
     image: postgres:11.2-alpine
     container_name: postgres-core
     volumes:
-      - ${CORE_DATADIR}/data/postgresql:/var/lib/postgresql/data
+      - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: chainpoint
       POSTGRES_PASSWORD: chainpoint
