@@ -74,6 +74,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		// wait for a BTC-M tx
 		deadline := time.Now().Add(2 * time.Minute)
 		for app.state.LatestBtcmTxInt < startTxRange && !time.Now().After(deadline) {
+			time.Sleep(10 * time.Second)
 		}
 
 		// A BTC-M tx should have hit by now

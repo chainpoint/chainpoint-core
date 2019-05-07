@@ -55,6 +55,7 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 		app.state.LastMintCoreID = ids[0]
 	}
 	if leader {
+		app.logger.Info("Mint: Elected Leader for Minting")
 		if len(sig) > 6 {
 			sig = sig[0:6]
 		}
@@ -68,13 +69,12 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 			}
 			sigBytes[i] = decodedSig
 		}
-		ethTx, err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
+		err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
-		} else {
-			app.logger.Info(fmt.Sprintf("Mint Tx: %#v", ethTx))
 		}
+		app.logger.Info("Mint process complete")
 	}
 	return nil
 }
@@ -86,46 +86,54 @@ func (app *AnchorApplication) MintRewardNodes() error {
 
 	//Lock the minting process
 	app.SetMintPendingState(true)
-	defer app.SetMintPendingState(false)
 
 	if leader, _ := app.ElectLeader(6); leader {
-		app.logger.Info("Elected Leader for Minting")
+		app.logger.Info("Elected Leader for Mint Signing")
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Error("Mint Error: problem retrieving highest block")
+			app.SetMintPendingState(false)
 			return err
 		}
 		if currentEthBlock.Int64()-app.state.LastMintedAtBlock < 5760 {
 			app.logger.Info("Mint Error: Too soon for minting")
+			app.SetMintPendingState(false)
 			return errors.New("Too soon for minting")
 		}
 		candidates, rewardHash, err = app.GetNodeRewardCandidates()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Error retrieving node reward candidates")
+			app.SetMintPendingState(false)
 			return err
 		}
 		signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
+			app.SetMintPendingState(false)
 			return err
 		}
 		_, err = app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
 		if err != nil {
 			app.logger.Info("Mint Error: Error issuing SIGN tx")
+			app.SetMintPendingState(false)
 			return err
 		}
 	}
 	// wait for 6 SIGN tx
 	deadline := time.Now().Add(3 * time.Minute)
 	for len(app.RewardSignatures) < 6 || !time.Now().After(deadline) {
+		time.Sleep(10 * time.Second)
 	}
 	// Mint if 6+ SIGN txs are received
 	if len(app.RewardSignatures) >= 6 {
+		app.logger.Info("Mint: Enough SIGN TXs received, calling mint")
 		err := app.MintReward(app.RewardSignatures, candidates, rewardHash)
 		if util.LoggerError(app.logger, err) != nil {
+			app.SetMintPendingState(false)
 			return err
 		}
 	}
+	app.SetMintPendingState(false)
 	return nil
 }
 
