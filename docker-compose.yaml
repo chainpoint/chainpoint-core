@@ -31,9 +31,9 @@ services:
       LOG_LEVEL: "DEBUG"
       USE_TESTNETS: "true"
     volumes:
-    - ${CORE_DATADIR}/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
-    - ${CORE_DATADIR}/config/node_1:/tendermint/config:Z
-    - ${CORE_DATADIR}/config/node_1/data:/tendermint/data:Z
+    - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
+    - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
+    - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
     ports:
     - "26656:26656"
     - "26657:26657"
@@ -93,7 +93,7 @@ services:
         protocol: tcp
         mode: host
     volumes:
-      - ${CORE_DATADIR}/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
+      - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     environment:
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -244,7 +244,7 @@ services:
       - "6382:6379"
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
-      - ${CORE_DATADIR}/data/redis:/data
+      - ~/.chainpoint/core/data/redis:/data
     networks:
       - chainpoint
     command:
@@ -267,7 +267,7 @@ services:
     image: postgres:11.2-alpine
     container_name: postgres-core
     volumes:
-      - ${CORE_DATADIR}/data/postgresql:/var/lib/postgresql/data
+      - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: chainpoint
       POSTGRES_PASSWORD: chainpoint
