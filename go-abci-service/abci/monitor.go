@@ -181,8 +181,14 @@ func (app *AnchorApplication) SyncMonitor() {
 
 //KeyMonitor : updates active ECDSA public keys from all accessible peers
 func (app *AnchorApplication) KeyMonitor() {
+	first := true
 	for {
-		time.Sleep(5 * time.Second) //sleep here for continue condition
+		if first { // at startup we need to give keys to everyone else
+			time.Sleep(5 * time.Second) //sleep here for continue condition
+			first = false
+		} else {
+			time.Sleep(600 * time.Second) //normally we only do this once every 10 minutes
+		}
 		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
 		response, err := http.Get(selfStatusURL)
 		if util.LoggerError(app.logger, err) != nil {
@@ -205,7 +211,6 @@ func (app *AnchorApplication) KeyMonitor() {
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
-		time.Sleep(600 * time.Second) //if successful, only do this once every 10 minutes
 	}
 }
 
