@@ -20,8 +20,8 @@ COPY node-api-service/run.sh /home/node/app
 # Copy the test files
 COPY node-api-service/test test
 
-# Override the NODE_ENV environment variable to 'dev', in order to get required test packages
-ENV NODE_ENV dev
+# Override the NODE_ENV environment variable to 'test'
+ENV NODE_ENV test
 
 # 1. Get test packages; AND
 # 2. Install our test framework - mocha

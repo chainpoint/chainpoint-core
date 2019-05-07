@@ -10,14 +10,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+let env = require('./parse-env.js')()
 
 const winston = require('winston')
 
 const myFormat = winston.format.printf(({ level, message, timestamp }) => `${timestamp} [${level}] : ${message}`)
 
+let consoleOpts = { level: 'info', stderrLevels: ['error'] }
+if (env.NODE_ENV === 'test') consoleOpts.silent = true
+
 const logger = winston.createLogger({
   format: winston.format.combine(winston.format.colorize({ all: true }), winston.format.timestamp(), myFormat),
-  transports: [new winston.transports.Console({ level: 'info', stderrLevels: ['error'] })]
+  transports: [new winston.transports.Console(consoleOpts)]
 })
 
 module.exports = logger
