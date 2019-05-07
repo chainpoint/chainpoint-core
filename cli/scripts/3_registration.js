@@ -19,7 +19,7 @@ const path = require('path')
 const { pipeP } = require('ramda')
 const ethers = require('ethers')
 const { getETHStatsByAddressAsync, broadcastEthTxAsync } = require('../../lib/cores')
-const env = require('../../lib/parse-env.js')
+const env = require('../../lib/parse-env.js')()
 
 let tknDefinition = require('../../go-abci-service/ethcontracts/TierionNetworkToken.json')
 let regDefinition = require('../../go-abci-service/ethcontracts/ChainpointRegistry.json')
