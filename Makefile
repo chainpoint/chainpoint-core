@@ -208,6 +208,7 @@ redis:
 
 ## deploy					: deploys a swarm stack
 deploy:
+	@sudo rsync .env ${CORE_DATADIR}/.env
 	@set -a && source ${CORE_DATADIR}/.env && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
 
 ## stop						: stops a swarm stack
