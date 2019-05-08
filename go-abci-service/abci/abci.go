@@ -190,7 +190,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	if config.DoNodeManagement {
 		//Initialize node state
-		go app.KeyMonitor()
 		go app.PollNodesFromContract()
 	}
 
@@ -269,6 +268,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	if app.state.ChainSynced {
 		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
+		go app.KeyMonitor()        // send out this Core's JWK to the rest of the network
 	}
 
 	// Finalize new block by calculating appHash and incrementing height
