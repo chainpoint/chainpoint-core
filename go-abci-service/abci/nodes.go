@@ -69,7 +69,7 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 			}
 			sigBytes[i] = decodedSig
 		}
-		err := app.ethClient.Mint(rewardCandidates, signHash(rewardHash), sigBytes)
+		err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
@@ -106,6 +106,9 @@ func (app *AnchorApplication) MintRewardNodes() error {
 			app.SetMintPendingState(false)
 			return err
 		}
+		app.logger.Info(fmt.Sprintf("Mint: raw SHA3 hash: %x", rewardHash))
+		rewardHash = signHash(rewardHash)
+		app.logger.Info(fmt.Sprintf("Mint: with prefix: %x", rewardHash))
 		signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
