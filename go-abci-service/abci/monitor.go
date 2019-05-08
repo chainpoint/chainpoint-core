@@ -215,6 +215,7 @@ func (app *AnchorApplication) KeyMonitor() {
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if leader, _ := app.ElectLeader(1); leader {
+		app.logger.Info("NIST: Elected as leader")
 		nistRecord, err := beacon.LastRecord()
 		if util.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new NIST beacon value")
