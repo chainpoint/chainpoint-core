@@ -25,7 +25,6 @@ import (
 	cfg "github.com/tendermint/tendermint/config"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
 	cmn "github.com/tendermint/tendermint/libs/common"
-	sm "github.com/tendermint/tendermint/state"
 )
 
 func main() {
@@ -78,7 +77,7 @@ func main() {
 		privval.LoadOrGenFilePV(newPrivValKey, newPrivValState),
 		nodeKey,
 		appProxy,
-		sm.DefaultGenesisDocProviderFunc(defaultConfig),
+		node.DefaultGenesisDocProviderFunc(defaultConfig),
 		node.DefaultDBProvider,
 		node.DefaultMetricsProvider(defaultConfig.Instrumentation),
 		logger,
