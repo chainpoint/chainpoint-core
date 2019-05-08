@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -24,6 +25,8 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
+
+var randSourceLock sync.Mutex
 
 // LogError : Log error if it exists
 func LogError(err error) error {
@@ -65,16 +68,22 @@ func GetEnv(key string, def string) string {
 func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	eightByteHash := seedBytes[0:7]
 	seed, _ := binary.Varint(eightByteHash)
+	randSourceLock.Lock()
 	rand.Seed(seed)
-	return rand.Intn(upperBound)
+	index := rand.Intn(upperBound)
+	randSourceLock.Unlock()
+	return index
 }
 
 // GetSeededRandFloat : Given a seed return a random float
 func GetSeededRandFloat(seedBytes []byte) float32 {
 	eightByteHash := seedBytes[0:7]
 	seed, _ := binary.Varint(eightByteHash)
+	randSourceLock.Lock()
 	rand.Seed(seed)
-	return rand.Float32()
+	index := rand.Float32()
+	randSourceLock.Unlock()
+	return index
 }
 
 // UUIDFromHash : generate a uuid from a byte hash, must be 16 bytes

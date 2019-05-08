@@ -214,8 +214,9 @@ func (app *AnchorApplication) KeyMonitor() {
 	}
 }
 
-// NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI app
+// NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
+	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if leader, _ := app.ElectLeader(1); leader {
 		nistRecord, err := beacon.LastRecord()
 		if util.LogError(err) != nil {

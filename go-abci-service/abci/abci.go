@@ -167,10 +167,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	//Initialize calendar writing if enabled
 	if config.DoCal {
-
-		// Update NIST beacon record and gossip it to ensure everyone has the same aggregator state
-		scheduler.AddFunc("0/1 0-23 * * *", app.NistBeaconMonitor)
-
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
 			if app.state.ChainSynced { // don't aggregate if Tendermint isn't synced or functioning correctly
@@ -262,6 +258,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
+			go app.NistBeaconMonitor()                                          // update NIST beacon using deterministic leader election
 			if app.config.DoNodeAudit && !app.state.MintPending {
 				go app.AuditNodes() //retrieve, audit, and reward some nodes
 				go app.MintRewardNodes()
