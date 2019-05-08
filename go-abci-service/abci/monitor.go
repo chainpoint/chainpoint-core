@@ -214,8 +214,8 @@ func (app *AnchorApplication) KeyMonitor() {
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if leader, _ := app.ElectLeader(1); leader {
-		app.logger.Info("NIST: Elected as leader")
+	if leader, leaders := app.ElectLeader(1); leader {
+		app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 		nistRecord, err := beacon.LastRecord()
 		if util.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new NIST beacon value")
