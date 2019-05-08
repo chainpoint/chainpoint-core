@@ -258,7 +258,6 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
-			go app.NistBeaconMonitor()                                          // update NIST beacon using deterministic leader election
 			if app.config.DoNodeAudit && !app.state.MintPending {
 				go app.AuditNodes() //retrieve, audit, and reward some nodes
 				go app.MintRewardNodes()
@@ -266,6 +265,10 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
+	}
+
+	if app.state.ChainSynced {
+		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
 	}
 
 	// Finalize new block by calculating appHash and incrementing height

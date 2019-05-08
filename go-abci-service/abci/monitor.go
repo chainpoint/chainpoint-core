@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tendermint/tendermint/abci/example/code"
-
 	beacon "github.com/chainpoint/go-nist-beacon"
 
 	"github.com/streadway/amqp"
@@ -203,11 +201,11 @@ func (app *AnchorApplication) KeyMonitor() {
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
-		res, err := app.rpc.BroadcastTxCommit("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
+		res, err := app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
-		if res.DeliverTx.Code == code.CodeTypeOK {
+		if res.Code == 0 {
 			app.logger.Info("JWK keysync tx committed")
 			return
 		}
