@@ -96,8 +96,8 @@ func (app *AnchorApplication) SignRewards() error {
 	var rewardHash []byte
 
 	//Lock the minting process
-	if leader, _ := app.ElectLeader(6); leader {
-		app.logger.Info("Elected Leader for Mint Signing")
+	if leader, leaders := app.ElectLeader(6); leader {
+		app.logger.Info(fmt.Sprintf("Elected Leaders for Mint Signing: %v", leaders))
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Error("Mint Error: problem retrieving highest block")
