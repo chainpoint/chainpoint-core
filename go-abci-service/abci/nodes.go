@@ -96,7 +96,7 @@ func (app *AnchorApplication) SignRewards() error {
 	var rewardHash []byte
 
 	//Lock the minting process
-	if leader, leaders := app.ElectLeader(6); leader {
+	if leader, leaders := app.ElectLeader(7); leader {
 		app.logger.Info(fmt.Sprintf("Elected Leaders for Mint Signing: %v", leaders))
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
