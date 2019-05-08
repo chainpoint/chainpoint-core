@@ -59,7 +59,7 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 		if len(sig) > 6 {
 			sig = sig[0:6]
 		}
-		app.logger.Info(fmt.Sprintf("Mint Signatures: %v\nReward Candidates: %#v\nReward Hash: %x\n", sig, rewardCandidates, rewardHash))
+		app.logger.Info(fmt.Sprintf("Mint Signatures: %v\nReward Candidates: %v\nReward Hash: %x\n", sig, rewardCandidates, rewardHash))
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
@@ -154,6 +154,7 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 			return []common.Address{}, []byte{}, err
 		}
 		for _, nodeJSON := range nodes {
+			app.logger.Info(fmt.Sprintf("Mint: Decoded NODE-RC: %#v", nodeJSON))
 			nodeArray = append(nodeArray, common.HexToAddress(nodeJSON.EthAddr))
 		}
 	}
@@ -161,6 +162,7 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 		return []common.Address{}, []byte{}, errors.New("No NODE-RC tx from the last epoch have been found")
 	}
 	addresses := util.UniquifyAddresses(nodeArray)
+	app.logger.Info(fmt.Sprintf("Mint: input node addresses: %#v", addresses))
 	rewardHash := ethcontracts.AddressesToHash(addresses)
 	return addresses, rewardHash, nil
 }
