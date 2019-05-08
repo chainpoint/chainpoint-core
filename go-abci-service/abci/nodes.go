@@ -110,6 +110,7 @@ func (app *AnchorApplication) MintRewardNodes() error {
 		rewardHash = signHash(rewardHash)
 		app.logger.Info(fmt.Sprintf("Mint: with prefix: %x", rewardHash))
 		signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
+		signature[64] += 27
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
 			app.SetMintPendingState(false)
