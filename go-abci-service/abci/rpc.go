@@ -34,6 +34,16 @@ func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int6
 	return *result, nil
 }
 
+// BroadcastTxCommit : Synchronously broadcasts a transaction to the local Tendermint node THIS IS BLOCKING
+func (rpc *RPC) BroadcastTxCommit(txType string, data string, version int64, time int64, stackID string) (core_types.ResultBroadcastTxCommit, error) {
+	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID}
+	result, err := rpc.client.BroadcastTxCommit([]byte(util.EncodeTx(tx)))
+	if util.LogError(err) != nil {
+		return core_types.ResultBroadcastTxCommit{}, err
+	}
+	return *result, nil
+}
+
 // GetStatus retrieves status of our node. Can't use RPC because remote_ip has buggy encoding.
 func (rpc *RPC) GetStatus() (core_types.ResultStatus, error) {
 	if rpc == nil {
