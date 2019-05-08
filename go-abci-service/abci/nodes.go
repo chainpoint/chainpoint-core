@@ -80,13 +80,12 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 }
 
 func (app *AnchorApplication) MintRewardNodes() error {
-	app.SetMintPendingState(true)
+	app.SetMintPendingState(true) //needed since we can't do a blocking lock in commit
 	err := app.SignRewards()
+	app.SetMintPendingState(false)
 	if util.LoggerError(app.logger, err) != nil {
-		app.SetMintPendingState(false)
 		return err
 	}
-	app.SetMintPendingState(false)
 	return nil
 }
 
@@ -129,7 +128,7 @@ func (app *AnchorApplication) SignRewards() error {
 	}
 	// wait for 6 SIGN tx
 	deadline := time.Now().Add(3 * time.Minute)
-	for len(app.RewardSignatures) < 6 || !time.Now().After(deadline) {
+	for len(app.RewardSignatures) < 6 && !time.Now().After(deadline) {
 		time.Sleep(10 * time.Second)
 	}
 	// Mint if 6+ SIGN txs are received
