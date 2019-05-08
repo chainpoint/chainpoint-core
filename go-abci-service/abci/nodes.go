@@ -69,7 +69,7 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 			}
 			sigBytes[i] = decodedSig
 		}
-		err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
+		err := app.ethClient.Mint(rewardCandidates, signHash(rewardHash), sigBytes)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
