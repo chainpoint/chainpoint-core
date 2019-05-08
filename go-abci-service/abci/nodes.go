@@ -79,31 +79,37 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 	return nil
 }
 
-//CollectRewardNodes : collate and sign reward node list
 func (app *AnchorApplication) MintRewardNodes() error {
+	app.SetMintPendingState(true)
+	err := app.SignRewards()
+	if util.LoggerError(app.logger, err) != nil {
+		app.SetMintPendingState(false)
+		return err
+	}
+	app.SetMintPendingState(false)
+	return nil
+}
+
+//CollectRewardNodes : collate and sign reward node list
+func (app *AnchorApplication) SignRewards() error {
 	var candidates []common.Address
 	var rewardHash []byte
 
 	//Lock the minting process
-	app.SetMintPendingState(true)
-
 	if leader, _ := app.ElectLeader(6); leader {
 		app.logger.Info("Elected Leader for Mint Signing")
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Error("Mint Error: problem retrieving highest block")
-			app.SetMintPendingState(false)
 			return err
 		}
 		if currentEthBlock.Int64()-app.state.LastMintedAtBlock < 5760 {
 			app.logger.Info("Mint Error: Too soon for minting")
-			app.SetMintPendingState(false)
 			return errors.New("Too soon for minting")
 		}
 		candidates, rewardHash, err = app.GetNodeRewardCandidates()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Error retrieving node reward candidates")
-			app.SetMintPendingState(false)
 			return err
 		}
 		app.logger.Info(fmt.Sprintf("Mint: raw SHA3 hash: %x", rewardHash))
@@ -113,13 +119,11 @@ func (app *AnchorApplication) MintRewardNodes() error {
 		signature[64] += 27
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
-			app.SetMintPendingState(false)
 			return err
 		}
 		_, err = app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
 		if err != nil {
 			app.logger.Info("Mint Error: Error issuing SIGN tx")
-			app.SetMintPendingState(false)
 			return err
 		}
 	}
@@ -133,11 +137,9 @@ func (app *AnchorApplication) MintRewardNodes() error {
 		app.logger.Info("Mint: Enough SIGN TXs received, calling mint")
 		err := app.MintReward(app.RewardSignatures, candidates, rewardHash)
 		if util.LoggerError(app.logger, err) != nil {
-			app.SetMintPendingState(false)
 			return err
 		}
 	}
-	app.SetMintPendingState(false)
 	return nil
 }
 

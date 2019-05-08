@@ -249,7 +249,5 @@ func (app *AnchorApplication) MintMonitor() {
 //SetMintState : create a deferable method to set mint state
 func (app *AnchorApplication) SetMintPendingState(val bool) {
 	app.state.MintPending = val
-	if !val {
-		app.RewardSignatures = make([]string, 0)
-	}
+	app.RewardSignatures = make([]string, 0)
 }
