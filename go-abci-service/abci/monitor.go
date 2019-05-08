@@ -181,34 +181,33 @@ func (app *AnchorApplication) SyncMonitor() {
 
 //KeyMonitor : updates active ECDSA public keys from all accessible peers
 func (app *AnchorApplication) KeyMonitor() {
-	for {
-		time.Sleep(90 * time.Second) //sleep here for continue condition
-		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
-		response, err := http.Get(selfStatusURL)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		contents, err := ioutil.ReadAll(response.Body)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		var apiStatus types.CoreAPIStatus
-		err = json.Unmarshal(contents, &apiStatus)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		jwkJson, err := json.Marshal(apiStatus.Jwk)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		res, err := app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		if res.Code == 0 {
-			app.logger.Info("JWK keysync tx committed")
-			return
-		}
+	time.Sleep(90 * time.Second) //sleep here for continue condition
+	selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
+	response, err := http.Get(selfStatusURL)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	contents, err := ioutil.ReadAll(response.Body)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	var apiStatus types.CoreAPIStatus
+	err = json.Unmarshal(contents, &apiStatus)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	jwkJson, err := json.Marshal(apiStatus.Jwk)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	res, err := app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	if res.Code == 0 {
+		app.logger.Info("JWK keysync tx committed")
+		app.config.JWKSent = true
+		return
 	}
 }
 
