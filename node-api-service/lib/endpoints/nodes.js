@@ -17,43 +17,47 @@
 const errors = require('restify-errors')
 let tmRpc = require('../tendermint-rpc.js')
 let stakedNode = require('../models/StakedNode.js')
+let env = require('../parse-env.js')('api')
 const logger = require('../logger.js')
 
 async function getNodesAsync(req, res, next) {
   let nodes = []
 
-  try {
-    //get the minting epoch which will tell us how to retrieve known good nodes from tendermint
-    let abciResponse = await tmRpc.getAbciInfo()
-    if (abciResponse.error) {
-      logger.error(`RPC error communicating with Tendermint : ${abciResponse.error.message}`)
-      throw new Error('Could not get abci info')
-    }
-
-    //create tx query tag and query TM for transactions containing reward candidate nodes
-    let prevEpoch = JSON.parse(abciResponse.result.response.data).prev_mint_block
-    if (prevEpoch != 0) {
-      let tag = `NODERC=${prevEpoch}`
-      let txResponse = await tmRpc.getTxSearch(tag, 1, 25) //get NODE-RC transactions from past 24 hours
-      if (txResponse.error) {
-        logger.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
-        throw new Error('Could not get NODE-RC transactions')
+  // Do not attempt to build node list from rewards candidate in Private Mode
+  if (env.PRIVATE_NETWORK === false) {
+    try {
+      //get the minting epoch which will tell us how to retrieve known good nodes from tendermint
+      let abciResponse = await tmRpc.getAbciInfo()
+      if (abciResponse.error) {
+        logger.error(`RPC error communicating with Tendermint : ${abciResponse.error.message}`)
+        throw new Error('Could not get abci info')
       }
 
-      //retrieve IPs from reward candidate arrays
-      let nodeArrays = txResponse.result.txs.map(tx => {
-        let txText = new Buffer(new Buffer(tx, 'base64').toString('ascii'), 'base64').toString('ascii')
-        return JSON.parse(txText).data.map(node => {
-          return { public_uri: 'http://' + node.node_ip }
+      //create tx query tag and query TM for transactions containing reward candidate nodes
+      let prevEpoch = JSON.parse(abciResponse.result.response.data).prev_mint_block
+      if (prevEpoch != 0) {
+        let tag = `NODERC=${prevEpoch}`
+        let txResponse = await tmRpc.getTxSearch(tag, 1, 25) //get NODE-RC transactions from past 24 hours
+        if (txResponse.error) {
+          logger.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+          throw new Error('Could not get NODE-RC transactions')
+        }
+
+        //retrieve IPs from reward candidate arrays
+        let nodeArrays = txResponse.result.txs.map(tx => {
+          let txText = new Buffer(new Buffer(tx, 'base64').toString('ascii'), 'base64').toString('ascii')
+          return JSON.parse(txText).data.map(node => {
+            return { public_uri: 'http://' + node.node_ip }
+          })
         })
-      })
-      nodes = [].concat.apply([], nodeArrays) //flatten array
+        nodes = [].concat.apply([], nodeArrays) //flatten array
+      }
+    } catch (error) {
+      logger.error(`Tendermint RPC error : falling back to random nodes list : ${error.message}`)
     }
-  } catch (error) {
-    logger.error(`Tendermint RPC error : falling back to random nodes list : ${error.message}`)
   }
 
-  //If we retrieved nothing from tendermint, retrieve some random nodes
+  // If nothing was retrieved from Tendermint (0 results or Private Mode), get random Node list
   if (nodes.length == 0) {
     try {
       let nodesResponse = await stakedNode.getRandomNodes() //get random nodes if we can't get reward-candidates
@@ -78,5 +82,8 @@ module.exports = {
   },
   setStakedNode: sn => {
     stakedNode = sn
+  },
+  setENV: obj => {
+    env = obj
   }
 }
