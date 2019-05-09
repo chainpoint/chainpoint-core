@@ -15,6 +15,7 @@ services:
     - rabbitmq
     - api
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       PEERS: ${PEERS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
@@ -95,6 +96,7 @@ services:
     volumes:
       - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       VIRTUAL_HOST: api.local
@@ -117,6 +119,7 @@ services:
     networks:
       - chainpoint
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
       VIRTUAL_HOST: api.local
@@ -144,6 +147,7 @@ services:
     networks:
       - chainpoint
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
@@ -167,6 +171,7 @@ services:
     networks:
       - chainpoint
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
     tty: true
@@ -187,6 +192,7 @@ services:
     networks:
       - chainpoint
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
     tty: true
@@ -208,6 +214,7 @@ services:
     networks:
       - chainpoint
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
     tty: true
 

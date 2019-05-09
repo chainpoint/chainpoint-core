@@ -28,6 +28,13 @@ const validateMinConfirmRange = envalid.makeValidator(x => {
   if (x >= 1 && x <= 16) return x
   else throw new Error('Value must be between 1 and 16, inclusive')
 })
+const validatePrivateNetwork = envalid.makeValidator(x => {
+  if (!x) return false
+  x = x.toString().toLowerCase()
+  if (x === 'false') return false
+  if (x === 'true') return true
+  throw new Error('The PRIVATE_NETWORK value is invalid')
+})
 
 let envDefinitions = {
   // The following variables are exposed by this stack's /status endpoint
@@ -38,8 +45,9 @@ let envDefinitions = {
   // * Global variables with default values
   // ***********************************************************************
 
-  // Chainpoint stack related variables
+  // Chainpoint Core environment related variables
   NODE_ENV: envalid.str({ default: 'production', desc: 'The type of environment in which the service is running' }),
+  PRIVATE_NETWORK: validatePrivateNetwork({ default: 'false', desc: 'Run this Core within your own private network' }),
 
   // RabbitMQ related variables
   RABBITMQ_CONNECT_URI: envalid.url({

@@ -28,6 +28,7 @@ services:
     - rabbitmq
     - api
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -110,6 +111,7 @@ services:
         protocol: tcp
         mode: host
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       VIRTUAL_HOST: api.local
@@ -145,6 +147,7 @@ services:
     secrets:
       - BITCOIN_WIF
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
@@ -167,6 +170,7 @@ services:
     networks:
       - chainpoint
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
     tty: true
@@ -186,6 +190,7 @@ services:
     networks:
       - chainpoint
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
     tty: true
@@ -206,6 +211,7 @@ services:
     networks:
       - chainpoint
     environment:
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
     tty: true
 
