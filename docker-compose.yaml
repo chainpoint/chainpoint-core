@@ -22,6 +22,9 @@ services:
       ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
+      PRIVATE_NODE_IPS: ""
+      TEST_MODE: ${NODE_ENV}
       AUDIT: "true"
       NODE_MANAGEMENT: "true"
       ANCHOR: "true"
@@ -30,7 +33,6 @@ services:
       HASHES_PER_MERKLE_TREE: "200"
       ANCHOR_BLOCK_INTERVAL: "3"
       LOG_LEVEL: "DEBUG"
-      USE_TESTNETS: "true"
     volumes:
     - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
