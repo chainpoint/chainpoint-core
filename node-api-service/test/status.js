@@ -10,11 +10,11 @@ const app = require('../server.js')
 const status = require('../lib/endpoints/status.js')
 const { version } = require('../package.json')
 
-describe('Status Controller', () => {
+describe('Status Controller - Public Mode', () => {
   let insecureServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync()
+    insecureServer = await app.startInsecureRestifyServerAsync(false)
   })
   afterEach(() => {
     insecureServer.close()
@@ -63,7 +63,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
     }
     before(() => {
-      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ECDSA_PKPEM: ecdsa })
+      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ECDSA_PKPEM: ecdsa, PRIVATE_NETWORK: false })
       let statusResult = { tmresult: 1 }
       status.setTmRpc({
         getStatusAsync: async () => {
@@ -93,6 +93,56 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
             .to.have.property('jwk')
             .and.to.be.a('object')
             .and.to.deep.equal(jwk)
+          expect(res.body)
+            .to.have.property('tmresult')
+            .and.to.be.a('number')
+            .and.to.equal(1)
+          done()
+        })
+    })
+  })
+})
+
+describe('Status Controller - Private Mode', () => {
+  let insecureServer = null
+  beforeEach(async () => {
+    app.setThrottle(() => (req, res, next) => next())
+    insecureServer = await app.startInsecureRestifyServerAsync(true)
+  })
+  afterEach(() => {
+    insecureServer.close()
+  })
+
+  describe('GET /status', () => {
+    let baseURI = 'http://base.uri'
+    before(() => {
+      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, PRIVATE_NETWORK: true })
+      let statusResult = { tmresult: 1 }
+      status.setTmRpc({
+        getStatusAsync: async () => {
+          return { result: statusResult }
+        }
+      })
+    })
+    it('should return proper status object', done => {
+      request(insecureServer)
+        .get('/status')
+        .expect('Content-type', /json/)
+        .expect(200)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('version')
+            .and.to.be.a('string')
+            .and.to.equal(version)
+          expect(res.body)
+            .to.have.property('time')
+            .and.to.be.a('string')
+          expect(res.body)
+            .to.have.property('base_uri')
+            .and.to.be.a('string')
+            .and.to.equal(baseURI)
+          expect(res.body).to.not.have.property('jwk')
           expect(res.body)
             .to.have.property('tmresult')
             .and.to.be.a('number')
