@@ -56,7 +56,7 @@ let throttle = (burst, rate, opts = { ip: true }) => {
   return restify.plugins.throttle(Object.assign({}, { burst, rate }, opts))
 }
 
-function setupRestifyConfigAndRoutes(server) {
+function setupRestifyConfigAndRoutes(server, privateMode) {
   // LOG EVERY REQUEST
   // server.pre(function (request, response, next) {
   //   request.log.info({ req: [request.url, request.method, request.rawHeaders] }, 'API-REQUEST')
@@ -112,22 +112,25 @@ function setupRestifyConfigAndRoutes(server) {
   server.get({ path: '/peers', version: '1.0.0' }, throttle(15, 3), peers.getPeersAsync)
   // get status
   server.get({ path: '/status', version: '1.0.0' }, throttle(15, 3), status.getCoreStatusAsync)
-  // get eth tx data
-  server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
-  // post eth broadcast
-  server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
-  // post token refresh
-  server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
-  // post token credit
-  server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
+  // do not enable ETH and JWT related endpoint if running in Private Mode
+  if (privateMode === false) {
+    // get eth tx data
+    server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
+    // post eth broadcast
+    server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
+    // post token refresh
+    server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
+    // post token credit
+    server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
+  }
   // teapot
   server.get({ path: '/', version: '1.0.0' }, root.getV1)
 }
 
 // HTTP Server
-async function startInsecureRestifyServerAsync() {
+async function startInsecureRestifyServerAsync(privateMode) {
   let restifyServer = restify.createServer(httpOptions)
-  setupRestifyConfigAndRoutes(restifyServer)
+  setupRestifyConfigAndRoutes(restifyServer, privateMode)
 
   // Begin listening for requests
   await connections.listenRestifyAsync(restifyServer, 8080)
@@ -212,7 +215,7 @@ async function start() {
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
-    await startInsecureRestifyServerAsync()
+    await startInsecureRestifyServerAsync(env.PRIVATE_NETWORK)
     logger.info(`Startup completed successfully ${env.PRIVATE_NETWORK ? ': *** Private Network Mode ***' : ''}`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
