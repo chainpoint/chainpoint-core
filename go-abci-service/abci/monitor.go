@@ -181,37 +181,37 @@ func (app *AnchorApplication) SyncMonitor() {
 
 //KeyMonitor : updates active ECDSA public keys from all accessible peers
 func (app *AnchorApplication) KeyMonitor() {
-	for {
-		time.Sleep(5 * time.Second) //sleep here for continue condition
-		selfStatusURL := fmt.Sprintf("http://nginx-proxy/status")
-		response, err := http.Get(selfStatusURL)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		contents, err := ioutil.ReadAll(response.Body)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		var apiStatus types.CoreAPIStatus
-		err = json.Unmarshal(contents, &apiStatus)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		jwkJson, err := json.Marshal(apiStatus.Jwk)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
-		if util.LoggerError(app.logger, err) != nil {
-			continue
-		}
-		time.Sleep(600 * time.Second) //if successful, only do this once every 10 minutes
+	time.Sleep(90 * time.Second) //sleep here for continue condition
+	selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
+	response, err := http.Get(selfStatusURL)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	contents, err := ioutil.ReadAll(response.Body)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	var apiStatus types.CoreAPIStatus
+	err = json.Unmarshal(contents, &apiStatus)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	app.JWK = apiStatus.Jwk
+	jwkJson, err := json.Marshal(apiStatus.Jwk)
+	if util.LoggerError(app.logger, err) != nil {
+		return
+	}
+	_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
+	if util.LoggerError(app.logger, err) != nil {
+		return
 	}
 }
 
-// NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI app
+// NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
-	if leader, _ := app.ElectLeader(1); leader {
+	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
+	if leader, leaders := app.ElectLeader(1); leader {
+		app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 		nistRecord, err := beacon.LastRecord()
 		if util.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new NIST beacon value")
@@ -233,10 +233,17 @@ func (app *AnchorApplication) MintMonitor() {
 			return
 		}
 		if lastMintedAt.Int64() > app.state.LastMintedAtBlock {
+			app.logger.Info("Mint success, sending MINT tx")
 			_, err = app.rpc.BroadcastTx("MINT", strconv.FormatInt(lastMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID) // elect a leader to send a NIST tx
 			if err != nil {
 				app.logger.Debug("Failed to gossip MINT for LastMintedAtBlock gossip")
 			}
 		}
 	}
+}
+
+//SetMintState : create a deferable method to set mint state
+func (app *AnchorApplication) SetMintPendingState(val bool) {
+	app.state.MintPending = val
+	app.RewardSignatures = make([]string, 0)
 }

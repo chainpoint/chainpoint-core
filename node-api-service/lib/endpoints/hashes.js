@@ -15,7 +15,7 @@
  */
 
 const errors = require('restify-errors')
-const env = require('../parse-env.js')('api')
+let env = require('../parse-env.js')('api')
 const utils = require('../utils.js')
 const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
@@ -103,19 +103,17 @@ function generatePostHashResponse(hash) {
  * Generate the expected proof ready times for each proof stage
  *
  * @param {Date} timestampDate - The hash submission timestamp
- * @returns {Object} An Object with 'cal', 'eth', and 'btc' properties
+ * @returns {Object} An Object with 'cal' and 'btc' properties
  *
  */
 function generateProcessingHints(timestampDate) {
   let twoHoursFromTimestamp = utils.addMinutes(timestampDate, 120)
   let oneHourFromTopOfTheHour = new Date(twoHoursFromTimestamp.setHours(twoHoursFromTimestamp.getHours(), 0, 0, 0))
   let calHint = utils.formatDateISO8601NoMs(utils.addSeconds(timestampDate, 10))
-  let ethHint = utils.formatDateISO8601NoMs(utils.addMinutes(timestampDate, 41))
   let btcHint = utils.formatDateISO8601NoMs(oneHourFromTopOfTheHour)
 
   return {
     cal: calHint,
-    eth: ethHint,
     btc: btcHint
   }
 }
@@ -161,45 +159,48 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
-  const tokenString = req.params.token
-  // ensure that token is supplied
-  if (!tokenString) {
-    return next(new errors.InvalidArgumentError('invalid request, token must be supplied'))
+  // do not require JWT when running in Private Mode
+  if (env.PRIVATE_NETWORK === false) {
+    const tokenString = req.params.token
+    // ensure that token is supplied
+    if (!tokenString) {
+      return next(new errors.InvalidArgumentError('invalid request, token must be supplied'))
+    }
+
+    let decodedToken = null
+    // attempt to parse token, if not valid, return error
+    try {
+      decodedToken = jwt.decode(tokenString, { complete: true })
+      if (!decodedToken) throw new Error()
+    } catch (error) {
+      return next(new errors.InvalidArgumentError('invalid request, token cannot be decoded'))
+    }
+
+    // verify signature of token
+    let verifyError = await tokenUtils.verifySigAsync(tokenString, decodedToken)
+    // verifyError will be a restify error on error, or null on successful verification
+    if (verifyError !== null) return next(verifyError)
+
+    // ensure that we can retrieve the Node IP from the request
+    let submittingNodeIP = utils.getClientIP(req)
+    if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+    logger.info(`Received request from Node at ${submittingNodeIP}`)
+
+    // get the token's subject
+    let sub = decodedToken.payload.sub
+    if (!sub) return next(new errors.InvalidArgumentError('invalid request, token missing `sub` value'))
+
+    // ensure the Node IP is the subject of the JWT
+    if (sub !== submittingNodeIP)
+      return next(new errors.InvalidArgumentError('invalid request, token subject does not match Node IP'))
+
+    // cannot accept expired token
+    let exp = decodedToken.payload.exp
+    if (!exp) return next(new errors.InvalidArgumentError('invalid request, token missing `exp` value'))
+    if (isNaN(exp)) return next(new errors.InvalidArgumentError('invalid request, `exp` value must be a number'))
+    let expMS = exp * 1000
+    if (expMS < Date.now()) return next(new errors.UnauthorizedError('not authorized, token has expired'))
   }
-
-  let decodedToken = null
-  // attempt to parse token, if not valid, return error
-  try {
-    decodedToken = jwt.decode(tokenString, { complete: true })
-    if (!decodedToken) throw new Error()
-  } catch (error) {
-    return next(new errors.InvalidArgumentError('invalid request, token cannot be decoded'))
-  }
-
-  // verify signature of token
-  let verifyError = await tokenUtils.verifySigAsync(tokenString, decodedToken)
-  // verifyError will be a restify error on error, or null on successful verification
-  if (verifyError !== null) return next(verifyError)
-
-  // ensure that we can retrieve the Node IP from the request
-  let submittingNodeIP = utils.getClientIP(req)
-  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
-  logger.info(`Received request from Node at ${submittingNodeIP}`)
-
-  // get the token's subject
-  let sub = decodedToken.payload.sub
-  if (!sub) return next(new errors.InvalidArgumentError('invalid request, token missing `sub` value'))
-
-  // ensure the Node IP is the subject of the JWT
-  if (sub !== submittingNodeIP)
-    return next(new errors.InvalidArgumentError('invalid request, token subject does not match Node IP'))
-
-  // cannot accept expired token
-  let exp = decodedToken.payload.exp
-  if (!exp) return next(new errors.InvalidArgumentError('invalid request, token missing `exp` value'))
-  if (isNaN(exp)) return next(new errors.InvalidArgumentError('invalid request, `exp` value must be a number'))
-  let expMS = exp * 1000
-  if (expMS < Date.now()) return next(new errors.UnauthorizedError('not authorized, token has expired'))
 
   let responseObj = generatePostHashResponse(req.params.hash)
 
@@ -236,5 +237,8 @@ module.exports = {
   },
   setGetIP: func => {
     utils.getClientIP = func
+  },
+  setENV: obj => {
+    env = obj
   }
 }

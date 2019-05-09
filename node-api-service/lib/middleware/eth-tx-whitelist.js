@@ -17,7 +17,7 @@
 const ethers = require('ethers')
 const errors = require('restify-errors')
 const utils = require('../utils.js')
-const env = require('../parse-env.js')
+const env = require('../parse-env.js')()
 
 const tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
 const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.json')

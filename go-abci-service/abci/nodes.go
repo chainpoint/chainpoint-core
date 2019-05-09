@@ -33,6 +33,10 @@ import (
 //SaveJWK : save the JWT value retrieved
 func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 	key := fmt.Sprintf("CorePublicKey:%s", jwk.Kid)
+	if jwk.Kid == app.JWK.Kid {
+		app.logger.Info("JWK keysync tx committed")
+		app.JWKSent = true
+	}
 	jsonJwk, err := json.Marshal(jwk)
 	if util.LoggerError(app.logger, err) != nil {
 		return err
@@ -49,12 +53,17 @@ func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 }
 
 //MintRewardNodes : mint rewards for nodes
-func (app *AnchorApplication) MintRewardNodes(sig []string) error {
+func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common.Address, rewardHash []byte) error {
 	leader, ids := app.ElectLeader(1)
 	if len(ids) == 1 {
 		app.state.LastMintCoreID = ids[0]
 	}
 	if leader {
+		app.logger.Info("Mint: Elected Leader for Minting")
+		if len(sig) > 6 {
+			sig = sig[0:6]
+		}
+		app.logger.Info(fmt.Sprintf("Mint Signatures: %v\nReward Candidates: %v\nReward Hash: %x\n", sig, rewardCandidates, rewardHash))
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
@@ -64,23 +73,34 @@ func (app *AnchorApplication) MintRewardNodes(sig []string) error {
 			}
 			sigBytes[i] = decodedSig
 		}
-		rewardCandidates, rewardHash, err := app.GetNodeRewardCandidates()
-		if util.LoggerError(app.logger, err) != nil {
-			return err
-		}
-		err = app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
+		err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
 		}
-		app.RewardSignatures = make([]string, 0)
+		app.logger.Info("Mint process complete")
+	}
+	return nil
+}
+
+func (app *AnchorApplication) MintRewardNodes() error {
+	app.SetMintPendingState(true) //needed since we can't do a blocking lock in commit
+	err := app.SignRewards()
+	app.SetMintPendingState(false)
+	if util.LoggerError(app.logger, err) != nil {
+		return err
 	}
 	return nil
 }
 
 //CollectRewardNodes : collate and sign reward node list
-func (app *AnchorApplication) CollectRewardNodes() error {
-	if leader, _ := app.ElectLeader(5); leader {
+func (app *AnchorApplication) SignRewards() error {
+	var candidates []common.Address
+	var rewardHash []byte
+
+	//Lock the minting process
+	if leader, leaders := app.ElectLeader(7); leader {
+		app.logger.Info(fmt.Sprintf("Elected Leaders for Mint Signing: %v", leaders))
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Error("Mint Error: problem retrieving highest block")
@@ -90,27 +110,38 @@ func (app *AnchorApplication) CollectRewardNodes() error {
 			app.logger.Info("Mint Error: Too soon for minting")
 			return errors.New("Too soon for minting")
 		}
-		_, rewardHash, err := app.GetNodeRewardCandidates()
+		candidates, rewardHash, err = app.GetNodeRewardCandidates()
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Error retrieving node reward candidates")
 			return err
 		}
+		app.logger.Info(fmt.Sprintf("Mint: raw SHA3 hash: %x", rewardHash))
+		rewardHash = signHash(rewardHash)
+		app.logger.Info(fmt.Sprintf("Mint: with prefix: %x", rewardHash))
 		signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
+		signature[64] += 27
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
 			return err
 		}
-		res, err := app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
+		_, err = app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
 		if err != nil {
 			app.logger.Info("Mint Error: Error issuing SIGN tx")
 			return err
 		}
-		if res.Code == 0 {
-			return nil
+	}
+	// wait for 6 SIGN tx
+	deadline := time.Now().Add(3 * time.Minute)
+	for len(app.RewardSignatures) < 6 && !time.Now().After(deadline) {
+		time.Sleep(10 * time.Second)
+	}
+	// Mint if 6+ SIGN txs are received
+	if len(app.RewardSignatures) >= 6 {
+		app.logger.Info("Mint: Enough SIGN TXs received, calling mint")
+		err := app.MintReward(app.RewardSignatures, candidates, rewardHash)
+		if util.LoggerError(app.logger, err) != nil {
+			return err
 		}
-		err = errors.New("Mint Error: did not successfully broadcast SIGN-RC tx")
-		util.LoggerError(app.logger, err)
-		return err
 	}
 	return nil
 }
@@ -132,13 +163,15 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 			return []common.Address{}, []byte{}, err
 		}
 		for _, nodeJSON := range nodes {
+			app.logger.Info(fmt.Sprintf("Mint: Decoded NODE-RC: %#v", nodeJSON))
 			nodeArray = append(nodeArray, common.HexToAddress(nodeJSON.EthAddr))
 		}
 	}
 	if len(nodeArray) == 0 {
-		return []common.Address{}, []byte{}, errors.New("No NODE-RC t from the last epoch have been found")
+		return []common.Address{}, []byte{}, errors.New("No NODE-RC tx from the last epoch have been found")
 	}
-	addresses := uniquify(nodeArray)
+	addresses := util.UniquifyAddresses(nodeArray)
+	app.logger.Info(fmt.Sprintf("Mint: input node addresses: %#v", addresses))
 	rewardHash := ethcontracts.AddressesToHash(addresses)
 	return addresses, rewardHash, nil
 }
@@ -190,6 +223,10 @@ func (app *AnchorApplication) AuditNodes() error {
 			err := errors.New("Unspecified reward candidate collation failure for node audit")
 			util.LoggerError(app.logger, err)
 			return err
+		}
+		if app.state.MintPending {
+			app.logger.Info("Minting in progress, not auditing")
+			return nil
 		}
 		rcJSON, err := json.Marshal(rewardCandidates)
 		if util.LoggerError(app.logger, err) != nil {
@@ -503,18 +540,4 @@ func verifySig(from, sigHex string, msg []byte) (bool, error) {
 func signHash(data []byte) []byte {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 	return crypto.Keccak256([]byte(msg))
-}
-
-func uniquify(s []common.Address) []common.Address {
-	seen := make(map[common.Address]struct{}, len(s))
-	j := 0
-	for _, v := range s {
-		if _, ok := seen[v]; ok {
-			continue
-		}
-		seen[v] = struct{}{}
-		s[j] = v
-		j++
-	}
-	return s[:j]
 }

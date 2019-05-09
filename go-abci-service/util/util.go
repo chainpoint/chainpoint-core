@@ -13,6 +13,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
@@ -22,6 +25,8 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
+
+var randSourceLock sync.Mutex
 
 // LogError : Log error if it exists
 func LogError(err error) error {
@@ -63,16 +68,22 @@ func GetEnv(key string, def string) string {
 func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	eightByteHash := seedBytes[0:7]
 	seed, _ := binary.Varint(eightByteHash)
+	randSourceLock.Lock()
 	rand.Seed(seed)
-	return rand.Intn(upperBound)
+	index := rand.Intn(upperBound)
+	randSourceLock.Unlock()
+	return index
 }
 
 // GetSeededRandFloat : Given a seed return a random float
 func GetSeededRandFloat(seedBytes []byte) float32 {
 	eightByteHash := seedBytes[0:7]
 	seed, _ := binary.Varint(eightByteHash)
+	randSourceLock.Lock()
 	rand.Seed(seed)
-	return rand.Float32()
+	index := rand.Float32()
+	randSourceLock.Unlock()
+	return index
 }
 
 // UUIDFromHash : generate a uuid from a byte hash, must be 16 bytes
@@ -266,4 +277,34 @@ func ReadContractJSON(file string, testnet bool) string {
 		return jsonMap["networks"].(map[string]interface{})["3"].(map[string]interface{})["address"].(string)
 	}
 	return jsonMap["networks"].(map[string]interface{})["1"].(map[string]interface{})["address"].(string)
+}
+
+//UniquifyAddresses: make unique array of addresses
+func UniquifyAddresses(s []common.Address) []common.Address {
+	seen := make(map[common.Address]struct{}, len(s))
+	j := 0
+	for _, v := range s {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		s[j] = v
+		j++
+	}
+	return s[:j]
+}
+
+//UniquifyStrings : make unique array of strings
+func UniquifyStrings(s []string) []string {
+	seen := make(map[string]struct{}, len(s))
+	j := 0
+	for _, v := range s {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		s[j] = v
+		j++
+	}
+	return s[:j]
 }

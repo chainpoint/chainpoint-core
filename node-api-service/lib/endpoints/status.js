@@ -54,26 +54,26 @@ async function buildStatusObjectAsync() {
     }
   }
 
-  let privateKeyPEM = env.ECDSA_PKPEM
-  let jwkJSON = null
-  try {
-    let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
-    jwkJSON = jwk.toJSON()
-  } catch (error) {
-    logger.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
+  let coreInfo = {
+    version: version,
+    time: new Date().toISOString(),
+    base_uri: env.CHAINPOINT_CORE_BASE_URI
+  }
+
+  // do not include 'jwk' data in results if running in Private Mode
+  if (env.PRIVATE_NETWORK === false) {
+    let privateKeyPEM = env.ECDSA_PKPEM
+    try {
+      let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
+      // add 'jwk' data to coreInfo result object
+      coreInfo.jwk = jwk.toJSON()
+    } catch (error) {
+      logger.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
+    }
   }
 
   return {
-    status: Object.assign(
-      {
-        version: version,
-        time: new Date().toISOString(),
-        base_uri: env.CHAINPOINT_CORE_BASE_URI,
-        eth_address: env.ETH_TNT_LISTEN_ADDR,
-        jwk: jwkJSON
-      },
-      statusResponse.result
-    )
+    status: Object.assign(coreInfo, statusResponse.result)
   }
 }
 

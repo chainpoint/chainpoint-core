@@ -83,10 +83,10 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		var jwk types.Jwk
 		json.Unmarshal([]byte(tx.Data), &jwk)
 		go app.SaveJWK(jwk)
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "SIGN":
-		app.RewardSignatures = append(app.RewardSignatures, tx.Data)
+		app.RewardSignatures = util.UniquifyStrings(append(app.RewardSignatures, tx.Data))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "NODE-RC":

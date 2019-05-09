@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -74,6 +75,8 @@ type AnchorApplication struct {
 	ethClient        *ethcontracts.EthClient
 	rpc              *RPC
 	ID               string
+	JWK              types.Jwk
+	JWKSent          bool
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -133,12 +136,28 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		fmt.Println("Connection to Redis established")
 	}
 
+	for _, nodeIPString := range config.PrivateNodeIPs {
+		node := types.Node{
+			EthAddr:     nodeIPString,
+			PublicIP:    sql.NullString{String: nodeIPString, Valid: true},
+			BlockNumber: sql.NullInt64{Int64: 0, Valid: false},
+		}
+		inserted, err := pgClient.NodeUpsert(node)
+		if inserted {
+			(*config.Logger).Info(fmt.Sprintf("Inserted private node %s: %t", nodeIPString, inserted))
+		}
+		util.LoggerError(*config.Logger, err)
+	}
+
 	//Declare ethereum Client
-	ethClient, err := ethcontracts.NewClient(config.EthConfig.EthereumURL, config.EthConfig.EthPrivateKey,
-		config.EthConfig.TokenContractAddr, config.EthConfig.RegistryContractAddr,
-		*config.Logger)
-	if util.LoggerError(*config.Logger, err) != nil {
-		panic(err)
+	var ethClient *ethcontracts.EthClient
+	if config.DoNodeManagement {
+		ethClient, err = ethcontracts.NewClient(config.EthConfig.EthereumURL, config.EthConfig.EthPrivateKey,
+			config.EthConfig.TokenContractAddr, config.EthConfig.RegistryContractAddr,
+			*config.Logger)
+		if util.LoggerError(*config.Logger, err) != nil {
+			panic(err)
+		}
 	}
 
 	//Construct application
@@ -165,12 +184,19 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Create cron scheduler
 	scheduler := cron.New(cron.WithLocation(time.UTC))
 
+	//Initialize node auditing if enabled
+	if config.DoNodeAudit {
+		// Update Mint status
+		scheduler.AddFunc("0/1 0-23 * * *", app.MintMonitor)
+	}
+
+	//Initialize and monitor node state
+	if config.DoNodeManagement {
+		go app.PollNodesFromContract()
+	}
+
 	//Initialize calendar writing if enabled
 	if config.DoCal {
-
-		// Update NIST beacon record and gossip it to ensure everyone has the same aggregator state
-		scheduler.AddFunc("0/1 0-23 * * *", app.NistBeaconMonitor)
-
 		// Run calendar aggregation every minute with pointer to nist object
 		scheduler.AddFunc("0/1 0-23 * * *", func() {
 			if app.state.ChainSynced { // don't aggregate if Tendermint isn't synced or functioning correctly
@@ -180,22 +206,10 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		})
 	}
 
-	//Initialize node auditing if enabled
-	if config.DoNodeAudit {
-		// Update Mint status
-		scheduler.AddFunc("0/1 0-23 * * *", app.MintMonitor)
-	}
-
 	//Initialize anchoring to bitcoin if enabled
 	if config.DoAnchor {
 		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
-	}
-
-	if config.DoNodeManagement {
-		//Initialize node state
-		go app.KeyMonitor()
-		go app.PollNodesFromContract()
 	}
 
 	//Start scheduled cron tasks
@@ -262,17 +276,20 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
-			if app.config.DoNodeAudit {
+			if app.config.DoNodeAudit && !app.state.MintPending {
 				go app.AuditNodes() //retrieve, audit, and reward some nodes
-				go app.CollectRewardNodes()
+				go app.MintRewardNodes()
 			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
 	}
 
-	if len(app.RewardSignatures) == 6 && app.config.DoNodeAudit {
-		go app.MintRewardNodes(app.RewardSignatures)
+	if app.state.ChainSynced {
+		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
+		if !app.JWKSent {
+			go app.KeyMonitor() // send out this Core's JWK to the rest of the network
+		}
 	}
 
 	// Finalize new block by calculating appHash and incrementing height

@@ -110,22 +110,32 @@ func main() {
 // initABCIConfig: receives ENV variables and initializes app config struct
 func initABCIConfig() types.AnchorConfig {
 	// Perform env type conversions
+	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
+	nodeIPs := strings.Split(util.GetEnv("PRIVATE_NODE_IPS", ""), ",")
 	doNodeManagement, _ := strconv.ParseBool(util.GetEnv("NODE_MANAGEMENT", "true"))
 	doAuditLoop, _ := strconv.ParseBool(util.GetEnv("AUDIT", "true"))
-	doAuditLoop = doNodeManagement && doAuditLoop //only allow auditing if node management enabled
+	doNodeManagement = doNodeManagement && !doPrivateNetwork           //only allow node management if private networking is disabled
+	doAuditLoop = doNodeManagement && doAuditLoop && !doPrivateNetwork //only allow auditing if node management enabled and private networking disabled
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
-	useTestNets, _ := strconv.ParseBool(util.GetEnv("USE_TESTNETS", "true"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_BLOCK_INTERVAL", "60"))
 	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
 	ethereumURL := util.GetEnv("ETH_URI", fmt.Sprintf("https://ropsten.infura.io/v3/%s", ethInfuraApiKey))
-	ethTokenContract := util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/TierionNetworkToken.json", useTestNets)
-	if ethTokenContract == "" {
-		ethTokenContract = util.GetEnv("TokenContractAddr", "0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3")
+	testMode := util.GetEnv("TEST_MODE", "development")
+	useTestNets := (testMode == "development")
+	ethTokenContract := ""
+	if doAuditLoop {
+		ethTokenContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/TierionNetworkToken.json", useTestNets)
+		if ethTokenContract == "" {
+			ethTokenContract = util.GetEnv("TokenContractAddr", "0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3")
+		}
 	}
-	ethRegistryContract := util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/ChainpointRegistry.json", useTestNets)
-	if ethRegistryContract == "" {
-		ethRegistryContract = util.GetEnv("RegistryContractAddr", "0x3a8264f138489f80D9CcA443C3A534B73F4B6401")
+	ethRegistryContract := ""
+	if doNodeManagement {
+		ethRegistryContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/ChainpointRegistry.json", useTestNets)
+		if ethRegistryContract == "" && doNodeManagement {
+			ethRegistryContract = util.GetEnv("RegistryContractAddr", "0x3a8264f138489f80D9CcA443C3A534B73F4B6401")
+		}
 	}
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
 	if len(ethPrivateKey) > 0 && strings.Contains(ethPrivateKey, "0x") {
@@ -141,6 +151,7 @@ func initABCIConfig() types.AnchorConfig {
 	postgresPort := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
 	postgresDb := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
+	apiURI := util.GetEnv("API_URI", "http://api:8080")
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
@@ -168,10 +179,13 @@ func initABCIConfig() types.AnchorConfig {
 		TendermintRPC:    tendermintRPC,
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,
+		APIURI:           apiURI,
 		EthConfig:        ethConfig,
 		ECPrivateKey:     *ecPrivKey,
 		DoNodeAudit:      doAuditLoop,
 		DoNodeManagement: doNodeManagement,
+		DoPrivateNetwork: doPrivateNetwork,
+		PrivateNodeIPs:   nodeIPs,
 		DoCal:            doCalLoop,
 		DoAnchor:         doAnchorLoop,
 		AnchorInterval:   anchorInterval,
