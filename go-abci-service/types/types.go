@@ -30,7 +30,6 @@ type AnchorConfig struct {
 	DoAnchor         bool
 	AnchorInterval   int
 	Logger           *log.Logger
-	JWKSent          bool
 }
 
 //EthConfig holds contract addresses and eth node URI
