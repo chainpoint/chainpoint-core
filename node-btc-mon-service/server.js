@@ -223,6 +223,7 @@ function startIntervals() {
 // process all steps need to start the application
 async function start() {
   if (env.NODE_ENV === 'test') return
+  if (env.PRIVATE_NETWORK) logger.info(`*** Private Network Mode ***`)
   try {
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
@@ -230,7 +231,7 @@ async function start() {
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // init interval functions
     startIntervals()
-    logger.info('Startup completed successfully')
+    logger.info(`Startup completed successfully ${env.PRIVATE_NETWORK ? ': *** Private Network Mode ***' : ''}`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)

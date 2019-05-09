@@ -10,12 +10,12 @@ const app = require('../server.js')
 const checkWhitelist = require('../lib/middleware/eth-tx-whitelist.js')
 const eth = require('../lib/endpoints/eth.js')
 
-describe('Eth Controller', () => {
+describe('Eth Controller - Public Mode', () => {
   let insecureServer = null
   beforeEach(async () => {
     checkWhitelist.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync()
+    insecureServer = await app.startInsecureRestifyServerAsync(false)
   })
   afterEach(() => {
     insecureServer.close()
@@ -357,6 +357,60 @@ describe('Eth Controller', () => {
             .to.have.property('gasUsed')
             .and.to.be.a('number')
             .and.to.equal(35000)
+          done()
+        })
+    })
+  })
+})
+
+describe('Eth Controller - Private Mode', () => {
+  let insecureServer = null
+  beforeEach(async () => {
+    checkWhitelist.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
+    app.setThrottle(() => (req, res, next) => next())
+    insecureServer = await app.startInsecureRestifyServerAsync(true)
+  })
+  afterEach(() => {
+    insecureServer.close()
+  })
+
+  describe('GET /eth/:addr/stats', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .get('/eth/badaddr/stats')
+        .expect('Content-type', /json/)
+        .expect(404)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('ResourceNotFound')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('/eth/badaddr/stats does not exist')
+          done()
+        })
+    })
+  })
+
+  describe('POST /eth/broadcast', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/eth/broadcast')
+        .expect('Content-type', /json/)
+        .expect(404)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('ResourceNotFound')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('/eth/broadcast does not exist')
           done()
         })
     })

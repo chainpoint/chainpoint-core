@@ -9,11 +9,11 @@ const request = require('supertest')
 const app = require('../server.js')
 const usageToken = require('../lib/endpoints/usage-token.js')
 
-describe('Usage Token Controller', () => {
+describe('Usage Token Controller - Public Mode', () => {
   let insecureServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync()
+    insecureServer = await app.startInsecureRestifyServerAsync(false)
   })
   afterEach(() => {
     insecureServer.close()
@@ -1318,6 +1318,59 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           expect(res.body)
             .to.have.property('token')
             .and.to.be.a('string')
+          done()
+        })
+    })
+  })
+})
+
+describe('Usage Token Controller - Private Mode', () => {
+  let insecureServer = null
+  beforeEach(async () => {
+    app.setThrottle(() => (req, res, next) => next())
+    insecureServer = await app.startInsecureRestifyServerAsync(true)
+  })
+  afterEach(() => {
+    insecureServer.close()
+  })
+
+  describe('POST /usagetoken/refresh', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .expect('Content-type', /json/)
+        .expect(404)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('ResourceNotFound')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('/usagetoken/refresh does not exist')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/credit', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/credit')
+        .expect('Content-type', /json/)
+        .expect(404)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('ResourceNotFound')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('/usagetoken/credit does not exist')
           done()
         })
     })

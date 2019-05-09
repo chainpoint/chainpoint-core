@@ -389,6 +389,7 @@ function startIntervals() {
 // process all steps need to start the application
 async function start() {
   if (env.NODE_ENV === 'test') return
+  if (env.PRIVATE_NETWORK) logger.info(`*** Private Network Mode ***`)
   try {
     // init DB
     await openPostgresConnectionAsync()
@@ -398,7 +399,7 @@ async function start() {
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init intervals
     startIntervals()
-    logger.info('Startup completed successfully')
+    logger.info(`Startup completed successfully ${env.PRIVATE_NETWORK ? ': *** Private Network Mode ***' : ''}`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)

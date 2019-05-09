@@ -12,7 +12,7 @@ describe('Root Controller', () => {
   let insecureServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync()
+    insecureServer = await app.startInsecureRestifyServerAsync(false)
   })
   afterEach(() => {
     insecureServer.close()
