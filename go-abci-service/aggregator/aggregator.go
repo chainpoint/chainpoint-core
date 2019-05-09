@@ -37,7 +37,7 @@ type Aggregator struct {
 func (aggregator *Aggregator) Aggregate(nist string) (agg []types.Aggregation) {
 	var session rabbitmq.Session
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
-	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "200"))
+	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "25000"))
 	sleep := int(60 / aggThreads)
 
 	//Consume queue in goroutines with output slice guarded by mutex

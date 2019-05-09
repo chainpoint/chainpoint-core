@@ -74,6 +74,8 @@ type AnchorApplication struct {
 	ethClient        *ethcontracts.EthClient
 	rpc              *RPC
 	ID               string
+	JWK              types.Jwk
+	JWKSent          bool
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -268,7 +270,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	if app.state.ChainSynced {
 		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
-		if !app.config.JWKSent {
+		if !app.JWKSent {
 			go app.KeyMonitor() // send out this Core's JWK to the rest of the network
 		}
 	}

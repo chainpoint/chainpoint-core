@@ -33,6 +33,10 @@ import (
 //SaveJWK : save the JWT value retrieved
 func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 	key := fmt.Sprintf("CorePublicKey:%s", jwk.Kid)
+	if jwk.Kid == app.JWK.Kid {
+		app.logger.Info("JWK keysync tx committed")
+		app.JWKSent = true
+	}
 	jsonJwk, err := json.Marshal(jwk)
 	if util.LoggerError(app.logger, err) != nil {
 		return err
