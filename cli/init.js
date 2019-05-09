@@ -42,16 +42,6 @@ async function main() {
     createSwarmAndSecrets,
     createWallet,
     createDockerSecrets,
-    tap(
-      pipe(
-        currVal => ({
-          ETH_ADDRESS: currVal.address
-        }),
-        updateOrCreateEnv
-      ),
-      resolve
-    ),
-    //tap(spinner.succeed.bind(spinner, chalk.bold.yellow('New Wallet:\n')), resolve),
     displayWalletInfo
   )()
 }
