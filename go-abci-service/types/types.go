@@ -26,6 +26,8 @@ type AnchorConfig struct {
 	ECPrivateKey     ecdsa.PrivateKey
 	DoNodeManagement bool
 	DoNodeAudit      bool
+	DoPrivateNetwork bool
+	PrivateNodeIPs   []string
 	DoCal            bool
 	DoAnchor         bool
 	AnchorInterval   int

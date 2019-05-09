@@ -38,6 +38,9 @@ services:
       ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
+      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
+      PRIVATE_NODE_IPS: ""
+      TEST_MODE: ${NODE_ENV:-development}
       ANCHOR: "true"
       AUDIT: "true"
       NODE_MANAGEMENT: "true"
@@ -46,7 +49,6 @@ services:
       HASHES_PER_MERKLE_TREE: "200"
       ANCHOR_BLOCK_INTERVAL: "60"
       LOG_LEVEL: "DEBUG"
-      USE_TESTNETS: "true"
     volumes:
     - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
     - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z

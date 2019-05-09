@@ -137,7 +137,7 @@ clean: down
 	@sudo rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
 	@sudo chmod 777 ${CORE_DATADIR}/config/node_1
 	@sudo chmod 777 ${CORE_DATADIR}/config/node_1/*
-	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
+	@sudo cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	@sudo docker system prune --volumes -f
 
 ## init                      : Create data folder with proper permissions
@@ -224,7 +224,7 @@ clean-tendermint: stop
 	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/cs.wal
 	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/anchor.db
 	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/priv_validator_state.json
-	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
+	@sudo cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -af
 
 ## remove 					: stops, removes, and cleans a swarm

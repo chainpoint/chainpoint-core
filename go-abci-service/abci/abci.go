@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -135,12 +136,28 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		fmt.Println("Connection to Redis established")
 	}
 
+	for _, nodeIPString := range config.PrivateNodeIPs {
+		node := types.Node{
+			EthAddr:     nodeIPString,
+			PublicIP:    sql.NullString{String: nodeIPString, Valid: true},
+			BlockNumber: sql.NullInt64{Int64: 0, Valid: false},
+		}
+		inserted, err := pgClient.NodeUpsert(node)
+		if inserted {
+			(*config.Logger).Info(fmt.Sprintf("Inserted private node %s: %t", nodeIPString, inserted))
+		}
+		util.LoggerError(*config.Logger, err)
+	}
+
 	//Declare ethereum Client
-	ethClient, err := ethcontracts.NewClient(config.EthConfig.EthereumURL, config.EthConfig.EthPrivateKey,
-		config.EthConfig.TokenContractAddr, config.EthConfig.RegistryContractAddr,
-		*config.Logger)
-	if util.LoggerError(*config.Logger, err) != nil {
-		panic(err)
+	var ethClient *ethcontracts.EthClient
+	if config.DoNodeManagement {
+		ethClient, err = ethcontracts.NewClient(config.EthConfig.EthereumURL, config.EthConfig.EthPrivateKey,
+			config.EthConfig.TokenContractAddr, config.EthConfig.RegistryContractAddr,
+			*config.Logger)
+		if util.LoggerError(*config.Logger, err) != nil {
+			panic(err)
+		}
 	}
 
 	//Construct application
@@ -167,6 +184,17 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Create cron scheduler
 	scheduler := cron.New(cron.WithLocation(time.UTC))
 
+	//Initialize node auditing if enabled
+	if config.DoNodeAudit {
+		// Update Mint status
+		scheduler.AddFunc("0/1 0-23 * * *", app.MintMonitor)
+	}
+
+	//Initialize and monitor node state
+	if config.DoNodeManagement {
+		go app.PollNodesFromContract()
+	}
+
 	//Initialize calendar writing if enabled
 	if config.DoCal {
 		// Run calendar aggregation every minute with pointer to nist object
@@ -178,21 +206,10 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		})
 	}
 
-	//Initialize node auditing if enabled
-	if config.DoNodeAudit {
-		// Update Mint status
-		scheduler.AddFunc("0/1 0-23 * * *", app.MintMonitor)
-	}
-
 	//Initialize anchoring to bitcoin if enabled
 	if config.DoAnchor {
 		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
-	}
-
-	if config.DoNodeManagement {
-		//Initialize node state
-		go app.PollNodesFromContract()
 	}
 
 	//Start scheduled cron tasks
