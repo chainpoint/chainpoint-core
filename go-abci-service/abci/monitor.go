@@ -201,7 +201,7 @@ func (app *AnchorApplication) KeyMonitor() {
 	if util.LoggerError(app.logger, err) != nil {
 		return
 	}
-	res, err := app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
+	_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
 	if util.LoggerError(app.logger, err) != nil {
 		return
 	}
