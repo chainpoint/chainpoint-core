@@ -103,19 +103,17 @@ function generatePostHashResponse(hash) {
  * Generate the expected proof ready times for each proof stage
  *
  * @param {Date} timestampDate - The hash submission timestamp
- * @returns {Object} An Object with 'cal', 'eth', and 'btc' properties
+ * @returns {Object} An Object with 'cal' and 'btc' properties
  *
  */
 function generateProcessingHints(timestampDate) {
   let twoHoursFromTimestamp = utils.addMinutes(timestampDate, 120)
   let oneHourFromTopOfTheHour = new Date(twoHoursFromTimestamp.setHours(twoHoursFromTimestamp.getHours(), 0, 0, 0))
   let calHint = utils.formatDateISO8601NoMs(utils.addSeconds(timestampDate, 10))
-  let ethHint = utils.formatDateISO8601NoMs(utils.addMinutes(timestampDate, 41))
   let btcHint = utils.formatDateISO8601NoMs(oneHourFromTopOfTheHour)
 
   return {
     cal: calHint,
-    eth: ethHint,
     btc: btcHint
   }
 }
