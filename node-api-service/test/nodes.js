@@ -127,7 +127,7 @@ describe('Nodes Controller - Public Mode', () => {
     let result = ips.map(ip => {
       return { public_uri: `http://${ip}` }
     })
-    let tx = { data: dataArray }
+    let tx = { data: JSON.stringify(dataArray) }
     tx = JSON.stringify(tx)
     tx = Buffer.from(tx, 'ascii').toString('base64')
     tx = Buffer.from(tx, 'ascii').toString('base64')
@@ -137,7 +137,7 @@ describe('Nodes Controller - Public Mode', () => {
           return { result: { response: { data: '{"last_mint_block":27,"prev_mint_block":27}' } } }
         },
         getTxSearch: async () => {
-          return { result: { txs: [tx] } }
+          return { result: { txs: [{ tx }] } }
         }
       })
     })
@@ -180,7 +180,7 @@ describe('Nodes Controller - Private Mode', () => {
     let result = randomIps.map(ip => {
       return { public_uri: `http://${ip}` }
     })
-    let tx = { data: dataArray }
+    let tx = { data: JSON.stringify(dataArray) }
     tx = JSON.stringify(tx)
     tx = Buffer.from(tx, 'ascii').toString('base64')
     tx = Buffer.from(tx, 'ascii').toString('base64')
@@ -190,7 +190,7 @@ describe('Nodes Controller - Private Mode', () => {
           return { result: { response: { data: '{"last_mint_block":27,"prev_mint_block":27}' } } }
         },
         getTxSearch: async () => {
-          return { result: { txs: [tx] } }
+          return { result: { txs: [{ tx }] } }
         }
       })
       nodes.setStakedNode({ getRandomNodes: async () => dbResult })

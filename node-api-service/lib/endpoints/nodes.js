@@ -45,12 +45,14 @@ async function getNodesAsync(req, res, next) {
 
         //retrieve IPs from reward candidate arrays
         let nodeArrays = txResponse.result.txs.map(tx => {
-            let txText = new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii')
-            return JSON.parse(JSON.parse(txText).data).map(node => {
-                return 'http://' + node.node_ip
-            })
+          let txText = new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii')
+          return JSON.parse(JSON.parse(txText).data).map(node => {
+            return 'http://' + node.node_ip
+          })
         })
-        nodes = [...new Set([].concat.apply([], nodeArrays))].map(node => {return {public_uri: node};})
+        nodes = [...new Set([].concat.apply([], nodeArrays))].map(node => {
+          return { public_uri: node }
+        })
       }
     } catch (error) {
       logger.error(`Tendermint RPC error : falling back to random nodes list : ${error.message}`)
