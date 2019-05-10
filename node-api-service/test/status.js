@@ -63,7 +63,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
     }
     before(() => {
-      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ECDSA_PKPEM: ecdsa, PRIVATE_NETWORK: false })
+      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ECDSA_PKPEM: ecdsa, NODE_ENV: 'test', PRIVATE_NETWORK: false })
       let statusResult = { tmresult: 1 }
       status.setTmRpc({
         getStatusAsync: async () => {
@@ -89,6 +89,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
             .to.have.property('base_uri')
             .and.to.be.a('string')
             .and.to.equal(baseURI)
+          expect(res.body)
+            .to.have.property('environment')
+            .and.to.be.a('string')
+            .and.to.equal('test')
+          expect(res.body)
+            .to.have.property('mode')
+            .and.to.be.a('string')
+            .and.to.equal('public')
           expect(res.body)
             .to.have.property('jwk')
             .and.to.be.a('object')
@@ -116,7 +124,7 @@ describe('Status Controller - Private Mode', () => {
   describe('GET /status', () => {
     let baseURI = 'http://base.uri'
     before(() => {
-      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, PRIVATE_NETWORK: true })
+      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, NODE_ENV: 'test', PRIVATE_NETWORK: true })
       let statusResult = { tmresult: 1 }
       status.setTmRpc({
         getStatusAsync: async () => {
@@ -142,6 +150,14 @@ describe('Status Controller - Private Mode', () => {
             .to.have.property('base_uri')
             .and.to.be.a('string')
             .and.to.equal(baseURI)
+          expect(res.body)
+            .to.have.property('environment')
+            .and.to.be.a('string')
+            .and.to.equal('test')
+          expect(res.body)
+            .to.have.property('mode')
+            .and.to.be.a('string')
+            .and.to.equal('private')
           expect(res.body).to.not.have.property('jwk')
           expect(res.body)
             .to.have.property('tmresult')
