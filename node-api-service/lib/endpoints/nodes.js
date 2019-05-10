@@ -34,7 +34,7 @@ async function getNodesAsync(req, res, next) {
       }
 
       //create tx query tag and query TM for transactions containing reward candidate nodes
-      let prevEpoch = JSON.parse(abciResponse.response.data).prev_mint_block
+      let prevEpoch = JSON.parse(abciResponse.result.response.data).prev_mint_block
       if (prevEpoch != 0) {
         let tag = `"NODERC=${prevEpoch}"`
         let txResponse = await tmRpc.getTxSearch(tag, 1, 25) //get NODE-RC transactions from past 24 hours
