@@ -57,7 +57,9 @@ async function buildStatusObjectAsync() {
   let coreInfo = {
     version: version,
     time: new Date().toISOString(),
-    base_uri: env.CHAINPOINT_CORE_BASE_URI
+    base_uri: env.CHAINPOINT_CORE_BASE_URI,
+    environment: env.NODE_ENV,
+    mode: env.PRIVATE_NETWORK ? 'private' : 'public'
   }
 
   // do not include 'jwk' data in results if running in Private Mode
