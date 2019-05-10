@@ -24,12 +24,9 @@ const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFU
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
 
-let wallet = new ethers.Wallet(env.ETH_PRIVATE_KEY)
-wallet = wallet.connect(fallbackProvider)
-
 const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.json')
 const registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
-const registryContract = new ethers.Contract(registryAddress, regDefinition.abi, wallet)
+const registryContract = new ethers.Contract(registryAddress, regDefinition.abi, fallbackProvider)
 
 async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
