@@ -34,9 +34,9 @@ async function getNodesAsync(req, res, next) {
       }
 
       //create tx query tag and query TM for transactions containing reward candidate nodes
-      let prevEpoch = JSON.parse(abciResponse.result.response.data).prev_mint_block
+      let prevEpoch = JSON.parse(abciResponse.response.data).prev_mint_block
       if (prevEpoch != 0) {
-        let tag = `NODERC=${prevEpoch}`
+        let tag = `"NODERC=${prevEpoch}"`
         let txResponse = await tmRpc.getTxSearch(tag, 1, 25) //get NODE-RC transactions from past 24 hours
         if (txResponse.error) {
           logger.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
@@ -45,12 +45,12 @@ async function getNodesAsync(req, res, next) {
 
         //retrieve IPs from reward candidate arrays
         let nodeArrays = txResponse.result.txs.map(tx => {
-          let txText = new Buffer(new Buffer(tx, 'base64').toString('ascii'), 'base64').toString('ascii')
-          return JSON.parse(txText).data.map(node => {
-            return { public_uri: 'http://' + node.node_ip }
-          })
+            let txText = new Buffer(new Buffer(tx.tx, 'base64').toString('ascii'), 'base64').toString('ascii')
+            return JSON.parse(JSON.parse(txText).data).map(node => {
+                return 'http://' + node.node_ip
+            })
         })
-        nodes = [].concat.apply([], nodeArrays) //flatten array
+        nodes = [...new Set([].concat.apply([], nodeArrays))].map(node => {return {public_uri: node};})
       }
     } catch (error) {
       logger.error(`Tendermint RPC error : falling back to random nodes list : ${error.message}`)

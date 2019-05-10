@@ -56,7 +56,7 @@ async function getTransactionAsync(txID) {
 async function getTxSearch(tag, page, perPage) {
   let txResults
   try {
-    txResults = await rpcClient.tx_search({ query: tag, prove: false, page: page, per_page: perPage })
+    txResults = await rpcClient.txSearch({ query: tag, prove: false, page: page, per_page: perPage })
   } catch (error) {
     return parseRpcError(error)
   }
