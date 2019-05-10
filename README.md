@@ -45,9 +45,27 @@ You will need to set up a configuration and secrets (bitcoin and ethereum) befor
 Running `make init` will prompt for secrets to be stored in the docker secrets system. 
 This command will also copy `.env.sample` to `.env`. The `.env` file will be used by `docker-compose` to set required environment variables.
 
-There are further settings found in the `swarm-compose.yaml` file. 
+There are further settings found in the `.env.sample` and `swarm-compose.yaml` file. 
 These are more permanent and altering them may cause problems connecting to the public Chainpoint testnets and mainnet. 
 However, they may be invaluable for setting up a private Chainpoint Network with different parameters, for example by configuring more frequent bitcoin anchoring or excluding the smart contract registration requirement.
+
+The following are the descriptions of the configuration parameters:
+
+| Name           | Type | Location |Description |
+| :------------- |:-----|:---------|:-----------
+| CHAINPOINT\_CORE\_BASE\_URI | String | .env | Public URI of host machine, of the form `http://35.245.53.181` |
+| PRIVATE\_NETWORK | Boolean | .env | Sets Core to use pre-seeded list of Nodes instead of registry smart contract discovery. Default is false. |
+| PRIVATE\_NODE\_IPS     | String | .env | Comma-delimited list of private Nodes for use with PRIVATE\_NETWORK. Default is empty string. |
+| NODE\_ENV  | String | .env  | Sets Core to use either ethereum/bitcoin mainnets (`production`) or testnets (`development`) |
+| ANCHOR\_INTERVAL | String | swarm-compose.yaml | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60. | 
+| HASHES\_PER\_MERKLE_TREE | String | swarm-compose.yaml     | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000 | 
+| PEERS | String | .env       | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:$Port, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
+| SEEDS | String | .env       | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:$Port, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
+| ETH\_INFURA\_API\_KEY | String | Docker Secrets (`make init`) | API key to use Infura ethereum web services |
+| ETH\_ETHERSCAN\_API\_KEY | String | Docker Secrets (`make init`) | API key to use etherscan ethereum web services as a fallback to infura |
+| ETH\_PRIVATE\_KEY | String | Docker Secrets (`make init`) | Private key for this Core's Ethereum account. |
+| ECDSA\_PKPEM | String | Docker Secrets (`make init`) | Keypair used to create JWKs for Core's API auth |
+| BITCOIN\_WIF | String | Docker Secrets (`make init`) | Private key for bitcoin hotwallet, used to paying anchoring fees |
 
 ## Startup
 

@@ -26,7 +26,6 @@ services:
     - rabbitmq
     - api
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -44,8 +43,8 @@ services:
       NODE_MANAGEMENT: "true"
       AGGREGATE: "true"
       AGGREGATION_THREADS: "4"
-      HASHES_PER_MERKLE_TREE: "200"
-      ANCHOR_BLOCK_INTERVAL: "60"
+      HASHES_PER_MERKLE_TREE: "25000"
+      ANCHOR_INTERVAL: "60"
       LOG_LEVEL: "DEBUG"
     volumes:
     - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
