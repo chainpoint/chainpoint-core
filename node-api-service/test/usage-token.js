@@ -838,10 +838,131 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     })
   })
 
-  describe('POST /usagetoken/credit with no tx', () => {
+  describe('POST /usagetoken/credit with no aud', () => {
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must be supplied')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/credit with bad aud', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/credit')
+        .send({ aud: '0xnothex' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 values')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/credit with bad count aud', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/credit')
+        .send({ aud: '64.10.120.11,64.10.120.12' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 values')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/credit with non-ip aud', () => {
+    let ip = 'notanip'
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/credit')
+        .send({ aud: '64.10.120.11,64.10.120.12,' + ip })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal(`invalid request, bad IP value in aud - ${ip}`)
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/credit with aud missing core ip', () => {
+    before(() => {
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/credit')
+        .send({ aud: '64.10.120.11,64.10.120.12,64.10.120.13' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal(`invalid request, aud must include this Core IP`)
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/credit with no tx', () => {
+    before(() => {
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/credit')
+        .send({ aud: '64.10.120.11,64.10.120.12,65.1.1.1' })
         .expect('Content-type', /json/)
         .expect(409)
         .end((err, res) => {
@@ -860,10 +981,15 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   })
 
   describe('POST /usagetoken/credit with bad tx no 0x', () => {
+    before(() => {
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
+    })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
-        .send({ tx: 'deadbeef' })
+        .send({ aud: '64.10.120.11,64.10.120.12,65.1.1.1', tx: 'deadbeef' })
         .expect('Content-type', /json/)
         .expect(409)
         .end((err, res) => {
@@ -882,10 +1008,15 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   })
 
   describe('POST /usagetoken/credit with bad tx non hex', () => {
+    before(() => {
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
+    })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
-        .send({ tx: '0xnothex' })
+        .send({ aud: '64.10.120.11,64.10.120.12,65.1.1.1', tx: '0xnothex' })
         .expect('Content-type', /json/)
         .expect(409)
         .end((err, res) => {
@@ -904,10 +1035,15 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   })
 
   describe('POST /usagetoken/credit with bad tx invalid', () => {
+    before(() => {
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
+    })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
-        .send({ tx: '0xdeadbeefcafe' })
+        .send({ aud: '64.10.120.11,64.10.120.12,65.1.1.1', tx: '0xdeadbeefcafe' })
         .expect('Content-type', /json/)
         .expect(409)
         .end((err, res) => {
@@ -928,11 +1064,15 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   describe('POST /usagetoken/credit with wrong contract address', () => {
     before(() => {
       usageToken.setTA('0xbadc0de1971122f30998bf2ba76d8cf19ff73ae1')
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
     })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4bd6ff20b000000000000000000000000000000000000000000000000000000003b9aca001ca064d1e9fcbd45fb666996232481aea69e12b59982097deb8fe6632a06accf0632a032352440244d001856014b7381e7cf23ec51ef941388d30fabc9beb8fd65d1a8'
         })
@@ -956,11 +1096,15 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   describe('POST /usagetoken/credit with wrong method call', () => {
     before(() => {
       usageToken.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
     })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf8ac82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80b844a9059cbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003b9aca001ca0c34363aa26528b00c407cc04bf1b595afd87fc45c60e87be8a7387402b8094a1a0300c115718d7271b215e459c811167c318b3dfd0f4b56f0ccbb51054ee35727e'
         })
@@ -984,11 +1128,15 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   describe('POST /usagetoken/credit with too low amount', () => {
     before(() => {
       usageToken.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
     })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4b55968ec000000000000000000000000000000000000000000000000000000000000000a1ba0204e52d00175f6a45c23a3ab600aa04af244b12b5e8ad5957a2eca8377f3e06aa020dda534949c5cf94a703b74f90297509368202a14c504fdcd27790906be1157'
         })
@@ -1017,11 +1165,15 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           throw new Error('err!')
         }
       })
+      usageToken.setENV({
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
+      })
     })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4b55968ec000000000000000000000000000000000000000000000000000000003b9aca001ca0519ab9c09202342a0b6e125ecaeb59ffa139bf02274ad0d3233ac5a8ba8dd217a01eca0f0f2386bd543065a17d1f627aed42885cf160e93a720cb45defc0a4da8a'
         })
@@ -1052,13 +1204,15 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
         waitForTransaction: async () => null
       })
       usageToken.setENV({
-        ECDSA_PKPEM: 'badPEM'
+        ECDSA_PKPEM: 'badPEM',
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
       })
     })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4b55968ec000000000000000000000000000000000000000000000000000000003b9aca001ca0519ab9c09202342a0b6e125ecaeb59ffa139bf02274ad0d3233ac5a8ba8dd217a01eca0f0f2386bd543065a17d1f627aed42885cf160e93a720cb45defc0a4da8a'
         })
@@ -1102,7 +1256,7 @@ zfB8ygE3fGv5tKTCVQUg8I/gB8OhRANCAATQppszaJzIR+Ri1L7LgyVqEkUFsfAO
 HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
 -----END PRIVATE KEY-----
 `,
-        CHAINPOINT_CORE_BASE_URI: 'http://localhost'
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
       })
       usageToken.setStatus({
         buildStatusObjectAsync: async () => {
@@ -1119,6 +1273,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4b55968ec000000000000000000000000000000000000000000000000000000003b9aca001ca0519ab9c09202342a0b6e125ecaeb59ffa139bf02274ad0d3233ac5a8ba8dd217a01eca0f0f2386bd543065a17d1f627aed42885cf160e93a720cb45defc0a4da8a'
         })
@@ -1166,7 +1321,7 @@ zfB8ygE3fGv5tKTCVQUg8I/gB8OhRANCAATQppszaJzIR+Ri1L7LgyVqEkUFsfAO
 HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
 -----END PRIVATE KEY-----
 `,
-        CHAINPOINT_CORE_BASE_URI: 'http://localhost'
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
       })
       usageToken.setStatus({
         buildStatusObjectAsync: async () => {
@@ -1183,6 +1338,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4b55968ec000000000000000000000000000000000000000000000000000000003b9aca001ca0519ab9c09202342a0b6e125ecaeb59ffa139bf02274ad0d3233ac5a8ba8dd217a01eca0f0f2386bd543065a17d1f627aed42885cf160e93a720cb45defc0a4da8a'
         })
@@ -1230,7 +1386,7 @@ zfB8ygE3fGv5tKTCVQUg8I/gB8OhRANCAATQppszaJzIR+Ri1L7LgyVqEkUFsfAO
 HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
 -----END PRIVATE KEY-----
 `,
-        CHAINPOINT_CORE_BASE_URI: 'http://localhost'
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
       })
       usageToken.setStatus({
         buildStatusObjectAsync: async () => {
@@ -1247,6 +1403,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4b55968ec000000000000000000000000000000000000000000000000000000003b9aca001ca0519ab9c09202342a0b6e125ecaeb59ffa139bf02274ad0d3233ac5a8ba8dd217a01eca0f0f2386bd543065a17d1f627aed42885cf160e93a720cb45defc0a4da8a'
         })
@@ -1291,7 +1448,7 @@ zfB8ygE3fGv5tKTCVQUg8I/gB8OhRANCAATQppszaJzIR+Ri1L7LgyVqEkUFsfAO
 HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
 -----END PRIVATE KEY-----
 `,
-        CHAINPOINT_CORE_BASE_URI: 'http://localhost'
+        CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.1'
       })
       usageToken.setStatus({
         buildStatusObjectAsync: async () => {
@@ -1308,6 +1465,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       request(insecureServer)
         .post('/usagetoken/credit')
         .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.1',
           tx:
             '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4b55968ec000000000000000000000000000000000000000000000000000000003b9aca001ca0519ab9c09202342a0b6e125ecaeb59ffa139bf02274ad0d3233ac5a8ba8dd217a01eca0f0f2386bd543065a17d1f627aed42885cf160e93a720cb45defc0a4da8a'
         })
