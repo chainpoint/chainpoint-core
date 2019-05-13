@@ -99,13 +99,17 @@ async function postTokenRefreshAsync(req, res, next) {
   // construct the token payload
   // set the expiration time to an hour in the future
   // if active token has time remaining, add one hour to existing expiration
+  let oneHourFromNow = Math.ceil(Date.now() / 1000) + 60 * 60 // 1 hour in the future from now
   let nowSeconds = Math.ceil(Date.now() / 1000)
   let base = decodedToken.payload.exp > nowSeconds ? decodedToken.payload.exp : nowSeconds
   let exp = base + 60 * 60 // 1 hour in the future from base time
   // set new balance value
   let bal = decodedToken.payload.bal - 1
-  // set the expiration time to an hour in the future
-  let payload = constructTokenPayload(submittingNodeIP, exp, bal)
+  // set the audit update limit remaining count
+  let aulr = 3
+  // set the audit update limit timestamp to an hour in the future
+  let ault = oneHourFromNow
+  let payload = constructTokenPayload(submittingNodeIP, exp, bal, aulr, ault)
 
   // Create token
   let refreshedTokenString = null
@@ -166,7 +170,7 @@ async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
   }
 }
 
-function constructTokenPayload(submittingNodeIP, exp, bal) {
+function constructTokenPayload(submittingNodeIP, exp, bal, aulr, ault) {
   // create a new JWT id
   let jti = uuidv1()
   // set the issuer (this Core's identifier)
@@ -174,7 +178,7 @@ function constructTokenPayload(submittingNodeIP, exp, bal) {
   // set the subject (the Node IP)
   let sub = submittingNodeIP
   // construct and return a JWT payload
-  return { jti, iss, sub, exp, bal }
+  return { jti, iss, sub, exp, bal, aulr, ault }
 }
 
 async function postTokenCreditAsync(req, res, next) {
@@ -269,8 +273,13 @@ async function postTokenCreditAsync(req, res, next) {
 
   // construct the token payload
   // set the expiration time to an hour in the future
-  let exp = Math.ceil(Date.now() / 1000) + 60 * 60 // 1 hour in the future from now
-  let payload = constructTokenPayload(submittingNodeIP, exp, bal)
+  let oneHourFromNow = Math.ceil(Date.now() / 1000) + 60 * 60 // 1 hour in the future from now
+  let exp = oneHourFromNow
+  // set the audit update limit remaining count
+  let aulr = 3
+  // set the audit update limit timestamp to an hour in the future
+  let ault = oneHourFromNow
+  let payload = constructTokenPayload(submittingNodeIP, exp, bal, aulr, ault)
 
   // Create token
   let newTokenString = null
