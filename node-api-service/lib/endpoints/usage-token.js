@@ -64,6 +64,31 @@ async function postTokenRefreshAsync(req, res, next) {
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
   logger.info(`Received request from Node at ${submittingNodeIP}`)
 
+  // get the token's audience
+  let aud = decodedToken.payload.aud
+  if (!aud) return next(new errors.InvalidArgumentError('invalid request, token missing `aud` value'))
+
+  let ipCSV = aud.toString()
+  let ips = ipCSV.split(',')
+  // ensure that aud is a csv with three values
+  if (ips.length !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
+  }
+
+  // ensure that each ip value is a real ip
+  for (let ip of ips) {
+    if (!utils.isIP(ip)) {
+      return next(new errors.InvalidArgumentError(`invalid request, bad IP value in aud - ${ip}`))
+    }
+  }
+
+  // ensure that the ip values contain this Core ip
+  let coreURL = new url(env.CHAINPOINT_CORE_BASE_URI)
+  let coreIP = coreURL.hostname
+  if (!ips.includes(coreIP)) {
+    return next(new errors.InvalidArgumentError(`invalid request, aud must include this Core IP`))
+  }
+
   // get the token's subject
   let sub = decodedToken.payload.sub
   if (!sub) return next(new errors.InvalidArgumentError('invalid request, token missing `sub` value'))
