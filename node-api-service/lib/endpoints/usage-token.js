@@ -82,13 +82,6 @@ async function postTokenRefreshAsync(req, res, next) {
     }
   }
 
-  // ensure that the ip values contain this Core ip
-  let coreURL = new url(env.CHAINPOINT_CORE_BASE_URI)
-  let coreIP = coreURL.hostname
-  if (!ips.includes(coreIP)) {
-    return next(new errors.InvalidArgumentError(`invalid request, aud must include this Core IP`))
-  }
-
   // get the token's subject
   let sub = decodedToken.payload.sub
   if (!sub) return next(new errors.InvalidArgumentError('invalid request, token missing `sub` value'))
