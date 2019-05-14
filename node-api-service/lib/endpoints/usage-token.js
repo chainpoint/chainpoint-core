@@ -390,7 +390,8 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
 
   // get the token's audience update limit remaining
   let tokenAulr = decodedToken.payload.aulr
-  if (!tokenAulr) return next(new errors.InvalidArgumentError('invalid request, token missing `aulr` value'))
+  if (!tokenAulr && tokenAulr !== 0)
+    return next(new errors.InvalidArgumentError('invalid request, token missing `aulr` value'))
   if (isNaN(tokenAulr)) return next(new errors.InvalidArgumentError('invalid request, `aulr` value must be a number'))
 
   // ensure audience update limit remaining is greater than 0
@@ -402,7 +403,7 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
   try {
     let resultRow = await activeToken.getActiveTokenByNodeIPAsync(submittingNodeIP)
     if (resultRow === null)
-      return next(new errors.InvalidArgumentError('invalid request, no active token available to be refreshed'))
+      return next(new errors.InvalidArgumentError('invalid request, no active token available to be updated'))
     activeTokenHash = resultRow.tokenHash
   } catch (error) {
     return next(new errors.InternalServerError('server error, unable to read active token data'))
@@ -425,29 +426,29 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
   let payload = constructTokenPayload(submittingNodeIP, tokenExp, bal, aud, aulr)
 
   // Create token
-  let refreshedTokenString = null
+  let updatedTokenString = null
   try {
-    refreshedTokenString = await createAndSignJWTAsync(payload)
+    updatedTokenString = await createAndSignJWTAsync(payload)
   } catch (error) {
-    return next(new errors.InternalServerError('server error, could not sign refreshed token'))
+    return next(new errors.InternalServerError('server error, could not sign updated token'))
   }
 
   // calculate hash of new token
-  let refreshTokenHash = crypto
+  let updatedTokenHash = crypto
     .createHash('sha256')
-    .update(refreshedTokenString)
+    .update(updatedTokenString)
     .digest('hex')
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
   try {
     let coreId = await tokenUtils.getCachedCoreIDAsync()
-    await broadcastCoreTxAsync(coreId, submittingNodeIP, refreshTokenHash)
+    await broadcastCoreTxAsync(coreId, submittingNodeIP, updatedTokenHash)
   } catch (error) {
     return next(new errors.InternalServerError(`server error, ${error.message}`))
   }
 
   res.contentType = 'application/json'
-  res.send({ token: refreshedTokenString })
+  res.send({ token: updatedTokenString })
   return next()
 }
 
