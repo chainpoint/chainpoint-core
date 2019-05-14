@@ -404,48 +404,6 @@ describe('Usage Token Controller - Public Mode', () => {
     })
   })
 
-  describe('POST /usagetoken/refresh aud does not contain Core IP', () => {
-    let jwk = {
-      kty: 'EC',
-      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
-      crv: 'P-256',
-      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
-      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
-    }
-    before(() => {
-      usageToken.setRedis({
-        get: async () => null,
-        set: async () => null
-      })
-      usageToken.setRP(async () => {
-        return { body: { jwk: jwk } }
-      })
-      usageToken.setGetIP(() => '66.12.12.12')
-    })
-    it('should return proper error', done => {
-      request(insecureServer)
-        .post('/usagetoken/refresh')
-        .send({
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJkOWRiN2JlMC03NWQzLTExZTktYjdhMy05NWI0YzkzNWYyNWEiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ4ODM3LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xMy4xMy41NSIsImlhdCI6MTU1Nzc4ODgzNn0.EANsL7ClAACHVZ28fnt_VpVdRRlAi9VJyH9_OjPzscH8R19hk_MagP5PGCI09L0fk9k9aOwoURcFsd65GVvYiA'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal(`invalid request, aud must include this Core IP`)
-          done()
-        })
-    })
-  })
-
   describe('POST /usagetoken/refresh sub missing', () => {
     let jwk = {
       kty: 'EC',
