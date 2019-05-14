@@ -124,7 +124,7 @@ async function postTokenRefreshAsync(req, res, next) {
   let bal = decodedToken.payload.bal - 1
   // set the audit update limit remaining count
   let aulr = 3
-  let payload = constructTokenPayload(submittingNodeIP, exp, bal, aulr)
+  let payload = constructTokenPayload(submittingNodeIP, exp, bal, aud, aulr)
 
   // Create token
   let refreshedTokenString = null
@@ -185,7 +185,7 @@ async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
   }
 }
 
-function constructTokenPayload(submittingNodeIP, exp, bal, aulr) {
+function constructTokenPayload(submittingNodeIP, exp, bal, aud, aulr) {
   // create a new JWT id
   let jti = uuidv1()
   // set the issuer (this Core's identifier)
@@ -193,7 +193,7 @@ function constructTokenPayload(submittingNodeIP, exp, bal, aulr) {
   // set the subject (the Node IP)
   let sub = submittingNodeIP
   // construct and return a JWT payload
-  return { jti, iss, sub, exp, bal, aulr }
+  return { jti, iss, sub, exp, bal, aud, aulr }
 }
 
 async function postTokenCreditAsync(req, res, next) {
@@ -202,8 +202,8 @@ async function postTokenCreditAsync(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid request, aud must be supplied'))
   }
 
-  let ipCSV = req.params.aud.toString()
-  let ips = ipCSV.split(',')
+  let aud = req.params.aud.toString()
+  let ips = aud.split(',')
   // ensure that aud is a csv with three values
   if (ips.length !== 3) {
     return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
@@ -292,7 +292,7 @@ async function postTokenCreditAsync(req, res, next) {
   let exp = oneHourFromNow
   // set the audit update limit remaining count
   let aulr = 3
-  let payload = constructTokenPayload(submittingNodeIP, exp, bal, aulr)
+  let payload = constructTokenPayload(submittingNodeIP, exp, bal, aud, aulr)
 
   // Create token
   let newTokenString = null
