@@ -22,6 +22,7 @@ const _ = require('lodash')
 const jwt = require('jsonwebtoken')
 const tokenUtils = require('../middleware/token-utils.js')
 const logger = require('../logger.js')
+const url = require('url').URL
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -200,6 +201,31 @@ async function postHashV1Async(req, res, next) {
     if (isNaN(exp)) return next(new errors.InvalidArgumentError('invalid request, `exp` value must be a number'))
     let expMS = exp * 1000
     if (expMS < Date.now()) return next(new errors.UnauthorizedError('not authorized, token has expired'))
+
+    // get the token's audience
+    let aud = decodedToken.payload.aud
+    if (!aud) return next(new errors.InvalidArgumentError('invalid request, token missing `aud` value'))
+
+    let ipCSV = aud.toString()
+    let ips = ipCSV.split(',')
+    // ensure that aud is a csv with three values
+    if (ips.length !== 3) {
+      return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
+    }
+
+    // ensure that each ip value is a real ip
+    for (let ip of ips) {
+      if (!utils.isIP(ip)) {
+        return next(new errors.InvalidArgumentError(`invalid request, bad IP value in aud - ${ip}`))
+      }
+    }
+
+    // ensure that the ip values contain this Core ip
+    let coreURL = new url(env.CHAINPOINT_CORE_BASE_URI)
+    let coreIP = coreURL.hostname
+    if (!ips.includes(coreIP)) {
+      return next(new errors.InvalidArgumentError(`invalid request, aud must include this Core IP`))
+    }
   }
 
   let responseObj = generatePostHashResponse(req.params.hash)
