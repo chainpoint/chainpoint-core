@@ -328,9 +328,140 @@ async function postTokenCreditAsync(req, res, next) {
   return next()
 }
 
+async function postTokenAudienceUpdateAsync(req, res, next) {
+  // ensure that aud was supplied
+  if (!req.params.aud) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must be supplied'))
+  }
+
+  let aud = req.params.aud.toString()
+  let ips = aud.split(',')
+  // ensure that aud is a csv with three values
+  if (ips.length !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
+  }
+
+  // ensure that each ip value is a real ip
+  for (let ip of ips) {
+    if (!utils.isIP(ip)) {
+      return next(new errors.InvalidArgumentError(`invalid request, bad IP value in aud - ${ip}`))
+    }
+  }
+
+  // ensure that the ip values contain this Core ip
+  let coreURL = new url(env.CHAINPOINT_CORE_BASE_URI)
+  let coreIP = coreURL.hostname
+  if (!ips.includes(coreIP)) {
+    return next(new errors.InvalidArgumentError(`invalid request, aud must include this Core IP`))
+  }
+
+  const tokenString = req.params.token
+  // ensure that token is supplied
+  if (!tokenString) {
+    return next(new errors.InvalidArgumentError('invalid request, token must be supplied'))
+  }
+
+  let decodedToken = null
+  // attempt to parse token, if not valid, return error
+  try {
+    decodedToken = jwt.decode(tokenString, { complete: true })
+    if (!decodedToken) throw new Error()
+  } catch (error) {
+    return next(new errors.InvalidArgumentError('invalid request, token cannot be decoded'))
+  }
+
+  // verify signature of token
+  let verifyError = await tokenUtils.verifySigAsync(tokenString, decodedToken)
+  // verifyError will be a restify error on error, or null on successful verification
+  if (verifyError !== null) return next(verifyError)
+
+  // ensure that we can retrieve the Node IP from the request
+  let submittingNodeIP = utils.getClientIP(req)
+  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  logger.info(`Received request from Node at ${submittingNodeIP}`)
+
+  // get the token's subject
+  let sub = decodedToken.payload.sub
+  if (!sub) return next(new errors.InvalidArgumentError('invalid request, token missing `sub` value'))
+
+  // ensure the Node IP is the subject of the JWT
+  if (sub !== submittingNodeIP)
+    return next(new errors.InvalidArgumentError('invalid request, token subject does not match Node IP'))
+
+  // cannot accept expired token
+  let tokenExp = decodedToken.payload.exp
+  if (!tokenExp) return next(new errors.InvalidArgumentError('invalid request, token missing `exp` value'))
+  if (isNaN(tokenExp)) return next(new errors.InvalidArgumentError('invalid request, `exp` value must be a number'))
+  let tokenExpMS = tokenExp * 1000
+  if (tokenExpMS < Date.now()) return next(new errors.UnauthorizedError('not authorized, token has expired'))
+
+  // get the token's audience update limit remaining
+  let tokenAulr = decodedToken.payload.aulr
+  if (!tokenAulr) return next(new errors.InvalidArgumentError('invalid request, token missing `aulr` value'))
+  if (isNaN(tokenAulr)) return next(new errors.InvalidArgumentError('invalid request, `aulr` value must be a number'))
+
+  // ensure audience update limit remaining is greater than 0
+  if (tokenAulr < 1)
+    return next(new errors.TooManyRequestsError('request rejected, aud update rate limit exceeded for this token'))
+
+  // ensure that the submitted token is the active token for the Node
+  let activeTokenHash = null
+  try {
+    let resultRow = await activeToken.getActiveTokenByNodeIPAsync(submittingNodeIP)
+    if (resultRow === null)
+      return next(new errors.InvalidArgumentError('invalid request, no active token available to be refreshed'))
+    activeTokenHash = resultRow.tokenHash
+  } catch (error) {
+    return next(new errors.InternalServerError('server error, unable to read active token data'))
+  }
+  let tokenHash = crypto
+    .createHash('sha256')
+    .update(tokenString)
+    .digest('hex')
+  if (activeTokenHash !== tokenHash)
+    return next(new errors.InvalidArgumentError('invalid request, supplied token is not an active token'))
+
+  // At this point, we've established that the submitted token is a valid JWT with valid signature,
+  // it has a update limit remaining > 0, and it is the active token. Proceed with aud update.
+
+  // construct the token payload
+  // get the current balance
+  let bal = decodedToken.payload.bal
+  // reduce the audit update limit remaining count by 1
+  let aulr = tokenAulr - 1
+  let payload = constructTokenPayload(submittingNodeIP, tokenExp, bal, aud, aulr)
+
+  // Create token
+  let refreshedTokenString = null
+  try {
+    refreshedTokenString = await createAndSignJWTAsync(payload)
+  } catch (error) {
+    return next(new errors.InternalServerError('server error, could not sign refreshed token'))
+  }
+
+  // calculate hash of new token
+  let refreshTokenHash = crypto
+    .createHash('sha256')
+    .update(refreshedTokenString)
+    .digest('hex')
+
+  // broadcast Node IP and new token hash for Cores to update their local active token table
+  try {
+    let coreId = await tokenUtils.getCachedCoreIDAsync()
+    await broadcastCoreTxAsync(coreId, submittingNodeIP, refreshTokenHash)
+  } catch (error) {
+    return next(new errors.InternalServerError(`server error, ${error.message}`))
+  }
+
+  res.contentType = 'application/json'
+  res.send({ token: refreshedTokenString })
+  return next()
+}
+
 module.exports = {
   postTokenRefreshAsync: postTokenRefreshAsync,
   postTokenCreditAsync: postTokenCreditAsync,
+  postTokenAudienceUpdateAsync: postTokenAudienceUpdateAsync,
   // additional functions for testing purposes
   setFP: fp => {
     fallbackProvider = fp

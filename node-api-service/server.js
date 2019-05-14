@@ -122,6 +122,8 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
     server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
     // post token credit
     server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
+    // post token audience update
+    server.post({ path: '/usagetoken/audience', version: '1.0.0' }, usageToken.postTokenAudienceUpdateAsync)
   }
   // teapot
   server.get({ path: '/', version: '1.0.0' }, root.getV1)
