@@ -16,7 +16,7 @@ describe('Hashes Controller - Public Mode', () => {
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
     insecureServer = await app.startInsecureRestifyServerAsync(false)
-    hashes.setENV({ PRIVATE_NETWORK: false })
+    hashes.setENV({ PRIVATE_NETWORK: false, CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.100' })
   })
   afterEach(() => {
     insecureServer.close()
@@ -588,14 +588,14 @@ describe('Hashes Controller - Public Mode', () => {
     })
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hashes token missing `aud` value', () => {
     let cache = null
     let jwk = {
       kty: 'EC',
-      kid: 'OEQiv4MMu9pf3MK1DcIMczWqd3nBjyKvOGjLCUurs4E',
+      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
       crv: 'P-256',
-      x: 'E1tQ_do30mgWfcj2zhnpTFx7FfxSJ6S6gl6R8VaIuBk',
-      y: 'ezM2bavf93gkFH3bm9oChRtFX3tm4WuwdIb43ukvwlY'
+      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
+      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
     }
     let jwkStr = JSON.stringify(jwk)
     before(() => {
@@ -608,7 +608,227 @@ describe('Hashes Controller - Public Mode', () => {
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
       })
-      hashes.setGetIP(() => '24.154.21.11')
+      hashes.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJiYWNiOTY3MC03NjcwLTExZTktOTU0My0xYjA3ZDQ1NDUyODAiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE2MjE2LCJiYWwiOjEwLCJpYXQiOjE1NTc4NTYyMTV9.RQdN64rkCTVPjk_zS5Ap9nlq2VMtkVY_Qy8N6Y_yjNj-g1GhyWCV1YmJ1pED0cFOXQ2uQ1C6jIzeo5XVlHPAEg'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, token missing `aud` value')
+          expect(cache)
+            .to.be.a('array')
+            .and.to.have.length(2)
+          expect(cache[1]).to.equal(jwkStr)
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes aud must contain 3 values', () => {
+    let cache = null
+    let jwk = {
+      kty: 'EC',
+      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
+      crv: 'P-256',
+      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
+      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
+    }
+    let jwkStr = JSON.stringify(jwk)
+    before(() => {
+      hashes.setRedis({
+        get: async () => null,
+        set: async (k, v) => {
+          cache = [k, v]
+        }
+      })
+      hashes.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      hashes.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJmYjgwNjA2MC03NjcwLTExZTktYTk1Yy0yMTY5MWRmNDRjYjkiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE2MzI0LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSIsImlhdCI6MTU1Nzg1NjMyM30.j0OLuvrc-y67daAZfxYaxLD_vP3rSX8firO2j03GkDTEOodbRNTDTLaf_4asnZYlAWJb-leTLd9PWRDiJpBwQQ'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 values')
+          expect(cache)
+            .to.be.a('array')
+            .and.to.have.length(2)
+          expect(cache[1]).to.equal(jwkStr)
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes bad IP value in aud', () => {
+    let cache = null
+    let jwk = {
+      kty: 'EC',
+      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
+      crv: 'P-256',
+      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
+      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
+    }
+    let jwkStr = JSON.stringify(jwk)
+    before(() => {
+      hashes.setRedis({
+        get: async () => null,
+        set: async (k, v) => {
+          cache = [k, v]
+        }
+      })
+      hashes.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      hashes.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIxMmRkNWQzMC03NjcxLTExZTktOTMyYS00NTA3YjBjYzhkMTQiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE2MzY0LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSxiYWRpcCIsImlhdCI6MTU1Nzg1NjM2M30.ovxjzztWOayd1-vzdQS-BYMc8WQ-oMMAjTOyz9ZtWBL-A-0BzDlDAAxeKm7xSIimI8d7naiqi-uCt928CRng7w'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal(`invalid request, bad IP value in aud - badip`)
+          expect(cache)
+            .to.be.a('array')
+            .and.to.have.length(2)
+          expect(cache[1]).to.equal(jwkStr)
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes aud must include this Core IP', () => {
+    let cache = null
+    let jwk = {
+      kty: 'EC',
+      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
+      crv: 'P-256',
+      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
+      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
+    }
+    let jwkStr = JSON.stringify(jwk)
+    before(() => {
+      hashes.setRedis({
+        get: async () => null,
+        set: async (k, v) => {
+          cache = [k, v]
+        }
+      })
+      hashes.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      hashes.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIyYTAzOTI5MC03NjcxLTExZTktOTc2Yy0wYmQyOGVlNTc4ZDYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE2NDAyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2NS4xLjEuMSIsImlhdCI6MTU1Nzg1NjQwMX0.0Gk3D78Nydg2p6jkdIBvLFKb-QURCGlCWtJXFCM1RXID9xR2Hz9dzIKcLfqJLqr7c_ul6qO68ys2VPqpP2ccKg'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must include this Core IP')
+          expect(cache)
+            .to.be.a('array')
+            .and.to.have.length(2)
+          expect(cache[1]).to.equal(jwkStr)
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes', () => {
+    let cache = null
+    let jwk = {
+      kty: 'EC',
+      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
+      crv: 'P-256',
+      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
+      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
+    }
+    let jwkStr = JSON.stringify(jwk)
+    before(() => {
+      hashes.setRedis({
+        get: async () => null,
+        set: async (k, v) => {
+          cache = [k, v]
+        }
+      })
+      hashes.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      hashes.setGetIP(() => '66.12.12.12')
     })
     it('should return a matched set of metadata and UUID embedded timestamps', done => {
       app.setAMQPChannel({
@@ -620,7 +840,7 @@ describe('Hashes Controller - Public Mode', () => {
         .send({
           hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ik9FUWl2NE1NdTlwZjNNSzFEY0lNY3pXcWQzbkJqeUt2T0dqTENVdXJzNEUifQ.eyJqdGkiOiI2MzFiYmYxMC02YzVhLTExZTktOTc3Ni04ZDJmNjcxNWYxNWMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTg3MjEwNzEwOCwiYmFsIjoxMCwiaWF0IjoxNTU2NzQ3MTA3fQ.3dJ47LQPnrFRZLT47e7sBe4qc3RX1AHWjaaPRCVLKKT5KWwvADmGY5_VB05i5xuBqc9sH_qUcnDaWY6cff48xg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJhNWRhNTc5MC03NjcyLTExZTktODE1Mi1lOTA3YWYzZjRhY2EiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE3MDQwLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2NS4xLjEuMTAwIiwiaWF0IjoxNTU3ODU3MDM5fQ.nXUiZ_FzWMZGIgHlgf92Jx0jMhPnFfAundv0USEqQKqceeKoXI6YmtgjzuVXoYcmK0b9r6I0vN_20b3mK8oX9w'
         })
         .expect('Content-type', /json/)
         .expect(200)
@@ -644,10 +864,10 @@ describe('Hashes Controller - Public Mode', () => {
     let cache = null
     let jwk = {
       kty: 'EC',
-      kid: 'OEQiv4MMu9pf3MK1DcIMczWqd3nBjyKvOGjLCUurs4E',
+      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
       crv: 'P-256',
-      x: 'E1tQ_do30mgWfcj2zhnpTFx7FfxSJ6S6gl6R8VaIuBk',
-      y: 'ezM2bavf93gkFH3bm9oChRtFX3tm4WuwdIb43ukvwlY'
+      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
+      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
     }
     let jwkStr = JSON.stringify(jwk)
     before(() => {
@@ -660,7 +880,7 @@ describe('Hashes Controller - Public Mode', () => {
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
       })
-      hashes.setGetIP(() => '24.154.21.11')
+      hashes.setGetIP(() => '66.12.12.12')
     })
     it('should return a v1 UUID node embedded with a partial SHA256 over timestamp and hash', done => {
       app.setAMQPChannel({
@@ -672,7 +892,7 @@ describe('Hashes Controller - Public Mode', () => {
         .send({
           hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ik9FUWl2NE1NdTlwZjNNSzFEY0lNY3pXcWQzbkJqeUt2T0dqTENVdXJzNEUifQ.eyJqdGkiOiI2MzFiYmYxMC02YzVhLTExZTktOTc3Ni04ZDJmNjcxNWYxNWMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTg3MjEwNzEwOCwiYmFsIjoxMCwiaWF0IjoxNTU2NzQ3MTA3fQ.3dJ47LQPnrFRZLT47e7sBe4qc3RX1AHWjaaPRCVLKKT5KWwvADmGY5_VB05i5xuBqc9sH_qUcnDaWY6cff48xg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJhNWRhNTc5MC03NjcyLTExZTktODE1Mi1lOTA3YWYzZjRhY2EiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE3MDQwLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2NS4xLjEuMTAwIiwiaWF0IjoxNTU3ODU3MDM5fQ.nXUiZ_FzWMZGIgHlgf92Jx0jMhPnFfAundv0USEqQKqceeKoXI6YmtgjzuVXoYcmK0b9r6I0vN_20b3mK8oX9w'
         })
         .expect('Content-type', /json/)
         .expect(200)
@@ -707,10 +927,10 @@ describe('Hashes Controller - Public Mode', () => {
     let cache = null
     let jwk = {
       kty: 'EC',
-      kid: 'OEQiv4MMu9pf3MK1DcIMczWqd3nBjyKvOGjLCUurs4E',
+      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
       crv: 'P-256',
-      x: 'E1tQ_do30mgWfcj2zhnpTFx7FfxSJ6S6gl6R8VaIuBk',
-      y: 'ezM2bavf93gkFH3bm9oChRtFX3tm4WuwdIb43ukvwlY'
+      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
+      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
     }
     let jwkStr = JSON.stringify(jwk)
     before(() => {
@@ -723,7 +943,7 @@ describe('Hashes Controller - Public Mode', () => {
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
       })
-      hashes.setGetIP(() => '24.154.21.11')
+      hashes.setGetIP(() => '66.12.12.12')
     })
     it('should return proper result with valid call', done => {
       app.setAMQPChannel({
@@ -735,7 +955,7 @@ describe('Hashes Controller - Public Mode', () => {
         .send({
           hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ik9FUWl2NE1NdTlwZjNNSzFEY0lNY3pXcWQzbkJqeUt2T0dqTENVdXJzNEUifQ.eyJqdGkiOiI2MzFiYmYxMC02YzVhLTExZTktOTc3Ni04ZDJmNjcxNWYxNWMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTg3MjEwNzEwOCwiYmFsIjoxMCwiaWF0IjoxNTU2NzQ3MTA3fQ.3dJ47LQPnrFRZLT47e7sBe4qc3RX1AHWjaaPRCVLKKT5KWwvADmGY5_VB05i5xuBqc9sH_qUcnDaWY6cff48xg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJhNWRhNTc5MC03NjcyLTExZTktODE1Mi1lOTA3YWYzZjRhY2EiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE3MDQwLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2NS4xLjEuMTAwIiwiaWF0IjoxNTU3ODU3MDM5fQ.nXUiZ_FzWMZGIgHlgf92Jx0jMhPnFfAundv0USEqQKqceeKoXI6YmtgjzuVXoYcmK0b9r6I0vN_20b3mK8oX9w'
         })
         .expect('Content-type', /json/)
         .expect(200)
