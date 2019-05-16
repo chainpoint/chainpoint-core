@@ -17,15 +17,20 @@
 const ethers = require('ethers')
 const env = require('../parse-env.js')('api')
 const errors = require('restify-errors')
+const utils = require('../utils.js')
 const logger = require('../logger.js')
 
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
+
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
 
+const tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
+let tokenAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
+
 const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.json')
-const registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
+let registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
 const registryContract = new ethers.Contract(registryAddress, regDefinition.abi, fallbackProvider)
 
 async function getEthStatsAsync(req, res, next) {
@@ -79,7 +84,38 @@ async function getEthStatsAsync(req, res, next) {
 }
 
 async function postEthBroadcastAsync(req, res, next) {
-  const rawTx = req.params.tx
+  // ensure that tx was supplied
+  if (!req.params.tx) {
+    return next(new errors.InvalidArgumentError('invalid request, tx must be supplied'))
+  }
+
+  const rawTx = req.params.tx.toString()
+  // ensure that rawTx represents a valid hex value starting wiht 0x
+  if (!rawTx.startsWith('0x')) {
+    return next(new errors.InvalidArgumentError('invalid request, tx must begin with 0x'))
+  }
+  // ensure that rawTx represents a valid hex value
+  let txContent = rawTx.slice(2)
+  if (!utils.isHex(txContent)) {
+    return next(new errors.InvalidArgumentError('invalid request, non hex tx value supplied'))
+  }
+
+  // ensure that rawTx represents a valid ethereum transaction
+  let decodedTx = null
+  try {
+    decodedTx = ethers.utils.parseTransaction(rawTx)
+  } catch (error) {
+    return next(new errors.InvalidArgumentError('invalid request, invalid ethereum tx body supplied'))
+  }
+
+  // Ensure that the raw Eth Tx provided is interacting with either the Chainpoint Token or Registry Contracts
+  if (decodedTx.to !== tokenAddress && decodedTx.to !== registryAddress) {
+    return next(
+      new errors.InvalidArgumentError(
+        'invalid request, transaction must interact with Chainpoint token or registry contract'
+      )
+    )
+  }
 
   let result
   try {
@@ -106,5 +142,11 @@ module.exports = {
   // additional functions for testing purposes
   setFP: fp => {
     fallbackProvider = fp
+  },
+  setTA: ta => {
+    tokenAddress = ta
+  },
+  setRA: ra => {
+    registryAddress = ra
   }
 }

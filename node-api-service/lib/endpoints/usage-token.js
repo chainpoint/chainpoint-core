@@ -24,7 +24,7 @@ const crypto = require('crypto')
 const uuidv1 = require('uuid/v1')
 const jose = require('node-jose')
 let tmRpc = require('../tendermint-rpc.js')
-const tokenUtils = require('../middleware/token-utils.js')
+const tokenUtils = require('../token-utils.js')
 const logger = require('../logger.js')
 const url = require('url').URL
 

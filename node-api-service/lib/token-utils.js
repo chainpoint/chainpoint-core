@@ -19,12 +19,10 @@ const jwt = require('jsonwebtoken')
 const jose = require('node-jose')
 let rp = require('request-promise-native')
 const retry = require('async-retry')
-let status = require('../endpoints/status.js')
-const env = require('../parse-env.js')('api')
-const logger = require('../logger.js')
+let status = require('./endpoints/status.js')
+const env = require('./parse-env.js')('api')
+const logger = require('./logger.js')
 
-// NOTE: This is not restify middleware in the traditional sense
-// These functions contain async functions and thus cannot be directly included in Restify routes
 // These are token signature verification methods that are used in more than one of the API endpoints
 // The purpose of this file is to prevent duplication of these token signature verification methods
 

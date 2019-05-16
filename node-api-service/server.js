@@ -34,8 +34,7 @@ const proof = require('./lib/models/Proof.js')
 const stakedNode = require('./lib/models/StakedNode.js')
 const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
-const ethTxWhitelist = require('./lib/middleware/eth-tx-whitelist.js').validate
-const tokenUtils = require('./lib/middleware/token-utils.js')
+const tokenUtils = require('./lib/token-utils.js')
 const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
 
@@ -117,7 +116,7 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
     // get eth tx data
     server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
     // post eth broadcast
-    server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), ethTxWhitelist, eth.postEthBroadcastAsync)
+    server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), eth.postEthBroadcastAsync)
     // post token refresh
     server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
     // post token credit

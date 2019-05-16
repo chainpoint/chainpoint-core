@@ -20,7 +20,7 @@ const utils = require('../utils.js')
 const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
 const jwt = require('jsonwebtoken')
-const tokenUtils = require('../middleware/token-utils.js')
+const tokenUtils = require('../token-utils.js')
 const logger = require('../logger.js')
 const url = require('url').URL
 
