@@ -7,13 +7,11 @@ const expect = require('chai').expect
 const request = require('supertest')
 
 const app = require('../server.js')
-const checkWhitelist = require('../lib/middleware/eth-tx-whitelist.js')
 const eth = require('../lib/endpoints/eth.js')
 
 describe('Eth Controller - Public Mode', () => {
   let insecureServer = null
   beforeEach(async () => {
-    checkWhitelist.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
     app.setThrottle(() => (req, res, next) => next())
     insecureServer = await app.startInsecureRestifyServerAsync(false)
   })
@@ -224,13 +222,42 @@ describe('Eth Controller - Public Mode', () => {
     })
   })
 
-  describe('POST /eth/broadcast with non chainpoint related eth tx', () => {
+  describe('POST /eth/broadcast with non chainpoint related eth tx, bad tx calls', () => {
     it('should return proper error', done => {
       request(insecureServer)
         .post('/eth/broadcast')
         .send({
           tx:
             '0xf88b82061c8502540be4008302d2a894000e7d2b54d2fc9fef0138ce00702445cead9cea80a4bd6ff20b000000000000000000000000000000000000000000000000000000003b9aca001ba04ee96fa3979190df8141c95b960b21f7d48eac705035c4983e4132c43ac35012a05ca005a878e61e405c5191d50c24589567abf279c053b51516ba0f4fc4bfbdb5'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, transaction must interact with Chainpoint token or registry contract')
+          done()
+        })
+    })
+  })
+
+  describe('POST /eth/broadcast with non chainpoint related eth tx, bad contract addresses', () => {
+    before(() => {
+      eth.setTA('0xdeadbeef')
+      eth.setRA('0xdeadbeef')
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/eth/broadcast')
+        .send({
+          tx:
+            '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4bd6ff20b000000000000000000000000000000000000000000000000000000003b9aca001ca064d1e9fcbd45fb666996232481aea69e12b59982097deb8fe6632a06accf0632a032352440244d001856014b7381e7cf23ec51ef941388d30fabc9beb8fd65d1a8'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -256,6 +283,7 @@ describe('Eth Controller - Public Mode', () => {
           throw new Error('senderror')
         }
       })
+      eth.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -291,6 +319,7 @@ describe('Eth Controller - Public Mode', () => {
           throw new Error('waiterror')
         }
       })
+      eth.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
     })
     it('should return proper error', done => {
       request(insecureServer)
@@ -331,6 +360,7 @@ describe('Eth Controller - Public Mode', () => {
           }
         }
       })
+      eth.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
     })
     it('should return success', done => {
       request(insecureServer)
@@ -366,7 +396,7 @@ describe('Eth Controller - Public Mode', () => {
 describe('Eth Controller - Private Mode', () => {
   let insecureServer = null
   beforeEach(async () => {
-    checkWhitelist.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
+    eth.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
     app.setThrottle(() => (req, res, next) => next())
     insecureServer = await app.startInsecureRestifyServerAsync(true)
   })
