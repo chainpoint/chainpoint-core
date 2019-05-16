@@ -99,7 +99,7 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
   // API RESOURCES
 
   // submit hash(es)
-  server.post({ path: '/hashes', version: '1.0.0' }, throttle(5, 1), hashes.postHashV1Async)
+  server.post({ path: '/hashes', version: '1.0.0' }, throttle(5, 0.02), hashes.postHashV1Async) // throttl
   // get the block objects for the calendar in the specified block range
   server.get({ path: '/calendar/:txid', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxAsync)
   // get the data value of a txId
