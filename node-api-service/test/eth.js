@@ -8,6 +8,9 @@ const request = require('supertest')
 
 const app = require('../server.js')
 const eth = require('../lib/endpoints/eth.js')
+const ethers = require('ethers')
+const tokenABI = require('./sample_data/tokenABI_tests.js')
+const regABI = require('./sample_data/regABI_tests.js')
 
 describe('Eth Controller - Public Mode', () => {
   let insecureServer = null
@@ -276,6 +279,66 @@ describe('Eth Controller - Public Mode', () => {
     })
   })
 
+  describe('POST /eth/broadcast with unsupported token method', () => {
+    before(() => {
+      eth.setTA('0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3')
+      eth.setTCI(new ethers.utils.Interface(tokenABI))
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/eth/broadcast')
+        .send({
+          tx:
+            '0xf8aa038502540be4008302d2a8940cc0adfb92b45195ba844945e9d69361cb0529a380b844a9059cbb0000000000000000000000003a8264f138489f80d9cca443c3a534b73f4b6401000000000000000000000000000000000000000000000000000000746a5288001ba0d557f0f5c6b8f90cd20972d0a60d77094d9c8f8d635d158ef38c5f0709a46272a01281e47680298300f352c9c039a84b8945bf8d6b8a973c8cdf3650a0807c25fb'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal(`invalid request, transaction may only call 'approve' method(s) on that contract`)
+          done()
+        })
+    })
+  })
+
+  describe('POST /eth/broadcast with unsupported reg method', () => {
+    before(() => {
+      eth.setRA('0x3a8264f138489f80D9CcA443C3A534B73F4B6401')
+      eth.setRCI(new ethers.utils.Interface(regABI))
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/eth/broadcast')
+        .send({
+          tx:
+            '0xf869038502540be4008302d2a8943a8264f138489f80d9cca443c3a534b73f4b640180848456cb591ba0c8ece996fd486d501db127f18478965c0a4a1782fcdd7af0f1416d8dbaa5d6a9a006d494bc817c14cca1f1d883b1e21c80efb1c0aa0e349f685b5aa21b2ae8441f'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal(
+              `invalid request, transaction may only call 'stake,unStake,updateStake' method(s) on that contract`
+            )
+          done()
+        })
+    })
+  })
+
   describe('POST /eth/broadcast with send error', () => {
     before(() => {
       eth.setFP({
@@ -283,14 +346,15 @@ describe('Eth Controller - Public Mode', () => {
           throw new Error('senderror')
         }
       })
-      eth.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
+      eth.setTA('0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3')
+      eth.setTCI(new ethers.utils.Interface(tokenABI))
     })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/eth/broadcast')
         .send({
           tx:
-            '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4bd6ff20b000000000000000000000000000000000000000000000000000000003b9aca001ca064d1e9fcbd45fb666996232481aea69e12b59982097deb8fe6632a06accf0632a032352440244d001856014b7381e7cf23ec51ef941388d30fabc9beb8fd65d1a8'
+            '0xf8aa038502540be4008302d2a8940cc0adfb92b45195ba844945e9d69361cb0529a380b844095ea7b30000000000000000000000003a8264f138489f80d9cca443c3a534b73f4b6401000000000000000000000000000000000000000000000000000000746a5288001ba0aaf904fd07752d48a178a66ca533ad291dae487c4b400c78b4428f583929f9fba0637b141375e2370a407eb76b6a99b14de0f2edfefbfaad7dfdff4a9109c63ad9'
         })
         .expect('Content-type', /json/)
         .expect(500)
@@ -319,14 +383,15 @@ describe('Eth Controller - Public Mode', () => {
           throw new Error('waiterror')
         }
       })
-      eth.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
+      eth.setTA('0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3')
+      eth.setTCI(new ethers.utils.Interface(tokenABI))
     })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/eth/broadcast')
         .send({
           tx:
-            '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4bd6ff20b000000000000000000000000000000000000000000000000000000003b9aca001ca064d1e9fcbd45fb666996232481aea69e12b59982097deb8fe6632a06accf0632a032352440244d001856014b7381e7cf23ec51ef941388d30fabc9beb8fd65d1a8'
+            '0xf8aa038502540be4008302d2a8940cc0adfb92b45195ba844945e9d69361cb0529a380b844095ea7b30000000000000000000000003a8264f138489f80d9cca443c3a534b73f4b6401000000000000000000000000000000000000000000000000000000746a5288001ba0aaf904fd07752d48a178a66ca533ad291dae487c4b400c78b4428f583929f9fba0637b141375e2370a407eb76b6a99b14de0f2edfefbfaad7dfdff4a9109c63ad9'
         })
         .expect('Content-type', /json/)
         .expect(500)
@@ -360,14 +425,15 @@ describe('Eth Controller - Public Mode', () => {
           }
         }
       })
-      eth.setTA('0x684e7D2B54D2fc9fef0138ce00702445cEAd9cEA')
+      eth.setTA('0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3')
+      eth.setTCI(new ethers.utils.Interface(tokenABI))
     })
     it('should return success', done => {
       request(insecureServer)
         .post('/eth/broadcast')
         .send({
           tx:
-            '0xf88b82061c8502540be4008302d2a894684e7d2b54d2fc9fef0138ce00702445cead9cea80a4bd6ff20b000000000000000000000000000000000000000000000000000000003b9aca001ca064d1e9fcbd45fb666996232481aea69e12b59982097deb8fe6632a06accf0632a032352440244d001856014b7381e7cf23ec51ef941388d30fabc9beb8fd65d1a8'
+            '0xf8aa038502540be4008302d2a8940cc0adfb92b45195ba844945e9d69361cb0529a380b844095ea7b30000000000000000000000003a8264f138489f80d9cca443c3a534b73f4b6401000000000000000000000000000000000000000000000000000000746a5288001ba0aaf904fd07752d48a178a66ca533ad291dae487c4b400c78b4428f583929f9fba0637b141375e2370a407eb76b6a99b14de0f2edfefbfaad7dfdff4a9109c63ad9'
         })
         .expect('Content-type', /json/)
         .expect(200)

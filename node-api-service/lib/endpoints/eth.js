@@ -28,9 +28,11 @@ let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, et
 
 const tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
 let tokenAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
+let tokenContractInterface = new ethers.utils.Interface(tknDefinition.abi)
 
 const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.json')
 let registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
+let registryContractInterface = new ethers.utils.Interface(regDefinition.abi)
 const registryContract = new ethers.Contract(registryAddress, regDefinition.abi, fallbackProvider)
 
 async function getEthStatsAsync(req, res, next) {
@@ -109,10 +111,32 @@ async function postEthBroadcastAsync(req, res, next) {
   }
 
   // Ensure that the raw Eth Tx provided is interacting with either the Chainpoint Token or Registry Contracts
-  if (decodedTx.to !== tokenAddress && decodedTx.to !== registryAddress) {
+  // Ensure that the raw Eth Tx provided is invoking an allowed method on our Contracts
+  let allowedMethods, parsedTx
+  switch (decodedTx.to) {
+    case tokenAddress: {
+      allowedMethods = ['approve']
+      parsedTx = tokenContractInterface.parseTransaction(decodedTx)
+      break
+    }
+    case registryAddress: {
+      allowedMethods = ['stake', 'unStake', 'updateStake']
+      parsedTx = registryContractInterface.parseTransaction(decodedTx)
+      break
+    }
+    default: {
+      return next(
+        new errors.InvalidArgumentError(
+          'invalid request, transaction must interact with Chainpoint token or registry contract'
+        )
+      )
+    }
+  }
+  console.log(parsedTx)
+  if (!allowedMethods.includes(parsedTx.name)) {
     return next(
       new errors.InvalidArgumentError(
-        'invalid request, transaction must interact with Chainpoint token or registry contract'
+        `invalid request, transaction may only call '${allowedMethods.join(',')}' method(s) on that contract`
       )
     )
   }
@@ -148,5 +172,11 @@ module.exports = {
   },
   setRA: ra => {
     registryAddress = ra
+  },
+  setTCI: tci => {
+    tokenContractInterface = tci
+  },
+  setRCI: rci => {
+    registryContractInterface = rci
   }
 }
