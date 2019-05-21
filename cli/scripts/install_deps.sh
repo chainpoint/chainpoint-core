@@ -28,4 +28,4 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     brew install openssl
 fi
 
-npm install chalk ramda ora executive envfile ethers web3 inquirer validator
+npm install chalk ramda ora executive envfile ethers web3 inquirer validator keccak command-line-args

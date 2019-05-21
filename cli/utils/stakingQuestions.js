@@ -20,6 +20,22 @@ const validator = require('validator')
 const web3 = new Web3(Web3.givenProvider || 'ws://localhost:8546', null, {})
 
 module.exports = {
+  PRIVATE_NETWORK: {
+      type: 'list',
+      name: 'PRIVATE_NETWORK',
+      message: 'Will this Core run in private mode (independently of the public Chainpoint Network)?',
+      choices: [
+          {
+              name: 'Private Network',
+              value: true
+          },
+          {
+              name: 'Public Network',
+              value: false
+          }
+      ],
+      default: false
+  },
   NODE_ETH_REWARDS_ADDRESS: {
     type: 'input',
     name: 'NODE_ETH_REWARDS_ADDRESS',

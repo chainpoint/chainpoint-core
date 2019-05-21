@@ -16,7 +16,6 @@
 
 const fs = require('fs')
 const path = require('path')
-const { pipeP } = require('ramda')
 const ethers = require('ethers')
 const { getETHStatsByAddressAsync, broadcastEthTxAsync } = require('../../lib/cores')
 const env = require('../../lib/parse-env.js')()
@@ -25,43 +24,31 @@ let tknDefinition = require('../../go-abci-service/ethcontracts/TierionNetworkTo
 let regDefinition = require('../../go-abci-service/ethcontracts/ChainpointRegistry.json')
 
 const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
-const TierionNetworkTokenABI = tknDefinition.abi
-// const ChainpointRegistryABI = regDefinition.abi
+
 const tokenAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
 const registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
+const provider = ethers.getDefaultProvider(network)
 
 const privateKey = fs.readFileSync(path.resolve('/run/secrets/ETH_PRIVATE_KEY', 'utf8'))
 const wallet = new ethers.Wallet(privateKey)
+const CORE_TNT_STAKE_AMOUNT = 2500000000000;
 
-async function approve(
-  txData = {
-    gasPrice: 2000000000,
-    nonce: 0
-  }
-) {
-  const tokenInterface = new ethers.Interface(TierionNetworkTokenABI)
-  const funcSigEncoded = tokenInterface.functions.approve(registryAddress, 500000000000)
-
-  const tx = {
-    gasPrice: txData.gasPrice,
-    gasLimit: 185000,
-    data: funcSigEncoded.data,
-    to: tokenAddress,
-    nonce: txData.nonce
-  }
-
-  return wallet.sign(tx)
+async function approve() {
+  let tokenContract = new ethers.Contract(tokenAddress, tknDefinition.abi, wallet);
+  console.log(chalk.gray('-> Approving Allowance: ' + wallet.address))
+  let approval = await tokenContract.approve(registryAddress, CORE_TNT_STAKE_AMOUNT);
+  await approval.wait();
+  let txReceipt = await provider.getTransactionReceipt(approval.hash);
+  return txReceipt
 }
 
-async function register() {
-  // const tokenInterface = new ethers.Interface(TierionNetworkTokenABI)
-  // const funcSigEncoded = tokenInterface.functions.approve(registryAddress, 500000000000)
-  // return wallet.sign(tx)
+async function register(ip) {
+    let registryContract = new ethers.Contract(registryAddress, regDefinition.abi, wallet);
+    let stakeResult = await registryContract.stakeCore(ip);
+    await stakeResult.wait();
+    let txReceipt = await provider.getTransactionReceipt(stakeResult.hash);
+    return txReceipt
 }
 
 module.exports.register = register
-module.exports.approve = pipeP(
-  getETHStatsByAddressAsync.bind(null, wallet.address),
-  approve,
-  broadcastEthTxAsync
-)
+module.exports.approve = approve

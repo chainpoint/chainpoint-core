@@ -14,14 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const fs = require('fs')
-const path = require('path')
 const chalk = require('chalk')
-const { pipeP } = require('ramda')
-const inquirer = require('inquirer')
 const cliHelloLogger = require('./utils/cliHelloLogger')
-const stakingQuestions = require('./utils/stakingQuestions')
 const updateOrCreateEnv = require('./scripts/2_update_env')
+const register = require('./scripts/3_registration')
 
 async function main() {
   cliHelloLogger()
@@ -29,12 +25,9 @@ async function main() {
   console.log(chalk.bold.yellow('Stake your Core:'))
 
   try {
-    await pipeP(
-      () => inquirer.prompt([stakingQuestions['ETH_REWARDS_ADDRESS']]),
-      updateOrCreateEnv
-      // TODO: /eth/:addr/txdata
-      // TODO: /eth/broadcast
-    )()
+    let ip = (await updateOrCreateEnv({})).CORE_PUBLIC_IP_ADDRESS
+    await register.approve()
+    await register.register(ip)
 
     console.log(chalk.green('\n===================================='))
     console.log(chalk.green('==   SUCCESSFULLY STAKED CORE!    =='))
