@@ -15,35 +15,41 @@
  */
 
 const inquirer = require('inquirer')
-const { pipe, pipeP } = require('ramda')
-const tap = require('./utils/tap')
+const commandLineArgs = require('command-line-args')
+const pipeP = require('ramda')
 const createSwarmAndSecrets = require('./scripts/0_swarm_secrets')
 const cliHelloLogger = require('./utils/cliHelloLogger')
-const createWallet = require('./scripts/1_create_wallet')
-const createDockerSecrets = require('./scripts/1a_wallet_docker_secrets')
-const displayWalletInfo = require('./scripts/1b_display_info')
-const updateOrCreateEnv = require('./scripts/2_update_env')
 const stakingQuestions = require('./utils/stakingQuestions')
 
-const resolve = Promise.resolve.bind(Promise)
-
+const argsDefinitions = [
+    { name: 'PRIVATE_NETWORK', defaultValue: false },
+    { name: 'CORE_PUBLIC_IP_ADDRESS' },
+    { name: 'INSIGHT_API_URI' },
+    { name: 'BITCOIN_WIF' },
+    { name: 'INFURA_API_KEY' },
+    { name: 'ETHERSCAN_API_KEY' },
+    { name: 'ETH_PRIVATE_KEY' }
+]
+const args = commandLineArgs(argsDefinitions)
+console.log(args)
 async function main() {
   cliHelloLogger()
-
-  await pipeP(
-    () =>
-      inquirer.prompt([
-        stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
-        stakingQuestions['INSIGHT_API_URI'],
-        stakingQuestions['BITCOIN_WIF'],
-        stakingQuestions['INFURA_API_KEY'],
-        stakingQuestions['ETHERSCAN_API_KEY']
-      ]),
-    createSwarmAndSecrets,
-    createWallet,
-    createDockerSecrets,
-    displayWalletInfo
-  )()
+  if (Object.keys(args).length > 1) {
+      await createSwarmAndSecrets(args)
+  }else {
+      await pipeP(
+          () =>
+              inquirer.prompt([
+                  stakingQuestions['PRIVATE_NETWORK'],
+                  stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
+                  stakingQuestions['INSIGHT_API_URI'],
+                  stakingQuestions['BITCOIN_WIF'],
+                  stakingQuestions['INFURA_API_KEY'],
+                  stakingQuestions['ETHERSCAN_API_KEY']
+              ]),
+          createSwarmAndSecrets
+      )()
+  }
 }
 
 main().then(() => {
