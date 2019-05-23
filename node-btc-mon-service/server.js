@@ -38,7 +38,7 @@ let redis = null
 
 let CHECKS_IN_PROGRESS = false
 
-const btcUseTestnet = env.NODE_ENV === 'production' ? false : true
+const btcUseTestnet = env.NETWORK === 'mainnet' ? false : true
 
 // Initialize BlockchainAnchor object
 let anchor = new BlockchainAnchor({

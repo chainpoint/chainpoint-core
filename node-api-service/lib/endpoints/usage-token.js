@@ -28,7 +28,7 @@ const tokenUtils = require('../token-utils.js')
 const logger = require('../logger.js')
 const url = require('url').URL
 
-const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
+const network = env.NETWORK === 'mainnet' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])

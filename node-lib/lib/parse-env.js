@@ -28,6 +28,11 @@ const validateMinConfirmRange = envalid.makeValidator(x => {
   if (x >= 1 && x <= 16) return x
   else throw new Error('Value must be between 1 and 16, inclusive')
 })
+const validateNetwork = envalid.makeValidator(name => {
+  if (name === '' || name === 'mainnet') return 'mainnet'
+  if (name === 'testnet') return 'testnet'
+  throw new Error('The NETWORK value is invalid')
+})
 const validatePrivateNetwork = envalid.makeValidator(x => {
   if (!x) return false
   x = x.toString().toLowerCase()
@@ -47,6 +52,7 @@ let envDefinitions = {
 
   // Chainpoint Core environment related variables
   NODE_ENV: envalid.str({ default: 'production', desc: 'The type of environment in which the service is running' }),
+  NETWORK: validateNetwork({ default: 'mainnet', desc: `The network to use, 'mainnet' or 'testnet'` }),
   PRIVATE_NETWORK: validatePrivateNetwork({ default: 'false', desc: 'Run this Core within your own private network' }),
 
   // RabbitMQ related variables
