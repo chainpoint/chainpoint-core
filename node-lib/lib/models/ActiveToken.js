@@ -78,9 +78,19 @@ async function getActiveTokenByNodeIPAsync(ip) {
   return results
 }
 
+async function writeActiveTokenAsync(tokenObject) {
+  let activeTokenObject = {
+    node_ip: tokenObject.node_ip,
+    token_hash: tokenObject.token_hash
+  }
+  await ActiveToken.upsert(activeTokenObject)
+  return true
+}
+
 module.exports = {
   defineFor: defineFor,
   getActiveTokenByNodeIPAsync: getActiveTokenByNodeIPAsync,
+  writeActiveTokenAsync: writeActiveTokenAsync,
   setDatabase: (sqlz, activeToken) => {
     // sequelize = sqlz
     ActiveToken = activeToken

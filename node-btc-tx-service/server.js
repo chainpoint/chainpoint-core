@@ -26,7 +26,7 @@ const logger = require('./lib/logger.js')
 // This value is set once the connection has been established
 let amqpChannel = null
 
-const btcUseTestnet = env.NODE_ENV === 'production' ? false : true
+const btcUseTestnet = env.NETWORK === 'mainnet' ? false : true
 
 // Initialize BlockchainAnchor object
 let anchor = new BlockchainAnchor({

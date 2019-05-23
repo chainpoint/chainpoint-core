@@ -64,7 +64,7 @@ function addCalendarBranch(proof, aggState, calState) {
   calendarBranch.ops = aggState.ops.concat(calState.ops)
 
   let calendarAnchor = {}
-  calendarAnchor.type = 'cal'
+  calendarAnchor.type = env.NETWORK === 'mainnet' ? 'cal' : 'tcal'
   calendarAnchor.anchor_id = calState.anchor.anchor_id
   calendarAnchor.uris = calState.anchor.uris
 
@@ -80,7 +80,7 @@ function addBtcBranch(proof, anchorBTCAggState, btcTxState, btcHeadState) {
   btcBranch.ops = anchorBTCAggState.ops.concat(btcTxState.ops, btcHeadState.ops)
 
   let btcAnchor = {}
-  btcAnchor.type = 'btc'
+  btcAnchor.type = env.NETWORK === 'mainnet' ? 'btc' : 'tbtc'
   btcAnchor.anchor_id = btcHeadState.anchor.anchor_id
   btcAnchor.uris = btcHeadState.anchor.uris
 

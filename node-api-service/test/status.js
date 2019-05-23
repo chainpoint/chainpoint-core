@@ -63,7 +63,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
     }
     before(() => {
-      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ECDSA_PKPEM: ecdsa, NODE_ENV: 'test', PRIVATE_NETWORK: false })
+      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ECDSA_PKPEM: ecdsa, NETWORK: 'testnet', PRIVATE_NETWORK: false })
       let statusResult = { tmresult: 1 }
       status.setTmRpc({
         getStatusAsync: async () => {
@@ -90,9 +90,9 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
             .and.to.be.a('string')
             .and.to.equal(baseURI)
           expect(res.body)
-            .to.have.property('environment')
+            .to.have.property('network')
             .and.to.be.a('string')
-            .and.to.equal('test')
+            .and.to.equal('testnet')
           expect(res.body)
             .to.have.property('mode')
             .and.to.be.a('string')
@@ -124,7 +124,7 @@ describe('Status Controller - Private Mode', () => {
   describe('GET /status', () => {
     let baseURI = 'http://base.uri'
     before(() => {
-      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, NODE_ENV: 'test', PRIVATE_NETWORK: true })
+      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, NETWORK: 'testnet', PRIVATE_NETWORK: true })
       let statusResult = { tmresult: 1 }
       status.setTmRpc({
         getStatusAsync: async () => {
@@ -151,9 +151,9 @@ describe('Status Controller - Private Mode', () => {
             .and.to.be.a('string')
             .and.to.equal(baseURI)
           expect(res.body)
-            .to.have.property('environment')
+            .to.have.property('network')
             .and.to.be.a('string')
-            .and.to.equal('test')
+            .and.to.equal('testnet')
           expect(res.body)
             .to.have.property('mode')
             .and.to.be.a('string')

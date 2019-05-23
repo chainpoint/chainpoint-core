@@ -20,7 +20,7 @@ const errors = require('restify-errors')
 const utils = require('../utils.js')
 const logger = require('../logger.js')
 
-const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
+const network = env.NETWORK === 'mainnet' ? 'homestead' : 'ropsten'
 
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
@@ -132,7 +132,7 @@ async function postEthBroadcastAsync(req, res, next) {
       )
     }
   }
-  console.log(parsedTx)
+
   if (!allowedMethods.includes(parsedTx.name)) {
     return next(
       new errors.InvalidArgumentError(

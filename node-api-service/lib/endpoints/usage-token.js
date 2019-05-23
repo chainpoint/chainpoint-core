@@ -28,7 +28,7 @@ const tokenUtils = require('../token-utils.js')
 const logger = require('../logger.js')
 const url = require('url').URL
 
-const network = env.NODE_ENV === 'production' ? 'homestead' : 'ropsten'
+const network = env.NETWORK === 'mainnet' ? 'homestead' : 'ropsten'
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
@@ -139,6 +139,21 @@ async function postTokenRefreshAsync(req, res, next) {
     .createHash('sha256')
     .update(refreshedTokenString)
     .digest('hex')
+
+  // save new active token information in local database
+  // this is to allow multiple consecutive JWT method calls
+  // from the same Core without waiting for the broadcast delay
+  // if this fails, we can proceed because the subsequent broadcast
+  // call will update the local database eventually as well,
+  // and Nodes will eventually recover
+  try {
+    await activeToken.writeActiveTokenAsync({
+      node_ip: submittingNodeIP,
+      token_hash: refreshTokenHash
+    })
+  } catch (error) {
+    logger.warn(`Could not update active token data in local database`)
+  }
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
   try {
@@ -308,6 +323,21 @@ async function postTokenCreditAsync(req, res, next) {
     .update(newTokenString)
     .digest('hex')
 
+  // save new active token information in local database
+  // this is to allow multiple consecutive JWT method calls
+  // from the same Core without waiting for the broadcast delay
+  // if this fails, we can proceed because the subsequent broadcast
+  // call will update the local database eventually as well,
+  // and Nodes will eventually recover
+  try {
+    await activeToken.writeActiveTokenAsync({
+      node_ip: submittingNodeIP,
+      token_hash: newTokenHash
+    })
+  } catch (error) {
+    logger.warn(`Could not update active token data in local database`)
+  }
+
   // broadcast Node IP and new token hash for Cores to update their local active token table
   try {
     let coreId = await tokenUtils.getCachedCoreIDAsync()
@@ -438,6 +468,21 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
     .createHash('sha256')
     .update(updatedTokenString)
     .digest('hex')
+
+  // save new active token information in local database
+  // this is to allow multiple consecutive JWT method calls
+  // from the same Core without waiting for the broadcast delay
+  // if this fails, we can proceed because the subsequent broadcast
+  // call will update the local database eventually as well,
+  // and Nodes will eventually recover
+  try {
+    await activeToken.writeActiveTokenAsync({
+      node_ip: submittingNodeIP,
+      token_hash: updatedTokenHash
+    })
+  } catch (error) {
+    logger.warn(`Could not update active token data in local database`)
+  }
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
   try {
