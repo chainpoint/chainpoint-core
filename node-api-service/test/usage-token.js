@@ -757,7 +757,8 @@ describe('Usage Token Controller - Public Mode', () => {
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => {
           return { tokenHash: '82fde371ab5507a54d43cb963855cef4ac9e6057b10f66e1fb972c26a5fade74' }
-        }
+        },
+        writeActiveTokenAsync: async () => null
       })
       usageToken.setENV({
         ECDSA_PKPEM: `-----BEGIN PRIVATE KEY-----
@@ -830,7 +831,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => {
           return { tokenHash: '82fde371ab5507a54d43cb963855cef4ac9e6057b10f66e1fb972c26a5fade74' }
-        }
+        },
+        writeActiveTokenAsync: async () => null
       })
       usageToken.setENV({
         ECDSA_PKPEM: `-----BEGIN PRIVATE KEY-----
@@ -903,7 +905,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => {
           return { tokenHash: '82fde371ab5507a54d43cb963855cef4ac9e6057b10f66e1fb972c26a5fade74' }
-        }
+        },
+        writeActiveTokenAsync: async () => null
       })
       usageToken.setENV({
         ECDSA_PKPEM: `-----BEGIN PRIVATE KEY-----
@@ -973,7 +976,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => {
           return { tokenHash: '82fde371ab5507a54d43cb963855cef4ac9e6057b10f66e1fb972c26a5fade74' }
-        }
+        },
+        writeActiveTokenAsync: async () => null
       })
       usageToken.setENV({
         ECDSA_PKPEM: `-----BEGIN PRIVATE KEY-----
@@ -1431,6 +1435,9 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   describe('POST /usagetoken/credit with broadcast error', () => {
     let coreIdCache = ''
     before(() => {
+      usageToken.setAT({
+        writeActiveTokenAsync: async () => null
+      })
       usageToken.setRedis({
         get: async () => null,
         set: async (k, v) => {
@@ -1496,6 +1503,9 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   describe('POST /usagetoken/credit with broadcast error - bad arg', () => {
     let coreIdCache = ''
     before(() => {
+      usageToken.setAT({
+        writeActiveTokenAsync: async () => null
+      })
       usageToken.setRedis({
         get: async () => null,
         set: async (k, v) => {
@@ -1561,6 +1571,9 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
   describe('POST /usagetoken/credit with broadcast error - TM comm error', () => {
     let coreIdCache = ''
     before(() => {
+      usageToken.setAT({
+        writeActiveTokenAsync: async () => null
+      })
       usageToken.setRedis({
         get: async () => null,
         set: async (k, v) => {
@@ -1625,6 +1638,9 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
 
   describe('POST /usagetoken/credit with success', () => {
     before(() => {
+      usageToken.setAT({
+        writeActiveTokenAsync: async () => null
+      })
       usageToken.setRedis({
         get: async () => null,
         set: async () => null
@@ -2609,7 +2625,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => {
           return { tokenHash: 'ae582b3778cfa085c215e7ad17b7ba6337bad4eb9ad7c27596aa8cc7f14a965d' }
-        }
+        },
+        writeActiveTokenAsync: async () => null
       })
       usageToken.setENV({
         ECDSA_PKPEM: `-----BEGIN PRIVATE KEY-----
@@ -2683,7 +2700,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => {
           return { tokenHash: 'ae582b3778cfa085c215e7ad17b7ba6337bad4eb9ad7c27596aa8cc7f14a965d' }
-        }
+        },
+        writeActiveTokenAsync: async () => null
       })
       usageToken.setENV({
         ECDSA_PKPEM: `-----BEGIN PRIVATE KEY-----
@@ -2757,7 +2775,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => {
           return { tokenHash: 'ae582b3778cfa085c215e7ad17b7ba6337bad4eb9ad7c27596aa8cc7f14a965d' }
-        }
+        },
+        writeActiveTokenAsync: async () => null
       })
       usageToken.setENV({
         ECDSA_PKPEM: `-----BEGIN PRIVATE KEY-----
@@ -2828,7 +2847,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
       usageToken.setAT({
         getActiveTokenByNodeIPAsync: async () => {
           return { tokenHash: 'ae582b3778cfa085c215e7ad17b7ba6337bad4eb9ad7c27596aa8cc7f14a965d' }
-        }
+        },
+        writeActiveTokenAsync: async () => null
       })
       usageToken.setENV({
         ECDSA_PKPEM: `-----BEGIN PRIVATE KEY-----
