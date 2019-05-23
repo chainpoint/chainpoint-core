@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "amqplib": "^0.5.2",
-    "chainpoint-proof-json-schema": "^1.0.2",
+    "chainpoint-proof-json-schema": "^1.1.0",
     "envalid": "^5.0.0",
     "ioredis": "^4.9.0",
     "moment": "^2.22.2",
