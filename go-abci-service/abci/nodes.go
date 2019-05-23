@@ -31,13 +31,15 @@ import (
 )
 
 //SaveJWK : save the JWT value retrieved
-func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
-	key := fmt.Sprintf("CorePublicKey:%s", jwk.Kid)
-	if jwk.Kid == app.JWK.Kid {
+func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
+	var jwkType types.Jwk
+	json.Unmarshal([]byte(tx.Data), &jwkType)
+	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
+	if jwkType.Kid == app.JWK.Kid {
 		app.logger.Info("JWK keysync tx committed")
 		app.JWKSent = true
 	}
-	jsonJwk, err := json.Marshal(jwk)
+	jsonJwk, err := json.Marshal(jwkType)
 	if util.LoggerError(app.logger, err) != nil {
 		return err
 	}
@@ -47,7 +49,7 @@ func (app *AnchorApplication) SaveJWK(jwk types.Jwk) error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
-		app.logger.Info(fmt.Sprintf("Set JWK cache for kid %s", jwk.Kid))
+		app.logger.Info(fmt.Sprintf("Set JWK cache for kid %s", jwkType.Kid))
 	}
 	return nil
 }
@@ -124,7 +126,7 @@ func (app *AnchorApplication) SignRewards() error {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
 			return err
 		}
-		_, err = app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID)
+		_, err = app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if err != nil {
 			app.logger.Info("Mint Error: Error issuing SIGN tx")
 			return err
@@ -232,7 +234,7 @@ func (app *AnchorApplication) AuditNodes() error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
-		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJSON), 2, time.Now().Unix(), app.ID)
+		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJSON), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}

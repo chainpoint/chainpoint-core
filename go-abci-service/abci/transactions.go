@@ -1,12 +1,9 @@
 package abci
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
 	types2 "github.com/tendermint/tendermint/abci/types"
 
@@ -24,7 +21,7 @@ func (app *AnchorApplication) incrementTxInt(tags []cmn.KVPair) []cmn.KVPair {
 
 // updateStateFromTx: Updates state based on type of transaction received. Used by DeliverTx
 func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
-	tx, err := util.DecodeTx(rawTx)
+	tx, err := util.DecodeVerifyTx(rawTx, app.CoreKeys)
 	tags := []cmn.KVPair{}
 	if err != nil {
 		return types2.ResponseDeliverTx{Code: code.CodeTypeEncodingError, Tags: tags}
@@ -80,10 +77,14 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "JWK":
-		var jwk types.Jwk
-		json.Unmarshal([]byte(tx.Data), &jwk)
-		go app.SaveJWK(jwk)
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		go app.SaveJWK(tx)
+		pubKey, err := util.DecodePubKey(tx)
+		if util.LoggerError(app.logger, err) != nil {
+			resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
+		} else {
+			app.CoreKeys[tx.CoreID] = *pubKey
+			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		}
 		break
 	case "SIGN":
 		app.RewardSignatures = util.UniquifyStrings(append(app.RewardSignatures, tx.Data))

@@ -63,10 +63,10 @@ func TestEncodeTx(t *testing.T) {
 
 func TestDecodeTx(t *testing.T) {
 	assert := assert.New(t)
-	tx, _ := DecodeTx([]byte("eyJ0eXBlIjoiQ0FMIiwiZGF0YSI6Im1zZyIsInZlcnNpb24iOjIsInRpbWUiOjF9"))
+	tx, _ := DecodeVerifyTx([]byte("eyJ0eXBlIjoiQ0FMIiwiZGF0YSI6Im1zZyIsInZlcnNpb24iOjIsInRpbWUiOjF9"))
 	assert.Equal(tx.Data, "msg", "Tx data section should be 'msg'")
-	_, err := DecodeTx([]byte{})
-	assert.NotEqual(err, nil, "Error from DecodeTx([]byte{}) should be non-nil")
+	_, err := DecodeVerifyTx([]byte{})
+	assert.NotEqual(err, nil, "Error from DecodeVerifyTx([]byte{}) should be non-nil")
 }
 
 func TestDecodeIP(t *testing.T) {

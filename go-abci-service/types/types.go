@@ -3,6 +3,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"database/sql"
+	"math/big"
 	"time"
 
 	"github.com/tendermint/tendermint/libs/log"
@@ -76,6 +77,12 @@ type Tx struct {
 	Version int64  `json:"version"`
 	Time    int64  `json:"time"`
 	CoreID  string `json:"core_id"`
+	Sig     string `json:"sig,omitempty"`
+}
+
+// EcdsaSignature : Allows for unmarshalling an ecdsa signature
+type EcdsaSignature struct {
+	R, S *big.Int
 }
 
 // BtcA struct will be included in the BTC-A tx data field

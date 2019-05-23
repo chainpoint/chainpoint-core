@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,9 +26,9 @@ func NewRPCClient(tendermintRPC types.TendermintURI) (rpc *RPC) {
 }
 
 // BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
-func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int64, stackID string) (core_types.ResultBroadcastTx, error) {
+func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int64, stackID string, privateKey *ecdsa.PrivateKey) (core_types.ResultBroadcastTx, error) {
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID}
-	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTx(tx)))
+	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTx(tx, privateKey)))
 	if util.LogError(err) != nil {
 		return core_types.ResultBroadcastTx{}, err
 	}
@@ -35,9 +36,9 @@ func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int6
 }
 
 // BroadcastTxCommit : Synchronously broadcasts a transaction to the local Tendermint node THIS IS BLOCKING
-func (rpc *RPC) BroadcastTxCommit(txType string, data string, version int64, time int64, stackID string) (core_types.ResultBroadcastTxCommit, error) {
+func (rpc *RPC) BroadcastTxCommit(txType string, data string, version int64, time int64, stackID string, privateKey *ecdsa.PrivateKey) (core_types.ResultBroadcastTxCommit, error) {
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID}
-	result, err := rpc.client.BroadcastTxCommit([]byte(util.EncodeTx(tx)))
+	result, err := rpc.client.BroadcastTxCommit([]byte(util.EncodeTx(tx, privateKey)))
 	if util.LogError(err) != nil {
 		return core_types.ResultBroadcastTxCommit{}, err
 	}

@@ -77,7 +77,7 @@ func DeclareABCI() *AnchorApplication {
 
 func sendTx(app *AnchorApplication) {
 	tx := types.Tx{TxType: "CAL", Data: "test", Version: 2, Time: time.Now().Unix()}
-	txEncoded := []byte(util.EncodeTx(tx))
+	txEncoded := []byte(util.EncodeTx(tx, &app.config.ECPrivateKey))
 	app.DeliverTx(txEncoded)
 }
 

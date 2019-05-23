@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"crypto/ecdsa"
 	"database/sql"
 	"encoding/binary"
 	"encoding/json"
@@ -77,6 +78,7 @@ type AnchorApplication struct {
 	ID               string
 	JWK              types.Jwk
 	JWKSent          bool
+	CoreKeys         map[string]ecdsa.PublicKey
 }
 
 //NewAnchorApplication is ABCI app constructor

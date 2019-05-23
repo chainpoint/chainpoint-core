@@ -1,6 +1,9 @@
 package util
 
 import (
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -14,6 +17,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/lestrrat-go/jwx/jwk"
+
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -91,20 +98,95 @@ func UUIDFromHash(seedBytes []byte) (uuid.UUID, error) {
 	return uuid.FromBytes(seedBytes)
 }
 
-// DecodeTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
+func DecodePubKey(tx types.Tx) (*ecdsa.PublicKey, error) {
+	var jwkType types.Jwk
+	json.Unmarshal([]byte(tx.Data), &jwkType)
+	jsonJwk, err := json.Marshal(jwkType)
+	if LogError(err) != nil {
+		return &ecdsa.PublicKey{}, err
+	}
+	set, err := jwk.ParseBytes(jsonJwk)
+	if LogError(err) != nil {
+		return &ecdsa.PublicKey{}, err
+	}
+	for _, k := range set.Keys {
+		pubKeyInterface, err := k.Materialize()
+		if LogError(err) != nil {
+			continue
+		}
+		pubKey := pubKeyInterface.(ecdsa.PublicKey)
+		return &pubKey, err
+	}
+	return &ecdsa.PublicKey{}, errors.New("unable to create public key from JWK")
+}
+
+// DecodeVerifyTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
 func DecodeTx(incoming []byte) (types.Tx, error) {
 	decoded, err := base64.StdEncoding.DecodeString(string(incoming))
 	var calendar types.Tx
 	if err != nil {
 		fmt.Println(err)
-		return calendar, err
+		return types.Tx{}, err
 	}
 	err = json.Unmarshal([]byte(decoded), &calendar)
 	return calendar, err
 }
 
+// DecodeVerifyTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
+func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types.Tx, error) {
+	decoded, err := base64.StdEncoding.DecodeString(string(incoming))
+	var calendar types.Tx
+	if err != nil {
+		fmt.Println(err)
+		return types.Tx{}, err
+	}
+	err = json.Unmarshal([]byte(decoded), &calendar)
+	/* Skip sig verification if this is a TOKEN tx */
+	if calendar.TxType == "TOKEN" {
+		return calendar, nil
+	}
+	/* Verify Signature */
+	var pubKey *ecdsa.PublicKey
+	if calendar.TxType == "JWK" {
+		pubKey, err = DecodePubKey(calendar)
+	} else {
+		pubKeyInterface := CoreKeys[calendar.CoreID]
+		pubKey = &pubKeyInterface
+	}
+	der, err := base64.StdEncoding.DecodeString(calendar.Sig)
+	if err != nil {
+		return types.Tx{}, err
+	}
+	sig := types.EcdsaSignature{}
+	_, err = asn1.Unmarshal(der, sig)
+	if err != nil {
+		return types.Tx{}, err
+	}
+	calendar.Sig = ""
+	txNoSig, err := json.Marshal(calendar)
+	if LogError(err) != nil {
+		return types.Tx{}, err
+	}
+	hash := sha256.Sum256(txNoSig)
+	if !ecdsa.Verify(pubKey, hash[:], sig.R, sig.S) {
+		err := LogError(errors.New("Can't validate signature of Tx"))
+		return types.Tx{}, err
+	}
+	return calendar, nil
+}
+
 // EncodeTx : Encodes a Tendermint transaction to base64
-func EncodeTx(outgoing types.Tx) string {
+func EncodeTx(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
+	txNoSig, err := json.Marshal(outgoing)
+	if LogError(err) != nil {
+		return ""
+	}
+	hash := sha256.Sum256(txNoSig)
+	sig, err := crypto.Sign(hash[:], privateKey)
+	if LogError(err) != nil {
+		return ""
+	}
+	outgoing.Sig = base64.StdEncoding.EncodeToString(sig)
 	txJSON, _ := json.Marshal(outgoing)
 	return base64.StdEncoding.EncodeToString(txJSON)
 }

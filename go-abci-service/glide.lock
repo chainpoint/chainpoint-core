@@ -1,5 +1,5 @@
 hash: 2d515a802a372f14e3dba5dcd485d5e1b36f3859c9ec8a9f3e6f37691c7649d2
-updated: 2019-04-22T17:30:49.492500208-07:00
+updated: 2019-05-22T16:28:20.903852169-07:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
@@ -25,6 +25,8 @@ imports:
   - spew
 - name: github.com/deckarep/golang-set
   version: 699df6a3acf6867538e50931511e9dc403da108a
+- name: github.com/etcd-io/bbolt
+  version: 4af6cfab7010371f25e79d9e104890c6377781ab
 - name: github.com/ethereum/go-ethereum
   version: 216bd2ceba2eb1708b7bdc7d69cf2984ff972cbf
   subpackages:
@@ -110,8 +112,6 @@ imports:
   - json/parser
   - json/scanner
   - json/token
-- name: github.com/inconshreveable/mousetrap
-  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jasonlvhit/gocron
   version: 6771d4b492ba2d5f57919c04b4cddb3735365120
 - name: github.com/jmhodges/levigo
@@ -120,6 +120,13 @@ imports:
   version: fb6fad722528d308d5fbc9f39e0a9644905ee1cb
 - name: github.com/kr/logfmt
   version: b84e30acd515aadc4b783ad4ff83aff3299bdfe0
+- name: github.com/lestrrat-go/jwx
+  version: 32eeb2c5e6858d4225899310d3b99292f3d19f92
+  subpackages:
+  - internal/base64
+  - internal/option
+  - jwa
+  - jwk
 - name: github.com/lib/pq
   version: 51e2106eed1cea199c802d2a49e91e2491b02056
   subpackages:
@@ -176,8 +183,6 @@ imports:
   - mem
 - name: github.com/spf13/cast
   version: 8c9545af88b134710ab1cd196795e7f2388358d7
-- name: github.com/spf13/cobra
-  version: 67fc4837d267bc9bfd6e47f77783fcc3dffc68de
 - name: github.com/spf13/jwalterweatherman
   version: 94f6ae3ed3bceceafa716478c5fbf8d29ca601a1
 - name: github.com/spf13/pflag
@@ -213,7 +218,6 @@ imports:
   - abci/server
   - abci/types
   - blockchain
-  - cmd/tendermint/commands
   - config
   - consensus
   - consensus/types
@@ -224,10 +228,10 @@ imports:
   - crypto/multisig
   - crypto/multisig/bitarray
   - crypto/secp256k1
+  - crypto/secp256k1/internal/secp256k1
   - crypto/tmhash
   - evidence
   - libs/autofile
-  - libs/cli
   - libs/cli/flags
   - libs/clist
   - libs/common
@@ -238,16 +242,12 @@ imports:
   - libs/log
   - libs/pubsub
   - libs/pubsub/query
-  - lite
-  - lite/client
-  - lite/errors
-  - lite/proxy
   - mempool
+  - mock
   - node
   - p2p
   - p2p/conn
   - p2p/pex
-  - p2p/upnp
   - privval
   - proxy
   - rpc/client
@@ -265,7 +265,7 @@ imports:
   - types/time
   - version
 - name: github.com/uber-go/zap
-  version: ff33455a0e382e8a81d14dd7c922020b6b5e7982
+  version: 27376062155ad36be76b0f12cf1572a221d3a48c
 - name: golang.org/x/crypto
   version: 8dd112bcdc25174059e45e07517d9fc663123347
   subpackages:

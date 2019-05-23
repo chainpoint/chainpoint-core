@@ -66,7 +66,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	var hash []byte
 	var btcMonObj types.BtcMonMsg
 	json.Unmarshal(msg.Body, &btcMonObj)
-	result, err := app.rpc.BroadcastTx("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID)
+	result, err := app.rpc.BroadcastTx("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 	if util.LogError(err) != nil {
 		if strings.Contains(err.Error(), "-32603") {
 			app.logger.Error("Another core has already committed a BTCC tx")
@@ -114,7 +114,7 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	switch msg.Type {
 	case "btctx":
 		time.Sleep(30 * time.Second)
-		app.rpc.BroadcastTx("BTC-M", string(msg.Body), 2, time.Now().Unix(), app.ID)
+		app.rpc.BroadcastTx("BTC-M", string(msg.Body), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		msg.Ack(false)
 		break
 	case "btcmon":
@@ -201,7 +201,7 @@ func (app *AnchorApplication) KeyMonitor() {
 	if util.LoggerError(app.logger, err) != nil {
 		return
 	}
-	_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID)
+	_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 	if util.LoggerError(app.logger, err) != nil {
 		return
 	}
@@ -217,7 +217,7 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 			app.logger.Error("Unable to obtain new NIST beacon value")
 			return
 		}
-		_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID) // elect a leader to send a NIST tx
+		_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 		if util.LogError(err) != nil {
 			app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
 		}
@@ -234,7 +234,7 @@ func (app *AnchorApplication) MintMonitor() {
 		}
 		if lastMintedAt.Int64() > app.state.LastMintedAtBlock {
 			app.logger.Info("Mint success, sending MINT tx")
-			_, err = app.rpc.BroadcastTx("MINT", strconv.FormatInt(lastMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID) // elect a leader to send a NIST tx
+			_, err = app.rpc.BroadcastTx("MINT", strconv.FormatInt(lastMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if err != nil {
 				app.logger.Debug("Failed to gossip MINT for LastMintedAtBlock gossip")
 			}
