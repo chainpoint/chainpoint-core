@@ -121,8 +121,8 @@ func initABCIConfig() types.AnchorConfig {
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
 	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
 	ethereumURL := util.GetEnv("ETH_URI", fmt.Sprintf("https://ropsten.infura.io/v3/%s", ethInfuraApiKey))
-	testMode := util.GetEnv("TEST_MODE", "development")
-	useTestNets := (testMode == "development")
+	testMode := util.GetEnv("NETWORK", "testnet")
+	useTestNets := (testMode == "testnet")
 	ethTokenContract := ""
 	if doAuditLoop {
 		ethTokenContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/TierionNetworkToken.json", useTestNets)

@@ -32,6 +32,7 @@ const usageToken = require('./lib/endpoints/usage-token.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
 const stakedNode = require('./lib/models/StakedNode.js')
+const stakedCore = require('./lib/models/StakedCore.js')
 const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const tokenUtils = require('./lib/token-utils.js')
@@ -162,11 +163,12 @@ function openRedisConnection(redisURIs) {
  * Opens a Postgres connection
  **/
 async function openPostgresConnectionAsync() {
-  let sqlzModelArray = [proof, stakedNode, activeToken]
+  let sqlzModelArray = [proof, stakedNode, activeToken, stakedCore]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.op, cxObjects.models[0])
   stakedNode.setDatabase(cxObjects.sequelize, cxObjects.models[1])
   activeToken.setDatabase(cxObjects.sequelize, cxObjects.models[2])
+  stakedCore.setDatabase(cxObjects.sequelize, cxObjects.models[3])
 }
 
 /**

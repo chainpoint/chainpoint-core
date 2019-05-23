@@ -2,8 +2,11 @@ package abci
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -30,6 +33,52 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
+//LoadJWK : load public keys derived from JWTs from redis
+func (app *AnchorApplication) LoadJWK() error {
+	var cursor uint64
+	var idKeys []string
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = app.redisClient.Scan(cursor, "CoreID:*", 10).Result()
+		if err != nil {
+			return err
+		}
+		idKeys = append(idKeys, keys...)
+		if cursor == 0 {
+			break
+		}
+	}
+	if len(idKeys) == 0 {
+		return errors.New("no JWT keys found in redis")
+	}
+	for _, k := range idKeys {
+		var coreID string
+		idStr := strings.Split(k, ":")
+		if len(idStr) == 2 {
+			coreID = idStr[1]
+		} else {
+			continue
+		}
+		hexStr, err := app.redisClient.Get(k).Result()
+		if util.LoggerError(app.logger, err) != nil {
+			continue
+		}
+		pubKeyBytes, err := base64.StdEncoding.DecodeString(hexStr)
+		if util.LoggerError(app.logger, err) != nil {
+			continue
+		}
+		x, y := elliptic.Unmarshal(elliptic.P256(), pubKeyBytes)
+		pubKey := ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X:     x,
+			Y:     y,
+		}
+		app.CoreKeys[coreID] = pubKey
+	}
+	return nil
+}
+
 //SaveJWK : save the JWT value retrieved
 func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	var jwkType types.Jwk
@@ -42,6 +91,12 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	jsonJwk, err := json.Marshal(jwkType)
 	if util.LoggerError(app.logger, err) != nil {
 		return err
+	}
+	pubKey, err := util.DecodePubKey(tx)
+	if util.LoggerError(app.logger, err) == nil {
+		app.CoreKeys[tx.CoreID] = *pubKey
+		pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+		util.LoggerError(app.logger, app.redisClient.Set("CoreID:"+app.ID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
 	}
 	value, err := app.redisClient.Get(key).Result()
 	if err == redis.Nil || value != string(jsonJwk) {
@@ -390,7 +445,7 @@ func SendNodeHash(node types.Node) (types.NodeHashResponse, error) {
 			return nodeResponse, nil
 		}
 	}
-	return types.NodeHashResponse{}, errors.New("cannot parse node IP")
+	return types.NodeHashResponse{}, errors.New(fmt.Sprintf("cannot parse node IP: %s", node.PublicIP.String))
 }
 
 //RetrieveNodeCalProof : get back a node cal proof to validate Node health
@@ -412,7 +467,7 @@ func RetrieveNodeCalProof(node types.Node, hashID types.NodeHashResponse) error 
 		//fmt.Printf("node proof: %#v\n", nodeProof)
 		if len(nodeProof) > 0 && len(nodeProof[0].AnchorsComplete) > 0 {
 			for _, anchor := range nodeProof[0].AnchorsComplete {
-				if anchor == "cal" {
+				if anchor == "cal" || anchor == "tcal" {
 					return nil
 				}
 			}

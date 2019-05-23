@@ -18,7 +18,7 @@ secrets:
 services:
 
   abci:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG:-latest}
+    image: abci:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.abci
@@ -37,7 +37,7 @@ services:
       TENDERMINT_PORT: 26657
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       PRIVATE_NODE_IPS: ""
-      TEST_MODE: ${NODE_ENV:-development}
+      NETWORK: ${NETWORK:-testnet}
       ANCHOR: "true"
       AUDIT: "true"
       NODE_MANAGEMENT: "true"
@@ -88,7 +88,7 @@ services:
   #
   api:
     restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG:-latest}
+    image: node-api-service:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.api

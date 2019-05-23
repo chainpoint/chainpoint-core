@@ -23,7 +23,7 @@ services:
       TENDERMINT_PORT: 26657
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       PRIVATE_NODE_IPS: ""
-      TEST_MODE: ${NODE_ENV}
+      NETWORK: ${NETWORK:-testnet}
       AUDIT: "true"
       NODE_MANAGEMENT: "true"
       ANCHOR: "true"

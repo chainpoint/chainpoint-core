@@ -218,6 +218,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	//Start scheduled cron tasks
 	scheduler.Start()
 
+	// Load JWK into local mapping from redis
+	app.LoadJWK()
+
 	return &app
 }
 

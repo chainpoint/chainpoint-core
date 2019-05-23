@@ -78,13 +78,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		break
 	case "JWK":
 		go app.SaveJWK(tx)
-		pubKey, err := util.DecodePubKey(tx)
-		if util.LoggerError(app.logger, err) != nil {
-			resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
-		} else {
-			app.CoreKeys[tx.CoreID] = *pubKey
-			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "SIGN":
 		app.RewardSignatures = util.UniquifyStrings(append(app.RewardSignatures, tx.Data))

@@ -254,8 +254,10 @@ type NodeHashResponse struct {
 	Meta struct {
 		SubmittedAt     time.Time `json:"submitted_at"`
 		ProcessingHints struct {
-			Cal time.Time `json:"cal"`
-			Btc time.Time `json:"btc"`
+			Cal  time.Time `json:"cal"`
+			Btc  time.Time `json:"btc"`
+			Tcal time.Time `json:"tcal"`
+			Tbtc time.Time `json:"tbtc"`
 		} `json:"processing_hints"`
 	} `json:"meta"`
 	Hashes []struct {

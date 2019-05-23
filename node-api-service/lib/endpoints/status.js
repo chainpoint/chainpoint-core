@@ -62,16 +62,13 @@ async function buildStatusObjectAsync() {
     mode: env.PRIVATE_NETWORK ? 'private' : 'public'
   }
 
-  // do not include 'jwk' data in results if running in Private Mode
-  if (env.PRIVATE_NETWORK === false) {
-    let privateKeyPEM = env.ECDSA_PKPEM
-    try {
-      let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
-      // add 'jwk' data to coreInfo result object
-      coreInfo.jwk = jwk.toJSON()
-    } catch (error) {
-      logger.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
-    }
+  let privateKeyPEM = env.ECDSA_PKPEM
+  try {
+    let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
+    // add 'jwk' data to coreInfo result object
+    coreInfo.jwk = jwk.toJSON()
+  } catch (error) {
+    logger.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
   }
 
   return {
