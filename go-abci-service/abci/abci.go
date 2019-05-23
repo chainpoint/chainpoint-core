@@ -181,6 +181,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		redisClient: redisClient,
 		ethClient:   ethClient,
 		rpc:         NewRPCClient(config.TendermintRPC),
+		CoreKeys:    map[string]ecdsa.PublicKey{},
 	}
 
 	// Create cron scheduler

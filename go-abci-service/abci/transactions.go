@@ -23,7 +23,7 @@ func (app *AnchorApplication) incrementTxInt(tags []cmn.KVPair) []cmn.KVPair {
 func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
 	tx, err := util.DecodeVerifyTx(rawTx, app.CoreKeys)
 	tags := []cmn.KVPair{}
-	if err != nil {
+	if util.LoggerError(app.logger, err) != nil {
 		return types2.ResponseDeliverTx{Code: code.CodeTypeEncodingError, Tags: tags}
 	}
 	var resp types2.ResponseDeliverTx

@@ -2,6 +2,7 @@ package util
 
 import (
 	"crypto/ecdsa"
+	random "crypto/rand"
 	"crypto/sha256"
 	"encoding/asn1"
 	"encoding/base64"
@@ -19,8 +20,6 @@ import (
 	"sync"
 
 	"github.com/lestrrat-go/jwx/jwk"
-
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -114,8 +113,8 @@ func DecodePubKey(tx types.Tx) (*ecdsa.PublicKey, error) {
 		if LogError(err) != nil {
 			continue
 		}
-		pubKey := pubKeyInterface.(ecdsa.PublicKey)
-		return &pubKey, err
+		pubKey := pubKeyInterface.(*ecdsa.PublicKey)
+		return pubKey, err
 	}
 	return &ecdsa.PublicKey{}, errors.New("unable to create public key from JWK")
 }
@@ -142,24 +141,23 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 	}
 	err = json.Unmarshal([]byte(decoded), &calendar)
 	/* Skip sig verification if this is a TOKEN tx */
-	if calendar.TxType == "TOKEN" {
+	if calendar.TxType == "TOKEN" || calendar.TxType == "JWK" {
 		return calendar, nil
 	}
 	/* Verify Signature */
 	var pubKey *ecdsa.PublicKey
-	if calendar.TxType == "JWK" {
-		pubKey, err = DecodePubKey(calendar)
-	} else {
-		pubKeyInterface := CoreKeys[calendar.CoreID]
+	if pubKeyInterface, keyExists := CoreKeys[calendar.CoreID]; keyExists {
 		pubKey = &pubKeyInterface
+	} else {
+		return types.Tx{}, errors.New("Can't find corresponding key for message")
 	}
 	der, err := base64.StdEncoding.DecodeString(calendar.Sig)
-	if err != nil {
+	if LogError(err) != nil {
 		return types.Tx{}, err
 	}
-	sig := types.EcdsaSignature{}
+	sig := &types.EcdsaSignature{}
 	_, err = asn1.Unmarshal(der, sig)
-	if err != nil {
+	if LogError(err) != nil {
 		return types.Tx{}, err
 	}
 	calendar.Sig = ""
@@ -182,7 +180,7 @@ func EncodeTx(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
 		return ""
 	}
 	hash := sha256.Sum256(txNoSig)
-	sig, err := crypto.Sign(hash[:], privateKey)
+	sig, err := privateKey.Sign(random.Reader, hash[:], nil)
 	if LogError(err) != nil {
 		return ""
 	}
