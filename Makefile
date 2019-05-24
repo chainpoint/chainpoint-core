@@ -137,7 +137,7 @@ clean: down
 	@sudo rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
 	@sudo chmod 777 ${CORE_DATADIR}/config/node_1
 	@sudo chmod 777 ${CORE_DATADIR}/config/node_1/*
-	@sudo cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
+	@sudo cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
 	@sudo docker system prune --volumes -f
 
 ## init                      : Create data folder with proper permissions
@@ -152,8 +152,8 @@ init:
 	@sudo chmod -R 777 ${CORE_DATADIR}/config/node_1
 	@docker run -it --rm -v ${CORE_DATADIR}/config/node_1:/tendermint/config  -v ${CORE_DATADIR}/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
 	@sudo chmod 777 ${CORE_DATADIR}/config/node_1/*
-	@sudo chmod 777 ${CORE_DATADIR}/config/node_1/priv_validator_key.json
-	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
+	@sudo chmod 777 ${CORE_DATADIR}/config/node_1/priv_validator_key.json || echo "not yet run for the first time"
+	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "not yet run for the first time"
 	@cli/scripts/install_deps.sh
 	@node cli/init
 	@sudo rsync .env ${CORE_DATADIR}/.env
