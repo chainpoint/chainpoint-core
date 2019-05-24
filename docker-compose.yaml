@@ -99,7 +99,7 @@ services:
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK}
+      NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
@@ -121,7 +121,7 @@ services:
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK}
+      NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
@@ -148,7 +148,7 @@ services:
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK}
+      NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
       BITCOIN_WIF: ${BITCOIN_WIF}
@@ -173,7 +173,7 @@ services:
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK}
+      NETWORK: ${NETWORK:-testnet}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
     tty: true
 
@@ -195,7 +195,7 @@ services:
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK}
+      NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
     tty: true
 
@@ -218,7 +218,7 @@ services:
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK}
+      NETWORK: ${NETWORK:-testnet}
     tty: true
 
   # RabbitMQ

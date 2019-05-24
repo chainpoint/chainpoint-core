@@ -127,14 +127,14 @@ func initABCIConfig() types.AnchorConfig {
 	if doAuditLoop {
 		ethTokenContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/TierionNetworkToken.json", useTestNets)
 		if ethTokenContract == "" {
-			ethTokenContract = util.GetEnv("TokenContractAddr", "0x0Cc0ADFb92B45195bA844945E9d69361cB0529a3")
+			ethTokenContract = util.GetEnv("TokenContractAddr", "0x230829991362d2741f954D2827771ce7c320FeB2")
 		}
 	}
 	ethRegistryContract := ""
 	if doNodeManagement {
 		ethRegistryContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/ChainpointRegistry.json", useTestNets)
 		if ethRegistryContract == "" && doNodeManagement {
-			ethRegistryContract = util.GetEnv("RegistryContractAddr", "0x3a8264f138489f80D9CcA443C3A534B73F4B6401")
+			ethRegistryContract = util.GetEnv("RegistryContractAddr", "0xbD6a355A72aa22723423795F383e8bDd8526D0De")
 		}
 	}
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
