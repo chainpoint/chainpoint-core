@@ -110,6 +110,8 @@ async function postEthBroadcastAsync(req, res, next) {
   let decodedTx = null
   try {
     decodedTx = ethers.utils.parseTransaction(rawTx)
+    // eslint-disable-next-line no-console
+    console.log(decodedTx)
   } catch (error) {
     return next(new errors.InvalidArgumentError('invalid request, invalid ethereum tx body supplied'))
   }
