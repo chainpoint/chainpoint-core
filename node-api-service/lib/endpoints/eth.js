@@ -21,12 +21,16 @@ const utils = require('../utils.js')
 const logger = require('../logger.js')
 
 const network = env.NETWORK === 'mainnet' ? 'homestead' : 'ropsten'
+// eslint-disable-next-line no-console
+console.log(network)
 
 const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
 let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
 
 const tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
+// eslint-disable-next-line no-console
+console.log(tknDefinition.networks)
 let tokenAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
 let tokenContractInterface = new ethers.utils.Interface(tknDefinition.abi)
 
