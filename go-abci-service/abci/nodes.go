@@ -16,6 +16,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -188,7 +189,7 @@ func (app *AnchorApplication) SignRewards() error {
 		}
 	}
 	// wait for 6 SIGN tx
-	deadline := time.Now().Add(3 * time.Minute)
+	deadline := time.Now().Add(4 * time.Minute)
 	for len(app.RewardSignatures) < 6 && !time.Now().After(deadline) {
 		time.Sleep(10 * time.Second)
 	}
@@ -199,6 +200,9 @@ func (app *AnchorApplication) SignRewards() error {
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
+	} else {
+		app.logger.Info("Mint: Not enough SIGN TXs")
+		return errors.New("Mint: Not enough SIGN TXs")
 	}
 	return nil
 }
@@ -228,6 +232,9 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 		return []common.Address{}, []byte{}, errors.New("No NODE-RC tx from the last epoch have been found")
 	}
 	addresses := util.UniquifyAddresses(nodeArray)
+	sort.Slice(addresses[:], func(i, j int) bool {
+		return addresses[i].Hex() > addresses[j].Hex()
+	})
 	app.logger.Info(fmt.Sprintf("Mint: input node addresses: %#v", addresses))
 	rewardHash := ethcontracts.AddressesToHash(addresses)
 	return addresses, rewardHash, nil
