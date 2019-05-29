@@ -2,6 +2,7 @@ package abci
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"time"
@@ -29,12 +30,13 @@ func (app *AnchorApplication) PollCoresFromContract() {
 			continue
 		}
 		for _, core := range coresStaked {
-			newCore := types.Node{
+			newCore := types.Core{
 				EthAddr:     core.Sender.Hex(),
 				PublicIP:    sql.NullString{String: util.Int2Ip(core.CoreIp).String(), Valid: true},
+				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId)},
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
-			inserted, err := app.pgClient.NodeUpsert(newCore)
+			inserted, err := app.pgClient.CoreUpsert(newCore)
 			if util.LoggerError(app.logger, err) != nil {
 				continue
 			}
@@ -47,12 +49,13 @@ func (app *AnchorApplication) PollCoresFromContract() {
 			continue
 		}
 		for _, core := range coresStakedUpdated {
-			newCore := types.Node{
+			newCore := types.Core{
 				EthAddr:     core.Sender.Hex(),
 				PublicIP:    sql.NullString{String: util.Int2Ip(core.CoreIp).String(), Valid: true},
+				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId)},
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
-			inserted, err := app.pgClient.NodeUpsert(newCore)
+			inserted, err := app.pgClient.CoreUpsert(newCore)
 			if util.LoggerError(app.logger, err) != nil {
 				continue
 			}
@@ -65,12 +68,13 @@ func (app *AnchorApplication) PollCoresFromContract() {
 			continue
 		}
 		for _, core := range coresUnstaked {
-			newCore := types.Node{
+			newCore := types.Core{
 				EthAddr:     core.Sender.Hex(),
 				PublicIP:    sql.NullString{String: util.Int2Ip(core.CoreIp).String(), Valid: true},
+				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId)},
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
-			deleted, err := app.pgClient.NodeDelete(newCore)
+			deleted, err := app.pgClient.CoreDelete(newCore)
 			if util.LoggerError(app.logger, err) != nil {
 				continue
 			}

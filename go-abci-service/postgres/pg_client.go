@@ -95,6 +95,48 @@ func (pg *Postgres) NodeDelete(node types.Node) (bool, error) {
 	return false, nil
 }
 
+//CoreUpsert : Inserts a new core row if it doesn't exist, other wise updates it on conflict
+func (pg *Postgres) CoreUpsert(core types.Core) (bool, error) {
+	stmt := "INSERT INTO staked_cores (eth_addr, public_ip, core_id, block_number, created_at, updated_at) " +
+		"VALUES ($1, $2, $3, $4, now(), now()) " +
+		"ON CONFLICT (eth_addr) " +
+		"DO UPDATE " +
+		"SET " +
+		"public_ip = $2, " +
+		"core_id = $3, " +
+		"block_number = $4 " +
+		"WHERE $4 > staked_cores.block_number OR $2 <> staked_cores.public_ip;"
+	res, err := pg.DB.Exec(stmt, core.EthAddr, core.PublicIP, core.CoreId, core.BlockNumber)
+	if util.LoggerError(pg.Logger, err) != nil {
+		return false, err
+	}
+	affect, err := res.RowsAffected()
+	if util.LoggerError(pg.Logger, err) != nil {
+		return false, err
+	}
+	if affect > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+//CoreDelete : deletes a row if the blockNumber of the input unstake event is higher
+func (pg *Postgres) CoreDelete(core types.Core) (bool, error) {
+	stmt := "DELETE FROM staked_cores WHERE eth_addr = $1 AND block_number > $2;"
+	res, err := pg.DB.Exec(stmt, core.EthAddr, core.BlockNumber)
+	if util.LoggerError(pg.Logger, err) != nil {
+		return false, err
+	}
+	affect, err := res.RowsAffected()
+	if util.LoggerError(pg.Logger, err) != nil {
+		return false, err
+	}
+	if affect > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
 //TokenHashUpsert : insert new token hash when received by the network
 func (pg *Postgres) TokenHashUpsert(data string) (bool, error) {
 	payloadSlice := strings.Split(data, "|")
@@ -229,6 +271,22 @@ func (pg *Postgres) GetNodeByPublicIP(publicIP string) (types.Node, error) {
 	default:
 		util.LoggerError(pg.Logger, err)
 		return types.Node{}, err
+	}
+}
+
+//GetCoreByPublicIP : get staked nodes by their public IP string (should be unique)
+func (pg *Postgres) GetCoreByPublicIP(coreId string) (types.Core, error) {
+	stmt := "SELECT eth_addr, public_ip, core_id, block_number FROM staked_cores where core_id = $1"
+	row := pg.DB.QueryRow(stmt, coreId)
+	var core types.Core
+	switch err := row.Scan(&core.EthAddr, &core.PublicIP, &core.CoreId, &core.BlockNumber); err {
+	case sql.ErrNoRows:
+		return types.Core{}, nil
+	case nil:
+		return core, nil
+	default:
+		util.LoggerError(pg.Logger, err)
+		return types.Core{}, err
 	}
 }
 

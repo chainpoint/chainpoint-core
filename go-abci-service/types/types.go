@@ -224,6 +224,14 @@ type Node struct {
 	BlockNumber sql.NullInt64
 }
 
+// Core : Used to represent Core info to and from postgres
+type Core struct {
+	EthAddr     string
+	CoreId      sql.NullString
+	PublicIP    sql.NullString
+	BlockNumber sql.NullInt64
+}
+
 //NodeJSON : Used to write to chain
 type NodeJSON struct {
 	EthAddr  string `json:"eth_address"`

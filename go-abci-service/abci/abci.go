@@ -63,22 +63,23 @@ var _ types2.Application = (*AnchorApplication)(nil)
 // AnchorApplication : AnchorState and config variables for the abci app
 type AnchorApplication struct {
 	types2.BaseApplication
-	ValUpdates       []types2.ValidatorUpdate
-	RewardSignatures []string
-	Db               dbm.DB
-	state            types.AnchorState
-	config           types.AnchorConfig
-	logger           log.Logger
-	calendar         *calendar.Calendar
-	aggregator       *aggregator.Aggregator
-	pgClient         *postgres.Postgres
-	redisClient      *redis.Client
-	ethClient        *ethcontracts.EthClient
-	rpc              *RPC
-	ID               string
-	JWK              types.Jwk
-	JWKSent          bool
-	CoreKeys         map[string]ecdsa.PublicKey
+	ValUpdates           []types2.ValidatorUpdate
+	NodeRewardSignatures []string
+	CoreRewardSignatures []string
+	Db                   dbm.DB
+	state                types.AnchorState
+	config               types.AnchorConfig
+	logger               log.Logger
+	calendar             *calendar.Calendar
+	aggregator           *aggregator.Aggregator
+	pgClient             *postgres.Postgres
+	redisClient          *redis.Client
+	ethClient            *ethcontracts.EthClient
+	rpc                  *RPC
+	ID                   string
+	JWK                  types.Jwk
+	JWKSent              bool
+	CoreKeys             map[string]ecdsa.PublicKey
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -164,11 +165,12 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	//Construct application
 	app := AnchorApplication{
-		Db:               db,
-		state:            state,
-		config:           config,
-		logger:           *config.Logger,
-		RewardSignatures: make([]string, 0),
+		Db:                   db,
+		state:                state,
+		config:               config,
+		logger:               *config.Logger,
+		NodeRewardSignatures: make([]string, 0),
+		CoreRewardSignatures: make([]string, 0),
 		calendar: &calendar.Calendar{
 			RabbitmqURI: config.RabbitmqURI,
 			Logger:      *config.Logger,
@@ -196,6 +198,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	//Initialize and monitor node state
 	if config.DoNodeManagement {
 		go app.PollNodesFromContract()
+		go app.PollCoresFromContract()
 	}
 
 	//Initialize calendar writing if enabled

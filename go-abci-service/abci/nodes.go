@@ -182,7 +182,7 @@ func (app *AnchorApplication) SignRewards() error {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
 			return err
 		}
-		_, err = app.rpc.BroadcastTx("SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		_, err = app.rpc.BroadcastTx("NODE-SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if err != nil {
 			app.logger.Info("Mint Error: Error issuing SIGN tx")
 			return err
@@ -190,13 +190,13 @@ func (app *AnchorApplication) SignRewards() error {
 	}
 	// wait for 6 SIGN tx
 	deadline := time.Now().Add(4 * time.Minute)
-	for len(app.RewardSignatures) < 6 && !time.Now().After(deadline) {
+	for len(app.NodeRewardSignatures) < 6 && !time.Now().After(deadline) {
 		time.Sleep(10 * time.Second)
 	}
 	// Mint if 6+ SIGN txs are received
-	if len(app.RewardSignatures) >= 6 {
+	if len(app.NodeRewardSignatures) >= 6 {
 		app.logger.Info("Mint: Enough SIGN TXs received, calling mint")
-		err := app.MintReward(app.RewardSignatures, candidates, rewardHash)
+		err := app.MintReward(app.NodeRewardSignatures, candidates, rewardHash)
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}

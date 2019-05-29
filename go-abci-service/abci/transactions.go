@@ -80,8 +80,12 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		go app.SaveJWK(tx)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
-	case "SIGN":
-		app.RewardSignatures = util.UniquifyStrings(append(app.RewardSignatures, tx.Data))
+	case "CORE-SIGN":
+		app.CoreRewardSignatures = util.UniquifyStrings(append(app.CoreRewardSignatures, tx.Data))
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		break
+	case "NODE-SIGN":
+		app.NodeRewardSignatures = util.UniquifyStrings(append(app.NodeRewardSignatures, tx.Data))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "NODE-RC":
