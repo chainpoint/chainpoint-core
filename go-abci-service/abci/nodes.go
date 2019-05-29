@@ -110,8 +110,8 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	return nil
 }
 
-//MintRewardNodes : mint rewards for nodes
-func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common.Address, rewardHash []byte) error {
+//MintNodeReward : mint rewards for nodes
+func (app *AnchorApplication) MintNodeReward(sig []string, rewardCandidates []common.Address, rewardHash []byte) error {
 	leader, ids := app.ElectLeader(1)
 	if len(ids) == 1 {
 		app.state.LastMintCoreID = ids[0]
@@ -131,7 +131,7 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 			}
 			sigBytes[i] = decodedSig
 		}
-		err := app.ethClient.Mint(rewardCandidates, rewardHash, sigBytes)
+		err := app.ethClient.MintNodes(rewardCandidates, rewardHash, sigBytes)
 		if util.LoggerError(app.logger, err) != nil {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
@@ -141,7 +141,8 @@ func (app *AnchorApplication) MintReward(sig []string, rewardCandidates []common
 	return nil
 }
 
-func (app *AnchorApplication) MintRewardNodes() error {
+//StartNodeMintProcess : wraps signing/minting process and handles state updates
+func (app *AnchorApplication) StartNodeMintProcess() error {
 	app.SetMintPendingState(true) //needed since we can't do a blocking lock in commit
 	err := app.SignRewards()
 	app.SetMintPendingState(false)
@@ -196,7 +197,7 @@ func (app *AnchorApplication) SignRewards() error {
 	// Mint if 6+ SIGN txs are received
 	if len(app.NodeRewardSignatures) >= 6 {
 		app.logger.Info("Mint: Enough SIGN TXs received, calling mint")
-		err := app.MintReward(app.NodeRewardSignatures, candidates, rewardHash)
+		err := app.MintNodeReward(app.NodeRewardSignatures, candidates, rewardHash)
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}

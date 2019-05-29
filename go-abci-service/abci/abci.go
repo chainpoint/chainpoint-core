@@ -287,7 +287,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
 			if app.config.DoNodeAudit && !app.state.MintPending {
 				go app.AuditNodes() //retrieve, audit, and reward some nodes
-				go app.MintRewardNodes()
+				go app.StartNodeMintProcess()
 			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
