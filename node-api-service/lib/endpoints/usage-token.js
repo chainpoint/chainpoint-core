@@ -39,6 +39,38 @@ const tokenContractInterface = new ethers.utils.Interface(tokenABI)
 let tokenContractAddress = tknDefinition.networks[network === 'homestead' ? '1' : '3'].address
 
 async function postTokenRefreshAsync(req, res, next) {
+  // ensure that aud was supplied
+  if (!req.params.aud) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must be supplied'))
+  }
+
+  let aud = req.params.aud.toString()
+  let ips = aud.split(',')
+  // ensure that aud is a csv with three values
+  if (ips.length !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
+  }
+
+  // ensure each IP is unique
+  let ipSet = new Set(ips)
+  if (ipSet.size !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 unique values'))
+  }
+
+  // ensure that each ip value is a real ip
+  for (let ip of ips) {
+    if (!utils.isIP(ip)) {
+      return next(new errors.InvalidArgumentError(`invalid request, bad IP value in aud - ${ip}`))
+    }
+  }
+
+  // ensure that the ip values contain this Core ip
+  let coreURL = new url(env.CHAINPOINT_CORE_BASE_URI)
+  let coreIP = coreURL.hostname
+  if (!ips.includes(coreIP)) {
+    return next(new errors.InvalidArgumentError(`invalid request, aud must include this Core IP`))
+  }
+
   const tokenString = req.params.token
   // ensure that token is supplied
   if (!tokenString) {
@@ -63,24 +95,6 @@ async function postTokenRefreshAsync(req, res, next) {
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
   logger.info(`Received request from Node at ${submittingNodeIP}`)
-
-  // get the token's audience
-  let aud = decodedToken.payload.aud
-  if (!aud) return next(new errors.InvalidArgumentError('invalid request, token missing `aud` value'))
-
-  let ipCSV = aud.toString()
-  let ips = ipCSV.split(',')
-  // ensure that aud is a csv with three values
-  if (ips.length !== 3) {
-    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
-  }
-
-  // ensure that each ip value is a real ip
-  for (let ip of ips) {
-    if (!utils.isIP(ip)) {
-      return next(new errors.InvalidArgumentError(`invalid request, bad IP value in aud - ${ip}`))
-    }
-  }
 
   // get the token's subject
   let sub = decodedToken.payload.sub
@@ -224,6 +238,12 @@ async function postTokenCreditAsync(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
   }
 
+  // ensure each IP is unique
+  let ipSet = new Set(ips)
+  if (ipSet.size !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 unique values'))
+  }
+
   // ensure that each ip value is a real ip
   for (let ip of ips) {
     if (!utils.isIP(ip)) {
@@ -362,6 +382,12 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
   // ensure that aud is a csv with three values
   if (ips.length !== 3) {
     return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
+  }
+
+  // ensure each IP is unique
+  let ipSet = new Set(ips)
+  if (ipSet.size !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 unique values'))
   }
 
   // ensure that each ip value is a real ip
