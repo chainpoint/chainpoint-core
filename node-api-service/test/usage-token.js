@@ -20,10 +20,124 @@ describe('Usage Token Controller - Public Mode', () => {
     insecureServer.close()
   })
 
-  describe('POST /usagetoken/refresh with no token', () => {
+  describe('POST /usagetoken/refresh with missing aud', () => {
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/refresh')
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must be supplied')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh with bad aud', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({ aud: '0xnothex' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 values')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh with bad count aud', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({ aud: '64.10.120.11,64.10.120.12' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 values')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh with duplicate ips aud', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({ aud: '64.10.120.11,64.10.120.12,64.10.120.12' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 unique values')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh with non-ip aud', () => {
+    let ip = 'notanip'
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({ aud: '64.10.120.11,64.10.120.12,' + ip })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal(`invalid request, bad IP value in aud - ${ip}`)
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh with no token', () => {
+    before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({ aud: '64.10.120.11,64.10.120.12,66.1.1.1' })
         .expect('Content-type', /json/)
         .expect(409)
         .end((err, res) => {
@@ -42,10 +156,13 @@ describe('Usage Token Controller - Public Mode', () => {
   })
 
   describe('POST /usagetoken/refresh with bad token data', () => {
+    before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
+    })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/refresh')
-        .send({ token: 'qweqweqwe' })
+        .send({ token: 'qweqweqwe', aud: '64.10.120.11,64.10.120.12,66.1.1.1' })
         .expect('Content-type', /json/)
         .expect(409)
         .end((err, res) => {
@@ -64,12 +181,16 @@ describe('Usage Token Controller - Public Mode', () => {
   })
 
   describe('POST /usagetoken/refresh with missing kid', () => {
+    before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
+    })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIzNDFmODNkMC02YjdmLTExZTktYWM3Ni1kNTcyYjBmMzllNDgiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1NjU3MCwiYmFsIjoyNywiaWF0IjoxNTU2NjUyOTY5fQ.3sAXn6X7qhMXAriDBr470ciqyKTADeplWUN4skvscE9MaNkj6DtXWSw0ZujUqPwlpmAF3mq4kbJn-7SEXUa4JQ'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIzNDFmODNkMC02YjdmLTExZTktYWM3Ni1kNTcyYjBmMzllNDgiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1NjU3MCwiYmFsIjoyNywiaWF0IjoxNTU2NjUyOTY5fQ.3sAXn6X7qhMXAriDBr470ciqyKTADeplWUN4skvscE9MaNkj6DtXWSw0ZujUqPwlpmAF3mq4kbJn-7SEXUa4JQ',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -89,12 +210,16 @@ describe('Usage Token Controller - Public Mode', () => {
   })
 
   describe('POST /usagetoken/refresh with missing iss', () => {
+    before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
+    })
     it('should return proper error', done => {
       request(insecureServer)
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjU1OTI5ODQwLTZiN2YtMTFlOS04Yzk2LWM3NDY4MGE4MDQ4ZiJ9.eyJqdGkiOiI1NTkxYWRlMC02YjdmLTExZTktOGM5Ni1jNzQ2ODBhODA0OGYiLCJzdWIiOiIyNC4xNTQuMjEuMTEiLCJleHAiOjE1NTY2NTY2MjYsImJhbCI6MjcsImlhdCI6MTU1NjY1MzAyNX0.-JbQlyGo7cy5iWJTZhRizjndltpTFbxJCJoSOI5SVtepJuCp5SWHbdL7xdhWE78oKCpy6nVk5IjKTZUCVnK0cQ'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjU1OTI5ODQwLTZiN2YtMTFlOS04Yzk2LWM3NDY4MGE4MDQ4ZiJ9.eyJqdGkiOiI1NTkxYWRlMC02YjdmLTExZTktOGM5Ni1jNzQ2ODBhODA0OGYiLCJzdWIiOiIyNC4xNTQuMjEuMTEiLCJleHAiOjE1NTY2NTY2MjYsImJhbCI6MjcsImlhdCI6MTU1NjY1MzAyNX0.-JbQlyGo7cy5iWJTZhRizjndltpTFbxJCJoSOI5SVtepJuCp5SWHbdL7xdhWE78oKCpy6nVk5IjKTZUCVnK0cQ',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -115,6 +240,7 @@ describe('Usage Token Controller - Public Mode', () => {
 
   describe('POST /usagetoken/refresh with unknown JWK', () => {
     before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
       usageToken.setRedis({
         get: async () => null
       })
@@ -127,7 +253,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -157,6 +284,7 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     let jwkStr = JSON.stringify(jwk)
     before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
       usageToken.setRedis({
         get: async () => null,
         set: async (k, v) => {
@@ -172,7 +300,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ii1JMURIRTdWUDN3N01XM3hGRXo2eDh1WHowdWNKOXktMnVrRnpoWWxBT2MifQ.eyJqdGkiOiI5MjhkMDAwMC02Yjg0LTExZTktYTQzYS03ZjQ1ZTk1MGU0ZjMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI1LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1ODg3NiwiYmFsIjoyNywiaWF0IjoxNTU2NjU1Mjc1fQ.uQobSDBxbLOTmmgdipggAu7xzZlhu-SKHqppVxM5SyM_1tQaSQgUPo7VrDu4bFHUVR7AbP_ejM5HigtXE6ferw'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ii1JMURIRTdWUDN3N01XM3hGRXo2eDh1WHowdWNKOXktMnVrRnpoWWxBT2MifQ.eyJqdGkiOiI5MjhkMDAwMC02Yjg0LTExZTktYTQzYS03ZjQ1ZTk1MGU0ZjMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI1LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1ODg3NiwiYmFsIjoyNywiaWF0IjoxNTU2NjU1Mjc1fQ.uQobSDBxbLOTmmgdipggAu7xzZlhu-SKHqppVxM5SyM_1tQaSQgUPo7VrDu4bFHUVR7AbP_ejM5HigtXE6ferw',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -218,7 +347,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjZ6d1FmTlRnQTh1RU4xdWZhdGxxMDZWSWV4T1o4WjFfck9VbnN2VUJycjQifQ.eyJqdGkiOiI3YjU3ZTExMC02Yjg1LTExZTktOGQxOC1kMTU1MjkwZTU5YjMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1OTI2NiwiYmFsIjowLCJpYXQiOjE1NTY2NTU2NjV9.6BMhmmSTva9HJklAPeeCf56gnwTIK31m28GtydhKexh3p9NfaMy4r-TZioILh5Tol0wOwa0vxx7WOGGg5lrZqg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjZ6d1FmTlRnQTh1RU4xdWZhdGxxMDZWSWV4T1o4WjFfck9VbnN2VUJycjQifQ.eyJqdGkiOiI3YjU3ZTExMC02Yjg1LTExZTktOGQxOC1kMTU1MjkwZTU5YjMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1OTI2NiwiYmFsIjowLCJpYXQiOjE1NTY2NTU2NjV9.6BMhmmSTva9HJklAPeeCf56gnwTIK31m28GtydhKexh3p9NfaMy4r-TZioILh5Tol0wOwa0vxx7WOGGg5lrZqg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(400)
@@ -232,216 +362,6 @@ describe('Usage Token Controller - Public Mode', () => {
             .to.have.property('message')
             .and.to.be.a('string')
             .and.to.equal('bad request, unable to determine Node IP')
-          done()
-        })
-    })
-  })
-
-  describe('POST /usagetoken/refresh aud missing', () => {
-    let jwk = {
-      kty: 'EC',
-      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
-      crv: 'P-256',
-      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
-      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
-    }
-    before(() => {
-      usageToken.setRedis({
-        get: async () => null,
-        set: async () => null
-      })
-      usageToken.setRP(async () => {
-        return { body: { jwk: jwk } }
-      })
-      usageToken.setGetIP(() => '66.12.12.12')
-    })
-    it('should return proper error', done => {
-      request(insecureServer)
-        .post('/usagetoken/refresh')
-        .send({
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiI4ZTJjY2YzMC03NWMxLTExZTktOTQ2Yy04MzhhOTRmNDM5YjIiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQwOTc5LCJiYWwiOjEwLCJpYXQiOjE1NTc3ODA5Nzh9.ds2wfyD5n6RiT1QoacANhgTK5JJOt6yR6kCFEPqiQuGJt9FlKsma8H7ANwz2lxgecmpjp43U7MFVeHP5IOh5mg'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, token missing `aud` value')
-          done()
-        })
-    })
-  })
-
-  describe('POST /usagetoken/refresh aud invalid', () => {
-    let jwk = {
-      kty: 'EC',
-      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
-      crv: 'P-256',
-      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
-      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
-    }
-    before(() => {
-      usageToken.setRedis({
-        get: async () => null,
-        set: async () => null
-      })
-      usageToken.setRP(async () => {
-        return { body: { jwk: jwk } }
-      })
-      usageToken.setGetIP(() => '66.12.12.12')
-    })
-    it('should return proper error', done => {
-      request(insecureServer)
-        .post('/usagetoken/refresh')
-        .send({
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiI2NTdkMjdmMC03NWNjLTExZTktYTQ0Mi1kZjZlNTc4NTZjMWYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ1NjM1LCJiYWwiOjEwLCJhdWQiOiJiYWQiLCJpYXQiOjE1NTc3ODU2MzR9.YNdh7-5ChdU0HiGCLRqenJWp0ayVSOyi-GUTJw3WJbfMxSXUvX1ff2ydEMLFGY8QkghxUzeJXM7sqKJ3QSOwAg'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, aud must contain 3 values')
-          done()
-        })
-    })
-  })
-
-  describe('POST /usagetoken/refresh aud too few ips', () => {
-    let jwk = {
-      kty: 'EC',
-      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
-      crv: 'P-256',
-      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
-      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
-    }
-    before(() => {
-      usageToken.setRedis({
-        get: async () => null,
-        set: async () => null
-      })
-      usageToken.setRP(async () => {
-        return { body: { jwk: jwk } }
-      })
-      usageToken.setGetIP(() => '66.12.12.12')
-    })
-    it('should return proper error', done => {
-      request(insecureServer)
-        .post('/usagetoken/refresh')
-        .send({
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJiOGJkMWI1MC03NWNjLTExZTktYTA5OS02ZDEzZjAzMjRiMWEiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ1Nzc1LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSIsImlhdCI6MTU1Nzc4NTc3NH0.kOl7IST1vSVyKXVlKZHX4roKth_uEE3-_JiLNa_jODiZnLUhQLShTUD9_iqrUDh4T2rM05A9auPWw11HSkZQQA'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, aud must contain 3 values')
-          done()
-        })
-    })
-  })
-
-  describe('POST /usagetoken/refresh duplicate ips', () => {
-    let jwk = {
-      kty: 'EC',
-      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
-      crv: 'P-256',
-      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
-      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
-    }
-    before(() => {
-      usageToken.setRedis({
-        get: async () => null,
-        set: async () => null
-      })
-      usageToken.setRP(async () => {
-        return { body: { jwk: jwk } }
-      })
-      usageToken.setGetIP(() => '66.12.12.12')
-    })
-    it('should return proper error', done => {
-      request(insecureServer)
-        .post('/usagetoken/refresh')
-        .send({
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJiMDVjNDBlMC04MjE5LTExZTktYTNhZC00M2YwZWViNThmZGIiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODc0NDk4MjQ2LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2Ni4xMi4xMi4xMiw2Ni4xMi4xMi4xMiIsImF1bHIiOjMsImlhdCI6MTU1OTEzODI0NX0.sVmIK1tt9hOvwUVqHFL2iAcrNgaLotj3ztcdwt7rfLbp2wNqHmyhO4z5-MUMihEguwd6CG-Nk0Z4uqUcRUSGzg'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, aud must contain 3 unique values')
-          done()
-        })
-    })
-  })
-
-  describe('POST /usagetoken/refresh aud contains bad ip value', () => {
-    let jwk = {
-      kty: 'EC',
-      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
-      crv: 'P-256',
-      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
-      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
-    }
-    before(() => {
-      usageToken.setRedis({
-        get: async () => null,
-        set: async () => null
-      })
-      usageToken.setRP(async () => {
-        return { body: { jwk: jwk } }
-      })
-      usageToken.setGetIP(() => '66.12.12.12')
-    })
-    it('should return proper error', done => {
-      request(insecureServer)
-        .post('/usagetoken/refresh')
-        .send({
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiI4Nzc0MGUzMC03NWQzLTExZTktYWU5OC02NThiZTMzZDVhZjMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ4Njk5LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSxiYWRpcCIsImlhdCI6MTU1Nzc4ODY5OH0.EYuUzIT948yBOZ712ONzAgybv1fd3AjTXNSnD3ilv_d3VY8YsyM77hnDuFDuk4DFGkZ4qTSawSWP9XYT4EG7dQ'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal(`invalid request, bad IP value in aud - badip`)
           done()
         })
     })
@@ -471,7 +391,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIyOTAwNjhjMC03NWQ0LTExZTktYTM0NC1kM2ExMDMxMWY1YmMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsImV4cCI6MTg3MzE0ODk3MCwiYmFsIjoxMCwiYXVkIjoiNjUuMTIuMTIuNDUsNjUuMTMuMTMuNTUsNjYuMS4xLjEiLCJpYXQiOjE1NTc3ODg5Njl9.AV54PSh2mbLzgQhhMNYhnkpnNsA2uafGmErmtINuGqwBehkaBMgsxgWZXpjDRHj5qRF_9OnNofB6zn_0LVjlWw'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIyOTAwNjhjMC03NWQ0LTExZTktYTM0NC1kM2ExMDMxMWY1YmMiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsImV4cCI6MTg3MzE0ODk3MCwiYmFsIjoxMCwiYXVkIjoiNjUuMTIuMTIuNDUsNjUuMTMuMTMuNTUsNjYuMS4xLjEiLCJpYXQiOjE1NTc3ODg5Njl9.AV54PSh2mbLzgQhhMNYhnkpnNsA2uafGmErmtINuGqwBehkaBMgsxgWZXpjDRHj5qRF_9OnNofB6zn_0LVjlWw',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -514,7 +435,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiI4YmZmMWYyMC03NWQ0LTExZTktOTU1My01MWFjMjNiNmI5MTUiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5MTM2LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTEzNX0.R3n9LQknVXgtjRoHmzQ5f0BkK6xBnQRpcuzEniHVW5p76GpvliHW0RtdBOWHMkxJOUqn1OXGNn8GsHaAWJykmg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiI4YmZmMWYyMC03NWQ0LTExZTktOTU1My01MWFjMjNiNmI5MTUiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5MTM2LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTEzNX0.R3n9LQknVXgtjRoHmzQ5f0BkK6xBnQRpcuzEniHVW5p76GpvliHW0RtdBOWHMkxJOUqn1OXGNn8GsHaAWJykmg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -561,7 +483,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzODczNjA0MC03NWQ1LTExZTktOWMzYy0xN2NiMzk1MDQ0MTciLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5NDI1LCJiYWwiOjAsImF1ZCI6IjY1LjEyLjEyLjQ1LDY1LjEzLjEzLjU1LDY2LjEuMS4xIiwiaWF0IjoxNTU3Nzg5NDI0fQ.g7kWZNtAixfi9knrVJL2zH-qELhLZBnAFcwtR4XIQLR9uDurMan1nqr5AOAK41k5GEU--BJxkCVMO1CtJfvgWQ'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzODczNjA0MC03NWQ1LTExZTktOWMzYy0xN2NiMzk1MDQ0MTciLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5NDI1LCJiYWwiOjAsImF1ZCI6IjY1LjEyLjEyLjQ1LDY1LjEzLjEzLjU1LDY2LjEuMS4xIiwiaWF0IjoxNTU3Nzg5NDI0fQ.g7kWZNtAixfi9knrVJL2zH-qELhLZBnAFcwtR4XIQLR9uDurMan1nqr5AOAK41k5GEU--BJxkCVMO1CtJfvgWQ',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -611,7 +534,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -659,7 +583,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(500)
@@ -707,7 +632,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(409)
@@ -758,7 +684,8 @@ describe('Usage Token Controller - Public Mode', () => {
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(500)
@@ -828,7 +755,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(500)
@@ -902,7 +830,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(500)
@@ -976,7 +905,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(500)
@@ -1046,7 +976,8 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
         .post('/usagetoken/refresh')
         .send({
           token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg'
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiIzNzBiZWI5MC03NWQ2LTExZTktOGY3Yy1kOTdmYTk3YmFiYzYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMTQ5ODUyLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2Ni4xLjEuMSIsImlhdCI6MTU1Nzc4OTg1MX0.drgsrF1Kvf7LHeTCcQwjSVsT1VFHpYzYr4wu2SkDXRH2ZKvOafN_aQxwokXBpMkuJdIItJgSgQj-23S1VhMrdg',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
         })
         .expect('Content-type', /json/)
         .expect(200)
