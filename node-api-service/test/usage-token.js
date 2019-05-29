@@ -363,6 +363,48 @@ describe('Usage Token Controller - Public Mode', () => {
     })
   })
 
+  describe('POST /usagetoken/refresh duplicate ips', () => {
+    let jwk = {
+      kty: 'EC',
+      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
+      crv: 'P-256',
+      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
+      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
+    }
+    before(() => {
+      usageToken.setRedis({
+        get: async () => null,
+        set: async () => null
+      })
+      usageToken.setRP(async () => {
+        return { body: { jwk: jwk } }
+      })
+      usageToken.setGetIP(() => '66.12.12.12')
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJiMDVjNDBlMC04MjE5LTExZTktYTNhZC00M2YwZWViNThmZGIiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODc0NDk4MjQ2LCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2Ni4xMi4xMi4xMiw2Ni4xMi4xMi4xMiIsImF1bHIiOjMsImlhdCI6MTU1OTEzODI0NX0.sVmIK1tt9hOvwUVqHFL2iAcrNgaLotj3ztcdwt7rfLbp2wNqHmyhO4z5-MUMihEguwd6CG-Nk0Z4uqUcRUSGzg'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 unique values')
+          done()
+        })
+    })
+  })
+
   describe('POST /usagetoken/refresh aud contains bad ip value', () => {
     let jwk = {
       kty: 'EC',
@@ -1102,6 +1144,28 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     })
   })
 
+  describe('POST /usagetoken/credit with duplicate ips aud', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/credit')
+        .send({ aud: '64.10.120.11,64.10.120.12,64.10.120.11' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 unique values')
+          done()
+        })
+    })
+  })
+
   describe('POST /usagetoken/credit with non-ip aud', () => {
     let ip = 'notanip'
     it('should return proper error', done => {
@@ -1772,6 +1836,28 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
             .to.have.property('message')
             .and.to.be.a('string')
             .and.to.equal('invalid request, aud must contain 3 values')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/audience with duplicate ips aud', () => {
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/audience')
+        .send({ aud: '64.10.120.11,64.10.120.12,64.10.120.12' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, aud must contain 3 unique values')
           done()
         })
     })

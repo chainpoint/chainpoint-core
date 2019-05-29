@@ -75,6 +75,12 @@ async function postTokenRefreshAsync(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
   }
 
+  // ensure each IP is unique
+  let ipSet = new Set(ips)
+  if (ipSet.size !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 unique values'))
+  }
+
   // ensure that each ip value is a real ip
   for (let ip of ips) {
     if (!utils.isIP(ip)) {
@@ -224,6 +230,12 @@ async function postTokenCreditAsync(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
   }
 
+  // ensure each IP is unique
+  let ipSet = new Set(ips)
+  if (ipSet.size !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 unique values'))
+  }
+
   // ensure that each ip value is a real ip
   for (let ip of ips) {
     if (!utils.isIP(ip)) {
@@ -362,6 +374,12 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
   // ensure that aud is a csv with three values
   if (ips.length !== 3) {
     return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
+  }
+
+  // ensure each IP is unique
+  let ipSet = new Set(ips)
+  if (ipSet.size !== 3) {
+    return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 unique values'))
   }
 
   // ensure that each ip value is a real ip
