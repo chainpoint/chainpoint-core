@@ -227,16 +227,28 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 //MintMonitor : efficiently monitor for new minting and gossip that block to other cores
 func (app *AnchorApplication) MintMonitor() {
 	if leader, _ := app.ElectLeader(1); leader {
-		lastMintedAt, err := app.ethClient.GetLastMintedAt()
+		lastNodeMintedAt, err := app.ethClient.GetNodeLastMintedAt()
 		if util.LogError(err) != nil {
-			app.logger.Error("Unable to obtain new LastMintedAt value")
+			app.logger.Error("Unable to obtain new NodeLastMintedAt value")
 			return
 		}
-		if lastMintedAt.Int64() > app.state.LastMintedAtBlock {
-			app.logger.Info("Mint success, sending MINT tx")
-			_, err = app.rpc.BroadcastTx("MINT", strconv.FormatInt(lastMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+		if lastNodeMintedAt.Int64() > app.state.LastNodeMintedAtBlock {
+			app.logger.Info("Mint success, sending Node MINT tx")
+			_, err = app.rpc.BroadcastTx("NODE-MINT", strconv.FormatInt(lastNodeMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if err != nil {
-				app.logger.Debug("Failed to gossip MINT for LastMintedAtBlock gossip")
+				app.logger.Debug("Failed to gossip Node MINT for LastNodeMintedAtBlock gossip")
+			}
+		}
+		lastCoreMintedAt, err := app.ethClient.GetCoreLastMintedAt()
+		if util.LogError(err) != nil {
+			app.logger.Error("Unable to obtain new CoreLastMintedAt value")
+			return
+		}
+		if lastCoreMintedAt.Int64() > app.state.LastCoreMintedAtBlock {
+			app.logger.Info("Mint success, sending Core MINT tx")
+			_, err = app.rpc.BroadcastTx("CORE-MINT", strconv.FormatInt(lastCoreMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+			if err != nil {
+				app.logger.Debug("Failed to gossip Core MINT for LastNodeMintedAtBlock gossip")
 			}
 		}
 	}
@@ -244,6 +256,6 @@ func (app *AnchorApplication) MintMonitor() {
 
 //SetMintState : create a deferable method to set mint state
 func (app *AnchorApplication) SetMintPendingState(val bool) {
-	app.state.MintPending = val
+	app.state.NodeMintPending = val
 	app.NodeRewardSignatures = make([]string, 0)
 }

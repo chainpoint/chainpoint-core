@@ -165,7 +165,7 @@ func (app *AnchorApplication) SignRewards() error {
 			app.logger.Error("Mint Error: problem retrieving highest block")
 			return err
 		}
-		if currentEthBlock.Int64()-app.state.LastMintedAtBlock < 5760 {
+		if currentEthBlock.Int64()-app.state.LastNodeMintedAtBlock < 5760 {
 			app.logger.Info("Mint Error: Too soon for minting")
 			return errors.New("Too soon for minting")
 		}
@@ -210,7 +210,7 @@ func (app *AnchorApplication) SignRewards() error {
 
 //GetNodeRewardCandidates : scans for and collates the reward candidates in the current epoch
 func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byte, error) {
-	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("NODERC=%d", app.state.LastMintedAtBlock), false, 1, 25)
+	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("NODERC=%d", app.state.LastNodeMintedAtBlock), false, 1, 25)
 	if util.LoggerError(app.logger, err) != nil {
 		return []common.Address{}, []byte{}, err
 	}
@@ -289,7 +289,7 @@ func (app *AnchorApplication) AuditNodes() error {
 			util.LoggerError(app.logger, err)
 			return err
 		}
-		if app.state.MintPending {
+		if app.state.NodeMintPending {
 			app.logger.Info("Minting in progress, not auditing")
 			return nil
 		}

@@ -285,7 +285,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
-			if app.config.DoNodeAudit && !app.state.MintPending {
+			if app.config.DoNodeAudit && !app.state.NodeMintPending {
 				go app.AuditNodes() //retrieve, audit, and reward some nodes
 				go app.StartNodeMintProcess()
 			}

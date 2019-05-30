@@ -66,13 +66,23 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.state.LatestNistRecord = tx.Data
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
-	case "MINT":
+	case "NODE-MINT":
 		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
 		if err != nil {
-			app.logger.Debug("Parsing MINT tx failed")
+			app.logger.Debug("Parsing Node MINT tx failed")
 		} else {
-			app.state.PrevMintedAtBlock = app.state.LastMintedAtBlock
-			app.state.LastMintedAtBlock = lastMintedAtBlock
+			app.state.PrevNodeMintedAtBlock = app.state.LastNodeMintedAtBlock
+			app.state.LastNodeMintedAtBlock = lastMintedAtBlock
+		}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		break
+	case "CORE-MINT":
+		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
+		if err != nil {
+			app.logger.Debug("Parsing Core MINT tx failed")
+		} else {
+			app.state.PrevCoreMintedAtBlock = app.state.LastCoreMintedAtBlock
+			app.state.LastCoreMintedAtBlock = lastMintedAtBlock
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
@@ -90,7 +100,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		break
 	case "NODE-RC":
 		tags = app.incrementTxInt(tags)
-		tags = append(tags, cmn.KVPair{Key: []byte("NODERC"), Value: util.Int64ToByte(app.state.LastMintedAtBlock)})
+		tags = append(tags, cmn.KVPair{Key: []byte("NODERC"), Value: util.Int64ToByte(app.state.LastNodeMintedAtBlock)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "TOKEN":
