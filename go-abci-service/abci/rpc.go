@@ -88,3 +88,12 @@ func (rpc *RPC) GetAbciInfo() (types.AnchorState, error) {
 	util.LogError(json.Unmarshal([]byte(resp.Response.Data), &anchorState))
 	return anchorState, nil
 }
+
+//GetValidators : retrieves list of validators at a particular block height
+func (rpc *RPC) GetValidators(height int64) (core_types.ResultValidators, error) {
+	resp, err := rpc.client.Validators(&height)
+	if err != nil {
+		return core_types.ResultValidators{}, err
+	}
+	return *resp, nil
+}

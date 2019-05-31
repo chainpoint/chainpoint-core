@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+
 	types2 "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -21,7 +23,13 @@ func (app *AnchorApplication) incrementTxInt(tags []cmn.KVPair) []cmn.KVPair {
 
 // updateStateFromTx: Updates state based on type of transaction received. Used by DeliverTx
 func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
-	tx, err := util.DecodeVerifyTx(rawTx, app.CoreKeys)
+	var tx types.Tx
+	var err error
+	if app.state.ChainSynced {
+		tx, err = util.DecodeVerifyTx(rawTx, app.CoreKeys)
+	} else {
+		tx, err = util.DecodeTx(rawTx)
+	}
 	tags := []cmn.KVPair{}
 	if util.LoggerError(app.logger, err) != nil {
 		return types2.ResponseDeliverTx{Code: code.CodeTypeEncodingError, Tags: tags}

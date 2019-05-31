@@ -149,7 +149,7 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 	if pubKeyInterface, keyExists := CoreKeys[calendar.CoreID]; keyExists {
 		pubKey = &pubKeyInterface
 	} else {
-		return types.Tx{}, errors.New("Can't find corresponding key for message")
+		return types.Tx{}, errors.New(fmt.Sprintf("Can't find corresponding key for message from Core: %s", calendar.CoreID))
 	}
 	der, err := base64.StdEncoding.DecodeString(calendar.Sig)
 	if LogError(err) != nil {

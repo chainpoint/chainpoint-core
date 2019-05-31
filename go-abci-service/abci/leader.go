@@ -1,8 +1,11 @@
 package abci
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sort"
+
+	"github.com/tendermint/tendermint/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/p2p"
@@ -11,20 +14,57 @@ import (
 
 // ElectLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
 func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leaderID []string) {
-	var status core_types.ResultStatus
-	var netInfo core_types.ResultNetInfo
-	var err error
-	var err2 error
-
-	status, err = app.rpc.GetStatus()
-	netInfo, err2 = app.rpc.GetNetInfo()
-
-	if util.LogError(err) != nil || util.LogError(err2) != nil {
+	status, err := app.rpc.GetStatus()
+	if util.LoggerError(app.logger, err) != nil {
+		return false, []string{}
+	}
+	netInfo, err := app.rpc.GetNetInfo()
+	if util.LoggerError(app.logger, err) != nil {
 		return false, []string{}
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
 	return determineLeader(numLeaders, status, netInfo, blockHash)
+}
+
+// ElectValidator :
+func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, leaderID []string) {
+	validators, err := app.rpc.GetValidators(app.state.Height)
+	if util.LoggerError(app.logger, err) != nil {
+		return false, []string{}
+	}
+	status, err := app.rpc.GetStatus()
+	if util.LoggerError(app.logger, err) != nil {
+		return false, []string{}
+	}
+	currentNodeID := status.NodeInfo.ID()
+	leaders := make([]types.Validator, 0)
+	validatorList := make([]types.Validator, 0)
+	for _, val := range validators.Validators {
+		validatorList = append(validatorList, *val)
+	}
+	validatorLength := len(validatorList)
+	blockHash := status.SyncInfo.LatestBlockHash.String()
+	index := util.GetSeededRandInt([]byte(blockHash), validatorLength) //seed the first time
+	if err := util.RotateLeft(validatorList[:], index); err != nil {   //get a wrapped-around slice of numLeader leaders
+		util.LogError(err)
+		return false, []string{}
+	}
+	if numLeaders <= validatorLength {
+		leaders = validatorList[0:numLeaders]
+	} else {
+		leaders = validatorList[0:1]
+	}
+	leaderStrings := make([]string, 0)
+	iAmLeader := false
+	for _, leader := range leaders {
+		leaderID := hex.EncodeToString(leader.Address)
+		leaderStrings = append(leaderStrings, leaderID)
+		if leaderID == string(currentNodeID) && !status.SyncInfo.CatchingUp {
+			iAmLeader = true
+		}
+	}
+	return iAmLeader, leaderStrings
 }
 
 // GetPeers : get list of all peers
