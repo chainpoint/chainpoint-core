@@ -152,7 +152,7 @@ func (app *AnchorApplication) StartNodeMintProcess() error {
 	return nil
 }
 
-//SetMintState : create a deferable method to set mint state
+//SetNodeMintPendingState : create a deferable method to set mint state
 func (app *AnchorApplication) SetNodeMintPendingState(val bool) {
 	app.state.NodeMintPending = val
 	app.NodeRewardSignatures = make([]string, 0)

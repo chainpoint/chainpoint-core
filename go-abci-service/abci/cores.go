@@ -66,7 +66,7 @@ func (app *AnchorApplication) StartCoreMintProcess() error {
 	return nil
 }
 
-//SetMintState : create a deferable method to set mint state
+//SetCoreMintPendingState : create a deferable method to set mint state
 func (app *AnchorApplication) SetCoreMintPendingState(val bool) {
 	app.state.CoreMintPending = val
 	app.CoreRewardSignatures = make([]string, 0)
