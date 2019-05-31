@@ -143,17 +143,23 @@ func (app *AnchorApplication) MintNodeReward(sig []string, rewardCandidates []co
 
 //StartNodeMintProcess : wraps signing/minting process and handles state updates
 func (app *AnchorApplication) StartNodeMintProcess() error {
-	app.SetMintPendingState(true) //needed since we can't do a blocking lock in commit
-	err := app.SignRewards()
-	app.SetMintPendingState(false)
+	app.SetNodeMintPendingState(true) //needed since we can't do a blocking lock in commit
+	err := app.SignNodeRewards()
+	app.SetNodeMintPendingState(false)
 	if util.LoggerError(app.logger, err) != nil {
 		return err
 	}
 	return nil
 }
 
+//SetMintState : create a deferable method to set mint state
+func (app *AnchorApplication) SetNodeMintPendingState(val bool) {
+	app.state.NodeMintPending = val
+	app.NodeRewardSignatures = make([]string, 0)
+}
+
 //CollectRewardNodes : collate and sign reward node list
-func (app *AnchorApplication) SignRewards() error {
+func (app *AnchorApplication) SignNodeRewards() error {
 	var candidates []common.Address
 	var rewardHash []byte
 
@@ -166,7 +172,7 @@ func (app *AnchorApplication) SignRewards() error {
 			return err
 		}
 		if currentEthBlock.Int64()-app.state.LastNodeMintedAtBlock < 5760 {
-			app.logger.Info("Mint Error: Too soon for minting")
+			app.logger.Info("Mint: Too soon for minting")
 			return errors.New("Too soon for minting")
 		}
 		candidates, rewardHash, err = app.GetNodeRewardCandidates()

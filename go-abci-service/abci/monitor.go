@@ -253,9 +253,3 @@ func (app *AnchorApplication) MintMonitor() {
 		}
 	}
 }
-
-//SetMintState : create a deferable method to set mint state
-func (app *AnchorApplication) SetMintPendingState(val bool) {
-	app.state.NodeMintPending = val
-	app.NodeRewardSignatures = make([]string, 0)
-}

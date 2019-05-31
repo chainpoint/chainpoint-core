@@ -274,8 +274,8 @@ func (pg *Postgres) GetNodeByPublicIP(publicIP string) (types.Node, error) {
 	}
 }
 
-//GetCoreByPublicIP : get staked nodes by their public IP string (should be unique)
-func (pg *Postgres) GetCoreByPublicIP(coreId string) (types.Core, error) {
+//GetCoreByID : get staked nodes by their public IP string (should be unique)
+func (pg *Postgres) GetCoreByID(coreId string) (types.Core, error) {
 	stmt := "SELECT eth_addr, public_ip, core_id, block_number FROM staked_cores where core_id = $1"
 	row := pg.DB.QueryRow(stmt, coreId)
 	var core types.Core

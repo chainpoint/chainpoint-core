@@ -27,6 +27,24 @@ func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leader
 	return determineLeader(numLeaders, status, netInfo, blockHash)
 }
 
+// GetPeers : get list of all peers
+func (app *AnchorApplication) GetPeers() []core_types.Peer {
+	var status core_types.ResultStatus
+	var netInfo core_types.ResultNetInfo
+	var err error
+	var err2 error
+
+	status, err = app.rpc.GetStatus()
+	netInfo, err2 = app.rpc.GetNetInfo()
+
+	if util.LogError(err) != nil || util.LogError(err2) != nil {
+		return []core_types.Peer{}
+	}
+
+	peers := GetSortedPeerList(status, netInfo)
+	return peers
+}
+
 //GetSortedPeerList : returns sorted list of peers including self
 func GetSortedPeerList(status core_types.ResultStatus, netInfo core_types.ResultNetInfo) []core_types.Peer {
 	peers := netInfo.Peers

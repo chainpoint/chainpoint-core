@@ -44,6 +44,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.state.LatestBtcmHeight = app.state.Height + 1
 		app.state.LatestBtcmTxInt = app.state.TxInt
 		app.ConsumeBtcTxMsg([]byte(tx.Data))
+		tags = append(tags, cmn.KVPair{Key: []byte("CORERC"), Value: util.Int64ToByte(app.state.LastCoreMintedAtBlock)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "BTC-A":

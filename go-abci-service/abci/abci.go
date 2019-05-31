@@ -289,6 +289,9 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 				go app.AuditNodes() //retrieve, audit, and reward some nodes
 				go app.StartNodeMintProcess()
 			}
+			if app.config.DoNodeAudit && !app.state.CoreMintPending {
+				go app.StartCoreMintProcess()
+			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
