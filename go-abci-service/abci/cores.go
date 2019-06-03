@@ -25,11 +25,11 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 		app.state.LastMintCoreID = ids[0]
 	}
 	if leader {
-		app.logger.Info("Mint: Elected Leader for Minting")
+		app.logger.Info("CoreMint: Elected Leader for Minting")
 		if len(sig) > 6 {
 			sig = sig[0:6]
 		}
-		app.logger.Info(fmt.Sprintf("Mint Signatures: %v\nReward Candidates: %v\nReward Hash: %x\n", sig, rewardCandidates, rewardHash))
+		app.logger.Info(fmt.Sprintf("CoreMint: %v\nReward Candidates: %v\nReward Hash: %x\n", sig, rewardCandidates, rewardHash))
 		sigBytes := make([][]byte, 126)
 		for b := range sigBytes {
 			sigBytes[b] = make([]byte, 0)
@@ -38,7 +38,7 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 			var decodedSig []byte
 			decodedSig, err := hex.DecodeString(sigStr)
 			if util.LoggerError(app.logger, err) != nil {
-				app.logger.Info("Mint Error: mint hex decoding failed")
+				app.logger.Info("CoreMint: mint hex decoding failed")
 				continue
 			}
 			sigBytes[i] = decodedSig
@@ -47,10 +47,10 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 		copy(sigFixedBytes[:], sigBytes[:126])
 		err := app.ethClient.MintCores(rewardCandidates, rewardHash, sigFixedBytes)
 		if util.LoggerError(app.logger, err) != nil {
-			app.logger.Info("Mint Error: invoking smart contract failed")
+			app.logger.Info("CoreMint: invoking smart contract failed")
 			return err
 		}
-		app.logger.Info("Mint process complete")
+		app.logger.Info("CoreMint process complete")
 	}
 	return nil
 }
@@ -79,30 +79,30 @@ func (app *AnchorApplication) SignCoreRewards() error {
 
 	currentEthBlock, err := app.ethClient.HighestBlock()
 	if util.LoggerError(app.logger, err) != nil {
-		app.logger.Error("Mint Error: problem retrieving highest block for core minting")
+		app.logger.Error("CoreMint Error: problem retrieving highest block for core minting")
 		return err
 	}
 	if currentEthBlock.Int64()-app.state.LastCoreMintedAtBlock < 5760 {
-		app.logger.Info("Mint: Too soon for core minting")
-		return errors.New("Too soon for minting")
+		app.logger.Info("CoreMint: Too soon for core minting")
+		return errors.New("CoreMint: Too soon for minting")
 	}
 	candidates, rewardHash, err = app.GetCoreRewardCandidates()
 	if util.LoggerError(app.logger, err) != nil {
-		app.logger.Info("Mint Error: Error retrieving core reward candidates")
+		app.logger.Info("CoreMint Error: Error retrieving core reward candidates")
 		return err
 	}
-	app.logger.Info(fmt.Sprintf("Mint: raw SHA3 hash: %x", rewardHash))
+	app.logger.Info(fmt.Sprintf("CoreMint: raw SHA3 hash: %x", rewardHash))
 	rewardHash = signHash(rewardHash)
-	app.logger.Info(fmt.Sprintf("Mint: with prefix: %x", rewardHash))
+	app.logger.Info(fmt.Sprintf("CoreMint: with prefix: %x", rewardHash))
 	signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
 	signature[64] += 27
 	if util.LoggerError(app.logger, err) != nil {
-		app.logger.Info("Mint Error: Problem with signing message for minting")
+		app.logger.Info("CoreMint Error: Problem with signing message for minting")
 		return err
 	}
 	_, err = app.rpc.BroadcastTx("CORE-SIGN", hex.EncodeToString(signature), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 	if err != nil {
-		app.logger.Info("Mint Error: Error issuing SIGN tx")
+		app.logger.Info("CoreMint Error: Error issuing SIGN tx")
 		return err
 	}
 
@@ -116,14 +116,14 @@ func (app *AnchorApplication) SignCoreRewards() error {
 	}
 	// Mint if 6+ SIGN txs are received
 	if len(app.CoreRewardSignatures) >= thresholdLenPeers {
-		app.logger.Info("Mint: Enough SIGN TXs received, calling mint")
+		app.logger.Info("CoreMint: Enough SIGN TXs received, calling mint")
 		err := app.MintCoreReward(app.CoreRewardSignatures, candidates, rewardHash)
 		if util.LoggerError(app.logger, err) != nil {
 			return err
 		}
 	} else {
-		app.logger.Info("Mint: Not enough SIGN TXs for ")
-		return errors.New("Mint: Not enough SIGN TXs")
+		app.logger.Info("CoreMint: Not enough SIGN TXs")
+		return errors.New("CoreMint: Not enough SIGN TXs")
 	}
 	return nil
 }
@@ -137,20 +137,23 @@ func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byt
 	coreArray := make([]common.Address, 0)
 	for _, tx := range txResult.Txs {
 		decoded, err := util.DecodeTx(tx.Tx)
-		if err != nil {
+		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
 		core, err := app.pgClient.GetCoreByID(decoded.CoreID)
+		if util.LoggerError(app.logger, err) != nil {
+			continue
+		}
 		coreArray = append(coreArray, common.HexToAddress(core.EthAddr))
 	}
 	if len(coreArray) == 0 {
-		return []common.Address{}, []byte{}, errors.New("No CORE-RC tx from the last epoch have been found")
+		return []common.Address{}, []byte{}, errors.New("CoreMint: No CORE-RC tx from the last epoch have been found")
 	}
 	addresses := util.UniquifyAddresses(coreArray)
 	sort.Slice(addresses[:], func(i, j int) bool {
 		return addresses[i].Hex() > addresses[j].Hex()
 	})
-	app.logger.Info(fmt.Sprintf("Mint: input node addresses: %#v", addresses))
+	app.logger.Info(fmt.Sprintf("CoreMint: input node addresses: %#v", addresses))
 	rewardHash := ethcontracts.AddressesToHash(addresses)
 	return addresses, rewardHash, nil
 }
