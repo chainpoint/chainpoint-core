@@ -131,6 +131,7 @@ func (app *AnchorApplication) SignCoreRewards() error {
 //GetNodeRewardCandidates : scans for and collates the reward candidates in the current epoch
 func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byte, error) {
 	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("CORERC=%d", app.state.LastCoreMintedAtBlock), false, 1, 25)
+	app.logger.Info(fmt.Sprintf("CoreMint for CORERC txResults: %#v", txResult))
 	if util.LoggerError(app.logger, err) != nil {
 		return []common.Address{}, []byte{}, err
 	}
@@ -141,6 +142,7 @@ func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byt
 			continue
 		}
 		core, err := app.pgClient.GetCoreByID(decoded.CoreID)
+		app.logger.Info(fmt.Sprintf("CoreMint for core %#v", core))
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
@@ -153,7 +155,7 @@ func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byt
 	sort.Slice(addresses[:], func(i, j int) bool {
 		return addresses[i].Hex() > addresses[j].Hex()
 	})
-	app.logger.Info(fmt.Sprintf("CoreMint: input node addresses: %#v", addresses))
+	app.logger.Info(fmt.Sprintf("CoreMint: input core addresses: %#v", addresses))
 	rewardHash := ethcontracts.AddressesToHash(addresses)
 	return addresses, rewardHash, nil
 }

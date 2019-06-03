@@ -25,16 +25,14 @@ func (app *AnchorApplication) incrementTxInt(tags []cmn.KVPair) []cmn.KVPair {
 func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
 	var tx types.Tx
 	var err error
+	var resp types2.ResponseDeliverTx
 	tags := []cmn.KVPair{}
 	if app.state.ChainSynced {
 		tx, err = util.DecodeVerifyTx(rawTx, app.CoreKeys)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
-		if util.LoggerError(app.logger, err) != nil {
-			return types2.ResponseDeliverTx{Code: code.CodeTypeEncodingError, Tags: tags}
-		}
 	}
-	var resp types2.ResponseDeliverTx
+	util.LoggerError(app.logger, err)
 	switch string(tx.TxType) {
 	case "VAL":
 		tags = app.incrementTxInt(tags)
@@ -96,7 +94,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
 	case "JWK":
-		go app.SaveJWK(tx)
+		app.SaveJWK(tx)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "CORE-SIGN":
@@ -119,6 +117,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
 	}
+	app.logger.Info(fmt.Sprintf("TxType: %s, Result: %v", tx.TxType, resp))
 	return resp
 }
 
