@@ -34,7 +34,7 @@ var (
 	ProtocolVersion version.Protocol = 0x1
 )
 
-const MINT_EPOCH = 5760
+const MINT_EPOCH = 6400
 
 // loadState loads the AnchorState struct from a database instance
 func loadState(db dbm.DB) types.AnchorState {
