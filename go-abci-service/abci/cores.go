@@ -82,7 +82,7 @@ func (app *AnchorApplication) SignCoreRewards() error {
 		app.logger.Error("CoreMint Error: problem retrieving highest block for core minting")
 		return err
 	}
-	if currentEthBlock.Int64()-app.state.LastCoreMintedAtBlock < 5760 {
+	if currentEthBlock.Int64()-app.state.LastCoreMintedAtBlock < MINT_EPOCH {
 		app.logger.Info("CoreMint: Too soon for core minting")
 		return errors.New("CoreMint: Too soon for minting")
 	}

@@ -117,7 +117,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
 	}
-	app.logger.Info(fmt.Sprintf("TxType: %s, Result: %v", tx.TxType, resp))
 	return resp
 }
 

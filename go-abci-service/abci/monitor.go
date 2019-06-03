@@ -232,7 +232,7 @@ func (app *AnchorApplication) MintMonitor() {
 			app.logger.Error("Unable to obtain new NodeLastMintedAt value")
 			return
 		}
-		if lastNodeMintedAt.Int64() != 0 && lastNodeMintedAt.Int64() > app.state.LastNodeMintedAtBlock {
+		if lastNodeMintedAt.Int64() != 0 && lastNodeMintedAt.Int64() >= app.state.LastNodeMintedAtBlock+MINT_EPOCH {
 			app.logger.Info("Mint success, sending Node MINT tx")
 			_, err = app.rpc.BroadcastTx("NODE-MINT", strconv.FormatInt(lastNodeMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if err != nil {
@@ -244,7 +244,7 @@ func (app *AnchorApplication) MintMonitor() {
 			app.logger.Error("Unable to obtain new CoreLastMintedAt value")
 			return
 		}
-		if lastCoreMintedAt.Int64() != 0 && lastCoreMintedAt.Int64() > app.state.LastCoreMintedAtBlock {
+		if lastCoreMintedAt.Int64() != 0 && lastCoreMintedAt.Int64() >= app.state.LastCoreMintedAtBlock+MINT_EPOCH {
 			app.logger.Info("Mint success, sending Core MINT tx")
 			_, err = app.rpc.BroadcastTx("CORE-MINT", strconv.FormatInt(lastCoreMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if err != nil {

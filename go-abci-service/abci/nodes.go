@@ -172,7 +172,7 @@ func (app *AnchorApplication) SignNodeRewards() error {
 			app.logger.Error("Mint Error: problem retrieving highest block")
 			return err
 		}
-		if currentEthBlock.Int64()-app.state.LastNodeMintedAtBlock < 5760 {
+		if currentEthBlock.Int64()-app.state.LastNodeMintedAtBlock < MINT_EPOCH {
 			app.logger.Info("Mint: Too soon for minting")
 			return errors.New("Too soon for minting")
 		}
