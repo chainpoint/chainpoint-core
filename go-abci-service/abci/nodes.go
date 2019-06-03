@@ -51,7 +51,7 @@ func (app *AnchorApplication) LoadJWK() error {
 		}
 	}
 	if len(idKeys) == 0 {
-		return errors.New("no JWT keys found in redis")
+		return util.LoggerError(app.logger, errors.New("no JWT keys found in redis"))
 	}
 	for _, k := range idKeys {
 		var coreID string
@@ -61,11 +61,11 @@ func (app *AnchorApplication) LoadJWK() error {
 		} else {
 			continue
 		}
-		hexStr, err := app.redisClient.Get(k).Result()
+		b64Str, err := app.redisClient.Get(k).Result()
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
-		pubKeyBytes, err := base64.StdEncoding.DecodeString(hexStr)
+		pubKeyBytes, err := base64.StdEncoding.DecodeString(b64Str)
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
@@ -75,6 +75,7 @@ func (app *AnchorApplication) LoadJWK() error {
 			X:     x,
 			Y:     y,
 		}
+		app.logger.Info(fmt.Sprintf("Setting JWK for Core %s: %s", coreID, b64Str))
 		app.CoreKeys[coreID] = pubKey
 	}
 	return nil
@@ -97,7 +98,7 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	if util.LoggerError(app.logger, err) == nil {
 		app.CoreKeys[tx.CoreID] = *pubKey
 		pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
-		util.LoggerError(app.logger, app.redisClient.Set("CoreID:"+app.ID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
+		util.LoggerError(app.logger, app.redisClient.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
 	}
 	value, err := app.redisClient.Get(key).Result()
 	if err == redis.Nil || value != string(jsonJwk) {

@@ -141,7 +141,7 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 	}
 	err = json.Unmarshal([]byte(decoded), &calendar)
 	/* Skip sig verification if this is a TOKEN tx */
-	if calendar.TxType == "TOKEN" || calendar.TxType == "JWK" {
+	if calendar.TxType == "TOKEN" || calendar.TxType == "JWK" || calendar.TxType == "NIST" {
 		return calendar, nil
 	}
 	/* Verify Signature */

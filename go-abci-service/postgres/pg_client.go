@@ -145,6 +145,11 @@ func (pg *Postgres) TokenHashUpsert(data string) (bool, error) {
 		return false, errors.New("TOKEN tx is malformed")
 	}
 	nodeIP := payloadSlice[0]
+	nodeExists, err := pg.GetNodeByPublicIP(nodeIP)
+	if util.LoggerError(pg.Logger, err) != nil || nodeExists.PublicIP.String != nodeIP {
+		pg.Logger.Error(fmt.Sprintf("No node exists with IP: %s", nodeIP))
+		return false, err
+	}
 	tokenHash := payloadSlice[1]
 	stmt := "INSERT INTO active_tokens (node_ip, token_hash, created_at, updated_at) " +
 		"VALUES ($1, $2, now(), now()) " +
