@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
@@ -49,7 +50,9 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
 		app.state.LatestBtcmHeight = app.state.Height + 1
 		app.state.LatestBtcmTxInt = app.state.TxInt
+		app.state.LatestBtcmTx = base64.StdEncoding.EncodeToString(rawTx)
 		app.ConsumeBtcTxMsg([]byte(tx.Data))
+		app.logger.Info(fmt.Sprintf("Anchor: %s", tx.Data))
 		tags = append(tags, cmn.KVPair{Key: []byte("CORERC"), Value: util.Int64ToByte(app.state.LastCoreMintedAtBlock)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
 		break
