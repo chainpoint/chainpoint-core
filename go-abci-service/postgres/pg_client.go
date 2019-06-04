@@ -247,6 +247,20 @@ func (pg *Postgres) GetNodeCount() (int, error) {
 	}
 }
 
+func (pg *Postgres) GetCoreCount() (int, error) {
+	stmt := "SELECT count(*) FROM staked_cores;" //WHERE (staked_nodes.public_ip <> NULL) AND (staked_nodes.public_ip <> '');"
+	row := pg.DB.QueryRow(stmt)
+	var coreCount int
+	switch err := row.Scan(&coreCount); err {
+	case sql.ErrNoRows:
+		return 0, nil
+	case nil:
+		return coreCount, nil
+	default:
+		return 0, err
+	}
+}
+
 // GetNodeByEthAddr : gets staked nodes by their ethereum address (in hex with 0x format)
 func (pg *Postgres) GetNodeByEthAddr(ethAddr string) (types.Node, error) {
 	stmt := "SELECT eth_addr, public_ip, block_number FROM staked_nodes where eth_addr = $1"

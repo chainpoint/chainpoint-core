@@ -182,7 +182,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 			newCore := types.Core{
 				EthAddr:     core.Sender.Hex(),
 				PublicIP:    sql.NullString{String: util.Int2Ip(core.CoreIp).String(), Valid: true},
-				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId)},
+				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId), Valid: true},
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
 			inserted, err := app.pgClient.CoreUpsert(newCore)
@@ -201,7 +201,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 			newCore := types.Core{
 				EthAddr:     core.Sender.Hex(),
 				PublicIP:    sql.NullString{String: util.Int2Ip(core.CoreIp).String(), Valid: true},
-				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId)},
+				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId), Valid: true},
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
 			inserted, err := app.pgClient.CoreUpsert(newCore)
@@ -220,7 +220,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 			newCore := types.Core{
 				EthAddr:     core.Sender.Hex(),
 				PublicIP:    sql.NullString{String: util.Int2Ip(core.CoreIp).String(), Valid: true},
-				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId)},
+				CoreId:      sql.NullString{String: hex.EncodeToString(core.CoreId), Valid: true},
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
 			deleted, err := app.pgClient.CoreDelete(newCore)

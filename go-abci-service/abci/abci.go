@@ -108,6 +108,12 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 				time.Sleep(5 * time.Second)
 				continue
 			}
+			_, err = pgClient.GetCoreCount()
+			if util.LoggerError(*config.Logger, err) != nil {
+				(*config.Logger).Info("table 'staked_cores' doesn't exist, did API start successfully?")
+				time.Sleep(5 * time.Second)
+				continue
+			}
 			break
 		}
 	}
