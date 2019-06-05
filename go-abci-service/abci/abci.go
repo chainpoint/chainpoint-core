@@ -197,12 +197,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Create cron scheduler
 	scheduler := cron.New(cron.WithLocation(time.UTC))
 
-	//Initialize node auditing if enabled
-	if config.DoNodeAudit {
-		// Update Mint status
-		scheduler.AddFunc("0/1 0-23 * * *", app.MintMonitor)
-	}
-
 	//Initialize and monitor node state
 	if config.DoNodeManagement {
 		go app.PollNodesFromContract()
@@ -307,6 +301,9 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	if app.state.ChainSynced {
 		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
+		if app.config.DoNodeAudit && app.JWKSent {
+			go app.MintMonitor()
+		}
 		if !app.JWKSent {
 			go app.KeyMonitor() // send out this Core's JWK to the rest of the network
 		}
