@@ -20,39 +20,31 @@ import (
 
 //MintCoreReward : mint rewards for cores
 func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []common.Address, rewardHash []byte) error {
-	leader, ids := app.ElectLeader(1)
-	if len(ids) == 1 {
-		app.state.LastMintCoreID = ids[0]
+	app.logger.Info("CoreMint: Elected Leader for Minting")
+	app.logger.Info(fmt.Sprintf("CoreMint: %v\nReward Candidates: %v\nReward Hash: %x\n", sig, rewardCandidates, rewardHash))
+	sigBytes := make([][]byte, 126)
+	for i, _ := range sigBytes {
+		sigBytes[i] = make([]byte, 0)
 	}
-	if leader {
-		app.logger.Info("CoreMint: Elected Leader for Minting")
-		if len(sig) > 6 {
-			sig = sig[0:6]
-		}
-		app.logger.Info(fmt.Sprintf("CoreMint: %v\nReward Candidates: %v\nReward Hash: %x\n", sig, rewardCandidates, rewardHash))
-		sigBytes := make([][]byte, 126)
-		for i, _ := range sigBytes {
-			sigBytes[i] = make([]byte, 0)
-		}
-		for i, sigStr := range sig {
-			var decodedSig []byte
-			decodedSig, err := hex.DecodeString(sigStr)
-			if util.LoggerError(app.logger, err) != nil {
-				app.logger.Info("CoreMint: mint hex decoding failed")
-				continue
-			}
-			sigBytes[i] = decodedSig
-		}
-		var sigFixedBytes [126][]byte
-		copy(sigFixedBytes[:], sigBytes[:126])
-		app.logger.Info("CoreMint: Sig Bytes: %v", sigFixedBytes)
-		err := app.ethClient.MintCores(rewardCandidates, rewardHash, sigFixedBytes)
+	for i, sigStr := range sig {
+		var decodedSig []byte
+		decodedSig, err := hex.DecodeString(sigStr)
 		if util.LoggerError(app.logger, err) != nil {
-			app.logger.Info("CoreMint: invoking smart contract failed")
-			return err
+			app.logger.Info("CoreMint: mint hex decoding failed")
+			continue
 		}
-		app.logger.Info("CoreMint process complete")
+		sigBytes[i] = decodedSig
 	}
+	var sigFixedBytes [126][]byte
+	copy(sigFixedBytes[:], sigBytes[:126])
+	app.logger.Info("CoreMint: Sig Bytes: %v", sigFixedBytes)
+	err := app.ethClient.MintCores(rewardCandidates, rewardHash, sigFixedBytes)
+	if util.LoggerError(app.logger, err) != nil {
+		app.logger.Info("CoreMint: invoking smart contract failed")
+		return err
+	}
+	app.logger.Info("CoreMint process complete")
+
 	return nil
 }
 
@@ -77,7 +69,6 @@ func (app *AnchorApplication) SetCoreMintPendingState(val bool) {
 func (app *AnchorApplication) SignCoreRewards() error {
 	var candidates []common.Address
 	var rewardHash []byte
-
 	currentEthBlock, err := app.ethClient.HighestBlock()
 	if util.LoggerError(app.logger, err) != nil {
 		app.logger.Error("CoreMint Error: problem retrieving highest block for core minting")
@@ -106,25 +97,29 @@ func (app *AnchorApplication) SignCoreRewards() error {
 		app.logger.Info("CoreMint Error: Error issuing SIGN tx")
 		return err
 	}
+	if leader, ids := app.ElectLeader(1); leader {
+		peers := app.GetPeers()
+		thresholdLenPeers := int(math.Ceil(float64(len(peers)) * 0.66))
 
-	peers := app.GetPeers()
-	thresholdLenPeers := int(math.Ceil(float64(len(peers)) * 0.67))
-
-	// wait for 6 SIGN tx
-	deadline := time.Now().Add(4 * time.Minute)
-	for len(app.CoreRewardSignatures) < thresholdLenPeers && !time.Now().After(deadline) {
-		time.Sleep(10 * time.Second)
-	}
-	// Mint if 6+ SIGN txs are received
-	if len(app.CoreRewardSignatures) >= thresholdLenPeers {
-		app.logger.Info("CoreMint: Enough SIGN TXs received, calling mint")
-		err := app.MintCoreReward(app.CoreRewardSignatures, candidates, rewardHash)
-		if util.LoggerError(app.logger, err) != nil {
-			return err
+		// wait for 6 SIGN tx
+		deadline := time.Now().Add(4 * time.Minute)
+		for len(app.CoreRewardSignatures) < thresholdLenPeers && !time.Now().After(deadline) {
+			time.Sleep(10 * time.Second)
 		}
-	} else {
-		app.logger.Info("CoreMint: Not enough SIGN TXs")
-		return errors.New("CoreMint: Not enough SIGN TXs")
+		// Mint if 2/3+ SIGN txs are received
+		if len(app.CoreRewardSignatures) >= thresholdLenPeers {
+			app.logger.Info("CoreMint: Enough SIGN TXs received, calling mint")
+			err := app.MintCoreReward(app.CoreRewardSignatures, candidates, rewardHash)
+			if len(ids) == 1 {
+				app.state.LastMintCoreID = ids[0]
+			}
+			if util.LoggerError(app.logger, err) != nil {
+				return err
+			}
+		} else {
+			app.logger.Info("CoreMint: Not enough SIGN TXs")
+			return errors.New("CoreMint: Not enough SIGN TXs")
+		}
 	}
 	return nil
 }
