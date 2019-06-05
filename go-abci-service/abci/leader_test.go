@@ -47,7 +47,7 @@ func TestLeaderElectionLeader(t *testing.T) {
 			},
 		},
 	}
-	amILeader, LeaderIDs := determineLeader(1, status, netInfo.Peers, seed)
+	amILeader, LeaderIDs := determineLeader(1, status, netInfo, seed)
 	// We should be leader
 	if !amILeader || LeaderIDs[0] != "b" {
 		t.Errorf("Expected amILeader=true and LeaderID=b, got amILeader=%t and LeaderID=%s instead\n", amILeader, LeaderIDs[0])
@@ -93,7 +93,7 @@ func TestLeaderElectionNotLeader(t *testing.T) {
 			},
 		},
 	}
-	amILeader, LeaderIDs := determineLeader(1, status, netInfo.Peers, seed)
+	amILeader, LeaderIDs := determineLeader(1, status, netInfo, seed)
 	// We should not be leader
 	if amILeader || LeaderIDs[0] != "b" {
 		t.Errorf("Expected amILeader=false and LeaderID=b, got amILeader=%t and LeaderID=%s instead\n", amILeader, LeaderIDs[0])
@@ -114,7 +114,7 @@ func TestLeaderElectionSingleCore(t *testing.T) {
 	netInfo := core_types.ResultNetInfo{
 		Peers: []core_types.Peer{},
 	}
-	amILeader, LeaderIDs := determineLeader(1, status, netInfo.Peers, seed)
+	amILeader, LeaderIDs := determineLeader(1, status, netInfo, seed)
 	// We're the only node so we should be leader
 	if !amILeader || LeaderIDs[0] != "c" {
 		t.Errorf("Expected amILeader=false and LeaderID=c, got amILeader=%t and LeaderID=%s instead\n", amILeader, LeaderIDs[0])
@@ -160,7 +160,7 @@ func TestLeaderElectionCatchingUp(t *testing.T) {
 			},
 		},
 	}
-	amILeader, LeaderIDs := determineLeader(1, status, netInfo.Peers, seed)
+	amILeader, LeaderIDs := determineLeader(1, status, netInfo, seed)
 	// We're catching up so we shouldn't be leader
 	if amILeader || LeaderIDs[0] != "b" {
 		t.Errorf("Expected amILeader=false and LeaderID=b, got amILeader=%t and LeaderID=%s instead\n", amILeader, LeaderIDs[0])
