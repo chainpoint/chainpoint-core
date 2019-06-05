@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/tendermint/tendermint/privval"
+
 	"github.com/tendermint/tendermint/libs/log"
 )
 
@@ -33,6 +35,7 @@ type AnchorConfig struct {
 	DoAnchor         bool
 	AnchorInterval   int
 	Logger           *log.Logger
+	FilePV           privval.FilePV
 }
 
 //EthConfig holds contract addresses and eth node URI

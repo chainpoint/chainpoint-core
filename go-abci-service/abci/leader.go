@@ -1,7 +1,6 @@
 package abci
 
 import (
-	"encoding/hex"
 	"fmt"
 	"sort"
 
@@ -27,7 +26,7 @@ func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leader
 	return determineLeader(numLeaders, status, netInfo, blockHash)
 }
 
-// ElectValidator :
+// ElectValidator : elect a slice of validators as a leader and return whether we're the leader
 func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, leaderID []string) {
 	validators, err := app.rpc.GetValidators(app.state.Height)
 	if util.LoggerError(app.logger, err) != nil {
@@ -37,16 +36,17 @@ func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, lea
 	if util.LoggerError(app.logger, err) != nil {
 		return false, []string{}
 	}
-	currentNodeID := status.NodeInfo.ID()
-	leaders := make([]types.Validator, 0)
-	validatorList := make([]types.Validator, 0)
-	for _, val := range validators.Validators {
-		validatorList = append(validatorList, *val)
-	}
-	validatorLength := len(validatorList)
 	blockHash := status.SyncInfo.LatestBlockHash.String()
-	index := util.GetSeededRandInt([]byte(blockHash), validatorLength) //seed the first time
-	if err := util.RotateLeft(validatorList[:], index); err != nil {   //get a wrapped-around slice of numLeader leaders
+	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
+	return determineValidatorLeader(numLeaders, status, validators, blockHash, app.config.FilePV.GetAddress().String())
+}
+
+func determineValidatorLeader(numLeaders int, status core_types.ResultStatus, validators core_types.ResultValidators, seed string, address string) (isLeader bool, leaderIDs []string) {
+	leaders := make([]types.Validator, 0)
+	validatorList := GetSortedValidatorList(validators)
+	validatorLength := len(validatorList)
+	index := util.GetSeededRandInt([]byte(seed), validatorLength)    //seed the first time
+	if err := util.RotateLeft(validatorList[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)
 		return false, []string{}
 	}
@@ -58,13 +58,25 @@ func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, lea
 	leaderStrings := make([]string, 0)
 	iAmLeader := false
 	for _, leader := range leaders {
-		leaderID := hex.EncodeToString(leader.Address)
+		leaderID := leader.Address.String()
 		leaderStrings = append(leaderStrings, leaderID)
-		if leaderID == string(currentNodeID) && !status.SyncInfo.CatchingUp {
+		if leaderID == address && !status.SyncInfo.CatchingUp {
 			iAmLeader = true
 		}
 	}
 	return iAmLeader, leaderStrings
+}
+
+// GetSortedValidatorList : collate and deterministically sort validator list
+func GetSortedValidatorList(validators core_types.ResultValidators) []types.Validator {
+	validatorList := make([]types.Validator, 0)
+	for _, val := range validators.Validators {
+		validatorList = append(validatorList, *val)
+	}
+	sort.Slice(validatorList[:], func(i, j int) bool {
+		return validatorList[i].Address.String() > validatorList[j].Address.String()
+	})
+	return validatorList
 }
 
 // GetPeers : get list of all peers

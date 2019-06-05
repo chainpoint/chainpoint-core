@@ -29,10 +29,6 @@ import (
 
 func main() {
 
-	//Instantiate ABCI application
-	config := initABCIConfig()
-	app := abci.NewAnchorApplication(config)
-
 	//Instantiate Tendermint Node
 	defaultConfig, err := initTendermintConfig()
 	if err != nil {
@@ -68,13 +64,17 @@ func main() {
 		)
 		oldPV.Upgrade(newPrivValKey, newPrivValState)
 	}
+	pvFile := privval.LoadOrGenFilePV(newPrivValKey, newPrivValState)
+
+	//Instantiate ABCI application
+	config := initABCIConfig(*pvFile)
+	app := abci.NewAnchorApplication(config)
 
 	//declare connection to abci app
 	appProxy := proxy.NewLocalClientCreator(app)
-
 	/* Declare Tendermint Node with given config and abci app */
 	n, err := node.NewNode(defaultConfig,
-		privval.LoadOrGenFilePV(newPrivValKey, newPrivValState),
+		pvFile,
 		nodeKey,
 		appProxy,
 		node.DefaultGenesisDocProviderFunc(defaultConfig),
@@ -108,7 +108,7 @@ func main() {
 }
 
 // initABCIConfig: receives ENV variables and initializes app config struct
-func initABCIConfig() types.AnchorConfig {
+func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	// Perform env type conversions
 	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
 	nodeIPs := strings.Split(util.GetEnv("PRIVATE_NODE_IPS", ""), ",")
@@ -192,6 +192,7 @@ func initABCIConfig() types.AnchorConfig {
 		DoAnchor:         doAnchorLoop,
 		AnchorInterval:   anchorInterval,
 		Logger:           &tmLogger,
+		FilePV:           pv,
 	}
 }
 

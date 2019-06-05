@@ -8,6 +8,19 @@ import (
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
+func TestValidatorElection(t *testing.T) {
+	/*	seed := "3719ADA3EEE198F3A7A33616EA60ED6D72D94D31A2B2422FA12E2BCDDCABD4D4"
+		status := core_types.ResultStatus{
+			NodeInfo: p2p.DefaultNodeInfo{
+				ID_: "b",
+			},
+			SyncInfo: core_types.SyncInfo{
+				CatchingUp: false,
+			},
+			ValidatorInfo: core_types.ValidatorInfo{},
+		}*/
+}
+
 func TestLeaderElectionLeader(t *testing.T) {
 	seed := "3719ADA3EEE198F3A7A33616EA60ED6D72D94D31A2B2422FA12E2BCDDCABD4D4"
 	status := core_types.ResultStatus{
