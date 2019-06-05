@@ -84,9 +84,8 @@ func (app *AnchorApplication) SignCoreRewards() error {
 		app.logger.Info("CoreMint Error: Error retrieving core reward candidates")
 		return err
 	}
-	app.logger.Info(fmt.Sprintf("CoreMint: raw SHA3 hash: %x", rewardHash))
 	rewardHash = signHash(rewardHash)
-	app.logger.Info(fmt.Sprintf("CoreMint: with prefix: %x", rewardHash))
+	app.logger.Info(fmt.Sprintf("CoreMint: reward hash: %x", rewardHash))
 	signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
 	signature[64] += 27
 	if util.LoggerError(app.logger, err) != nil {
