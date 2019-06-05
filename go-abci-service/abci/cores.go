@@ -35,6 +35,7 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 		}
 		sigBytes[i] = decodedSig
 	}
+	app.logger.Info(fmt.Sprintf("CoreMint: Sig Bytes: %v", sigBytes))
 	var sigFixedBytes [126][]byte
 	copy(sigFixedBytes[:], sigBytes[:126])
 	app.logger.Info(fmt.Sprintf("CoreMint: Sig Bytes: %v", sigFixedBytes))
