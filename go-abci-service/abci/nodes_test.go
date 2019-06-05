@@ -1,7 +1,6 @@
 package abci
 
 import (
-	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,8 +29,7 @@ func TestValidateRepChainItemHash(t *testing.T) {
 func TestValidateRepChainItemSig(t *testing.T) {
 	assert := assert.New(t)
 	node := types.Node{
-		EthAddr:   "0x94200160227D9dB7353ecE34BE0aE3E506Fa35a1",
-		PublicKey: sql.NullString{String: "0xefd06c51a52e8bec76d294fd8e296a3a3b6be8829873dbe0e84ba42320d13c1f0e88907340937d1397bb68ce18389c04016c2cbe8f02b161f8320da2fac8226b1b", Valid: true},
+		EthAddr: "0x94200160227D9dB7353ecE34BE0aE3E506Fa35a1",
 	}
 	repChainItem := types.RepChainItem{
 		ID:              34559,

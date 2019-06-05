@@ -25,25 +25,25 @@ func TestLeaderElectionLeader(t *testing.T) {
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "a",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "b",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "c",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "d",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 		},
 	}
@@ -71,25 +71,25 @@ func TestLeaderElectionNotLeader(t *testing.T) {
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "a",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "b",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "c",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "d",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 		},
 	}
@@ -138,25 +138,25 @@ func TestLeaderElectionCatchingUp(t *testing.T) {
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "a",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "b",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "c",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 			core_types.Peer{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "d",
 				},
-				RemoteIP: "AAAAAAAAAAAAAP//I7zuug==",
+				RemoteIP: "127.0.0.1",
 			},
 		},
 	}
