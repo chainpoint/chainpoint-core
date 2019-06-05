@@ -37,7 +37,7 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 	}
 	var sigFixedBytes [126][]byte
 	copy(sigFixedBytes[:], sigBytes[:126])
-	app.logger.Info("CoreMint: Sig Bytes: %v", sigFixedBytes)
+	app.logger.Info(fmt.Sprintf("CoreMint: Sig Bytes: %v", sigFixedBytes))
 	err := app.ethClient.MintCores(rewardCandidates, rewardHash, sigFixedBytes)
 	if util.LoggerError(app.logger, err) != nil {
 		app.logger.Info("CoreMint: invoking smart contract failed")
