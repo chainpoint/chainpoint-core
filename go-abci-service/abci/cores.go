@@ -30,7 +30,7 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 		var decodedSig []byte
 		decodedSig, err := hex.DecodeString(sigStr)
 		if util.LoggerError(app.logger, err) != nil {
-			app.logger.Info("CoreMint: mint hex decoding failed")
+			app.logger.Info("CoreMint: sig hex decoding failed")
 			continue
 		}
 		sigBytes[i] = decodedSig
