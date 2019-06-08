@@ -156,7 +156,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
 	apiURI := util.GetEnv("API_URI", "http://api:8080")
 
-	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
+	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_FILTER", "debug")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
 	ethConfig := types.EthConfig{
