@@ -36,7 +36,7 @@ func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int6
 }
 
 func (rpc *RPC) BroadcastMsg(tx types.Tx) (core_types.ResultBroadcastMsg, error) {
-	result, err := rpc.client.BroadcastMsgSync([]byte(util.EncodeTx(tx)))
+	result, err := rpc.client.BroadcastMsgAsync([]byte(util.EncodeTx(tx)))
 	if util.LogError(err) != nil {
 		return core_types.ResultBroadcastMsg{}, err
 	}

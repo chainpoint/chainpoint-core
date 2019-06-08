@@ -226,7 +226,7 @@ imports:
 - name: github.com/tendermint/go-amino
   version: dc14acf9ef15f85828bfbc561ed9dd9d2a284885
 - name: github.com/chainpoint/tendermint
-  version: 1c84c1bc5c617341352b0b7b323a3f5bfc23a745
+  version: 944ee79d483a676c2031480e61e233df39e0b5c0
   subpackages:
   - abci/client
   - abci/example/code

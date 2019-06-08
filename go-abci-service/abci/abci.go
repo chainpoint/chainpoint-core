@@ -263,11 +263,11 @@ func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.Respo
 
 // DeliverTx : tx is url encoded json
 func (app *AnchorApplication) DeliverTx(tx []byte) types2.ResponseDeliverTx {
-	return app.updateStateFromTx(tx)
+	return app.updateStateFromTx(tx, false)
 }
 
 func (app *AnchorApplication) DeliverMsg(tx []byte) types2.ResponseDeliverMsg {
-	resp := app.updateStateFromTx(tx)
+	resp := app.updateStateFromTx(tx, true)
 	return types2.ResponseDeliverMsg{Code: resp.Code}
 }
 

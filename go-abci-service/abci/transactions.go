@@ -30,19 +30,19 @@ func (app *AnchorApplication) validateGossip(rawTx []byte) types2.ResponseCheckT
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
+	app.logger.Info(fmt.Sprintf("CheckTX: %v", tx))
 	if util.LoggerError(app.logger, err) != nil {
-		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 0}
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
 	if tx.TxType == "TOKEN" || tx.TxType == "NIST" || tx.TxType == "BTC-M" {
-		_, err := app.rpc.BroadcastMsg(tx)
-		util.LoggerError(app.logger, err)
-		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 0}
+		go app.rpc.BroadcastMsg(tx)
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
-	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 0}
+	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
 }
 
 // updateStateFromTx: Updates state based on type of transaction received. Used by DeliverTx
-func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
+func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types2.ResponseDeliverTx {
 	var tx types.Tx
 	var err error
 	var resp types2.ResponseDeliverTx
@@ -52,6 +52,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
+	app.logger.Info(fmt.Sprintf("Received Tx: %s, Gossip: %t", tx.TxType, gossip))
 	util.LoggerError(app.logger, err)
 	switch string(tx.TxType) {
 	case "VAL":

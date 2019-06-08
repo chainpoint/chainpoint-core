@@ -72,6 +72,7 @@ func main() {
 
 	//declare connection to abci app
 	appProxy := proxy.NewLocalClientCreator(app)
+
 	/* Declare Tendermint Node with given config and abci app */
 	n, err := node.NewNode(defaultConfig,
 		pvFile,
@@ -232,7 +233,7 @@ func initTMLogger(defaultConfig *cfg.Config) log.Logger {
 	if defaultConfig.LogFormat == cfg.LogFormatJSON {
 		logger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
 	}
-	logger, err := tmflags.ParseLogLevel(defaultConfig.LogLevel, logger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel("info", logger, cfg.DefaultLogLevel())
 	if err != nil {
 		return nil
 	}
