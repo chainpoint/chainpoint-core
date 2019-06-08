@@ -233,7 +233,7 @@ func initTMLogger(defaultConfig *cfg.Config) log.Logger {
 	if defaultConfig.LogFormat == cfg.LogFormatJSON {
 		logger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
 	}
-	logger, err := tmflags.ParseLogLevel("info", logger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_LEVEL", "info"), logger, cfg.DefaultLogLevel())
 	if err != nil {
 		return nil
 	}
