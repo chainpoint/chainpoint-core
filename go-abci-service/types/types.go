@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/tendermint/tendermint/privval"
+	"github.com/chainpoint/tendermint/privval"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/chainpoint/tendermint/libs/log"
 )
 
 // TendermintURI holds connection info for RPC

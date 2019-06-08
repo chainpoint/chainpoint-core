@@ -23,9 +23,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	core_types "github.com/chainpoint/tendermint/rpc/core/types"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/chainpoint/tendermint/libs/log"
 
 	"github.com/google/uuid"
 
@@ -173,8 +173,8 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 	return calendar, nil
 }
 
-// EncodeTx : Encodes a Tendermint transaction to base64
-func EncodeTx(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
+// EncodeTxWithKey : Encodes a Tendermint transaction to base64
+func EncodeTxWithKey(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
 	txNoSig, err := json.Marshal(outgoing)
 	if LogError(err) != nil {
 		return ""
@@ -185,6 +185,12 @@ func EncodeTx(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
 		return ""
 	}
 	outgoing.Sig = base64.StdEncoding.EncodeToString(sig)
+	txJSON, _ := json.Marshal(outgoing)
+	return base64.StdEncoding.EncodeToString(txJSON)
+}
+
+//EncodeTx : encode a tx to base64
+func EncodeTx(outgoing types.Tx) string {
 	txJSON, _ := json.Marshal(outgoing)
 	return base64.StdEncoding.EncodeToString(txJSON)
 }

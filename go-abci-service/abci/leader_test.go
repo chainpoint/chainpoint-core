@@ -3,9 +3,9 @@ package abci
 import (
 	"testing"
 
-	"github.com/tendermint/tendermint/p2p"
+	"github.com/chainpoint/tendermint/p2p"
 
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	core_types "github.com/chainpoint/tendermint/rpc/core/types"
 )
 
 func TestValidatorElection(t *testing.T) {

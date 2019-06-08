@@ -8,23 +8,23 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/proxy"
+	"github.com/chainpoint/tendermint/node"
+	"github.com/chainpoint/tendermint/proxy"
 
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/privval"
+	"github.com/chainpoint/tendermint/p2p"
+	"github.com/chainpoint/tendermint/privval"
 
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/chainpoint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	cfg "github.com/tendermint/tendermint/config"
-	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	cfg "github.com/chainpoint/tendermint/config"
+	tmflags "github.com/chainpoint/tendermint/libs/cli/flags"
+	cmn "github.com/chainpoint/tendermint/libs/common"
 )
 
 func main() {

@@ -12,11 +12,11 @@ import (
 
 	"github.com/knq/pemutil"
 
-	types2 "github.com/tendermint/tendermint/abci/types"
+	types2 "github.com/chainpoint/tendermint/abci/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/chainpoint/tendermint/libs/log"
 )
 
 func DeclareABCI() *AnchorApplication {
@@ -77,7 +77,7 @@ func DeclareABCI() *AnchorApplication {
 
 func sendTx(app *AnchorApplication) {
 	tx := types.Tx{TxType: "CAL", Data: "test", Version: 2, Time: time.Now().Unix()}
-	txEncoded := []byte(util.EncodeTx(tx, &app.config.ECPrivateKey))
+	txEncoded := []byte(util.EncodeTxWithKey(tx, &app.config.ECPrivateKey))
 	app.DeliverTx(txEncoded)
 }
 

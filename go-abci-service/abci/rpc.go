@@ -7,10 +7,10 @@ import (
 	"fmt"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	core_types "github.com/chainpoint/tendermint/rpc/core/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/tendermint/tendermint/rpc/client"
+	"github.com/chainpoint/tendermint/rpc/client"
 )
 
 // RPC : hold abstract http client for mocking purposes
@@ -28,9 +28,17 @@ func NewRPCClient(tendermintRPC types.TendermintURI) (rpc *RPC) {
 // BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
 func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int64, stackID string, privateKey *ecdsa.PrivateKey) (core_types.ResultBroadcastTx, error) {
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID}
-	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTx(tx, privateKey)))
+	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTxWithKey(tx, privateKey)))
 	if util.LogError(err) != nil {
 		return core_types.ResultBroadcastTx{}, err
+	}
+	return *result, nil
+}
+
+func (rpc *RPC) BroadcastMsg(tx types.Tx) (core_types.ResultBroadcastMsg, error) {
+	result, err := rpc.client.BroadcastMsgSync([]byte(util.EncodeTx(tx)))
+	if util.LogError(err) != nil {
+		return core_types.ResultBroadcastMsg{}, err
 	}
 	return *result, nil
 }
@@ -38,7 +46,7 @@ func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int6
 // BroadcastTxCommit : Synchronously broadcasts a transaction to the local Tendermint node THIS IS BLOCKING
 func (rpc *RPC) BroadcastTxCommit(txType string, data string, version int64, time int64, stackID string, privateKey *ecdsa.PrivateKey) (core_types.ResultBroadcastTxCommit, error) {
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID}
-	result, err := rpc.client.BroadcastTxCommit([]byte(util.EncodeTx(tx, privateKey)))
+	result, err := rpc.client.BroadcastTxCommit([]byte(util.EncodeTxWithKey(tx, privateKey)))
 	if util.LogError(err) != nil {
 		return core_types.ResultBroadcastTxCommit{}, err
 	}

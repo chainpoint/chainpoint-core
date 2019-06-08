@@ -57,7 +57,7 @@ func TestUUIDFromHash(t *testing.T) {
 }
 
 func TestEncodeTx(t *testing.T) {
-	txStr := EncodeTx(types.Tx{TxType: "CAL", Data: "msg", Version: 2, Time: 0000000001})
+	txStr := EncodeTxWithKey(types.Tx{TxType: "CAL", Data: "msg", Version: 2, Time: 0000000001})
 	assert.Equal(t, txStr, "eyJ0eXBlIjoiQ0FMIiwiZGF0YSI6Im1zZyIsInZlcnNpb24iOjIsInRpbWUiOjF9", "Tx should be in base64 ")
 }
 
