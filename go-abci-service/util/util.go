@@ -151,6 +151,7 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 	} else {
 		return types.Tx{}, errors.New(fmt.Sprintf("Can't find corresponding key for message from Core: %s", calendar.CoreID))
 	}
+	oldSig := calendar.Sig
 	der, err := base64.StdEncoding.DecodeString(calendar.Sig)
 	if LogError(err) != nil {
 		return types.Tx{}, err
@@ -170,6 +171,7 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 		err := LogError(errors.New("Can't validate signature of Tx"))
 		return types.Tx{}, err
 	}
+	calendar.Sig = oldSig
 	return calendar, nil
 }
 
