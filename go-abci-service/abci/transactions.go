@@ -34,7 +34,9 @@ func (app *AnchorApplication) validateGossip(rawTx []byte) types2.ResponseCheckT
 	if util.LoggerError(app.logger, err) != nil {
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
-	if tx.TxType == "TOKEN" || tx.TxType == "NIST" || tx.TxType == "BTC-M" {
+	// this serves as a shim for CheckTx so transactions we don't want in the mempool can
+	// still be gossipped to other Cores
+	if util.Contains(GossipTxs, tx.TxType) {
 		go app.rpc.BroadcastMsg(tx)
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}

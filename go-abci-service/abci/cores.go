@@ -97,7 +97,7 @@ func (app *AnchorApplication) SignCoreRewards() error {
 		app.logger.Info("CoreMint Error: Error issuing SIGN tx")
 		return err
 	}
-	if leader, ids := app.ElectLeader(1); leader {
+	if leader, ids := app.ElectValidator(1); leader {
 		peers := app.GetPeers()
 		thresholdLenPeers := int(math.Ceil(float64(len(peers)) * 0.66))
 

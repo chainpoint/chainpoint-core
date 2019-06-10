@@ -209,7 +209,7 @@ func (app *AnchorApplication) KeyMonitor() {
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if leader, leaders := app.ElectLeader(1); leader && app.state.ChainSynced {
+	if leader, leaders := app.ElectValidator(1); leader && app.state.ChainSynced {
 		app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 		nistRecord, err := beacon.LastRecord()
 		if util.LogError(err) != nil {
@@ -225,7 +225,7 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 
 //MintMonitor : efficiently monitor for new minting and gossip that block to other cores
 func (app *AnchorApplication) MintMonitor() {
-	if leader, _ := app.ElectLeader(1); leader && app.state.ChainSynced {
+	if leader, _ := app.ElectValidator(1); leader && app.state.ChainSynced {
 		lastNodeMintedAt, err := app.ethClient.GetNodeLastMintedAt()
 		if util.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new NodeLastMintedAt value")

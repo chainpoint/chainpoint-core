@@ -31,6 +31,7 @@ import (
 var (
 	stateKey                         = []byte("chainpoint")
 	ProtocolVersion version.Protocol = 0x1
+	GossipTxs                        = []string{"TOKEN", "NIST", "BTC-M"}
 )
 
 const MINT_EPOCH = 6400
