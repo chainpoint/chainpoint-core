@@ -26,6 +26,13 @@ const logger = require('./lib/logger.js')
 // This value is set once the connection has been established
 let amqpChannel = null
 
+// track the `feeSatPerByte` values being used so that, in the event of a estimated fee retrieval
+// failure, we fall back to the last retrieved value
+let lastKnownFeeSatPerByte = null
+// use a default constant value if the service has just started, lastKnownFeeSatPerByte is null,
+// and estimated fee retrieval fails
+const defaultFeeSatPerByte = 250
+
 const btcUseTestnet = env.NETWORK === 'mainnet' ? false : true
 
 // Initialize BlockchainAnchor object
@@ -49,20 +56,27 @@ const sendTxToBTCAsync = async hash => {
   let feeTotalSatoshi
   try {
     feeSatPerByte = await anchor.btcGetEstimatedFeeRateSatPerByteAsync()
-    // if the fee exceeds the maximum, revert to BTC_MAX_FEE_SAT_PER_BYTE for the fee
-    if (feeSatPerByte > env.BTC_MAX_FEE_SAT_PER_BYTE) {
-      logger.warn(
-        `Fee of ${feeSatPerByte} sat per byte exceeded BTC_MAX_FEE_SAT_PER_BYTE of ${env.BTC_MAX_FEE_SAT_PER_BYTE}`
-      )
-      feeSatPerByte = env.BTC_MAX_FEE_SAT_PER_BYTE
-    }
-    let feeExtra = 1.1 // the factor to use to increase the final transaction fee in order to better position this transaction for fast confirmation
-    feeSatPerByte = Math.ceil(feeSatPerByte * feeExtra) // Math.ceil to keep the value an integer, as expected in the log db
-    let averageTxInBytes = 235 // 235 represents the average btc anchor transaction size in bytes
-    feeTotalSatoshi = feeSatPerByte * averageTxInBytes
+    lastKnownFeeSatPerByte = feeSatPerByte
   } catch (error) {
-    throw new Error(`Error retrieving estimated fee: ${error.message}`)
+    logger.warn(`Error retrieving estimated fee: ${error.message}`)
+    feeSatPerByte = lastKnownFeeSatPerByte || defaultFeeSatPerByte
+    logger.warn(`Falling back to a Satoshi per byte fee value of '${feeSatPerByte}'`)
   }
+
+  // if the fee exceeds the maximum, revert to BTC_MAX_FEE_SAT_PER_BYTE for the fee
+  if (feeSatPerByte > env.BTC_MAX_FEE_SAT_PER_BYTE) {
+    logger.warn(
+      `Fee of '${feeSatPerByte}' Satoshi per byte exceeded BTC_MAX_FEE_SAT_PER_BYTE of '${
+        env.BTC_MAX_FEE_SAT_PER_BYTE
+      }'`
+    )
+    logger.warn(`Falling back to a Satoshi per byte fee value of '${env.BTC_MAX_FEE_SAT_PER_BYTE}'`)
+    feeSatPerByte = env.BTC_MAX_FEE_SAT_PER_BYTE
+  }
+  let feeExtra = 1.1 // the factor to use to increase the final transaction fee in order to better position this transaction for fast confirmation
+  feeSatPerByte = Math.ceil(feeSatPerByte * feeExtra) // Math.ceil to keep the value an integer, as expected in the log db
+  let averageTxInBytes = 235 // 235 represents the average btc anchor transaction size in bytes
+  feeTotalSatoshi = feeSatPerByte * averageTxInBytes
 
   let txResult
   try {
