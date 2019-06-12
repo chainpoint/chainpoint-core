@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
@@ -74,8 +75,10 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		app.state.LatestBtcmTxInt = app.state.TxInt
 		app.state.LatestBtcmTx = base64.StdEncoding.EncodeToString(rawTx)
 		app.ConsumeBtcTxMsg([]byte(tx.Data))
-		app.logger.Info(fmt.Sprintf("Anchor: %s", tx.Data))
-		tags = append(tags, common.KVPair{Key: []byte("CORERC"), Value: util.Int64ToByte(app.state.LastCoreMintedAtBlock)})
+		app.logger.Info(fmt.Sprintf("BTC-M Anchor Data: %s", tx.Data))
+		if leader, _ := app.ElectValidator(1); leader && app.state.ChainSynced {
+			go app.rpc.BroadcastTx("CORE-RC", tx.CoreID, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-A":
@@ -133,6 +136,11 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "NODE-RC":
 		tags = app.incrementTxInt(tags)
 		tags = append(tags, common.KVPair{Key: []byte("NODERC"), Value: util.Int64ToByte(app.state.LastNodeMintedAtBlock)})
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		break
+	case "CORE-RC":
+		tags = app.incrementTxInt(tags)
+		tags = append(tags, common.KVPair{Key: []byte("CORERC"), Value: util.Int64ToByte(app.state.LastCoreMintedAtBlock)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "TOKEN":

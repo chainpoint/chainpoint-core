@@ -137,7 +137,7 @@ func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byt
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
-		core, err := app.pgClient.GetCoreByID(decoded.CoreID)
+		core, err := app.pgClient.GetCoreByID(decoded.Data)
 		app.logger.Info(fmt.Sprintf("CoreMint for core %#v", core))
 		if util.LoggerError(app.logger, err) != nil {
 			continue
