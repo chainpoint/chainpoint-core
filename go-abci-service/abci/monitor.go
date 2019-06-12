@@ -66,7 +66,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	var anchoringCoreID string
 	var hash []byte
 	var btcMonObj types.BtcMonMsg
-	json.Unmarshal(msg.Body, &btcMonObj)
+	util.LoggerError(app.logger, json.Unmarshal(msg.Body, &btcMonObj))
 	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
 	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("BTCTX=%s", btcMonObj.BtcTxID), false, 1, 25)
 	util.LoggerError(app.logger, err)
