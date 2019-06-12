@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
@@ -137,7 +138,12 @@ func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byt
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
-		core, err := app.pgClient.GetCoreByID(decoded.Data)
+		meta := strings.Split(decoded.Meta, "|")
+		if len(meta) == 0 {
+			app.logger.Info(fmt.Sprintf("CoreMint: No CoreID attributable to tx %#v", decoded))
+			continue
+		}
+		core, err := app.pgClient.GetCoreByID(meta[0])
 		app.logger.Info(fmt.Sprintf("CoreMint for core %#v", core))
 		if util.LoggerError(app.logger, err) != nil {
 			continue

@@ -59,7 +59,6 @@ type AnchorState struct {
 	LatestBtcaTxInt       int64  `json:"latest_btca_int"`
 	LatestBtcaHeight      int64  `json:"latest_btca_height"`
 	LatestBtcTx           string `json:"latest_btc"`
-	LatestBtcmTx          string `json:"latest_btcm"`
 	LatestBtcmTxInt       int64  `json:"latest_btcm_int"`
 	LatestBtcmHeight      int64  `json:"latest_btcm_height"`
 	LatestBtccTx          []byte `json:"latest_btcc"`
@@ -84,6 +83,7 @@ type Tx struct {
 	Version int64  `json:"version"`
 	Time    int64  `json:"time"`
 	CoreID  string `json:"core_id"`
+	Meta    string `json:"meta,omitempty"`
 	Sig     string `json:"sig,omitempty"`
 }
 

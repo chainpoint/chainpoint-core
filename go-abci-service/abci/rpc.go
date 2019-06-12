@@ -35,6 +35,16 @@ func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int6
 	return *result, nil
 }
 
+// BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
+func (rpc *RPC) BroadcastTxWithMeta(txType string, data string, version int64, time int64, stackID string, meta string, privateKey *ecdsa.PrivateKey) (core_types.ResultBroadcastTx, error) {
+	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID, Meta: meta}
+	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTxWithKey(tx, privateKey)))
+	if util.LogError(err) != nil {
+		return core_types.ResultBroadcastTx{}, err
+	}
+	return *result, nil
+}
+
 func (rpc *RPC) BroadcastMsg(tx types.Tx) (core_types.ResultBroadcastMsg, error) {
 	result, err := rpc.client.BroadcastMsgAsync([]byte(util.EncodeTx(tx)))
 	if util.LogError(err) != nil {
