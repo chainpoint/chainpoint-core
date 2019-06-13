@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
 // AggregateCalendar : Aggregate submitted hashes into a calendar transaction
@@ -24,7 +23,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 		app.logger.Info(fmt.Sprintf("Calendar Root: %s", calAgg.CalRoot))
 
 		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-		if util.LogError(err) != nil {
+		if app.LogError(err) != nil {
 			return err
 		}
 		app.logger.Debug(fmt.Sprintf("CAL result: %v", result))
@@ -52,7 +51,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 
 	// Get CAL transactions between the latest BTCA tx and the current latest tx
 	txLeaves, err := app.getCalTxRange(startTxRange, endTxRange)
-	if util.LogError(err) != nil {
+	if app.LogError(err) != nil {
 		return err
 	}
 
@@ -64,7 +63,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	if treeData.AnchorBtcAggRoot != "" {
 		if iAmLeader {
 			err := app.calendar.QueueBtcTxStateDataMessage(treeData)
-			if util.LogError(err) != nil {
+			if app.LogError(err) != nil {
 				app.resetAnchor(startTxRange)
 				return err
 			}
@@ -82,7 +81,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 			app.resetAnchor(startTxRange)
 		} else {
 			err = app.calendar.QueueBtcaStateDataMessage(treeData)
-			if util.LogError(err) != nil {
+			if app.LogError(err) != nil {
 				app.resetAnchor(startTxRange)
 				return err
 			}
@@ -93,13 +92,13 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 					BtcTxID:          app.state.LatestBtcTx,
 				}
 				BtcAData, err := json.Marshal(BtcA)
-				if util.LogError(err) != nil {
+				if app.LogError(err) != nil {
 					app.resetAnchor(startTxRange)
 					return err
 				}
 				result, err := app.rpc.BroadcastTx("BTC-A", string(BtcAData), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 				app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
-				if util.LogError(err) != nil {
+				if app.LogError(err) != nil {
 					if strings.Contains(err.Error(), "-32603") {
 						app.logger.Debug(fmt.Sprintf("BTC-A block already committed; Leader is %v", leaderIDs))
 						return err

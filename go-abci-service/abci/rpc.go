@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	"github.com/chainpoint/tendermint/libs/log"
 	core_types "github.com/chainpoint/tendermint/rpc/core/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -16,20 +17,30 @@ import (
 // RPC : hold abstract http client for mocking purposes
 type RPC struct {
 	client *client.HTTP
+	logger log.Logger
 }
 
 // NewRPCClient : Creates a new client connected to a tendermint instance at web socket "tendermintRPC"
-func NewRPCClient(tendermintRPC types.TendermintURI) (rpc *RPC) {
+func NewRPCClient(tendermintRPC types.TendermintURI, logger log.Logger) (rpc *RPC) {
 	return &RPC{
 		client: client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket"),
+		logger: logger,
 	}
+}
+
+//LogError : log rpc errors
+func (rpc *RPC) LogError(err error) error {
+	if err != nil {
+		rpc.logger.Error(fmt.Sprintf("Error: %s", err.Error()))
+	}
+	return err
 }
 
 // BroadcastTx : Synchronously broadcasts a transaction to the local Tendermint node
 func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int64, stackID string, privateKey *ecdsa.PrivateKey) (core_types.ResultBroadcastTx, error) {
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID}
 	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTxWithKey(tx, privateKey)))
-	if util.LogError(err) != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultBroadcastTx{}, err
 	}
 	return *result, nil
@@ -39,7 +50,7 @@ func (rpc *RPC) BroadcastTx(txType string, data string, version int64, time int6
 func (rpc *RPC) BroadcastTxWithMeta(txType string, data string, version int64, time int64, stackID string, meta string, privateKey *ecdsa.PrivateKey) (core_types.ResultBroadcastTx, error) {
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID, Meta: meta}
 	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTxWithKey(tx, privateKey)))
-	if util.LogError(err) != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultBroadcastTx{}, err
 	}
 	return *result, nil
@@ -47,7 +58,7 @@ func (rpc *RPC) BroadcastTxWithMeta(txType string, data string, version int64, t
 
 func (rpc *RPC) BroadcastMsg(tx types.Tx) (core_types.ResultBroadcastMsg, error) {
 	result, err := rpc.client.BroadcastMsgAsync([]byte(util.EncodeTx(tx)))
-	if util.LogError(err) != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultBroadcastMsg{}, err
 	}
 	return *result, nil
@@ -57,7 +68,7 @@ func (rpc *RPC) BroadcastMsg(tx types.Tx) (core_types.ResultBroadcastMsg, error)
 func (rpc *RPC) BroadcastTxCommit(txType string, data string, version int64, time int64, stackID string, privateKey *ecdsa.PrivateKey) (core_types.ResultBroadcastTxCommit, error) {
 	tx := types.Tx{TxType: txType, Data: data, Version: version, Time: time, CoreID: stackID}
 	result, err := rpc.client.BroadcastTxCommit([]byte(util.EncodeTxWithKey(tx, privateKey)))
-	if util.LogError(err) != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultBroadcastTxCommit{}, err
 	}
 	return *result, nil
@@ -69,7 +80,7 @@ func (rpc *RPC) GetStatus() (core_types.ResultStatus, error) {
 		return core_types.ResultStatus{}, errors.New("rpc failure")
 	}
 	status, err := rpc.client.Status()
-	if util.LogError(err) != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultStatus{}, err
 	}
 	return *status, err
@@ -81,7 +92,7 @@ func (rpc *RPC) GetNetInfo() (core_types.ResultNetInfo, error) {
 		return core_types.ResultNetInfo{}, errors.New("rpc failure")
 	}
 	netInfo, err := rpc.client.NetInfo()
-	if util.LogError(err) != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultNetInfo{}, err
 	}
 	return *netInfo, err
@@ -90,7 +101,7 @@ func (rpc *RPC) GetNetInfo() (core_types.ResultNetInfo, error) {
 //GetTxByInt : Retrieves a tx by its unique integer ID (txInt)
 func (rpc *RPC) GetTxByInt(txInt int64) (core_types.ResultTxSearch, error) {
 	txResult, err := rpc.client.TxSearch(fmt.Sprintf("TxInt=%d", txInt), false, 1, 1)
-	if util.LogError(err) != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultTxSearch{}, err
 	}
 	return *txResult, err

@@ -23,7 +23,7 @@ import (
 func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	var btcTxObj types.BtcTxMsg
 	if err := json.Unmarshal(msgBytes, &btcTxObj); err != nil {
-		return util.LogError(err)
+		return app.LogError(err)
 	}
 	app.state.LatestBtcTx = btcTxObj.BtcTxID // Update app state with txID so we can broadcast BTC-A
 	stateObj := types.BtcTxProofState{
@@ -44,7 +44,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		},
 	}
 	dataJSON, err := json.Marshal(stateObj)
-	if util.LogError(err) != nil {
+	if app.LogError(err) != nil {
 		return err
 	}
 	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.proofstate", "btctx", dataJSON)
@@ -69,10 +69,10 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	util.LoggerError(app.logger, json.Unmarshal(msg.Body, &btcMonObj))
 	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
 	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("BTCTX=%s", btcMonObj.BtcTxID), false, 1, 25)
-	util.LoggerError(app.logger, err)
+	app.LogError(err)
 	for _, tx := range txResult.Txs {
 		decoded, err := util.DecodeTx(tx.Tx)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		anchoringCoreID = decoded.CoreID
@@ -83,10 +83,10 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	// Broadcast the confirmation message with metadata
 	result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
 	time.Sleep(1 * time.Minute) // wait until it hits the mempool
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		app.logger.Error(fmt.Sprintf("Anchor: Another core has probably already committed a BTCC tx: %s", err.Error()))
 		txResult, err := app.rpc.GetTxByInt(app.state.LatestBtccTxInt)
-		if util.LogError(err) != nil && len(txResult.Txs) > 0 {
+		if app.LogError(err) != nil && len(txResult.Txs) > 0 {
 			hash = txResult.Txs[0].Hash
 		} else {
 			return err
@@ -129,14 +129,14 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	case "btctx":
 		time.Sleep(30 * time.Second)
 		_, err := app.rpc.BroadcastTx("BTC-M", string(msg.Body), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			return err
 		}
 		msg.Ack(false)
 		break
 	case "btcmon":
 		err := app.ConsumeBtcMonMsg(msg)
-		util.LogError(err)
+		app.LogError(err)
 		break
 	case "reward":
 		break
@@ -180,7 +180,7 @@ func (app *AnchorApplication) ReceiveCalRMQ() error {
 func (app *AnchorApplication) SyncMonitor() {
 	for {
 		status, err := app.rpc.GetStatus()
-		if util.LogError(err) != nil {
+		if app.LogError(err) != nil {
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -200,25 +200,25 @@ func (app *AnchorApplication) SyncMonitor() {
 func (app *AnchorApplication) KeyMonitor() {
 	selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
 	response, err := http.Get(selfStatusURL)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return
 	}
 	contents, err := ioutil.ReadAll(response.Body)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return
 	}
 	var apiStatus types.CoreAPIStatus
 	err = json.Unmarshal(contents, &apiStatus)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return
 	}
 	app.JWK = apiStatus.Jwk
 	jwkJson, err := json.Marshal(apiStatus.Jwk)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return
 	}
 	_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return
 	}
 }
@@ -229,12 +229,12 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 	if leader, leaders := app.ElectValidator(1); leader && app.state.ChainSynced {
 		app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 		nistRecord, err := beacon.LastRecord()
-		if util.LogError(err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new NIST beacon value")
 			return
 		}
 		_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
-		if util.LogError(err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
 		}
 	}
@@ -244,7 +244,7 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 func (app *AnchorApplication) MintMonitor() {
 	if leader, _ := app.ElectValidator(1); leader && app.state.ChainSynced {
 		lastNodeMintedAt, err := app.ethClient.GetNodeLastMintedAt()
-		if util.LogError(err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new NodeLastMintedAt value")
 			return
 		}
@@ -256,7 +256,7 @@ func (app *AnchorApplication) MintMonitor() {
 			}
 		}
 		lastCoreMintedAt, err := app.ethClient.GetCoreLastMintedAt()
-		if util.LogError(err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Error("Unable to obtain new CoreLastMintedAt value")
 			return
 		}

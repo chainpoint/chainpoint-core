@@ -190,7 +190,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		pgClient:    pgClient,
 		redisClient: redisClient,
 		ethClient:   ethClient,
-		rpc:         NewRPCClient(config.TendermintRPC),
+		rpc:         NewRPCClient(config.TendermintRPC, *config.Logger),
 		CoreKeys:    map[string]ecdsa.PublicKey{},
 	}
 
@@ -252,7 +252,7 @@ func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.Resp
 func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.ResponseInfo) {
 	infoJSON, err := json.Marshal(app.state)
 	if err != nil {
-		util.LoggerError(app.logger, err)
+		app.LogError(err)
 		infoJSON = []byte("{}")
 	}
 	return types2.ResponseInfo{
@@ -329,4 +329,11 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 // Query : Custom ABCI query method. TODO: implement
 func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery types2.ResponseQuery) {
 	return
+}
+
+func (app *AnchorApplication) LogError(err error) error {
+	if err != nil {
+		app.logger.Error(fmt.Sprintf("Error: %s", err.Error()))
+	}
+	return err
 }

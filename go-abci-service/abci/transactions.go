@@ -32,7 +32,7 @@ func (app *AnchorApplication) validateGossip(rawTx []byte) types2.ResponseCheckT
 		tx, err = util.DecodeTx(rawTx)
 	}
 	app.logger.Info(fmt.Sprintf("CheckTX: %v", tx))
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return types2.ResponseCheckTx{Code: code.CodeTypeEncodingError, GasWanted: 1}
 	}
 	// this serves as a shim for CheckTx so transactions we don't want in the mempool can
@@ -60,7 +60,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		tx, err = util.DecodeTx(rawTx)
 	}
 	app.logger.Info(fmt.Sprintf("Received Tx: %s, Gossip: %t", tx.TxType, gossip))
-	util.LoggerError(app.logger, err)
+	app.LogError(err)
 	switch string(tx.TxType) {
 	case "VAL":
 		tags = app.incrementTxInt(tags)

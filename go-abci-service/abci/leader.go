@@ -14,11 +14,11 @@ import (
 // ElectLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
 func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leaderID []string) {
 	status, err := app.rpc.GetStatus()
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return false, []string{}
 	}
 	netInfo, err := app.rpc.GetNetInfo()
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return false, []string{}
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
@@ -29,11 +29,11 @@ func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leader
 // ElectValidator : elect a slice of validators as a leader and return whether we're the leader
 func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, leaderID []string) {
 	validators, err := app.rpc.GetValidators(app.state.Height)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return false, []string{}
 	}
 	status, err := app.rpc.GetStatus()
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return false, []string{}
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
@@ -89,7 +89,7 @@ func (app *AnchorApplication) GetPeers() []core_types.Peer {
 	status, err = app.rpc.GetStatus()
 	netInfo, err2 = app.rpc.GetNetInfo()
 
-	if util.LogError(err) != nil || util.LogError(err2) != nil {
+	if app.LogError(err) != nil || util.LogError(err2) != nil {
 		return []core_types.Peer{}
 	}
 

@@ -30,7 +30,7 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 	for i, sigStr := range sig {
 		var decodedSig []byte
 		decodedSig, err := hex.DecodeString(sigStr)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Info("CoreMint: sig hex decoding failed")
 			continue
 		}
@@ -41,7 +41,7 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 	copy(sigFixedBytes[:], sigBytes[:126])
 	app.logger.Info(fmt.Sprintf("CoreMint: Sig Bytes: %v", sigFixedBytes))
 	err := app.ethClient.MintCores(rewardCandidates, rewardHash, sigFixedBytes)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		app.logger.Info("CoreMint: invoking smart contract failed")
 		return err
 	}
@@ -55,7 +55,7 @@ func (app *AnchorApplication) StartCoreMintProcess() error {
 	app.SetCoreMintPendingState(true) //needed since we can't do a blocking lock in commit
 	err := app.SignCoreRewards()
 	app.SetCoreMintPendingState(false)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return err
 	}
 	return nil
@@ -72,7 +72,7 @@ func (app *AnchorApplication) SignCoreRewards() error {
 	var candidates []common.Address
 	var rewardHash []byte
 	currentEthBlock, err := app.ethClient.HighestBlock()
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		app.logger.Error("CoreMint Error: problem retrieving highest block for core minting")
 		return err
 	}
@@ -81,7 +81,7 @@ func (app *AnchorApplication) SignCoreRewards() error {
 		return errors.New("CoreMint: Too soon for minting")
 	}
 	candidates, rewardHash, err = app.GetCoreRewardCandidates()
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		app.logger.Info("CoreMint Error: Error retrieving core reward candidates")
 		return err
 	}
@@ -89,7 +89,7 @@ func (app *AnchorApplication) SignCoreRewards() error {
 	app.logger.Info(fmt.Sprintf("CoreMint: reward hash: %x", rewardHash))
 	signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
 	signature[64] += 27
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		app.logger.Info("CoreMint Error: Problem with signing message for minting")
 		return err
 	}
@@ -114,7 +114,7 @@ func (app *AnchorApplication) SignCoreRewards() error {
 			if len(ids) == 1 {
 				app.state.LastMintCoreID = ids[0]
 			}
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				return err
 			}
 		} else {
@@ -129,13 +129,13 @@ func (app *AnchorApplication) SignCoreRewards() error {
 func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byte, error) {
 	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("CORERC=%d", app.state.LastCoreMintedAtBlock), false, 1, 25)
 	app.logger.Info(fmt.Sprintf("CoreMint for CORERC txResults: %#v", txResult))
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return []common.Address{}, []byte{}, err
 	}
 	coreArray := make([]common.Address, 0)
 	for _, tx := range txResult.Txs {
 		decoded, err := util.DecodeTx(tx.Tx)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		meta := strings.Split(decoded.Meta, "|")
@@ -145,7 +145,7 @@ func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byt
 		}
 		core, err := app.pgClient.GetCoreByID(meta[0])
 		app.logger.Info(fmt.Sprintf("CoreMint for core %#v", core))
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		coreArray = append(coreArray, common.HexToAddress(core.EthAddr))
@@ -176,7 +176,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 
 		//Consume all past node events from this contract and import them into the local postgres instance
 		coresStaked, err := app.ethClient.GetPastCoresStakedEvents(*highestBlock)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Info("error in finding past staked nodes")
 			continue
 		}
@@ -188,7 +188,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
 			inserted, err := app.pgClient.CoreUpsert(newCore)
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				continue
 			}
 			app.logger.Info(fmt.Sprintf("Inserted for %#v: %t", newCore, inserted))
@@ -196,7 +196,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 
 		//Consume all updated events and reconcile them with the previous states
 		coresStakedUpdated, err := app.ethClient.GetPastCoresStakeUpdatedEvents(*highestBlock)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		for _, core := range coresStakedUpdated {
@@ -207,7 +207,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
 			inserted, err := app.pgClient.CoreUpsert(newCore)
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				continue
 			}
 			app.logger.Info(fmt.Sprintf("Updated for %#v: %t", newCore, inserted))
@@ -215,7 +215,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 
 		//Consume unstake events and delete nodes where the blockNumber of this event is higher than the last stake or update
 		coresUnstaked, err := app.ethClient.GetPastCoresUnstakeEvents(*highestBlock)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		for _, core := range coresUnstaked {
@@ -226,14 +226,14 @@ func (app *AnchorApplication) PollCoresFromContract() {
 				BlockNumber: sql.NullInt64{Int64: int64(core.Raw.BlockNumber), Valid: true},
 			}
 			deleted, err := app.pgClient.CoreDelete(newCore)
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				continue
 			}
 			app.logger.Info(fmt.Sprintf("Deleted for %#v: %t", newCore, deleted))
 		}
 
 		highestBlock, err = app.ethClient.HighestBlock()
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 	}

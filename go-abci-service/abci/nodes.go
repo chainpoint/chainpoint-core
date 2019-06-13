@@ -62,11 +62,11 @@ func (app *AnchorApplication) LoadJWK() error {
 			continue
 		}
 		b64Str, err := app.redisClient.Get(k).Result()
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		pubKeyBytes, err := base64.StdEncoding.DecodeString(b64Str)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		x, y := elliptic.Unmarshal(elliptic.P256(), pubKeyBytes)
@@ -91,11 +91,11 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 		app.JWKSent = true
 	}
 	jsonJwk, err := json.Marshal(jwkType)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return err
 	}
 	pubKey, err := util.DecodePubKey(tx)
-	if util.LoggerError(app.logger, err) == nil {
+	if app.LogError(err) == nil {
 		app.CoreKeys[tx.CoreID] = *pubKey
 		pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 		util.LoggerError(app.logger, app.redisClient.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
@@ -103,7 +103,7 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	value, err := app.redisClient.Get(key).Result()
 	if err == redis.Nil || value != string(jsonJwk) {
 		err = app.redisClient.Set(key, value, 0).Err()
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			return err
 		}
 		app.logger.Info(fmt.Sprintf("Set JWK cache for kid %s", jwkType.Kid))
@@ -126,14 +126,14 @@ func (app *AnchorApplication) MintNodeReward(sig []string, rewardCandidates []co
 		sigBytes := make([][]byte, len(sig))
 		for i, sigStr := range sig {
 			decodedSig, err := hex.DecodeString(sigStr)
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				app.logger.Info("Mint Error: mint hex decoding failed")
 				continue
 			}
 			sigBytes[i] = decodedSig
 		}
 		err := app.ethClient.MintNodes(rewardCandidates, rewardHash, sigBytes)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Info("Mint Error: invoking smart contract failed")
 			return err
 		}
@@ -147,7 +147,7 @@ func (app *AnchorApplication) StartNodeMintProcess() error {
 	app.SetNodeMintPendingState(true) //needed since we can't do a blocking lock in commit
 	err := app.SignNodeRewards()
 	app.SetNodeMintPendingState(false)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return err
 	}
 	return nil
@@ -168,7 +168,7 @@ func (app *AnchorApplication) SignNodeRewards() error {
 	if leader, leaders := app.ElectValidator(7); leader {
 		app.logger.Info(fmt.Sprintf("Elected Leaders for Mint Signing: %v", leaders))
 		currentEthBlock, err := app.ethClient.HighestBlock()
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Error("Mint Error: problem retrieving highest block")
 			return err
 		}
@@ -177,7 +177,7 @@ func (app *AnchorApplication) SignNodeRewards() error {
 			return errors.New("Too soon for minting")
 		}
 		candidates, rewardHash, err = app.GetNodeRewardCandidates()
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Info("Mint Error: Error retrieving node reward candidates")
 			return err
 		}
@@ -186,7 +186,7 @@ func (app *AnchorApplication) SignNodeRewards() error {
 		app.logger.Info(fmt.Sprintf("Mint: with prefix: %x", rewardHash))
 		signature, err := ethcontracts.SignMsg(rewardHash, app.ethClient.EthPrivateKey)
 		signature[64] += 27
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Info("Mint Error: Problem with signing message for minting")
 			return err
 		}
@@ -205,7 +205,7 @@ func (app *AnchorApplication) SignNodeRewards() error {
 	if len(app.NodeRewardSignatures) >= 6 {
 		app.logger.Info("Mint: Enough SIGN TXs received, calling mint")
 		err := app.MintNodeReward(app.NodeRewardSignatures, candidates, rewardHash)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			return err
 		}
 	} else {
@@ -218,7 +218,7 @@ func (app *AnchorApplication) SignNodeRewards() error {
 //GetNodeRewardCandidates : scans for and collates the reward candidates in the current epoch
 func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byte, error) {
 	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("NODERC=%d", app.state.LastNodeMintedAtBlock), false, 1, 25)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		return []common.Address{}, []byte{}, err
 	}
 	nodeArray := make([]common.Address, 0)
@@ -261,7 +261,7 @@ func (app *AnchorApplication) AuditNodes() error {
 		var mux sync.Mutex
 		for len(rewardCandidates) < 3 && !time.Now().After(deadline) {
 			nodes, err := app.pgClient.GetRandomNodes()
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				return err
 			}
 			for _, nodeCandidate := range nodes {
@@ -293,7 +293,7 @@ func (app *AnchorApplication) AuditNodes() error {
 		}
 		if len(rewardCandidates) == 0 {
 			err := errors.New("Unspecified reward candidate collation failure for node audit")
-			util.LoggerError(app.logger, err)
+			app.LogError(err)
 			return err
 		}
 		if app.state.NodeMintPending {
@@ -301,11 +301,11 @@ func (app *AnchorApplication) AuditNodes() error {
 			return nil
 		}
 		rcJSON, err := json.Marshal(rewardCandidates)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			return err
 		}
 		res, err := app.rpc.BroadcastTx("NODE-RC", string(rcJSON), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			return err
 		}
 		if res.Code == 0 {
@@ -322,12 +322,12 @@ func (app *AnchorApplication) AuditNodes() error {
 //AuditNode : Used by the audit leader and all confirming cores to validate node performance
 func (app *AnchorApplication) AuditNode(node types.Node) error {
 	err := ValidateNodeRecentReputation(node)
-	if util.LoggerError(app.logger, err) != nil {
+	if app.LogError(err) != nil {
 		app.logger.Info("unable to validate node audit reputation")
 		return err
 	}
 	nodeResp, err := SendNodeHash(node)
-	if util.LoggerError(app.logger, err) != nil && len(nodeResp.Hashes) == 0 {
+	if app.LogError(err) != nil && len(nodeResp.Hashes) == 0 {
 		app.logger.Info("node audit hash post failed")
 		return err
 	}
@@ -354,7 +354,7 @@ func (app *AnchorApplication) PollNodesFromContract() {
 
 		//Consume all past node events from this contract and import them into the local postgres instance
 		nodesStaked, err := app.ethClient.GetPastNodesStakedEvents(*highestBlock)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			app.logger.Info("error in finding past staked nodes")
 			continue
 		}
@@ -365,7 +365,7 @@ func (app *AnchorApplication) PollNodesFromContract() {
 				BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 			}
 			inserted, err := app.pgClient.NodeUpsert(newNode)
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				continue
 			}
 			app.logger.Info(fmt.Sprintf("Inserted for %#v: %t", newNode, inserted))
@@ -373,7 +373,7 @@ func (app *AnchorApplication) PollNodesFromContract() {
 
 		//Consume all updated events and reconcile them with the previous states
 		nodesStakedUpdated, err := app.ethClient.GetPastNodesStakeUpdatedEvents(*highestBlock)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		for _, node := range nodesStakedUpdated {
@@ -383,7 +383,7 @@ func (app *AnchorApplication) PollNodesFromContract() {
 				BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 			}
 			inserted, err := app.pgClient.NodeUpsert(newNode)
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				continue
 			}
 			app.logger.Info(fmt.Sprintf("Updated for %#v: %t", newNode, inserted))
@@ -391,7 +391,7 @@ func (app *AnchorApplication) PollNodesFromContract() {
 
 		//Consume unstake events and delete nodes where the blockNumber of this event is higher than the last stake or update
 		nodesUnstaked, err := app.ethClient.GetPastNodesUnstakeEvents(*highestBlock)
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 		for _, node := range nodesUnstaked {
@@ -401,14 +401,14 @@ func (app *AnchorApplication) PollNodesFromContract() {
 				BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
 			}
 			deleted, err := app.pgClient.NodeDelete(newNode)
-			if util.LoggerError(app.logger, err) != nil {
+			if app.LogError(err) != nil {
 				continue
 			}
 			app.logger.Info(fmt.Sprintf("Deleted for %#v: %t", newNode, deleted))
 		}
 
 		highestBlock, err = app.ethClient.HighestBlock()
-		if util.LoggerError(app.logger, err) != nil {
+		if app.LogError(err) != nil {
 			continue
 		}
 	}
