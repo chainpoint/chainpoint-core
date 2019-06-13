@@ -165,16 +165,19 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	var anchoringCoreID string
 	var hash []byte
 	var btcMonObj types.BtcMonMsg
-	util.LoggerError(app.logger, json.Unmarshal(msg.Body, &btcMonObj))
+	app.LogError(json.Unmarshal(msg.Body, &btcMonObj))
 	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
-	txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("BTCTX=%s", btcMonObj.BtcTxID), false, 1, 25)
-	app.LogError(err)
-	for _, tx := range txResult.Txs {
-		decoded, err := util.DecodeTx(tx.Tx)
-		if app.LogError(err) != nil {
-			continue
+	queryLine := fmt.Sprintf("BTCTX='%s'", btcMonObj.BtcTxID)
+	app.logger.Info("Anchor confirmation query: " + queryLine)
+	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25)
+	if app.LogError(err) == nil {
+		for _, tx := range txResult.Txs {
+			decoded, err := util.DecodeTx(tx.Tx)
+			if app.LogError(err) != nil {
+				continue
+			}
+			anchoringCoreID = decoded.CoreID
 		}
-		anchoringCoreID = decoded.CoreID
 	}
 	if len(anchoringCoreID) == 0 {
 		app.logger.Error(fmt.Sprintf("Anchor: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
