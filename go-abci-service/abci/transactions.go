@@ -41,9 +41,13 @@ func (app *AnchorApplication) validateGossip(rawTx []byte) types2.ResponseCheckT
 		go app.rpc.BroadcastMsg(tx)
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
-	if tx.TxType == "BTC-C" && tx.Data == string(app.state.LatestBtccTx) {
-		app.logger.Info(fmt.Sprintf("We've already seen this BTC-C tx: %s", tx.Data))
-		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+	if tx.TxType == "BTC-C" {
+		if tx.Data == string(app.state.LatestBtccTx) {
+			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C tx: %s", tx.Data))
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		} else {
+			app.state.LatestBtccTx = []byte(tx.Data)
+		}
 	}
 	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
 }
