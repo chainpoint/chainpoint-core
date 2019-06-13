@@ -52,6 +52,14 @@ const httpOptions = {
   log: apiLogs
 }
 
+const applyMiddleware = (middlewares = []) => {
+  if (process.env.NODE_ENV === 'development' || process.env.NETWORK === 'testnet') {
+    return []
+  } else {
+    return middlewares
+  }
+}
+
 let throttle = (burst, rate, opts = { ip: true }) => {
   return restify.plugins.throttle(Object.assign({}, { burst, rate }, opts))
 }
@@ -99,25 +107,25 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
   // API RESOURCES
 
   // submit hash(es)
-  server.post({ path: '/hashes', version: '1.0.0' }, throttle(5, 0.02), hashes.postHashV1Async) // throttl
+  server.post({ path: '/hashes', version: '1.0.0' }, ...applyMiddleware(throttle(5, 0.02)), hashes.postHashV1Async) // throttl
   // get the block objects for the calendar in the specified block range
-  server.get({ path: '/calendar/:txid', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxAsync)
+  server.get({ path: '/calendar/:txid', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), calendar.getCalTxAsync) 
   // get the data value of a txId
-  server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, throttle(50, 10), calendar.getCalTxDataAsync)
+  server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), calendar.getCalTxDataAsync)
   // get proofs from storage
-  server.get({ path: '/proofs', version: '1.0.0' }, throttle(50, 10), proofs.getProofsByIDsAsync)
+  server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), proofs.getProofsByIDsAsync)
   // get nodes from core
-  server.get({ path: '/nodes/random', version: '1.0.0' }, throttle(15, 3), nodes.getNodesAsync)
+  server.get({ path: '/nodes/random', version: '1.0.0' }, ...applyMiddleware(throttle(15, 3)), nodes.getNodesAsync)
   // get random core peers
-  server.get({ path: '/peers', version: '1.0.0' }, throttle(15, 3), peers.getPeersAsync)
+  server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware(throttle(15, 3)), peers.getPeersAsync)
   // get status
-  server.get({ path: '/status', version: '1.0.0' }, throttle(15, 3), status.getCoreStatusAsync)
+  server.get({ path: '/status', version: '1.0.0' }, ...applyMiddleware(throttle(15, 3)), status.getCoreStatusAsync)
   // do not enable ETH and JWT related endpoint if running in Private Mode
   if (privateMode === false) {
     // get eth tx data
-    server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, throttle(5, 1), eth.getEthStatsAsync)
+    server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, ...applyMiddleware(throttle(5, 1)), eth.getEthStatsAsync)
     // post eth broadcast
-    server.post({ path: '/eth/broadcast', version: '1.0.0' }, throttle(5, 1), eth.postEthBroadcastAsync)
+    server.post({ path: '/eth/broadcast', version: '1.0.0' }, ...applyMiddleware(throttle(5, 1)), eth.postEthBroadcastAsync)
     // post token refresh
     server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
     // post token credit
