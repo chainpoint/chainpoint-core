@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
@@ -30,7 +31,7 @@ func (app *AnchorApplication) MintCoreReward(sig []string, rewardCandidates []co
 		var decodedSig []byte
 		decodedSig, err := hex.DecodeString(sigStr)
 		if util.LoggerError(app.logger, err) != nil {
-			app.logger.Info("CoreMint: mint hex decoding failed")
+			app.logger.Info("CoreMint: sig hex decoding failed")
 			continue
 		}
 		sigBytes[i] = decodedSig
@@ -97,7 +98,7 @@ func (app *AnchorApplication) SignCoreRewards() error {
 		app.logger.Info("CoreMint Error: Error issuing SIGN tx")
 		return err
 	}
-	if leader, ids := app.ElectLeader(1); leader {
+	if leader, ids := app.ElectValidator(1); leader {
 		peers := app.GetPeers()
 		thresholdLenPeers := int(math.Ceil(float64(len(peers)) * 0.66))
 
@@ -137,7 +138,12 @@ func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byt
 		if util.LoggerError(app.logger, err) != nil {
 			continue
 		}
-		core, err := app.pgClient.GetCoreByID(decoded.CoreID)
+		meta := strings.Split(decoded.Meta, "|")
+		if len(meta) == 0 {
+			app.logger.Info(fmt.Sprintf("CoreMint: No CoreID attributable to tx %#v", decoded))
+			continue
+		}
+		core, err := app.pgClient.GetCoreByID(meta[0])
 		app.logger.Info(fmt.Sprintf("CoreMint for core %#v", core))
 		if util.LoggerError(app.logger, err) != nil {
 			continue

@@ -13,7 +13,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/go-redis/redis"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/chainpoint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
@@ -21,17 +21,17 @@ import (
 	cron "gopkg.in/robfig/cron.v3"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/tendermint/tendermint/abci/example/code"
-	types2 "github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/version"
+	types2 "github.com/chainpoint/tendermint/abci/types"
+	cmn "github.com/chainpoint/tendermint/libs/common"
+	dbm "github.com/chainpoint/tendermint/libs/db"
+	"github.com/chainpoint/tendermint/version"
 )
 
 // variables for protocol version and main db state key
 var (
 	stateKey                         = []byte("chainpoint")
 	ProtocolVersion version.Protocol = 0x1
+	GossipTxs                        = []string{"TOKEN", "NIST", "BTC-M"}
 )
 
 const MINT_EPOCH = 6400
@@ -231,6 +231,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 // SetOption : Method for runtime data transfer between other apps and ABCI
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
+	if req.Key == "TOKEN" {
+		go app.pgClient.TokenHashUpsert(req.Value)
+	}
 	return
 }
 
@@ -261,13 +264,17 @@ func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.Respo
 
 // DeliverTx : tx is url encoded json
 func (app *AnchorApplication) DeliverTx(tx []byte) types2.ResponseDeliverTx {
-	resp := app.updateStateFromTx(tx)
-	return resp
+	return app.updateStateFromTx(tx, false)
+}
+
+func (app *AnchorApplication) DeliverMsg(tx []byte) types2.ResponseDeliverMsg {
+	resp := app.updateStateFromTx(tx, true)
+	return types2.ResponseDeliverMsg{Code: resp.Code}
 }
 
 // CheckTx : Pre-gossip validation
-func (app *AnchorApplication) CheckTx(tx []byte) types2.ResponseCheckTx {
-	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
+func (app *AnchorApplication) CheckTx(rawTx []byte) types2.ResponseCheckTx {
+	return app.validateGossip(rawTx)
 }
 
 // BeginBlock : Handler that runs at the beginning of every block

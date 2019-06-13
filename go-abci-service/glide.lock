@@ -1,5 +1,5 @@
-hash: 2d515a802a372f14e3dba5dcd485d5e1b36f3859c9ec8a9f3e6f37691c7649d2
-updated: 2019-05-22T16:28:20.903852169-07:00
+hash: fb12d4ae086bdc7311a5e7b518ece607af4ca8922c3864a0b54f3a02bba40678
+updated: 2019-06-06T14:36:25.060773905-07:00
 imports:
 - name: github.com/allegro/bigcache
   version: e24eb225f15679bbe54f91bfa7da3b00e59b9768
@@ -19,14 +19,31 @@ imports:
   - btcec
 - name: github.com/chainpoint/go-nist-beacon
   version: 7779b0805bdd6c658bda68f750c0e3996ac57156
+- name: github.com/chainpoint/tendermint
+  version: 30e49dfe1b2e91b21c43db70ea738566ffdc942f
+  subpackages:
+  - abci/example/code
+  - abci/server
+  - abci/types
+  - config
+  - libs/cli/flags
+  - libs/common
+  - libs/db
+  - libs/log
+  - node
+  - p2p
+  - privval
+  - proxy
+  - rpc/client
+  - rpc/core/types
+  - types
+  - version
 - name: github.com/davecgh/go-spew
   version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/deckarep/golang-set
   version: 699df6a3acf6867538e50931511e9dc403da108a
-- name: github.com/etcd-io/bbolt
-  version: 4af6cfab7010371f25e79d9e104890c6377781ab
 - name: github.com/ethereum/go-ethereum
   version: 216bd2ceba2eb1708b7bdc7d69cf2984ff972cbf
   subpackages:
@@ -208,14 +225,13 @@ imports:
   - leveldb/util
 - name: github.com/tendermint/go-amino
   version: dc14acf9ef15f85828bfbc561ed9dd9d2a284885
-- name: github.com/tendermint/tendermint
-  version: 4253e67c07c69be6d7f7263ab03944ce30a9fc90
+- name: github.com/chainpoint/tendermint
+  version: 130bfeabd4967eb00a99c41c440742381fae09bb
   subpackages:
   - abci/client
   - abci/example/code
   - abci/example/counter
   - abci/example/kvstore
-  - abci/server
   - abci/types
   - blockchain
   - config
@@ -232,7 +248,6 @@ imports:
   - crypto/tmhash
   - evidence
   - libs/autofile
-  - libs/cli/flags
   - libs/clist
   - libs/common
   - libs/db
@@ -242,15 +257,14 @@ imports:
   - libs/log
   - libs/pubsub
   - libs/pubsub/query
+  - gossip
   - mempool
-  - mock
   - node
   - p2p
   - p2p/conn
   - p2p/pex
   - privval
   - proxy
-  - rpc/client
   - rpc/core
   - rpc/core/types
   - rpc/grpc

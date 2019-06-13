@@ -113,7 +113,7 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 
 //MintNodeReward : mint rewards for nodes
 func (app *AnchorApplication) MintNodeReward(sig []string, rewardCandidates []common.Address, rewardHash []byte) error {
-	leader, ids := app.ElectLeader(1)
+	leader, ids := app.ElectValidator(1)
 	if len(ids) == 1 {
 		app.state.LastMintCoreID = ids[0]
 	}
@@ -165,7 +165,7 @@ func (app *AnchorApplication) SignNodeRewards() error {
 	var rewardHash []byte
 
 	//Lock the minting process
-	if leader, leaders := app.ElectLeader(7); leader {
+	if leader, leaders := app.ElectValidator(7); leader {
 		app.logger.Info(fmt.Sprintf("Elected Leaders for Mint Signing: %v", leaders))
 		currentEthBlock, err := app.ethClient.HighestBlock()
 		if util.LoggerError(app.logger, err) != nil {
@@ -250,7 +250,7 @@ func (app *AnchorApplication) GetNodeRewardCandidates() ([]common.Address, []byt
 
 //AuditNodes : Audit nodes for reputation chain and hash submission validity. Submits reward tx with info if successful
 func (app *AnchorApplication) AuditNodes() error {
-	leader, ids := app.ElectLeader(1)
+	leader, ids := app.ElectValidator(1)
 	if len(ids) == 1 {
 		app.state.LastAuditCoreID = ids[0]
 	}

@@ -45,7 +45,8 @@ services:
       AGGREGATION_THREADS: "4"
       HASHES_PER_MERKLE_TREE: "25000"
       ANCHOR_INTERVAL: "60"
-      LOG_LEVEL: "DEBUG"
+      LOG_LEVEL: "main:debug,state:info,*:error"
+      LOG_FILTER: "info"
     volumes:
     - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
     - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z

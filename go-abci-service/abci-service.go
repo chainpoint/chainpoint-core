@@ -8,23 +8,23 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/proxy"
+	"github.com/chainpoint/tendermint/node"
+	"github.com/chainpoint/tendermint/proxy"
 
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/privval"
+	"github.com/chainpoint/tendermint/p2p"
+	"github.com/chainpoint/tendermint/privval"
 
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/chainpoint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	cfg "github.com/tendermint/tendermint/config"
-	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	cfg "github.com/chainpoint/tendermint/config"
+	tmflags "github.com/chainpoint/tendermint/libs/cli/flags"
+	cmn "github.com/chainpoint/tendermint/libs/common"
 )
 
 func main() {
@@ -72,6 +72,7 @@ func main() {
 
 	//declare connection to abci app
 	appProxy := proxy.NewLocalClientCreator(app)
+
 	/* Declare Tendermint Node with given config and abci app */
 	n, err := node.NewNode(defaultConfig,
 		pvFile,
@@ -155,7 +156,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
 	apiURI := util.GetEnv("API_URI", "http://api:8080")
 
-	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "DEBUG")))
+	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_FILTER", "debug")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
 	ethConfig := types.EthConfig{
@@ -232,7 +233,7 @@ func initTMLogger(defaultConfig *cfg.Config) log.Logger {
 	if defaultConfig.LogFormat == cfg.LogFormatJSON {
 		logger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
 	}
-	logger, err := tmflags.ParseLogLevel(defaultConfig.LogLevel, logger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_LEVEL", "info"), logger, cfg.DefaultLogLevel())
 	if err != nil {
 		return nil
 	}

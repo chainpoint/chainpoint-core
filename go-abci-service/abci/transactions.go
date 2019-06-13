@@ -1,38 +1,65 @@
 package abci
 
 import (
-	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
-	types2 "github.com/tendermint/tendermint/abci/types"
+	types2 "github.com/chainpoint/tendermint/abci/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/tendermint/tendermint/abci/example/code"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/chainpoint/tendermint/abci/example/code"
+	"github.com/chainpoint/tendermint/libs/common"
+	core_types "github.com/chainpoint/tendermint/rpc/core/types"
 )
 
 // incrementTxInt: Helper method to increment transaction integer
-func (app *AnchorApplication) incrementTxInt(tags []cmn.KVPair) []cmn.KVPair {
+func (app *AnchorApplication) incrementTxInt(tags []common.KVPair) []common.KVPair {
 	app.state.TxInt++ // no pre-increment :(
-	return append(tags, cmn.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
+	return append(tags, common.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
 }
 
-// updateStateFromTx: Updates state based on type of transaction received. Used by DeliverTx
-func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
+func (app *AnchorApplication) validateGossip(rawTx []byte) types2.ResponseCheckTx {
 	var tx types.Tx
 	var err error
-	var resp types2.ResponseDeliverTx
-	tags := []cmn.KVPair{}
 	if app.state.ChainSynced {
 		tx, err = util.DecodeVerifyTx(rawTx, app.CoreKeys)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
+	app.logger.Info(fmt.Sprintf("CheckTX: %v", tx))
+	if util.LoggerError(app.logger, err) != nil {
+		return types2.ResponseCheckTx{Code: code.CodeTypeEncodingError, GasWanted: 1}
+	}
+	// this serves as a shim for CheckTx so transactions we don't want in the mempool can
+	// still be gossipped to other Cores
+	if util.Contains(GossipTxs, tx.TxType) {
+		go app.rpc.BroadcastMsg(tx)
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+	}
+	if tx.TxType == "BTC-C" && tx.Data == string(app.state.LatestBtccTx) {
+		app.logger.Info(fmt.Sprintf("We've already seen this BTC-C tx: %s", tx.Data))
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+	}
+	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
+}
+
+// updateStateFromTx: Updates state based on type of transaction received. Used by DeliverTx
+func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types2.ResponseDeliverTx {
+	var tx types.Tx
+	var err error
+	var resp types2.ResponseDeliverTx
+	tags := []common.KVPair{}
+	if app.state.ChainSynced {
+		tx, err = util.DecodeVerifyTx(rawTx, app.CoreKeys)
+	} else {
+		tx, err = util.DecodeTx(rawTx)
+	}
+	app.logger.Info(fmt.Sprintf("Received Tx: %s, Gossip: %t", tx.TxType, gossip))
 	util.LoggerError(app.logger, err)
 	switch string(tx.TxType) {
 	case "VAL":
@@ -47,34 +74,42 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-M":
-		//Begin monitoring using the data contained in this gossiped (but ultimately nacked) transaction
-		app.state.LatestBtcmHeight = app.state.Height + 1
+		//Begin monitoring using the data contained in this gossiped transaction
 		app.state.LatestBtcmTxInt = app.state.TxInt
-		app.state.LatestBtcmTx = base64.StdEncoding.EncodeToString(rawTx)
-		app.ConsumeBtcTxMsg([]byte(tx.Data))
-		app.logger.Info(fmt.Sprintf("Anchor: %s", tx.Data))
-		tags = append(tags, cmn.KVPair{Key: []byte("CORERC"), Value: util.Int64ToByte(app.state.LastCoreMintedAtBlock)})
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		if app.state.ChainSynced {
+			app.ConsumeBtcTxMsg([]byte(tx.Data))
+			app.logger.Info(fmt.Sprintf("BTC-M Anchor Data: %s", tx.Data))
+		}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-A":
+		var btca types.BtcA
+		if util.LoggerError(app.logger, json.Unmarshal([]byte(tx.Data), &btca)) != nil {
+			break
+		}
 		app.state.LatestBtcaTx = rawTx
 		app.state.LatestBtcaHeight = app.state.Height + 1
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
 		app.state.BeginCalTxInt = app.state.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
-		app.state.LastAnchorCoreID = tx.CoreID
+		tags = append(tags, common.KVPair{Key: []byte("BTCTX"), Value: []byte(btca.BtcTxID)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "BTC-C":
-		app.state.LatestBtccTx = rawTx
+		app.state.LatestBtccTx = []byte(tx.Data)
 		app.state.LatestBtccHeight = app.state.Height + 1
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtccTxInt = app.state.TxInt
+		meta := strings.Split(tx.Meta, "|") // first part of meta is core ID that issued TX, second part is BTC TX ID
+		if len(meta) > 0 {
+			app.state.LastAnchorCoreID = meta[0]
+			tags = append(tags, common.KVPair{Key: []byte("CORERC"), Value: util.Int64ToByte(app.state.LastCoreMintedAtBlock)})
+		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "NIST":
 		app.state.LatestNistRecord = tx.Data
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "NODE-MINT":
 		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
@@ -84,7 +119,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 			app.state.PrevNodeMintedAtBlock = app.state.LastNodeMintedAtBlock
 			app.state.LastNodeMintedAtBlock = lastMintedAtBlock
 		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "CORE-MINT":
 		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
@@ -94,7 +129,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 			app.state.PrevCoreMintedAtBlock = app.state.LastCoreMintedAtBlock
 			app.state.LastCoreMintedAtBlock = lastMintedAtBlock
 		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "JWK":
 		app.SaveJWK(tx)
@@ -102,20 +137,20 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		break
 	case "CORE-SIGN":
 		app.CoreRewardSignatures = util.UniquifyStrings(append(app.CoreRewardSignatures, tx.Data))
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "NODE-SIGN":
 		app.NodeRewardSignatures = util.UniquifyStrings(append(app.NodeRewardSignatures, tx.Data))
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "NODE-RC":
 		tags = app.incrementTxInt(tags)
-		tags = append(tags, cmn.KVPair{Key: []byte("NODERC"), Value: util.Int64ToByte(app.state.LastNodeMintedAtBlock)})
+		tags = append(tags, common.KVPair{Key: []byte("NODERC"), Value: util.Int64ToByte(app.state.LastNodeMintedAtBlock)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	case "TOKEN":
 		go app.pgClient.TokenHashUpsert(tx.Data)
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnknownError, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}

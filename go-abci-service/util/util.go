@@ -23,9 +23,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	core_types "github.com/chainpoint/tendermint/rpc/core/types"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/chainpoint/tendermint/libs/log"
 
 	"github.com/google/uuid"
 
@@ -141,7 +141,7 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 	}
 	err = json.Unmarshal([]byte(decoded), &calendar)
 	/* Skip sig verification if this is a TOKEN tx */
-	if calendar.TxType == "TOKEN" || calendar.TxType == "JWK" || calendar.TxType == "NIST" {
+	if calendar.TxType == "TOKEN" || calendar.TxType == "JWK" {
 		return calendar, nil
 	}
 	/* Verify Signature */
@@ -151,6 +151,7 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 	} else {
 		return types.Tx{}, errors.New(fmt.Sprintf("Can't find corresponding key for message from Core: %s", calendar.CoreID))
 	}
+	oldSig := calendar.Sig
 	der, err := base64.StdEncoding.DecodeString(calendar.Sig)
 	if LogError(err) != nil {
 		return types.Tx{}, err
@@ -170,11 +171,12 @@ func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types
 		err := LogError(errors.New("Can't validate signature of Tx"))
 		return types.Tx{}, err
 	}
+	calendar.Sig = oldSig
 	return calendar, nil
 }
 
-// EncodeTx : Encodes a Tendermint transaction to base64
-func EncodeTx(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
+// EncodeTxWithKey : Encodes a Tendermint transaction to base64
+func EncodeTxWithKey(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
 	txNoSig, err := json.Marshal(outgoing)
 	if LogError(err) != nil {
 		return ""
@@ -185,6 +187,12 @@ func EncodeTx(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
 		return ""
 	}
 	outgoing.Sig = base64.StdEncoding.EncodeToString(sig)
+	txJSON, _ := json.Marshal(outgoing)
+	return base64.StdEncoding.EncodeToString(txJSON)
+}
+
+//EncodeTx : encode a tx to base64
+func EncodeTx(outgoing types.Tx) string {
 	txJSON, _ := json.Marshal(outgoing)
 	return base64.StdEncoding.EncodeToString(txJSON)
 }

@@ -1,6 +1,6 @@
 DEP := $(shell command -v dep 2> /dev/null)
 BUILD_TAGS?='tendermint'
-BUILD_FLAGS = -ldflags "-X github.com/tendermint/tendermint/version.GitCommit=`git rev-parse --short=8 HEAD`"
+BUILD_FLAGS = -ldflags "-X github.com/chainpoint/tendermint/version.GitCommit=`git rev-parse --short=8 HEAD`"
 
 get_tools:
 ifndef DEP
