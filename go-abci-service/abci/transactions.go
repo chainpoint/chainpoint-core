@@ -75,7 +75,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		break
 	case "BTC-M":
 		//Begin monitoring using the data contained in this gossiped transaction
-		app.state.LatestBtcmTxInt = app.state.TxInt
 		if app.state.ChainSynced {
 			app.ConsumeBtcTxMsg([]byte(tx.Data))
 			app.logger.Info(fmt.Sprintf("BTC-M Anchor Data: %s", tx.Data))

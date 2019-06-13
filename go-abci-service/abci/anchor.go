@@ -76,13 +76,13 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		app.state.LatestBtcaHeight = app.state.Height //So no one will try to re-anchor while processing the btc tx
 
 		// wait for a BTC-M tx
-		deadline := time.Now().Add(2 * time.Minute)
-		for app.state.LatestBtcmTxInt < startTxRange && !time.Now().After(deadline) {
+		deadline := time.Now().Add(3 * time.Minute)
+		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && !time.Now().After(deadline) {
 			time.Sleep(10 * time.Second)
 		}
 
 		// A BTC-M tx should have hit by now
-		if app.state.LatestBtcmTxInt < startTxRange { //If not, it'll be less than the start of the current range.
+		if app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot { //If not, it'll be less than the start of the current range.
 			app.resetAnchor(startTxRange)
 		} else {
 			err = app.calendar.QueueBtcaStateDataMessage(treeData)
@@ -125,6 +125,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return app.LogError(err)
 	}
 	app.state.LatestBtcTx = btcTxObj.BtcTxID // Update app state with txID so we can broadcast BTC-A
+	app.state.LatestBtcAggRoot = btcTxObj.AnchorBtcAggRoot
 	stateObj := types.BtcTxProofState{
 		AnchorBtcAggID: btcTxObj.AnchorBtcAggID,
 		BtcTxID:        btcTxObj.BtcTxID,
