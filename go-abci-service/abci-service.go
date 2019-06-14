@@ -113,6 +113,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	// Perform env type conversions
 	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
 	nodeIPs := strings.Split(util.GetEnv("PRIVATE_NODE_IPS", ""), ",")
+	coreIPs := strings.Split(util.GetEnv("PRIVATE_CORE_IPS", ""), ",")
 	doNodeManagement, _ := strconv.ParseBool(util.GetEnv("NODE_MANAGEMENT", "true"))
 	doAuditLoop, _ := strconv.ParseBool(util.GetEnv("AUDIT", "true"))
 	doNodeManagement = doNodeManagement && !doPrivateNetwork           //only allow node management if private networking is disabled
@@ -156,7 +157,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
 	apiURI := util.GetEnv("API_URI", "http://api:8080")
 
-	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_FILTER", "debug")))
+	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_FILTER", "info")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
 	ethConfig := types.EthConfig{
@@ -189,6 +190,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		DoNodeManagement: doNodeManagement,
 		DoPrivateNetwork: doPrivateNetwork,
 		PrivateNodeIPs:   nodeIPs,
+		PrivateCoreIPs:   coreIPs,
 		DoCal:            doCalLoop,
 		DoAnchor:         doAnchorLoop,
 		AnchorInterval:   anchorInterval,
@@ -233,7 +235,7 @@ func initTMLogger(defaultConfig *cfg.Config) log.Logger {
 	if defaultConfig.LogFormat == cfg.LogFormatJSON {
 		logger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
 	}
-	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_LEVEL", "info"), logger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_LEVEL", "main:debug,state:info,*:error"), logger, cfg.DefaultLogLevel())
 	if err != nil {
 		return nil
 	}

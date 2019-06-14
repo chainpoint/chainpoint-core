@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
@@ -149,13 +150,33 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	for _, nodeIPString := range config.PrivateNodeIPs {
 		node := types.Node{
-			EthAddr:     nodeIPString,
+			EthAddr:     "0",
 			PublicIP:    sql.NullString{String: nodeIPString, Valid: true},
-			BlockNumber: sql.NullInt64{Int64: 0, Valid: false},
+			BlockNumber: sql.NullInt64{Int64: 0, Valid: true},
 		}
 		inserted, err := pgClient.NodeUpsert(node)
 		if inserted {
 			(*config.Logger).Info(fmt.Sprintf("Inserted private node %s: %t", nodeIPString, inserted))
+		}
+		util.LoggerError(*config.Logger, err)
+	}
+
+	for _, coreIPString := range config.PrivateCoreIPs {
+		coreDetails := strings.Split(coreIPString, "@")
+		if len(coreDetails) != 2 {
+			(*config.Logger).Error(fmt.Sprintf("Core list needs to be comma-delimited list of <Tendermint_ID>@<IP>"))
+		}
+		id := coreDetails[0]
+		ip := coreDetails[1]
+		core := types.Core{
+			EthAddr:     "0",
+			CoreId:      sql.NullString{String: id, Valid: true},
+			PublicIP:    sql.NullString{String: ip, Valid: true},
+			BlockNumber: sql.NullInt64{Int64: 0, Valid: true},
+		}
+		inserted, err := pgClient.CoreUpsert(core)
+		if inserted {
+			(*config.Logger).Info(fmt.Sprintf("Inserted private core %s: %t", coreIPString, inserted))
 		}
 		util.LoggerError(*config.Logger, err)
 	}
