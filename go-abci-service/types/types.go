@@ -31,6 +31,7 @@ type AnchorConfig struct {
 	DoNodeAudit      bool
 	DoPrivateNetwork bool
 	PrivateNodeIPs   []string
+	PrivateCoreIPs   []string
 	DoCal            bool
 	DoAnchor         bool
 	AnchorInterval   int

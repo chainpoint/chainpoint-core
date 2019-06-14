@@ -113,6 +113,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	// Perform env type conversions
 	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
 	nodeIPs := strings.Split(util.GetEnv("PRIVATE_NODE_IPS", ""), ",")
+	coreIPs := strings.Split(util.GetEnv("PRIVATE_CORE_IPS", ""), ",")
 	doNodeManagement, _ := strconv.ParseBool(util.GetEnv("NODE_MANAGEMENT", "true"))
 	doAuditLoop, _ := strconv.ParseBool(util.GetEnv("AUDIT", "true"))
 	doNodeManagement = doNodeManagement && !doPrivateNetwork           //only allow node management if private networking is disabled
@@ -189,6 +190,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		DoNodeManagement: doNodeManagement,
 		DoPrivateNetwork: doPrivateNetwork,
 		PrivateNodeIPs:   nodeIPs,
+		PrivateCoreIPs:   coreIPs,
 		DoCal:            doCalLoop,
 		DoAnchor:         doAnchorLoop,
 		AnchorInterval:   anchorInterval,
