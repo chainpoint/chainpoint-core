@@ -156,7 +156,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
 	apiURI := util.GetEnv("API_URI", "http://api:8080")
 
-	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_FILTER", "debug")))
+	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_FILTER", "info")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
 	ethConfig := types.EthConfig{
@@ -233,7 +233,7 @@ func initTMLogger(defaultConfig *cfg.Config) log.Logger {
 	if defaultConfig.LogFormat == cfg.LogFormatJSON {
 		logger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
 	}
-	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_LEVEL", "info"), logger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_LEVEL", "main:debug,state:info,*:error"), logger, cfg.DefaultLogLevel())
 	if err != nil {
 		return nil
 	}
