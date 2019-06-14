@@ -134,7 +134,7 @@ func (app *AnchorApplication) GetCoreRewardCandidates() ([]common.Address, []byt
 	}
 	coreArray := make([]common.Address, 0)
 	for _, tx := range txResult.Txs {
-		decoded, err := util.DecodeTx(tx.Tx)
+		decoded, err := util.DecodeVerifyTx(tx.Tx, app.CoreKeys)
 		if app.LogError(err) != nil {
 			continue
 		}
