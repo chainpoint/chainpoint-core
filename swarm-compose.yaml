@@ -93,6 +93,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
+    deploy:
+      replicas: 2
     depends_on:
       - redis
       - rabbitmq
@@ -182,6 +184,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.proof-state
+    deploy:
+      replicas: 2
     depends_on:
       - rabbitmq
       - postgres
@@ -204,6 +208,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.proof-gen
+    deploy:
+      replicas: 2
     depends_on:
       - rabbitmq
       - postgres
