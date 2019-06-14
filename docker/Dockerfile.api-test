@@ -25,5 +25,7 @@ COPY node-api-service/test test
 RUN yarn && \
     yarn global add mocha
 
+USER chainpoint
+
 # Run the tests instead of the application
 CMD ["yarn", "test"]

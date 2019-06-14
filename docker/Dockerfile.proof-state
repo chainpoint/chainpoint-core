@@ -8,4 +8,6 @@ RUN yarn
 
 COPY node-proof-state-service/server.js /home/node/app/
 
+USER chainpoint
+
 CMD ["yarn", "start"]

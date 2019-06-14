@@ -9,6 +9,9 @@ FROM node:8.15.0-alpine
 
 LABEL MAINTAINER="Jacob Henderson <jacob@tierion.com>"
 
+RUN addgroup -g 8888 chainpoint && \
+    adduser -D -u 8888 -G chainpoint chainpoint
+
 # Upgrade packages to latest
 RUN apk update && \
     apk upgrade && \
@@ -54,4 +57,5 @@ WORKDIR /home/node/app
 #   https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/
 #   https://engineeringblog.yelp.com/2016/01/dumb-init-an-init-for-docker.html
 #
+
 ENTRYPOINT ["su-exec", "node:node", "/sbin/tini", "--"]

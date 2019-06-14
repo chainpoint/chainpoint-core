@@ -16,4 +16,6 @@ COPY node-api-service/run.sh /home/node/app
 
 EXPOSE 8080
 
+USER chainpoint
+
 CMD ["/bin/bash", "-c", "/home/node/app/run.sh"]

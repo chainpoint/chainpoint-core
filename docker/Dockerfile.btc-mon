@@ -7,4 +7,6 @@ RUN yarn
 
 COPY node-btc-mon-service/server.js /home/node/app/
 
+USER chainpoint
+
 CMD ["yarn", "start"]

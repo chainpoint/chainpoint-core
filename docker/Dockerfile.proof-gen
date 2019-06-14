@@ -7,4 +7,6 @@ RUN yarn
 
 COPY node-proof-gen-service/server.js /home/node/app/
 
+USER chainpoint
+
 CMD ["yarn", "start"]
