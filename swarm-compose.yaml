@@ -18,13 +18,14 @@ secrets:
 services:
 
   abci:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG:-latest}
+    image: abci:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.abci
     depends_on:
     - rabbitmq
     - api
+    user: ${USERID}:${GROUPID}
     environment:
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
@@ -95,6 +96,7 @@ services:
       dockerfile: docker/Dockerfile.api
     deploy:
       replicas: 2
+    user: ${USERID}:${GROUPID}
     depends_on:
       - redis
       - rabbitmq
@@ -138,6 +140,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.btc-tx
     container_name: btc-tx-core
+    user: ${USERID}:${GROUPID}
     depends_on:
       - rabbitmq
     networks:
@@ -163,6 +166,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.btc-mon
     container_name: btc-mon-core
+    user: ${USERID}:${GROUPID}
     depends_on:
       - rabbitmq
       - redis
@@ -186,6 +190,7 @@ services:
       dockerfile: docker/Dockerfile.proof-state
     deploy:
       replicas: 2
+    user: ${USERID}:${GROUPID}
     depends_on:
       - rabbitmq
       - postgres
@@ -210,6 +215,7 @@ services:
       dockerfile: docker/Dockerfile.proof-gen
     deploy:
       replicas: 2
+    user: ${USERID}:${GROUPID}
     depends_on:
       - rabbitmq
       - postgres
@@ -235,6 +241,7 @@ services:
     image: rabbitmq:3.6.11-management-alpine
     container_name: rabbitmq-core
     hostname: rabbitmq
+    user: ${USERID}:${GROUPID}
     ports:
     - 5673:5672
     - 15673:15672
@@ -250,6 +257,7 @@ services:
     restart: always
     image: redis:4.0.9-alpine
     container_name: redis-core
+    user: ${USERID}:${GROUPID}
     ports:
       - "6382:6379"
     volumes:
@@ -274,8 +282,9 @@ services:
   #
   postgres:
     restart: always
-    image: postgres:11.2-alpine
+    image: postgres:11.2
     container_name: postgres-core
+    user: ${USERID}:${GROUPID}
     volumes:
       - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
     environment:

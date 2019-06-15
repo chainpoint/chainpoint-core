@@ -1,9 +1,5 @@
 FROM golang:latest
 ENV TMHOME /tendermint
-
-RUN groupadd -g 8888 chainpoint
-RUN adduser -u 8888 --gid 8888 --shell /bin/bash chainpoint
-
 RUN apt-get update -y && apt-get install -y wget build-essential libsnappy-dev
 RUN wget https://github.com/google/leveldb/archive/v1.20.tar.gz && \
   tar -zxvf v1.20.tar.gz && \

@@ -9,6 +9,4 @@ COPY node-btc-tx-service/server.js /home/node/app/
 COPY node-btc-tx-service/run.sh /home/node/app/
 COPY node-btc-tx-service/env_secrets_expand.sh /home/node/app/
 
-USER chainpoint
-
 CMD ["./run.sh"]

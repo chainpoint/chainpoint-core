@@ -9,9 +9,6 @@ FROM node:8.15.0-alpine
 
 LABEL MAINTAINER="Jacob Henderson <jacob@tierion.com>"
 
-RUN addgroup -g 8888 chainpoint && \
-    adduser -D -u 8888 -G chainpoint chainpoint
-
 # Upgrade packages to latest
 RUN apk update && \
     apk upgrade && \

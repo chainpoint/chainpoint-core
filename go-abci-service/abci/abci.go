@@ -165,6 +165,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		coreDetails := strings.Split(coreIPString, "@")
 		if len(coreDetails) != 2 {
 			(*config.Logger).Error(fmt.Sprintf("Core list needs to be comma-delimited list of <Tendermint_ID>@<IP>"))
+			continue
 		}
 		id := coreDetails[0]
 		ip := coreDetails[1]
