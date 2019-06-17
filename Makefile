@@ -9,6 +9,9 @@ ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 # Get home directory of current users
 CORE_DATADIR := $(shell eval printf "~$$USER")/.chainpoint/core
 
+UID := $(shell id -u $$USER)
+GID := $(shell id -g $$USER)
+
 # Specify the binary dependencies
 REQUIRED_BINS := docker docker-compose
 $(foreach bin,$(REQUIRED_BINS),\
@@ -89,22 +92,22 @@ test: test-api test-aggregator test-merkletools test-abci test-calendar test-uti
 ## up                        : Build and start all
 .PHONY : up
 up: pull
-	docker-compose up -d
+	export UID=${UID} && export GID=${GID} && docker-compose up -d
 
 ## up-no-build               : Startup without performing builds, rely on pull of images.
 .PHONY : up-no-build
 up-no-build:
-	docker-compose up -d --no-build
+	export UID=${UID} && export GID=${GID} && docker-compose up -d --no-build
 
 ## dev                       : Build and start all
 .PHONY : dev
-dev: build
-	docker-compose up -d
+dev: build init-volumes
+	export UID=${UID} && export GID=${GID} && docker-compose up -d
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build
-dev-no-build:
-	docker-compose up -d --no-build
+dev-no-build: init-volumes
+	export UID=${UID} && export GID=${GID} && docker-compose up -d --no-build
 
 ## down                      : Shutdown Application
 .PHONY : down
@@ -129,40 +132,35 @@ logs:
 ## clean                     : Shutdown and destroy all local application data
 .PHONY : clean
 clean: down
-	@sudo rm -rf ${CORE_DATADIR}/data/postgresql/*
-	@sudo rm -rf ${CORE_DATADIR}/data/redis/*
-	@sudo chmod 777 ${CORE_DATADIR}/data/postgresql
-	@sudo chmod 777 ${CORE_DATADIR}/data/redis
-	@sudo rm -rf ${CORE_DATADIR}/config/node_1/data/*
-	@sudo rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
-	@sudo chmod 777 ${CORE_DATADIR}/config/node_1
-	@sudo chmod 777 ${CORE_DATADIR}/config/node_1/*
-	@sudo cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
-	@sudo docker system prune --volumes -f
+	@rm -rf ${CORE_DATADIR}/data/postgresql
+	@rm -rf ${CORE_DATADIR}/data/redis
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/*
+	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
+	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
+	@docker system prune --volumes -f
+
+## init-volumes              : Create data folder with proper permissions
+.PHONY : init-volumes
+init-volumes:
+	@mkdir -p ${CORE_DATADIR}/data/postgresql
+	@mkdir -p ${CORE_DATADIR}/data/redis
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init
-init:
-	@sudo mkdir -p ${CORE_DATADIR}/data
-	@sudo mkdir -p ${CORE_DATADIR}/config/node_1/data
-	@sudo mkdir -p ${CORE_DATADIR}/data/postgresql
-	@sudo mkdir -p ${CORE_DATADIR}/data/redis
-	@sudo mkdir -p ${CORE_DATADIR}/data/keys
-	@sudo chmod -R 777 ${CORE_DATADIR}/data
-	@sudo chmod -R 777 ${CORE_DATADIR}/config/node_1
-	@docker run -it --rm -v ${CORE_DATADIR}/config/node_1:/tendermint/config  -v ${CORE_DATADIR}/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
-	@sudo chmod 777 ${CORE_DATADIR}/config/node_1/*
-	@sudo chmod 777 ${CORE_DATADIR}/config/node_1/priv_validator_key.json || echo "not yet run for the first time"
+init: init-volumes
+	@mkdir -p ${CORE_DATADIR}/config/node_1/data
+	@mkdir -p ${CORE_DATADIR}/data/keys
+	@docker run -it --rm --user ${UID}:${GID} -v ${CORE_DATADIR}/config/node_1:/tendermint/config  -v ${CORE_DATADIR}/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "not yet run for the first time"
 	@cli/scripts/install_deps.sh
 	@node cli/init
-	@sudo rsync .env ${CORE_DATADIR}/.env
+	@rsync .env ${CORE_DATADIR}/.env
 
-## init-chain                      : Pull down chainpoint network info
+## init-chain                : Pull down chainpoint network info
 .PHONY : init-chain
 init-chain:
-	@sudo bash -c "curl https://storage.googleapis.com/chp-private-testnet/config.toml > ${CORE_DATADIR}/config/node_1/config.toml"
-	@sudo bash -c "curl https://storage.googleapis.com/chp-private-testnet/genesis.json > ${CORE_DATADIR}/config/node_1/genesis.json"
+	@bash -c "curl https://storage.googleapis.com/chp-private-testnet/config.toml > ${CORE_DATADIR}/config/node_1/config.toml"
+	@bash -c "curl https://storage.googleapis.com/chp-private-testnet/genesis.json > ${CORE_DATADIR}/config/node_1/genesis.json"
 
 ## prune                     : Shutdown and destroy all docker assets
 .PHONY : prune
@@ -207,9 +205,9 @@ redis:
 	@docker exec -it redis-core redis-cli
 
 ## deploy					: deploys a swarm stack
-deploy:
+deploy: init-volumes
 	@rsync .env ${CORE_DATADIR}/.env
-	@set -a && source ${CORE_DATADIR}/.env && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
+	@set -a && source ${CORE_DATADIR}/.env && export USERID=${UID} && export GROUPID=${GID} && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
 
 ## stop						: stops a swarm stack
 stop:
@@ -217,14 +215,14 @@ stop:
 
 ## clean-tendermint			: removes tendermint database, leaving postgres intact
 clean-tendermint: stop
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/tx_index.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/state.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/blockstore.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/evidence.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/cs.wal
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/anchor.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/priv_validator_state.json
-	@sudo cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/tx_index.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/state.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/blockstore.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/evidence.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/cs.wal
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/anchor.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/priv_validator_state.json
+	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -af
 
 ## remove 					: stops, removes, and cleans a swarm
