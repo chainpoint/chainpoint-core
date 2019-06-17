@@ -109,9 +109,17 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
   // submit hash(es)
   server.post({ path: '/hashes', version: '1.0.0' }, ...applyMiddleware(throttle(5, 0.02)), hashes.postHashV1Async) // throttl
   // get the block objects for the calendar in the specified block range
-  server.get({ path: '/calendar/:txid', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), calendar.getCalTxAsync) 
+  server.get(
+    { path: '/calendar/:txid', version: '1.0.0' },
+    ...applyMiddleware(throttle(50, 10)),
+    calendar.getCalTxAsync
+  )
   // get the data value of a txId
-  server.get({ path: '/calendar/:txid/data', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), calendar.getCalTxDataAsync)
+  server.get(
+    { path: '/calendar/:txid/data', version: '1.0.0' },
+    ...applyMiddleware(throttle(50, 10)),
+    calendar.getCalTxDataAsync
+  )
   // get proofs from storage
   server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), proofs.getProofsByIDsAsync)
   // get nodes from core
@@ -125,7 +133,11 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
     // get eth tx data
     server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, ...applyMiddleware(throttle(5, 1)), eth.getEthStatsAsync)
     // post eth broadcast
-    server.post({ path: '/eth/broadcast', version: '1.0.0' }, ...applyMiddleware(throttle(5, 1)), eth.postEthBroadcastAsync)
+    server.post(
+      { path: '/eth/broadcast', version: '1.0.0' },
+      ...applyMiddleware(throttle(5, 1)),
+      eth.postEthBroadcastAsync
+    )
     // post token refresh
     server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
     // post token credit
