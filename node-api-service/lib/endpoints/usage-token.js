@@ -554,5 +554,8 @@ module.exports = {
   },
   setGetIP: func => {
     utils.getClientIP = func
+  },
+  setSC: sc => {
+    tokenUtils.setSC(sc)
   }
 }

@@ -238,11 +238,136 @@ describe('Usage Token Controller - Public Mode', () => {
     })
   })
 
-  describe('POST /usagetoken/refresh with unknown JWK', () => {
+  describe('POST /usagetoken/refresh with non-cached non-peer iss', () => {
     before(() => {
       usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
       usageToken.setRedis({
         get: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
+      })
+      usageToken.setRP(async () => {
+        return { body: null }
+      })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, `iss` not a known network peer')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh with cached non-peer iss', () => {
+    before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
+      usageToken.setRedis({
+        get: async () => 'false'
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
+      })
+      usageToken.setRP(async () => {
+        return { body: null }
+      })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, `iss` not a known network peer')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh with non-cached peer iss', () => {
+    let cache = ''
+    before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
+      usageToken.setRedis({
+        get: async () => null,
+        set: async (key, val) => {
+          cache = val
+        }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => true
+      })
+      usageToken.setRP(async () => {
+        return { body: null }
+      })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/refresh')
+        .send({
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA',
+          aud: '64.10.120.11,64.10.120.12,66.1.1.1'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, unable to find public key for given kid')
+          expect(cache).to.equal(true)
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/refresh with unknown JWK and cached peer iss', () => {
+    before(() => {
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
+      usageToken.setRedis({
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: null }
@@ -286,10 +411,16 @@ describe('Usage Token Controller - Public Mode', () => {
     before(() => {
       usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://66.1.1.1' })
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -334,8 +465,14 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -377,8 +514,14 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -421,8 +564,14 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -467,10 +616,16 @@ describe('Usage Token Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -517,8 +672,14 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -564,8 +725,14 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -613,8 +780,14 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -662,8 +835,14 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -715,10 +894,16 @@ describe('Usage Token Controller - Public Mode', () => {
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           coreIdCache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -790,10 +975,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           coreIdCache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -865,10 +1056,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           coreIdCache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -939,8 +1136,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -1925,10 +2128,135 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     })
   })
 
-  describe('POST /usagetoken/audience with unknown JWK', () => {
+  describe('POST /usagetoken/audience with non-cached non-peer iss', () => {
     before(() => {
       usageToken.setRedis({
         get: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
+      })
+      usageToken.setRP(async () => {
+        return { body: null }
+      })
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.100' })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/audience')
+        .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.100',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, `iss` not a known network peer')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/audience with cached non-peer iss', () => {
+    before(() => {
+      usageToken.setRedis({
+        get: async () => 'false'
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
+      })
+      usageToken.setRP(async () => {
+        return { body: null }
+      })
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.100' })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/audience')
+        .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.100',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, `iss` not a known network peer')
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/audience with non-cached peer iss', () => {
+    let cache = ''
+    before(() => {
+      usageToken.setRedis({
+        get: async () => null,
+        set: async (key, val) => {
+          cache = val
+        }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => true
+      })
+      usageToken.setRP(async () => {
+        return { body: null }
+      })
+      usageToken.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.100' })
+    })
+    it('should return proper error', done => {
+      request(insecureServer)
+        .post('/usagetoken/audience')
+        .send({
+          aud: '64.10.120.11,64.10.120.12,65.1.1.100',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, unable to find public key for given kid')
+          expect(cache).to.equal(true)
+          done()
+        })
+    })
+  })
+
+  describe('POST /usagetoken/audience with unknown JWK and cached peer iss', () => {
+    before(() => {
+      usageToken.setRedis({
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: null }
@@ -1972,10 +2300,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2021,8 +2355,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2065,8 +2405,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2109,8 +2455,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2155,10 +2507,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2211,10 +2569,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2267,10 +2631,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2323,10 +2693,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2379,10 +2755,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2433,8 +2815,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2480,8 +2868,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2529,8 +2923,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2578,8 +2978,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2631,10 +3037,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           coreIdCache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2706,10 +3118,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           coreIdCache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2781,10 +3199,16 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           coreIdCache = [k, v]
         }
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -2855,8 +3279,14 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
     }
     before(() => {
       usageToken.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      usageToken.setSC({
+        hasMemberIPAsync: async () => false
       })
       usageToken.setRP(async () => {
         return { body: { jwk: jwk } }

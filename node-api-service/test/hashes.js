@@ -247,10 +247,132 @@ describe('Hashes Controller - Public Mode', () => {
     })
   })
 
-  describe('POST /hashes with unknown JWK', () => {
+  describe('POST /hashes with non-cached non-peer iss', () => {
     before(() => {
       hashes.setRedis({
         get: async () => null
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
+      })
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, `iss` not a known network peer')
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes with cached non-peer iss', () => {
+    before(() => {
+      hashes.setRedis({
+        get: async () => 'false'
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
+      })
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, `iss` not a known network peer')
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes with non-cached peer iss', () => {
+    let cache = ''
+    before(() => {
+      hashes.setRedis({
+        get: async () => null,
+        set: async (key, val) => {
+          cache = val
+        }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => true
+      })
+    })
+    it('should return proper error', done => {
+      app.setAMQPChannel({
+        sendToQueue: function() {}
+      })
+      request(insecureServer)
+        .post('/hashes')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          token:
+            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
+        })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid request, unable to find public key for given kid')
+          expect(cache).to.equal(true)
+          done()
+        })
+    })
+  })
+
+  describe('POST /hashes with unknown JWK and cached peer iss', () => {
+    before(() => {
+      hashes.setRedis({
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: null }
@@ -296,10 +418,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -347,8 +475,14 @@ describe('Hashes Controller - Public Mode', () => {
     }
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -394,8 +528,14 @@ describe('Hashes Controller - Public Mode', () => {
     }
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -441,8 +581,14 @@ describe('Hashes Controller - Public Mode', () => {
     }
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async () => null
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -490,10 +636,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -545,10 +697,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -600,10 +758,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -655,10 +819,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -710,10 +880,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -765,10 +941,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -820,10 +1002,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -872,10 +1060,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }
@@ -935,10 +1129,16 @@ describe('Hashes Controller - Public Mode', () => {
     let jwkStr = JSON.stringify(jwk)
     before(() => {
       hashes.setRedis({
-        get: async () => null,
+        get: async key => {
+          if (key.startsWith('CachedISSValues')) return 'true'
+          return null
+        },
         set: async (k, v) => {
           cache = [k, v]
         }
+      })
+      hashes.setSC({
+        hasMemberIPAsync: async () => false
       })
       hashes.setRP(async () => {
         return { body: { jwk: jwk } }

@@ -258,6 +258,9 @@ module.exports = {
   setRedis: r => {
     tokenUtils.setRedis(r)
   },
+  setSC: sc => {
+    tokenUtils.setSC(sc)
+  },
   setRP: rp => {
     tokenUtils.setRP(rp)
   },
