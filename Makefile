@@ -132,12 +132,12 @@ logs:
 ## clean                     : Shutdown and destroy all local application data
 .PHONY : clean
 clean: down
-	@sudo rm -rf ${CORE_DATADIR}/data/postgresql
-	@sudo rm -rf ${CORE_DATADIR}/data/redis
-	@sudo rm -rf ${CORE_DATADIR}/config/node_1/data/*
-	@sudo rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
-	@sudo cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
-	@sudo docker system prune --volumes -f
+	@rm -rf ${CORE_DATADIR}/data/postgresql
+	@rm -rf ${CORE_DATADIR}/data/redis
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/*
+	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
+	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
+	@docker system prune --volumes -f
 
 ## init-volumes              : Create data folder with proper permissions
 .PHONY : init-volumes
@@ -215,14 +215,14 @@ stop:
 
 ## clean-tendermint			: removes tendermint database, leaving postgres intact
 clean-tendermint: stop
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/tx_index.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/state.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/blockstore.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/evidence.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/cs.wal
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/anchor.db
-	sudo rm -rf ${CORE_DATADIR}/config/node_1/data/priv_validator_state.json
-	@sudo cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/tx_index.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/state.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/blockstore.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/evidence.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/cs.wal
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/anchor.db
+	@rm -rf ${CORE_DATADIR}/config/node_1/data/priv_validator_state.json
+	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -af
 
 ## remove 					: stops, removes, and cleans a swarm
