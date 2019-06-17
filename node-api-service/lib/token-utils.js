@@ -20,6 +20,7 @@ const jose = require('node-jose')
 let rp = require('request-promise-native')
 const retry = require('async-retry')
 let status = require('./endpoints/status.js')
+let stakedCore = require('./models/StakedCore.js')
 const env = require('./parse-env.js')('api')
 const logger = require('./logger.js')
 
@@ -28,6 +29,7 @@ const logger = require('./logger.js')
 
 const CORE_JWK_KEY_PREFIX = 'CorePublicKey'
 const CORE_ID_KEY = 'CoreID'
+const CACHED_ISS_VALUES_KEY = 'CachedISSValues'
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
@@ -42,6 +44,11 @@ async function verifySigAsync(tokenString, decodedToken) {
     // get the token's issuer, the Core URI
     let iss = decodedToken.payload.iss
     if (!iss) return new errors.InvalidArgumentError('invalid request, token missing `iss` value')
+
+    // ensure that the issuer ('iss') is a valid, known peer on the network
+    let isKnownPeer = await isKnownPeerIPAsync(iss)
+    if (!isKnownPeer) return new errors.InvalidArgumentError('invalid request, `iss` not a known network peer')
+
     // get the JWK for the given token
     let jwkObj = await getCachedJWKAsync(kid, iss)
     if (!jwkObj) return new errors.InvalidArgumentError('invalid request, unable to find public key for given kid')
@@ -52,6 +59,37 @@ async function verifySigAsync(tokenString, decodedToken) {
   }
 
   return null
+}
+
+async function isKnownPeerIPAsync(iss) {
+  // first, attempt to read value from Redis
+  let redisKey = `${CACHED_ISS_VALUES_KEY}:${iss}`
+  if (redis) {
+    try {
+      let cachedISSValue = await redis.get(redisKey)
+      if (cachedISSValue) return cachedISSValue === 'true'
+    } catch (error) {
+      logger.warn(`Redis read error : isKnownPeerIPAsync : ${error.message}`)
+    }
+  }
+  // a value was not found in Redis, so check the database
+  let isKnown = false
+  try {
+    isKnown = await stakedCore.hasMemberIPAsync(iss)
+  } catch (error) {
+    logger.error(`Database read error : isKnownPeerIPAsync : ${error.message}`)
+  }
+  // add to the cache
+  if (redis) {
+    try {
+      // cached known IPs for 24 hours, unknown for 1 minute
+      await redis.set(redisKey, isKnown, 'EX', isKnown ? 60 * 60 * 24 : 60)
+    } catch (error) {
+      logger.warn(`Redis write error : isKnownPeerIPAsync : ${error.message}`)
+    }
+  }
+
+  return isKnown
 }
 
 async function getCachedJWKAsync(kid, iss) {
@@ -173,5 +211,8 @@ module.exports = {
   },
   setStatus: s => {
     status = s
+  },
+  setSC: sc => {
+    stakedCore = sc
   }
 }
