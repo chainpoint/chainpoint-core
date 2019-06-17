@@ -53,19 +53,25 @@ async function createSwarmAndSecrets(valuePairs) {
   try {
     let privateKey
     if (!('ETH_PRIVATE_KEY' in valuePairs)) {
-        privateKey = (await createWallet()).privateKey
-    }else {
-        privateKey = valuePairs.ETH_PRIVATE_KEY
+      privateKey = (await createWallet()).privateKey
+    } else {
+      privateKey = valuePairs.ETH_PRIVATE_KEY
     }
     /* Derive address from private key */
-    let privateKeyBytes = new Buffer(privateKey.slice(2), 'hex');
-    let pubKey = secp256k1.publicKeyCreate(privateKeyBytes, false).slice(1);
-    let address = '0x' + keccak('keccak256').update(pubKey).digest().slice(-20).toString('hex');
+    let privateKeyBytes = new Buffer(privateKey.slice(2), 'hex')
+    let pubKey = secp256k1.publicKeyCreate(privateKeyBytes, false).slice(1)
+    let address =
+      '0x' +
+      keccak('keccak256')
+        .update(pubKey)
+        .digest()
+        .slice(-20)
+        .toString('hex')
     await exec.quiet([
-        `printf ${address} | docker secret create ETH_ADDRESS -`,
-        `printf ${privateKey} | docker secret create ETH_PRIVATE_KEY -`
+      `printf ${address} | docker secret create ETH_ADDRESS -`,
+      `printf ${privateKey} | docker secret create ETH_PRIVATE_KEY -`
     ])
-    await displayInfo.displayWalletInfo({'address': address, 'privateKey': privateKey})
+    await displayInfo.displayWalletInfo({ address: address, privateKey: privateKey })
   } catch (err) {
     console.log(chalk.red(`Error creating Docker secrets for ETH_ADDRESS & ETH_PRIVATE_KEY: ${err}`))
   }

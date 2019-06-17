@@ -22,33 +22,33 @@ const cliHelloLogger = require('./utils/cliHelloLogger')
 const stakingQuestions = require('./utils/stakingQuestions')
 
 const argsDefinitions = [
-    { name: 'PRIVATE_NETWORK', defaultValue: false },
-    { name: 'CORE_PUBLIC_IP_ADDRESS' },
-    { name: 'INSIGHT_API_URI' },
-    { name: 'BITCOIN_WIF' },
-    { name: 'INFURA_API_KEY' },
-    { name: 'ETHERSCAN_API_KEY' },
-    { name: 'ETH_PRIVATE_KEY' }
+  { name: 'PRIVATE_NETWORK', defaultValue: false },
+  { name: 'CORE_PUBLIC_IP_ADDRESS' },
+  { name: 'INSIGHT_API_URI' },
+  { name: 'BITCOIN_WIF' },
+  { name: 'INFURA_API_KEY' },
+  { name: 'ETHERSCAN_API_KEY' },
+  { name: 'ETH_PRIVATE_KEY' }
 ]
 const args = commandLineArgs(argsDefinitions)
 console.log(args)
 async function main() {
   cliHelloLogger()
   if (Object.keys(args).length > 1) {
-      await createSwarmAndSecrets(args)
-  }else {
-      await pipeP(
-          () =>
-              inquirer.prompt([
-                  stakingQuestions['PRIVATE_NETWORK'],
-                  stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
-                  stakingQuestions['INSIGHT_API_URI'],
-                  stakingQuestions['BITCOIN_WIF'],
-                  stakingQuestions['INFURA_API_KEY'],
-                  stakingQuestions['ETHERSCAN_API_KEY']
-              ]),
-          createSwarmAndSecrets
-      )()
+    await createSwarmAndSecrets(args)
+  } else {
+    await pipeP(
+      () =>
+        inquirer.prompt([
+          stakingQuestions['PRIVATE_NETWORK'],
+          stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
+          stakingQuestions['INSIGHT_API_URI'],
+          stakingQuestions['BITCOIN_WIF'],
+          stakingQuestions['INFURA_API_KEY'],
+          stakingQuestions['ETHERSCAN_API_KEY']
+        ]),
+      createSwarmAndSecrets
+    )()
   }
 }
 
