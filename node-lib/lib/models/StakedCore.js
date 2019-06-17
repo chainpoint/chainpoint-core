@@ -41,7 +41,7 @@ function defineFor(sqlz) {
         primaryKey: true
       },
       coreId: {
-        comment: 'A base64 Tendermint ID of a given core.',
+        comment: 'A base64 Tendermint ID of a given Core.',
         type: Sequelize.STRING,
         validate: {
           is: ['^0x[0-9a-f]{40}$']
@@ -50,13 +50,13 @@ function defineFor(sqlz) {
         allowNull: true
       },
       publicIp: {
-        comment: 'The public IP address of a Core, when blank represents a non-public Node.',
+        comment: 'The public IP address of a Core',
         type: Sequelize.STRING,
         validate: {
           isIP: true
         },
         field: 'public_ip',
-        allowNull: true
+        allowNull: false
       },
       blockNumber: {
         comment: 'The eth block number where this info was valid. Used for versioning core stake updates',
@@ -82,6 +82,10 @@ function defineFor(sqlz) {
         {
           unique: false,
           fields: ['created_at']
+        },
+        {
+          unique: true,
+          fields: ['public_ip']
         }
       ]
     }
@@ -90,14 +94,20 @@ function defineFor(sqlz) {
   return StakedCore
 }
 
-async function getRandomCores() {
+async function getRandomCoresAsync() {
   let results = await StakedCore.findAll({ order: Sequelize.literal('random()'), limit: 25, raw: true })
   return results
 }
 
+async function hasMemberIPAsync(ip) {
+  let count = await StakedCore.count({ where: { public_ip: ip } })
+  return count > 0
+}
+
 module.exports = {
   defineFor: defineFor,
-  getRandomCores: getRandomCores,
+  getRandomCoresAsync: getRandomCoresAsync,
+  hasMemberIPAsync: hasMemberIPAsync,
   setDatabase: (sqlz, stakedCore) => {
     // sequelize = sqlz
     StakedCore = stakedCore
