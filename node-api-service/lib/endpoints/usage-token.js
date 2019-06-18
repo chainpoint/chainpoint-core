@@ -167,11 +167,11 @@ async function postTokenRefreshAsync(req, res, next) {
   // and Nodes will eventually recover
   try {
     await activeToken.writeActiveTokenAsync({
-      node_ip: submittingNodeIP,
-      token_hash: refreshTokenHash
+      nodeIp: submittingNodeIP,
+      tokenHash: refreshTokenHash
     })
   } catch (error) {
-    logger.warn(`Could not update active token data in local database`)
+    logger.warn(`Could not update active token data in local database on refresh`)
   }
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
@@ -361,11 +361,11 @@ async function postTokenCreditAsync(req, res, next) {
   // and Nodes will eventually recover
   try {
     await activeToken.writeActiveTokenAsync({
-      node_ip: submittingNodeIP,
-      token_hash: newTokenHash
+      nodeIp: submittingNodeIP,
+      tokenHash: newTokenHash
     })
   } catch (error) {
-    logger.warn(`Could not update active token data in local database`)
+    logger.warn(`Could not update active token data in local database on credit`)
   }
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
@@ -518,11 +518,11 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
   // and Nodes will eventually recover
   try {
     await activeToken.writeActiveTokenAsync({
-      node_ip: submittingNodeIP,
-      token_hash: updatedTokenHash
+      nodeIp: submittingNodeIP,
+      tokenHash: updatedTokenHash
     })
   } catch (error) {
-    logger.warn(`Could not update active token data in local database`)
+    logger.warn(`Could not update active token data in local database on audience update`)
   }
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
