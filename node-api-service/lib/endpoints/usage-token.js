@@ -93,7 +93,12 @@ async function postTokenRefreshAsync(req, res, next) {
 
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
-  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  if (submittingNodeIP === null) {
+    logger.error('Unable to determine Node IP of request')
+    logger.error('connection = ', req.connection || 'undefined')
+    logger.error('socket = ', req.socket || 'undefined')
+    return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // get the token's subject
@@ -162,11 +167,11 @@ async function postTokenRefreshAsync(req, res, next) {
   // and Nodes will eventually recover
   try {
     await activeToken.writeActiveTokenAsync({
-      node_ip: submittingNodeIP,
-      token_hash: refreshTokenHash
+      nodeIp: submittingNodeIP,
+      tokenHash: refreshTokenHash
     })
   } catch (error) {
-    logger.warn(`Could not update active token data in local database`)
+    logger.warn(`Could not update active token data in local database on refresh`)
   }
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
@@ -304,7 +309,12 @@ async function postTokenCreditAsync(req, res, next) {
 
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
-  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  if (submittingNodeIP === null) {
+    logger.error('Unable to determine Node IP of request')
+    logger.error('connection = ', req.connection || 'undefined')
+    logger.error('socket = ', req.socket || 'undefined')
+    return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // broadcast the ETH transaction and await inclusion in a block
@@ -351,11 +361,11 @@ async function postTokenCreditAsync(req, res, next) {
   // and Nodes will eventually recover
   try {
     await activeToken.writeActiveTokenAsync({
-      node_ip: submittingNodeIP,
-      token_hash: newTokenHash
+      nodeIp: submittingNodeIP,
+      tokenHash: newTokenHash
     })
   } catch (error) {
-    logger.warn(`Could not update active token data in local database`)
+    logger.warn(`Could not update active token data in local database on credit`)
   }
 
   // broadcast Node IP and new token hash for Cores to update their local active token table
@@ -426,7 +436,12 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
 
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
-  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  if (submittingNodeIP === null) {
+    logger.error('Unable to determine Node IP of request')
+    logger.error('connection = ', req.connection || 'undefined')
+    logger.error('socket = ', req.socket || 'undefined')
+    return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // get the token's subject
@@ -503,11 +518,11 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
   // and Nodes will eventually recover
   try {
     await activeToken.writeActiveTokenAsync({
-      node_ip: submittingNodeIP,
-      token_hash: updatedTokenHash
+      nodeIp: submittingNodeIP,
+      tokenHash: updatedTokenHash
     })
   } catch (error) {
-    logger.warn(`Could not update active token data in local database`)
+    logger.warn(`Could not update active token data in local database on audience update`)
   }
 
   // broadcast Node IP and new token hash for Cores to update their local active token table

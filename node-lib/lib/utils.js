@@ -121,10 +121,10 @@ function getClientIP(req) {
     rsa = null
   }
 
-  let result = rcr || rsa || null
+  let result = rcr || rsa
   if (result) result = result.replace('::ffff:', '')
 
-  return result
+  return result || null
 }
 
 module.exports = {

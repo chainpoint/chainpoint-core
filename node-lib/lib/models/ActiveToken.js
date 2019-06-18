@@ -78,11 +78,7 @@ async function getActiveTokenByNodeIPAsync(ip) {
   return results
 }
 
-async function writeActiveTokenAsync(tokenObject) {
-  let activeTokenObject = {
-    node_ip: tokenObject.node_ip,
-    token_hash: tokenObject.token_hash
-  }
+async function writeActiveTokenAsync(activeTokenObject) {
   await ActiveToken.upsert(activeTokenObject)
   return true
 }
