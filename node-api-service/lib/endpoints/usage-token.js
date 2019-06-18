@@ -93,7 +93,12 @@ async function postTokenRefreshAsync(req, res, next) {
 
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
-  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  if (submittingNodeIP === null) {
+    logger.error('Unable to determine Node IP of request')
+    logger.error('connection = ', JSON.stringify(req.connection) || 'undefined')
+    logger.error('socket = ', JSON.stringify(req.socket) || 'undefined')
+    return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // get the token's subject
@@ -304,7 +309,12 @@ async function postTokenCreditAsync(req, res, next) {
 
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
-  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  if (submittingNodeIP === null) {
+    logger.error('Unable to determine Node IP of request')
+    logger.error('connection = ', JSON.stringify(req.connection) || 'undefined')
+    logger.error('socket = ', JSON.stringify(req.socket) || 'undefined')
+    return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // broadcast the ETH transaction and await inclusion in a block
@@ -426,7 +436,12 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
 
   // ensure that we can retrieve the Node IP from the request
   let submittingNodeIP = utils.getClientIP(req)
-  if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  if (submittingNodeIP === null) {
+    logger.error('Unable to determine Node IP of request')
+    logger.error('connection = ', JSON.stringify(req.connection) || 'undefined')
+    logger.error('socket = ', JSON.stringify(req.socket) || 'undefined')
+    return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
+  }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
 
   // get the token's subject
