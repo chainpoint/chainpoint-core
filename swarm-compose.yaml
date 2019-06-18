@@ -93,8 +93,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
-    deploy:
-      replicas: 2
     depends_on:
       - redis
       - rabbitmq
