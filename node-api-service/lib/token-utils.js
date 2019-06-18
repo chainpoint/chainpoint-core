@@ -62,6 +62,8 @@ async function verifySigAsync(tokenString, decodedToken) {
 }
 
 async function isKnownPeerIPAsync(iss) {
+  // Parsed iss
+  let parsedISS = iss.replace(/^(http|https):\/\//i, '')
   // first, attempt to read value from Redis
   let redisKey = `${CACHED_ISS_VALUES_KEY}:${iss}`
   if (redis) {
@@ -75,7 +77,7 @@ async function isKnownPeerIPAsync(iss) {
   // a value was not found in Redis, so check the database
   let isKnown = false
   try {
-    isKnown = await stakedCore.hasMemberIPAsync(iss)
+    isKnown = await stakedCore.hasMemberIPAsync(parsedISS)
     logger.info(`Iss: ${iss}, isKnown: ${isKnown}`)
   } catch (error) {
     logger.error(`Database read error : isKnownPeerIPAsync : ${error.message}`)
