@@ -171,6 +171,7 @@ func (pg *Postgres) TokenHashUpsert(data string) (bool, error) {
 	if affect > 0 {
 		return true, nil
 	}
+	pg.Logger.Error(fmt.Sprintf("No TOKEN inserted for %s", data))
 	return false, nil
 }
 
