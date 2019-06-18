@@ -38,7 +38,6 @@ let redis = null
 async function verifySigAsync(tokenString, decodedToken) {
   // verify signature of token
   try {
-    logger.info(`decodedToken: ${decodedToken}`)
     // get the token's key id
     let kid = decodedToken.header.kid
     if (!kid) return new errors.InvalidArgumentError('invalid request, token missing `kid` value')
