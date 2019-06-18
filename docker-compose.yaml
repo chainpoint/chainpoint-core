@@ -14,6 +14,7 @@ services:
     depends_on:
     - rabbitmq
     - api
+    user: ${USERID}:${GROUPID}
     environment:
       PEERS: ${PEERS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -84,6 +85,7 @@ services:
       - redis
       - rabbitmq
       - postgres
+    user: ${USERID}:${GROUPID}
     networks:
       - chainpoint
     ports:
@@ -117,6 +119,7 @@ services:
       dockerfile: docker/Dockerfile.api-test
     depends_on:
       - base
+    user: ${USERID}:${GROUPID}
     networks:
       - chainpoint
     environment:
@@ -141,6 +144,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.btc-tx
     container_name: btc-tx-core
+    user: ${USERID}:${GROUPID}
     depends_on:
       - base
       - rabbitmq
@@ -165,6 +169,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.btc-mon
     container_name: btc-mon-core
+    user: ${USERID}:${GROUPID}
     depends_on:
       - base
       - rabbitmq
@@ -187,6 +192,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.proof-state
+    user: ${USERID}:${GROUPID}
     depends_on:
       - base
       - rabbitmq
@@ -210,6 +216,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.proof-gen
+    user: ${USERID}:${GROUPID}
     depends_on:
       - base
       - rabbitmq
@@ -236,6 +243,7 @@ services:
     image: rabbitmq:3.6.11-management-alpine
     container_name: rabbitmq-core
     hostname: rabbitmq
+    user: ${USERID}:${GROUPID}
     ports:
     - 5673:5672
     - 15673:15672
@@ -251,6 +259,7 @@ services:
     restart: always
     image: redis:4.0.9-alpine
     container_name: redis-core
+    user: ${USERID}:${GROUPID}
     ports:
       - "6382:6379"
     volumes:
@@ -277,6 +286,7 @@ services:
     restart: always
     image: postgres:11.2-alpine
     container_name: postgres-core
+    user: ${USERID}:${GROUPID}
     volumes:
       - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
     environment:
