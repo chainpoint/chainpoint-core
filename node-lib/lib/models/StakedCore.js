@@ -100,7 +100,7 @@ async function getRandomCoresAsync() {
 }
 
 async function hasMemberIPAsync(ip) {
-  let count = await StakedCore.count({ where: { public_ip: ip } })
+  let count = await StakedCore.count({ where: { public_ip: ip }, raw: true })
   return count > 0
 }
 

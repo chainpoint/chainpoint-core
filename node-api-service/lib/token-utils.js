@@ -38,6 +38,7 @@ let redis = null
 async function verifySigAsync(tokenString, decodedToken) {
   // verify signature of token
   try {
+    logger.info(`decodedToken: ${decodedToken}`)
     // get the token's key id
     let kid = decodedToken.header.kid
     if (!kid) return new errors.InvalidArgumentError('invalid request, token missing `kid` value')
@@ -76,6 +77,7 @@ async function isKnownPeerIPAsync(iss) {
   let isKnown = false
   try {
     isKnown = await stakedCore.hasMemberIPAsync(iss)
+    logger.info(`Iss: ${iss}, isKnown: ${isKnown}`)
   } catch (error) {
     logger.error(`Database read error : isKnownPeerIPAsync : ${error.message}`)
   }
