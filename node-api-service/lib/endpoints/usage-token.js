@@ -95,8 +95,8 @@ async function postTokenRefreshAsync(req, res, next) {
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) {
     logger.error('Unable to determine Node IP of request')
-    logger.error('connection = ', JSON.stringify(req.connection) || 'undefined')
-    logger.error('socket = ', JSON.stringify(req.socket) || 'undefined')
+    logger.error('connection = ', req.connection || 'undefined')
+    logger.error('socket = ', req.socket || 'undefined')
     return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
   }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
@@ -311,8 +311,8 @@ async function postTokenCreditAsync(req, res, next) {
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) {
     logger.error('Unable to determine Node IP of request')
-    logger.error('connection = ', JSON.stringify(req.connection) || 'undefined')
-    logger.error('socket = ', JSON.stringify(req.socket) || 'undefined')
+    logger.error('connection = ', req.connection || 'undefined')
+    logger.error('socket = ', req.socket || 'undefined')
     return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
   }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
@@ -438,8 +438,8 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
   let submittingNodeIP = utils.getClientIP(req)
   if (submittingNodeIP === null) {
     logger.error('Unable to determine Node IP of request')
-    logger.error('connection = ', JSON.stringify(req.connection) || 'undefined')
-    logger.error('socket = ', JSON.stringify(req.socket) || 'undefined')
+    logger.error('connection = ', req.connection || 'undefined')
+    logger.error('socket = ', req.socket || 'undefined')
     return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
   }
   logger.info(`Received request from Node at ${submittingNodeIP}`)
