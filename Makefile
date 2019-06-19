@@ -39,7 +39,7 @@ build:
 pull:
 	docker-compose pull
 
-## git-pull        : Git pull latest & submodule update
+## git-pull                  : Git pull latest & submodule update
 .PHONY : git-pull
 git-pull:
 	@git pull --all
@@ -162,6 +162,11 @@ init-chain:
 	@bash -c "curl https://storage.googleapis.com/chp-private-testnet/config.toml > ${CORE_DATADIR}/config/node_1/config.toml"
 	@bash -c "curl https://storage.googleapis.com/chp-private-testnet/genesis.json > ${CORE_DATADIR}/config/node_1/genesis.json"
 
+## init-config               : Pull down chainpoint network config
+.PHONY : init-config
+init-config:
+	@bash -c "curl https://storage.googleapis.com/chp-private-testnet/config.toml > ${CORE_DATADIR}/config/node_1/config.toml"
+
 ## prune                     : Shutdown and destroy all docker assets
 .PHONY : prune
 prune: down
@@ -204,16 +209,16 @@ redis:
 	@sleep 2
 	@docker exec -it redis-core redis-cli
 
-## deploy					: deploys a swarm stack
+## deploy                    : deploys a swarm stack
 deploy: init-volumes
 	@rsync .env ${CORE_DATADIR}/.env
 	@set -a && source ${CORE_DATADIR}/.env && export USERID=${UID} && export GROUPID=${GID} && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
 
-## stop						: stops a swarm stack
+## stop                      : stops a swarm stack
 stop:
 	docker stack rm chainpoint-core || echo "removal in progress"
 
-## clean-tendermint			: removes tendermint database, leaving postgres intact
+## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint: stop
 	@rm -rf ${CORE_DATADIR}/config/node_1/data/tx_index.db
 	@rm -rf ${CORE_DATADIR}/config/node_1/data/state.db
@@ -225,5 +230,5 @@ clean-tendermint: stop
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -af
 
-## remove 					: stops, removes, and cleans a swarm
+## remove                    : stops, removes, and cleans a swarm
 remove: stop clean
