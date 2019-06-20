@@ -127,6 +127,9 @@ async function postTokenRefreshAsync(req, res, next) {
     .createHash('sha256')
     .update(tokenString)
     .digest('hex')
+
+  logger.info(`NodeIP ${submittingNodeIP} : Active Token ${activeTokenHash} : Refresh Token ${tokenHash}`)
+
   if (activeTokenHash !== tokenHash)
     return next(new errors.InvalidArgumentError('invalid request, supplied token is not an active token'))
 
