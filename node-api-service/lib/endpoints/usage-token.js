@@ -128,7 +128,7 @@ async function postTokenRefreshAsync(req, res, next) {
     .update(tokenString)
     .digest('hex')
 
-  logger.info(`NodeIP ${submittingNodeIP} : Active Token ${activeTokenHash} : Refresh Token ${tokenHash}`)
+  logger.info(`NodeIP ${submittingNodeIP} : Active Token ${activeTokenHash} : Provided Token ${tokenHash}`)
 
   if (activeTokenHash !== tokenHash)
     return next(new errors.InvalidArgumentError('invalid request, supplied token is not an active token'))
@@ -161,6 +161,8 @@ async function postTokenRefreshAsync(req, res, next) {
     .createHash('sha256')
     .update(refreshedTokenString)
     .digest('hex')
+
+    logger.info(`NodeIP ${submittingNodeIP} : Active Token ${activeTokenHash} : Provided Token ${tokenHash} : Refresh Token ${refreshTokenHash}`)
 
   // save new active token information in local database
   // this is to allow multiple consecutive JWT method calls
