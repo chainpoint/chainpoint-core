@@ -24,6 +24,7 @@ services:
       TENDERMINT_PORT: 26657
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       PRIVATE_NODE_IPS: ""
+      PRIVATE_CORE_IPS: ""
       NETWORK: ${NETWORK:-testnet}
       AUDIT: "true"
       NODE_MANAGEMENT: "true"
@@ -284,7 +285,7 @@ services:
   #
   postgres:
     restart: always
-    image: postgres:11.2-alpine
+    image: postgres:11.2
     container_name: postgres-core
     user: ${USERID}:${GROUPID}
     volumes:

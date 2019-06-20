@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/chainpoint/tendermint/node"
 	"github.com/chainpoint/tendermint/proxy"
@@ -223,6 +224,7 @@ func initTendermintConfig() (*cfg.Config, error) {
 		return nil, err
 	}
 	defaultConfig.SetRoot(homeDir)
+	defaultConfig.Consensus.TimeoutCommit = time.Duration(1 * time.Minute)
 	fmt.Printf("Config : %#v\n", defaultConfig)
 	cfg.EnsureRoot(defaultConfig.RootDir)
 	return defaultConfig, nil

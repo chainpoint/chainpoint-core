@@ -11,6 +11,7 @@ fi
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     sudo apt-get -qq install -y docker-compose git make jq nodejs openssl
+    sudo apt-get -qq install -y npm || echo "NPM already installed with nodejs"
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
     if ! [ -x "$(command -v yarn)" ]; then
         echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list

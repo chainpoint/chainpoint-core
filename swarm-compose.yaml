@@ -25,6 +25,7 @@ services:
     depends_on:
     - rabbitmq
     - api
+    user: ${USERID}:${GROUPID}
     environment:
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
@@ -37,6 +38,7 @@ services:
       TENDERMINT_PORT: 26657
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       PRIVATE_NODE_IPS: ""
+      PRIVATE_CORE_IPS: ""
       NETWORK: ${NETWORK:-testnet}
       ANCHOR: "true"
       AUDIT: "true"
@@ -93,6 +95,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
+    user: ${USERID}:${GROUPID}
     depends_on:
       - redis
       - rabbitmq
@@ -135,6 +138,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.btc-tx
+    user: ${USERID}:${GROUPID}
     container_name: btc-tx-core
     depends_on:
       - rabbitmq
@@ -161,6 +165,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.btc-mon
     container_name: btc-mon-core
+    user: ${USERID}:${GROUPID}
     depends_on:
       - rabbitmq
       - redis
@@ -182,6 +187,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.proof-state
+    user: ${USERID}:${GROUPID}
     deploy:
       replicas: 2
     depends_on:
@@ -206,6 +212,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.proof-gen
+    user: ${USERID}:${GROUPID}
     deploy:
       replicas: 2
     depends_on:
@@ -233,6 +240,7 @@ services:
     image: rabbitmq:3.6.11-management-alpine
     container_name: rabbitmq-core
     hostname: rabbitmq
+    user: ${USERID}:${GROUPID}
     ports:
     - 5673:5672
     - 15673:15672
@@ -248,6 +256,7 @@ services:
     restart: always
     image: redis:4.0.9-alpine
     container_name: redis-core
+    user: ${USERID}:${GROUPID}
     ports:
       - "6382:6379"
     volumes:
@@ -272,8 +281,9 @@ services:
   #
   postgres:
     restart: always
-    image: postgres:11.2-alpine
+    image: postgres:11.2
     container_name: postgres-core
+    user: ${USERID}:${GROUPID}
     volumes:
       - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
     environment:
