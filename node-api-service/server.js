@@ -38,6 +38,7 @@ const tmRpc = require('./lib/tendermint-rpc.js')
 const tokenUtils = require('./lib/token-utils.js')
 const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
+const morgan = require('morgan')
 
 var apiLogs = bunyan.createLogger({
   name: 'audit',
@@ -103,6 +104,7 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
   server.use(restify.plugins.gzipResponse())
   server.use(restify.plugins.queryParser())
   server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
+  server.use(morgan('dev'))
 
   // API RESOURCES
 

@@ -159,7 +159,6 @@ init: init-volumes
 ## init-chain                : Pull down chainpoint network info
 .PHONY : init-chain
 init-chain:
-	@bash -c "curl https://storage.googleapis.com/chp-private-testnet/config.toml > ${CORE_DATADIR}/config/node_1/config.toml"
 	@bash -c "curl https://storage.googleapis.com/chp-private-testnet/genesis.json > ${CORE_DATADIR}/config/node_1/genesis.json"
 
 ## init-config               : Pull down chainpoint network config
