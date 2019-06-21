@@ -92,22 +92,22 @@ test: test-api test-aggregator test-merkletools test-abci test-calendar test-uti
 ## up                        : Build and start all
 .PHONY : up
 up: pull
-	export UID=${UID} && export GID=${GID} && docker-compose up -d
+	export USERID=${UID} && export GROUPID=${GID} && docker-compose up -d
 
 ## up-no-build               : Startup without performing builds, rely on pull of images.
 .PHONY : up-no-build
 up-no-build:
-	export UID=${UID} && export GID=${GID} && docker-compose up -d --no-build
+	export USERID=${UID} && export GROUPID=${GID} && docker-compose up -d --no-build
 
 ## dev                       : Build and start all
 .PHONY : dev
 dev: build init-volumes
-	export UID=${UID} && export GID=${GID} && docker-compose up -d
+	export USERID=${UID} && export GROUPID=${GID} && docker-compose up -d
 
 ## dev-no-build              : Startup without performing builds, rely on pull of images.
 .PHONY : dev-no-build
 dev-no-build: init-volumes
-	export UID=${UID} && export GID=${GID} && docker-compose up -d --no-build
+	export USERID=${UID} && export GROUPID=${GID} && docker-compose up -d --no-build
 
 ## down                      : Shutdown Application
 .PHONY : down
