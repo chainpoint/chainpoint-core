@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "amqplib": "^0.5.3",
+    "apicache": "^1.4.0",
     "async-retry": "^1.2.3",
     "bignumber.js": "^8.1.1",
     "blake2s-js": "^1.2.2",

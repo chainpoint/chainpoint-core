@@ -38,6 +38,9 @@ const tmRpc = require('./lib/tendermint-rpc.js')
 const tokenUtils = require('./lib/token-utils.js')
 const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
+const apicache = require('apicache')
+
+let redisCache = null
 
 var apiLogs = bunyan.createLogger({
   name: 'audit',
@@ -121,7 +124,15 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
     calendar.getCalTxDataAsync
   )
   // get proofs from storage
-  server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), proofs.getProofsByIDsAsync)
+  if (redisCache) {
+    server.get(
+      { path: '/proofs', version: '1.0.0' },
+      ...applyMiddleware(throttle(50, 10), redisCache('1 minute')),
+      proofs.getProofsByIDsAsync
+    )
+  } else {
+    server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), proofs.getProofsByIDsAsync)
+  }
   // get nodes from core
   server.get({ path: '/nodes/random', version: '1.0.0' }, ...applyMiddleware(throttle(15, 3)), nodes.getNodesAsync)
   // get random core peers
@@ -169,6 +180,7 @@ function openRedisConnection(redisURIs) {
     redisURIs,
     newRedis => {
       tokenUtils.setRedis(newRedis)
+      redisCache = apicache.options({ redisClient: newRedis }).middleware
     },
     () => {
       tokenUtils.setRedis(null)
