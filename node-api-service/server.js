@@ -130,6 +130,7 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
       ...applyMiddleware(throttle(50, 10), redisCache('1 minute')),
       proofs.getProofsByIDsAsync
     )
+    logger.info('Redis caching middleware added')
   } else {
     server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), proofs.getProofsByIDsAsync)
   }
@@ -180,7 +181,7 @@ function openRedisConnection(redisURIs) {
     redisURIs,
     newRedis => {
       tokenUtils.setRedis(newRedis)
-      redisCache = apicache.options({ redisClient: newRedis }).middleware
+      redisCache = apicache.options({ redisClient: newRedis, debug: true }).middleware
     },
     () => {
       tokenUtils.setRedis(null)
