@@ -127,7 +127,8 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
   if (redisCache) {
     server.get(
       { path: '/proofs', version: '1.0.0' },
-      ...applyMiddleware(throttle(50, 10), redisCache('1 minute')),
+      ...applyMiddleware(throttle(50, 10)),
+      redisCache('1 minute'),
       proofs.getProofsByIDsAsync
     )
     logger.info('Redis caching middleware added')
@@ -177,19 +178,22 @@ async function startInsecureRestifyServerAsync(privateMode) {
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
  */
 function openRedisConnection(redisURIs) {
-  connections.openRedisConnection(
-    redisURIs,
-    newRedis => {
-      tokenUtils.setRedis(newRedis)
-      redisCache = apicache.options({ redisClient: newRedis, debug: true }).middleware
-    },
-    () => {
-      tokenUtils.setRedis(null)
-      setTimeout(() => {
-        openRedisConnection(redisURIs)
-      }, 5000)
-    }
-  )
+  return new Promise(resolve => {
+    connections.openRedisConnection(
+      redisURIs,
+      newRedis => {
+        resolve(newRedis)
+        tokenUtils.setRedis(newRedis)
+        redisCache = apicache.options({ redisClient: newRedis, debug: true }).middleware
+      },
+      () => {
+        tokenUtils.setRedis(null)
+        setTimeout(() => {
+          openRedisConnection(redisURIs).then(() => resolve())
+        }, 5000)
+      }
+    )
+  })
 }
 
 /**
@@ -214,7 +218,8 @@ async function openTendermintConnectionAsync() {
 
 /**
  * Opens an AMPQ connection and channel
- * Retry logic is included to handle losses of connection
+ * Retry logic is included to handle losses of connection    await openRedisConnection(env.REDIS_CONNECT_URIS)
+
  *
  * @param {string} connectURI - The connection URI for the RabbitMQ instance
  */
@@ -243,7 +248,7 @@ async function start() {
   if (env.PRIVATE_NETWORK) logger.info(`*** Private Network Mode ***`)
   try {
     // init Redis
-    openRedisConnection(env.REDIS_CONNECT_URIS)
+    await openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
     await openPostgresConnectionAsync()
     // init Tendermint
