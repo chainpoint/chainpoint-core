@@ -192,7 +192,11 @@ function openRedisConnection(redisURIs) {
       newRedis => {
         resolve(newRedis)
         tokenUtils.setRedis(newRedis)
-        redisCache = apicache.options({ redisClient: newRedis, debug: true }).middleware
+        redisCache = apicache.options({
+          redisClient: newRedis,
+          debug: true,
+          appendKey: req => req.headers.hashids
+        }).middleware
       },
       () => {
         tokenUtils.setRedis(null)
