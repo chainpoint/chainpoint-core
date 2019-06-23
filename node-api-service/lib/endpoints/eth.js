@@ -58,7 +58,7 @@ async function getEthStatsAsync(req, res, next) {
     return next(new errors.InternalServerError('Error when attempting to retrieve gas price'))
   }
   try {
-    let transactionCount = await fallbackProvider.getTransactionCount(ethAddress)
+    let transactionCount = await fallbackProvider.getTransactionCount(ethAddress, 'pending')
     result.transactionCount = transactionCount
   } catch (error) {
     logger.error(`Error when attempting to retrieve transaction count : ${ethAddress} : ${error.message}`)
