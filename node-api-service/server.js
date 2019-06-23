@@ -38,7 +38,9 @@ const tmRpc = require('./lib/tendermint-rpc.js')
 const tokenUtils = require('./lib/token-utils.js')
 const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
-const morgan = require('morgan')
+const apicache = require('apicache')
+
+let redisCache = null
 
 var apiLogs = bunyan.createLogger({
   name: 'audit',
@@ -104,40 +106,57 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
   server.use(restify.plugins.gzipResponse())
   server.use(restify.plugins.queryParser())
   server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
-  server.use(morgan('dev'))
 
   // API RESOURCES
 
   // submit hash(es)
-  server.post({ path: '/hashes', version: '1.0.0' }, ...applyMiddleware(throttle(5, 0.02)), hashes.postHashV1Async) // throttl
+  server.post({ path: '/hashes', version: '1.0.0' }, ...applyMiddleware([throttle(5, 0.02)]), hashes.postHashV1Async) // throttl
   // get the block objects for the calendar in the specified block range
   server.get(
     { path: '/calendar/:txid', version: '1.0.0' },
-    ...applyMiddleware(throttle(50, 10)),
+    ...applyMiddleware([throttle(50, 10)]),
     calendar.getCalTxAsync
   )
   // get the data value of a txId
   server.get(
     { path: '/calendar/:txid/data', version: '1.0.0' },
-    ...applyMiddleware(throttle(50, 10)),
+    ...applyMiddleware([throttle(50, 10)]),
     calendar.getCalTxDataAsync
   )
   // get proofs from storage
-  server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware(throttle(50, 10)), proofs.getProofsByIDsAsync)
+  if (redisCache) {
+    server.get(
+      { path: '/proofs', version: '1.0.0' },
+      ...applyMiddleware(throttle(50, 10)),
+      redisCache('1 minute'),
+      proofs.getProofsByIDsAsync
+    )
+    logger.info('Redis caching middleware added')
+  } else {
+    server.get(
+      { path: '/proofs', version: '1.0.0' },
+      ...applyMiddleware([throttle(50, 10)]),
+      proofs.getProofsByIDsAsync
+    )
+  }
   // get nodes from core
-  server.get({ path: '/nodes/random', version: '1.0.0' }, ...applyMiddleware(throttle(15, 3)), nodes.getNodesAsync)
+  server.get({ path: '/nodes/random', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), nodes.getNodesAsync)
   // get random core peers
-  server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware(throttle(15, 3)), peers.getPeersAsync)
+  server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), peers.getPeersAsync)
   // get status
-  server.get({ path: '/status', version: '1.0.0' }, ...applyMiddleware(throttle(15, 3)), status.getCoreStatusAsync)
+  server.get({ path: '/status', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), status.getCoreStatusAsync)
   // do not enable ETH and JWT related endpoint if running in Private Mode
   if (privateMode === false) {
     // get eth tx data
-    server.get({ path: '/eth/:addr/stats', version: '1.0.0' }, ...applyMiddleware(throttle(5, 1)), eth.getEthStatsAsync)
+    server.get(
+      { path: '/eth/:addr/stats', version: '1.0.0' },
+      ...applyMiddleware([throttle(5, 1)]),
+      eth.getEthStatsAsync
+    )
     // post eth broadcast
     server.post(
       { path: '/eth/broadcast', version: '1.0.0' },
-      ...applyMiddleware(throttle(5, 1)),
+      ...applyMiddleware([throttle(5, 1)]),
       eth.postEthBroadcastAsync
     )
     // post token refresh
@@ -167,18 +186,26 @@ async function startInsecureRestifyServerAsync(privateMode) {
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
  */
 function openRedisConnection(redisURIs) {
-  connections.openRedisConnection(
-    redisURIs,
-    newRedis => {
-      tokenUtils.setRedis(newRedis)
-    },
-    () => {
-      tokenUtils.setRedis(null)
-      setTimeout(() => {
-        openRedisConnection(redisURIs)
-      }, 5000)
-    }
-  )
+  return new Promise(resolve => {
+    connections.openRedisConnection(
+      redisURIs,
+      newRedis => {
+        resolve(newRedis)
+        tokenUtils.setRedis(newRedis)
+        redisCache = apicache.options({
+          redisClient: newRedis,
+          debug: true,
+          appendKey: req => req.headers.hashids
+        }).middleware
+      },
+      () => {
+        tokenUtils.setRedis(null)
+        setTimeout(() => {
+          openRedisConnection(redisURIs).then(() => resolve())
+        }, 5000)
+      }
+    )
+  })
 }
 
 /**
@@ -203,7 +230,8 @@ async function openTendermintConnectionAsync() {
 
 /**
  * Opens an AMPQ connection and channel
- * Retry logic is included to handle losses of connection
+ * Retry logic is included to handle losses of connection    await openRedisConnection(env.REDIS_CONNECT_URIS)
+
  *
  * @param {string} connectURI - The connection URI for the RabbitMQ instance
  */
@@ -232,7 +260,7 @@ async function start() {
   if (env.PRIVATE_NETWORK) logger.info(`*** Private Network Mode ***`)
   try {
     // init Redis
-    openRedisConnection(env.REDIS_CONNECT_URIS)
+    await openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
     await openPostgresConnectionAsync()
     // init Tendermint

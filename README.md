@@ -3,7 +3,7 @@
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint Core is an aggregation and anchoring service that collects hash input from Chainpoint Nodes, aggregates the hashes into a single hash, then periodically commits the data to the Bitcoin blockchain.
+Chainpoint Core is an aggregation and anchoring service that collects hash input from Chainpoint Nodes via a web API, aggregates the hashes into a single root hash, then periodically commits the root hash to the Bitcoin blockchain as a form of distributed digital notarization.
 
 ## Important Notice
 
@@ -30,7 +30,7 @@ make deploy     #Deploy Chainpoint Core to docker swarm
 
 ## Introduction
 
-Chainpoint-Core serves as an intermediate layer between hash aggregators (Chainpoint Nodes) and Bitcoin.
+Chainpoint-Core serves as an intermediate layer between hash aggregators (Chainpoint Nodes) and Bitcoin, and hence as the top-most layer of the Chainpoint Network.
 Hashes submitted by Nodes are aggregated and periodically broadcast to a Tendermint-based blockchain, the Calendar, created by consensus of all Cores.
 Every hour, a Core is elected to anchor the state of the Calendar to Bitcoin.
 
@@ -40,9 +40,9 @@ To connect to an existing Chainpoint blockchain, set the PEERS environment varia
 
 Chainpoint Core requires a minimum of 2 CPU Cores and 16 GB of RAM to run. Hard disk size should be at least 500 GB for the chain data (or be expandable).
 
-You will need to set up a configuration and secrets (bitcoin and ethereum) before running.
+You will need to set up a configuration and secrets (bitcoin and ethereum) before running. `make init` will do most of the heavy lifting for you.
 
-Running `make init` will prompt for secrets to be stored in the docker secrets system.
+Chainpoint Core currently uses Docker Swarm when running in Production mode. Running `make init` will initialize a Docker Swarm node on the host machine and prompt the user for secrets to be stored in Swarm's secrets system.
 This command will also copy `.env.sample` to `.env`. The `.env` file will be used by `docker-compose` to set required environment variables.
 
 There are further settings found in the `.env.sample` and `swarm-compose.yaml` file.
@@ -67,6 +67,10 @@ The following are the descriptions of the configuration parameters:
 | ETH_PRIVATE_KEY          | String  | Docker Secrets (`make init`) | Private key for this Core's Ethereum account.                                                                                                    |
 | ECDSA_PKPEM              | String  | Docker Secrets (`make init`) | Keypair used to create JWKs for Core's API auth                                                                                                  |
 | BITCOIN_WIF              | String  | Docker Secrets (`make init`) | Private key for bitcoin hotwallet, used to paying anchoring fees                                                                                 |
+| AGGREGATE                | Boolean | swarm-compose.yaml           | Whether to aggregate hashes and send them to the Calendar blockchain. Defaults to true                                                           |
+| ANCHOR                   | Boolean | swarm-compose.yaml           | Whether to anchor the state of the Calendar to Bitcoin                                                                                           |
+| LOG_FILTER               | String  | swarm-compose.yaml           | Log Verbosity. Defaults to `"main:debug,state:info,*:error"`                                                                                     |
+| LOG_LEVEL                | String  | swarm-compose.yaml           | Level of detail included in Logs. Defaults to `info`                                                                                             |
 
 ## Startup
 
@@ -103,6 +107,19 @@ You can upgrade Core by running `make clean-tendermint` and `docker-compose pull
 ### Build for GCR / DockerHub
 
 Edit the `image:` keys for each service in the docker-compose file to reflect your desired docker repo. Run `make build`, authenticate with your docker host service, then run `docker-compose push`.
+
+## Documentation
+
+READMEs for each Core micro-service are available:
+
+| Service                  | Description                                                                                                              | Readme                                                                                                 |
+| :----------------------- | :----------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
+| go-abci-service          | Runs the Tendermint blockchain service and coordinates all Core activity                                                 | [README](https://github.com/chainpoint/chainpoint-core/blob/master/go-abci-service/README.md)          |
+| node-api-service         | Web API for interacting with Chainpoint-Nodes                                                                            | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-api-service/README.md)         |
+| node-btc-tx-service      | Transmits a Merkle Root to Bitcoin and returns the Bitcoin TX ID                                                         | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-tx-service/README.md)      |
+| node-btc-mon-service     | Monitors the above Bitcoin TX for 6 confirmations and informs go-abci-service when complete                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-mon-service/README.md)     |
+| node-proof-gen-service   | Generates cryptographic proofs demonstrating how Chainpoint-Node data is included in the Chainpoint Calendar and Bitcoin | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-gen-service/README.md)   |
+| node-proof-state-service |                                                                                                                          | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-state-service/README.md) |
 
 ## Development
 
