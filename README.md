@@ -119,7 +119,7 @@ READMEs for each Core micro-service are available:
 | node-btc-tx-service      | Transmits a Merkle Root to Bitcoin and returns the Bitcoin TX ID                                                         | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-tx-service/README.md)      |
 | node-btc-mon-service     | Monitors the above Bitcoin TX for 6 confirmations and informs go-abci-service when complete                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-mon-service/README.md)     |
 | node-proof-gen-service   | Generates cryptographic proofs demonstrating how Chainpoint-Node data is included in the Chainpoint Calendar and Bitcoin | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-gen-service/README.md)   |
-| node-proof-state-service |                                                                                                                          | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-state-service/README.md) |
+| node-proof-state-service | Stores proofs in PostgreSQL                                                                                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-state-service/README.md) |
 
 ## Development
 
