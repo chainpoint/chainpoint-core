@@ -3,42 +3,95 @@
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint Core is an aggregation and anchoring service that collects hash input from Chainpoint Nodes via a web API, aggregates the hashes into a single root hash, then periodically commits the root hash to the Bitcoin blockchain as a form of distributed digital notarization.
+Chainpoint Core is a data integrity service which collects hash input from [Chainpoint Nodes](https://github.com/chainpoint/chainpoint-node-src) via a web API, aggregates the hashes into a single root hash, then periodically commits the root hash to the Bitcoin blockchain as a form of distributed digital notarization.
 
 ## Important Notice
 
-This software is intended to be run as part of the Core Network of the Chainpoint Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
+This software is intended to be run as part of Chainpoint's Core Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
 
 [https://github.com/chainpoint/chainpoint-node-src](https://github.com/chainpoint/chainpoint-node-src)
 
 [https://github.com/chainpoint/chainpoint-cli](https://github.com/chainpoint/chainpoint-cli)
 
-## Quick Start
+## Introduction to Chainpoint
 
-You can find a script that will install all prerequisite dependencies on Mac and Linux [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
+Chainpoint is a protocol for facilitating the decentralized notarization of data using the Bitcoin blockchain. It makes the process of _anchoring_ data fingerprints (hashes) to Bitcoin more cost-effective by creating intermediate, decentralized tiers between the user and the Bitcoin blockchain.
 
-Build and start the whole system locally with `make`. Running `make help`
-will display additional `Makefile` commands that are available.
+The first tier is the [Chainpoint Node](https://github.com/chainpoint/chainpoint-node-src), which [_aggregates_](https://github.com/Tierion/merkle-tools) user submissions into a single datapoint every minute. This datapoint is then submitted to the second tier, the Chainpoint Core Network.
+The Core Network consists of many Cores running in concert to create a Tendermint-based blockchain, the Calendar. Every hour, a random Core is elected to anchor the state of the Calendar to Bitcoin, then write back the result to the Calendar. The more Cores there are, the less frequently a given Core will be selected to anchor, which reduces the burden of paying Bitcoin fees.
 
-```sh
-git clone https://github.com/chainpoint/chainpoint-core
+After the Cores anchor to Bitcoin, the Chainpoint Nodes retrieve the result and construct a [cryptographic proof](https://github.com/chainpoint/chainpoint-cli) showing the user's data was included in the Bitcoin blockchain. Because the Bitcoin blockchain is viewable by everyone and secured by Bitcoin Mining, writing data to Bitcoin constitutes a reliable form of notarization-
+it is a good way of attesting to the existence of certain data (ie proving you knew something) at a particular point in time.
+
+Users can install a release of [Chainpoint-CLI](https://github.com/chainpoint/chainpoint-cli) to submit data to a Chainpoint Node and retrieve a [Chainpoint Proof](https://chainpoint.org/#v3x).
+
+## What is Chainpoint Core?
+
+Chainpoint Core forms the backbone of the Chainpoint Network and is operated by 'operators'- dedicated users and organizations. By running a Core and joining the Chainpoint Network, an operator helps defray the cost of transactions fees associated with anchoring data to Bitcoin.
+Additionally, the decentralized nature of Core adds significant resiliency to the Network. If a Core drops offline, the remaining Cores continue to elect a leader to anchor the Calendar to Bitcoin.
+
+Core uses [Tendermint](https://github.com/tendermint/tendermint) to communicate with other Cores and generate the Calendar blockchain. Because Tendermint uses a Validator-based model, generating new blocks through _mining_ is not necessary.
+Instead, certain trustworthy, secure Cores (Validators) agree on new Calendar blocks. It should be noted that it is _not_ necessary for a Core operator to be a Validator in order to anchor to Bitcoin. You only need a wallet with some Bitcoin and the instructions below!
+
+## Installing Chainpoint Core
+
+### Requirements
+
+#### Hardware
+
+Chainpoint Core has been tested with a couple of different hardware configurations.
+
+Minimum:
+
+- `>= 8GB RAM`
+- `>= 2 CPU Cores`
+- `256+ GB SSD`
+- `Public IPv4 address`
+
+Recommended:
+
+- `>= 16GB RAM`
+- `>= 4 CPU Cores`
+- `>= 500 GB SSD`
+- `Public IPv4 address`
+- `High-performance (1 Gbps+) Cloud Provider Networking`
+
+It _is_ possible to run Core from home, but you must have a static IP and have publicly forwarded ports 80, 26656, and 26657 on your router.
+
+#### Software
+
+At minimum, the following software is required for any installation of Core:
+
+- `*Nix-based OS (Ubuntu Linux and MacOS have been tested)`
+- `BASH`
+- `Git`
+
+Provided BASH is installed, a script to install all other dependencies (make, openssl, nodejs, yarn) on Ubuntu and Mac can be found [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
+
+#### External Services
+
+Core requires a few external services to facilitate communication with the Bitcoin and Ethereum blockchains. You will need:
+
+- `IP address of a Bitcore Node` - Bitcoin Node running the Insight-API
+- `Infura API Key` - generated from infura.io
+- `Etherscan API key`
+- `Bitcoin WIF`- Bitcoin Wallet Import Format (WIF) string in Base58.
+
+The Bitcoin WIF is the private key of your _Hot Wallet_, which is used to pay for Anchoring fees. Do not use your main Bitcoin wallet here!
+
+### Installation
+
+Running the following commands in BASH will download and setup the Core installation:
+
+```
+git clone https://github.com/chainpoint/chainpoint-core.git
 cd chainpoint-core
-make init           #interactive
-make register   #Stake with public smart contract
-make deploy     #Deploy Chainpoint Core to docker swarm
+make init
 ```
 
-## Introduction
-
-Chainpoint-Core serves as an intermediate layer between hash aggregators (Chainpoint Nodes) and Bitcoin, and hence as the top-most layer of the Chainpoint Network.
-Hashes submitted by Nodes are aggregated and periodically broadcast to a Tendermint-based blockchain, the Calendar, created by consensus of all Cores.
-Every hour, a Core is elected to anchor the state of the Calendar to Bitcoin.
-
-To connect to an existing Chainpoint blockchain, set the PEERS environment variable in the .env file to a comma-delimited list of `<tendermint ID>@<ip>` pairs. The ID of a given Core can be found by visiting `<ip>/status`
+The above make command will download all other dependencies and run an interactive setup wizard. The process is detailed in `Configuration` below.
 
 ### Configuration
-
-Chainpoint Core requires a minimum of 2 CPU Cores and 16 GB of RAM to run. Hard disk size should be at least 500 GB for the chain data (or be expandable).
 
 You will need to set up a configuration and secrets (bitcoin and ethereum) before running. `make init` will do most of the heavy lifting for you.
 
@@ -58,21 +111,21 @@ The following are the descriptions of the configuration parameters:
 | NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin and Ethereum testnets. Default is `mainnet`.                                                                     |
 | PRIVATE_NODE_IPS         | String  | .env                         | Comma-delimited list of private Nodes for use with PRIVATE_NETWORK. Default is empty string.                                                     |
 | NODE_ENV                 | String  | .env                         | Sets Core to use either ethereum/bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
-| ANCHOR_INTERVAL          | String  | swarm-compose.yaml           | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
-| HASHES_PER_MERKLE_TREE   | String  | swarm-compose.yaml           | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000                                        |
-| PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$Port, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
-| SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$Port, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
+| PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
+| SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | ETH_INFURA_API_KEY       | String  | Docker Secrets (`make init`) | API key to use Infura ethereum web services                                                                                                      |
 | ETH_ETHERSCAN_API_KEY    | String  | Docker Secrets (`make init`) | API key to use etherscan ethereum web services as a fallback to infura                                                                           |
 | ETH_PRIVATE_KEY          | String  | Docker Secrets (`make init`) | Private key for this Core's Ethereum account.                                                                                                    |
 | ECDSA_PKPEM              | String  | Docker Secrets (`make init`) | Keypair used to create JWKs for Core's API auth                                                                                                  |
 | BITCOIN_WIF              | String  | Docker Secrets (`make init`) | Private key for bitcoin hotwallet, used to paying anchoring fees                                                                                 |
+| ANCHOR_INTERVAL          | String  | swarm-compose.yaml           | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
+| HASHES_PER_MERKLE_TREE   | String  | swarm-compose.yaml           | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000                                        |
 | AGGREGATE                | Boolean | swarm-compose.yaml           | Whether to aggregate hashes and send them to the Calendar blockchain. Defaults to true                                                           |
 | ANCHOR                   | Boolean | swarm-compose.yaml           | Whether to anchor the state of the Calendar to Bitcoin                                                                                           |
 | LOG_FILTER               | String  | swarm-compose.yaml           | Log Verbosity. Defaults to `"main:debug,state:info,*:error"`                                                                                     |
 | LOG_LEVEL                | String  | swarm-compose.yaml           | Level of detail included in Logs. Defaults to `info`                                                                                             |
 
-## Startup
+### Startup
 
 To start up a Core node without connecting to the rest of the Chainpoint Network:
 
@@ -84,31 +137,33 @@ To start up a Core node without connecting to the rest of the Chainpoint Network
 
 If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute.
 
-## Joining the Chainpoint Testnet
+### Joining the Chainpoint Testnet
 
 After running `make init`, you can join the public testnet as a Full Node:
 
 1. Run `make init-chain` to download the testnet genesis and config files
 
-2. Specify peers by adding `PEERS="73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656,cbc0f714430ccf30e2a5cfb3da60c26d317abe72@35.188.238.186:26656"` to the .env file in the root project directory
+2. Specify peers by adding `PEERS="4350130c60da6c4e443d9fe4abb9c4129b82a651@35.245.53.181:26656,50cf252391ff609a1de6c2a146c4fdfcff80dc41@35.188.238.186:26656"` to the .env file in the root project directory
 
 3. Run `make deploy` to copy the .env file to the config directory and deploy Core.
 
-## Upgrade
+### Upgrade
 
 You can upgrade Core by running `make clean-tendermint` and `docker-compose pull`, then by redeploying with `make deploy`.
 
-## Build
+## Development
 
-### Build for local `docker-compose`
+We encourage anyone interested in contributing to fork this repo and submit a pull-request with desired changes. Please be sure to use eslint (npm) and gofmt (go) to check/fix any style issues.
 
-`make build`
+### Build
 
-### Build for GCR / DockerHub
+`make build` will build and tag local docker images for each of the micro-services in this Repo.
 
-Edit the `image:` keys for each service in the docker-compose file to reflect your desired docker repo. Run `make build`, authenticate with your docker host service, then run `docker-compose push`.
+### Run
 
-## Documentation
+`make dev` will bring up a docker-compose instance geared toward development. API will be accessible on port 80, while Tendermint is accessible on ports 26656-26657.
+
+### Documentation
 
 READMEs for each Core micro-service are available:
 
@@ -120,12 +175,6 @@ READMEs for each Core micro-service are available:
 | node-btc-mon-service     | Monitors the above Bitcoin TX for 6 confirmations and informs go-abci-service when complete                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-mon-service/README.md)     |
 | node-proof-gen-service   | Generates cryptographic proofs demonstrating how Chainpoint-Node data is included in the Chainpoint Calendar and Bitcoin | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-gen-service/README.md)   |
 | node-proof-state-service | Stores proofs in PostgreSQL                                                                                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-state-service/README.md) |
-
-## Development
-
-We encourage anyone interested in contributing to fork this repo and submit a pull-request with desired changes.
-
-`make dev` will bring up a docker-compose instance geared toward development. API will be accessible on port 80, while Tendermint is accessible on ports 26656-26657.
 
 ## License
 

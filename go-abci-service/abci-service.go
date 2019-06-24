@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/chainpoint/tendermint/node"
 	"github.com/chainpoint/tendermint/proxy"
@@ -29,7 +30,7 @@ import (
 
 func main() {
 
-	//Instantiate Tendermint Node
+	//Instantiate Tendermint Node Config
 	defaultConfig, err := initTendermintConfig()
 	if err != nil {
 		util.LogError(err)
@@ -73,7 +74,7 @@ func main() {
 	//declare connection to abci app
 	appProxy := proxy.NewLocalClientCreator(app)
 
-	/* Declare Tendermint Node with given config and abci app */
+	/* Instantiate Tendermint Node with given config and abci app */
 	n, err := node.NewNode(defaultConfig,
 		pvFile,
 		nodeKey,
@@ -223,7 +224,8 @@ func initTendermintConfig() (*cfg.Config, error) {
 		return nil, err
 	}
 	defaultConfig.SetRoot(homeDir)
-	//defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
+	defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
+	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(62 * time.Second) // allows us to wait for tx to commit + 2 sec latency margin
 	fmt.Printf("Config : %#v\n", defaultConfig)
 	cfg.EnsureRoot(defaultConfig.RootDir)
 	return defaultConfig, nil
