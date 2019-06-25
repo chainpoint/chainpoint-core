@@ -226,6 +226,7 @@ async function openPostgresConnectionAsync() {
 async function openTendermintConnectionAsync() {
   let rpcClient = await connections.openTendermintConnectionAsync(env.TENDERMINT_URI)
   tmRpc.setRpcClient(rpcClient)
+  tokenUtils.setTMRPC(tmRpc)
 }
 
 /**

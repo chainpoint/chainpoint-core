@@ -16,6 +16,7 @@
 
 const errors = require('restify-errors')
 let env = require('../parse-env.js')('api')
+let activeToken = require('../models/ActiveToken.js')
 const utils = require('../utils.js')
 const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
@@ -225,6 +226,40 @@ async function postHashV1Async(req, res, next) {
     let coreIP = coreURL.hostname
     if (!ips.includes(coreIP)) {
       return next(new errors.InvalidArgumentError(`invalid request, aud must include this Core IP`))
+    }
+
+    // CONFIRMATION STEP: This ensures the node actually received a new token after refresh
+    let activeTokenHash = crypto
+      .createHash('sha256')
+      .update(tokenString)
+      .digest('hex')
+
+    let prevToken = await tokenUtils.getPrevTokenHash(activeTokenHash)
+    if (prevToken) {
+      // save new active token information in local database
+      // this is to allow multiple consecutive JWT method calls
+      // from the same Core without waiting for the broadcast delay
+      // if this fails, we can proceed because the subsequent broadcast
+      // call will update the local database eventually as well,
+      // and Nodes will eventually recover
+      try {
+        await activeToken.writeActiveTokenAsync({
+          nodeIp: submittingNodeIP,
+          tokenHash: activeTokenHash
+        })
+      } catch (error) {
+        logger.warn(`Could not update active token data in local database on refresh`)
+      }
+
+      // broadcast Node IP and new token hash for Cores to update their local active token table
+      try {
+        let coreId = await tokenUtils.getCachedCoreIDAsync()
+        await tokenUtils.broadcastCoreTxAsync(coreId, submittingNodeIP, activeTokenHash)
+      } catch (error) {
+        return next(new errors.InternalServerError(`server error, ${error.message}`))
+      }
+
+      await tokenUtils.delPrevTokenHash(activeTokenHash)
     }
   }
 
