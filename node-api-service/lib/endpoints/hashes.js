@@ -249,6 +249,7 @@ async function postHashV1Async(req, res, next) {
         })
       } catch (error) {
         logger.warn(`Could not update active token data in local database on refresh`)
+        return next(new errors.InternalServerError(`server error, ${error.message}`))
       }
 
       // broadcast Node IP and new token hash for Cores to update their local active token table
