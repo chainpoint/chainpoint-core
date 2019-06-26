@@ -23,7 +23,6 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const uuidv1 = require('uuid/v1')
 const jose = require('node-jose')
-let tmRpc = require('../tendermint-rpc.js')
 const tokenUtils = require('../token-utils.js')
 const logger = require('../logger.js')
 const url = require('url').URL
@@ -162,29 +161,13 @@ async function postTokenRefreshAsync(req, res, next) {
     .update(refreshedTokenString)
     .digest('hex')
 
-    logger.info(`NodeIP ${submittingNodeIP} : Active Token ${activeTokenHash} : Provided Token ${tokenHash} : Refresh Token ${refreshTokenHash}`)
+  logger.info(
+    `NodeIP ${submittingNodeIP} : Active Token ${activeTokenHash} : Provided Token ${tokenHash} : Refresh Token ${refreshTokenHash}`
+  )
 
-  // save new active token information in local database
-  // this is to allow multiple consecutive JWT method calls
-  // from the same Core without waiting for the broadcast delay
-  // if this fails, we can proceed because the subsequent broadcast
-  // call will update the local database eventually as well,
-  // and Nodes will eventually recover
-  try {
-    await activeToken.writeActiveTokenAsync({
-      nodeIp: submittingNodeIP,
-      tokenHash: refreshTokenHash
-    })
-  } catch (error) {
-    logger.warn(`Could not update active token data in local database on refresh`)
-  }
-
-  // broadcast Node IP and new token hash for Cores to update their local active token table
-  try {
-    let coreId = await tokenUtils.getCachedCoreIDAsync()
-    await broadcastCoreTxAsync(coreId, submittingNodeIP, refreshTokenHash)
-  } catch (error) {
-    return next(new errors.InternalServerError(`server error, ${error.message}`))
+  let cacheSuccess = await tokenUtils.cacheTokenHashes(activeTokenHash, refreshTokenHash)
+  if (!cacheSuccess) {
+    return next(new errors.InternalServerError('server error, could cache token hashes for confirmation'))
   }
 
   res.contentType = 'application/json'
@@ -196,32 +179,6 @@ async function createAndSignJWTAsync(payload) {
   let privateKeyPEM = env.ECDSA_PKPEM
   let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
   return jwt.sign(payload, privateKeyPEM, { algorithm: 'ES256', keyid: jwk.toJSON().kid })
-}
-
-async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
-  let tokenTx = {
-    type: 'TOKEN',
-    data: `${submittingNodeIP}|${tokenHash}`,
-    version: 2,
-    time: Math.ceil(Date.now() / 1000),
-    core_id: coreId
-  }
-  let tokenTxString = JSON.stringify(tokenTx)
-  let tokenTxB64 = Buffer.from(tokenTxString).toString('base64')
-  try {
-    let txResponse = await tmRpc.broadcastTxAsync(tokenTxB64)
-    if (txResponse.error) {
-      switch (txResponse.error.responseCode) {
-        case 409:
-          throw new Error(txResponse.error.message)
-        default:
-          logger.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
-          throw new Error('Could not broadcast transaction')
-      }
-    }
-  } catch (error) {
-    throw new Error(`server error on transaction broadcast, ${error.message}`)
-  }
 }
 
 function constructTokenPayload(submittingNodeIP, exp, bal, aud, aulr) {
@@ -376,7 +333,7 @@ async function postTokenCreditAsync(req, res, next) {
   // broadcast Node IP and new token hash for Cores to update their local active token table
   try {
     let coreId = await tokenUtils.getCachedCoreIDAsync()
-    await broadcastCoreTxAsync(coreId, submittingNodeIP, newTokenHash)
+    await tokenUtils.broadcastCoreTxAsync(coreId, submittingNodeIP, newTokenHash)
   } catch (error) {
     return next(new errors.InternalServerError(`server error, ${error.message}`))
   }
@@ -533,7 +490,7 @@ async function postTokenAudienceUpdateAsync(req, res, next) {
   // broadcast Node IP and new token hash for Cores to update their local active token table
   try {
     let coreId = await tokenUtils.getCachedCoreIDAsync()
-    await broadcastCoreTxAsync(coreId, submittingNodeIP, updatedTokenHash)
+    await tokenUtils.broadcastCoreTxAsync(coreId, submittingNodeIP, updatedTokenHash)
   } catch (error) {
     return next(new errors.InternalServerError(`server error, ${error.message}`))
   }
@@ -556,9 +513,6 @@ module.exports = {
   },
   setENV: e => {
     env = e
-  },
-  setTMRPC: rpc => {
-    tmRpc = rpc
   },
   setTA: ta => {
     tokenContractAddress = ta

@@ -23,6 +23,7 @@ let status = require('./endpoints/status.js')
 let stakedCore = require('./models/StakedCore.js')
 const env = require('./parse-env.js')('api')
 const logger = require('./logger.js')
+let tmRpc = require('./tendermint-rpc.js')
 
 // These are token signature verification methods that are used in more than one of the API endpoints
 // The purpose of this file is to prevent duplication of these token signature verification methods
@@ -34,6 +35,45 @@ const CACHED_ISS_VALUES_KEY = 'CachedISSValues'
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
 let redis = null
+
+// cache old token hash so we can confirm node received new token in /hashes
+async function cacheTokenHashes(prevTokenHash, currTokenHash) {
+  if (redis) {
+    try {
+      await redis.set(currTokenHash, prevTokenHash, 'EX', 30 * 60 * 60 * 24)
+      return true
+    } catch (error) {
+      logger.warn(`Redis write error : isKnownPeerIPAsync : ${error.message}`)
+      return false
+    }
+  }
+}
+
+async function getPrevTokenHash(currTokenHash) {
+  if (redis) {
+    try {
+      let cacheResult = await redis.get(currTokenHash)
+      if (cacheResult) {
+        return cacheResult
+      }
+    } catch (error) {
+      logger.warn(`Redis read error : getCachedCoreIDAsync : ${error.message}`)
+    }
+  }
+  return null
+}
+
+async function delPrevTokenHash(currTokenHash) {
+  if (redis) {
+    try {
+      await redis.del(currTokenHash)
+      return true
+    } catch (error) {
+      logger.warn(`Redis read error : getCachedCoreIDAsync : ${error.message}`)
+    }
+  }
+  return false
+}
 
 async function verifySigAsync(tokenString, decodedToken) {
   // verify signature of token
@@ -202,15 +242,48 @@ async function coreStatusRequestAsync(coreURI, retryCount = 3) {
   return response.body
 }
 
+async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
+  let tokenTx = {
+    type: 'TOKEN',
+    data: `${submittingNodeIP}|${tokenHash}`,
+    version: 2,
+    time: Math.ceil(Date.now() / 1000),
+    core_id: coreId
+  }
+  let tokenTxString = JSON.stringify(tokenTx)
+  let tokenTxB64 = Buffer.from(tokenTxString).toString('base64')
+  try {
+    let txResponse = await tmRpc.broadcastTxAsync(tokenTxB64)
+    if (txResponse.error) {
+      switch (txResponse.error.responseCode) {
+        case 409:
+          throw new Error(txResponse.error.message)
+        default:
+          logger.error(`RPC error communicating with Tendermint : ${txResponse.error.message}`)
+          throw new Error('Could not broadcast transaction')
+      }
+    }
+  } catch (error) {
+    throw new Error(`server error on transaction broadcast, ${error.message}`)
+  }
+}
+
 module.exports = {
+  cacheTokenHashes: cacheTokenHashes,
+  getPrevTokenHash: getPrevTokenHash,
+  delPrevTokenHash: delPrevTokenHash,
   verifySigAsync: verifySigAsync,
   getCachedCoreIDAsync: getCachedCoreIDAsync,
+  broadcastCoreTxAsync: broadcastCoreTxAsync,
   setRedis: r => {
     redis = r
   },
   // additional functions for testing purposes
   setRP: r => {
     rp = r
+  },
+  setTMRPC: rpc => {
+    tmRpc = rpc
   },
   setStatus: s => {
     status = s
