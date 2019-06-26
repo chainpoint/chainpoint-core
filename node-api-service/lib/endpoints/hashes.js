@@ -290,6 +290,9 @@ module.exports = {
   setAMQPChannel: chan => {
     amqpChannel = chan
   },
+  setAT: at => {
+    activeToken = at
+  },
   setRedis: r => {
     tokenUtils.setRedis(r)
   },

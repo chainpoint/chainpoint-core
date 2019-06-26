@@ -23,7 +23,7 @@ let status = require('./endpoints/status.js')
 let stakedCore = require('./models/StakedCore.js')
 const env = require('./parse-env.js')('api')
 const logger = require('./logger.js')
-let tmRpc = require('../tendermint-rpc.js')
+let tmRpc = require('./tendermint-rpc.js')
 
 // These are token signature verification methods that are used in more than one of the API endpoints
 // The purpose of this file is to prevent duplication of these token signature verification methods
