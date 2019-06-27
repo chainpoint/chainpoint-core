@@ -24,6 +24,7 @@ const jwt = require('jsonwebtoken')
 const tokenUtils = require('../token-utils.js')
 const logger = require('../logger.js')
 const url = require('url').URL
+const crypto = require('crypto')
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
