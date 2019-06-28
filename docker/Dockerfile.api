@@ -5,7 +5,7 @@ COPY go-abci-service/ethcontracts /home/node/app/artifacts/ethcontracts/
 
 # Define and install dependencies
 COPY node-api-service/package.json node-api-service/yarn.lock /home/node/app/
-RUN yarn
+RUN yarn --verbose
 
 RUN mkdir /home/node/app/lib/endpoints
 COPY node-api-service/lib/endpoints /home/node/app/lib/endpoints/
