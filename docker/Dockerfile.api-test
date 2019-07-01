@@ -8,7 +8,7 @@ COPY go-abci-service/ethcontracts /home/node/app/artifacts/ethcontracts/
 
 # Define and install dependencies
 COPY node-api-service/package.json node-api-service/yarn.lock /home/node/app/
-RUN yarn
+RUN yarn --verbose
 
 RUN mkdir /home/node/app/lib/endpoints
 COPY node-api-service/lib/endpoints /home/node/app/lib/endpoints/
@@ -22,7 +22,7 @@ COPY node-api-service/test test
 
 # 1. Get test packages; AND
 # 2. Install our test framework - mocha
-RUN yarn && \
+RUN yarn --verbose && \
     yarn global add mocha
 
 # Run the tests instead of the application
