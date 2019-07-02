@@ -144,12 +144,14 @@ clean: down
 init-volumes:
 	@mkdir -p ${CORE_DATADIR}/data/postgresql
 	@mkdir -p ${CORE_DATADIR}/data/redis
+	@mkdir -p ${CORE_DATADIR}/data/traefik
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init
 init: init-volumes
 	@mkdir -p ${CORE_DATADIR}/config/node_1/data
 	@mkdir -p ${CORE_DATADIR}/data/keys
+	@cp config/traefik.toml ${CORE_DATADIR}/data/traefik/traefik.toml
 	@docker run -it --rm --user ${UID}:${GID} -v ${CORE_DATADIR}/config/node_1:/tendermint/config  -v ${CORE_DATADIR}/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "not yet run for the first time"
 	@cli/scripts/install_deps.sh
