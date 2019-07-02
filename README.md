@@ -15,15 +15,13 @@ This software is intended to be run as part of Chainpoint's Core Network. It is 
 
 ## Introduction to Chainpoint
 
-Chainpoint is a protocol for facilitating the decentralized notarization of data using the Bitcoin blockchain. It makes the process of _anchoring_ data fingerprints (hashes) to Bitcoin more cost-effective by creating intermediate, decentralized tiers between the user and the Bitcoin blockchain.
+Chainpoint is a protocol for digitally notarizing data using the Bitcoin blockchain. It makes the process of anchoring data fingerprints (hashes) to Bitcoin more cost-effective by creating an intermediate, decentralized network between the user and the Bitcoin blockchain.
 
-The first tier is the [Chainpoint Node](https://github.com/chainpoint/chainpoint-node-src), which [_aggregates_](https://github.com/Tierion/merkle-tools) user submissions into a single datapoint every minute. This datapoint is then submitted to the second tier, the Chainpoint Core Network.
-The Core Network consists of many Cores running in concert to create a Tendermint-based blockchain, the Calendar. Every hour, a random Core is elected to anchor the state of the Calendar to Bitcoin, then write back the result to the Calendar. The more Cores there are, the less frequently a given Core will be selected to anchor, which reduces the burden of paying Bitcoin fees.
+The first tier is the Chainpoint Node, which aggregates user submissions into a single datapoint every minute. This datapoint is then submitted to the second tier, the Chainpoint Core Network. The Core Network consists of many Cores running in concert to create the Calendar, a Tendermint-based blockchain. Every hour, a random Core anchors the state of the Calendar to Bitcoin. The more Cores there are, the less often a given Core is selected to anchor, which reduces the burden of paying Bitcoin fees.
 
-After the Cores anchor to Bitcoin, the Chainpoint Nodes retrieve the result and construct a [cryptographic proof](https://github.com/chainpoint/chainpoint-cli) showing the user's data was included in the Bitcoin blockchain. Because the Bitcoin blockchain is viewable by everyone and secured by Bitcoin Mining, writing data to Bitcoin constitutes a reliable form of notarization-
-it is a good way of attesting to the existence of certain data (ie proving you knew something) at a particular point in time.
+After the Cores anchor to Bitcoin, the Chainpoint Nodes retrieve the result and use it to construct a cryptographic proof. This proof shows that the Bitcoin blockchain contains a hash of the user's data. 
 
-Users can install a release of [Chainpoint-CLI](https://github.com/chainpoint/chainpoint-cli) to submit data to a Chainpoint Node and retrieve a [Chainpoint Proof](https://chainpoint.org/#v3x).
+Users can install a release of Chainpoint-CLI to submit data to a Chainpoint Node and retrieve a Chainpoint Proof.
 
 ## What is Chainpoint Core?
 
