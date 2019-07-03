@@ -144,6 +144,7 @@ clean: down
 init-volumes:
 	@mkdir -p ${CORE_DATADIR}/data/postgresql
 	@mkdir -p ${CORE_DATADIR}/data/redis
+	@mkdir -p ${CORE_DATADIR}/data/traefik
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init
@@ -155,6 +156,7 @@ init: init-volumes
 	@cli/scripts/install_deps.sh
 	@node cli/init
 	@rsync .env ${CORE_DATADIR}/.env
+	@cp -rf config/traefik.toml ${CORE_DATADIR}/data/traefik/traefik.toml
 
 ## init-chain                : Pull down chainpoint network info
 .PHONY : init-chain

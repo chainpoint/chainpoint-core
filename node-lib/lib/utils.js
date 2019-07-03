@@ -109,7 +109,12 @@ function formatAsChainpointV3Ops(proof, op) {
  * @returns {string} - The IP address, or null if it cannot be determined
  */
 function getClientIP(req) {
-  let rcr, rsa
+  let xff, rcr, rsa
+  try {
+    xff = req.headers['x-forwarded-for']
+  } catch (error) {
+    xff = null
+  }
   try {
     rcr = req.connection.remoteAddress
   } catch (error) {
@@ -121,7 +126,7 @@ function getClientIP(req) {
     rsa = null
   }
 
-  let result = rcr || rsa
+  let result = xff || rcr || rsa
   if (result) result = result.replace('::ffff:', '')
 
   return result || null

@@ -1,0 +1,27 @@
+logLevel = "DEBUG"
+defaultEntryPoints = ["http", "https", "dash", "rpc"]
+
+[web]
+    [entryPoints]
+        [entryPoints.http]
+            address = ":8080"
+        [entryPoints.https]
+            address = ":8443"
+            [entryPoints.https.redirect]
+                entryPoint="http"
+        [entryPoints.portainer]
+            address = ":9000"
+        [entryPoints.dash]
+            address = ":8081"
+        [entryPoints.rpc]
+            address=":26657"
+
+[api]
+    entrypoint = "dash"
+    dashboard = false
+
+[docker]
+    endpoint = "unix:///var/run/docker.sock"
+    watch = true
+    swarmmode = true
+    exposedbydefault = false
