@@ -25,7 +25,6 @@ services:
     depends_on:
     - rabbitmq
     - api
-    - traefik
     user: ${USERID}:${GROUPID}
     environment:
       PEERS: ${PEERS}
@@ -35,7 +34,7 @@ services:
       ETH_ETHERSCAN_API_KEY: DOCKER-SECRET->ETH_ETHERSCAN_API_KEY
       ETH_PRIVATE_KEY: DOCKER-SECRET->ETH_PRIVATE_KEY
       ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
-      TENDERMINT_HOST: abci
+      TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       PRIVATE_NODE_IPS: ""
@@ -54,21 +53,14 @@ services:
       - ~/.chainpoint/core/config/node_1:/tendermint/config
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data
     ports:
-      - "26656"
-      - "26657"
-    deploy:
-      mode: global
-      labels:
-      - "traefik.enable=true"
-      - "traefik.port=26656"
-      - "traefik.peer.port=26656"
-      - "traefik.peer.frontend.entryPoints=peer"
-      - "traefik.peer.frontend.rule=PathPrefix:/"
-      - "traefik.rpc.port=26657"
-      - "traefik.rpc.frontend.entryPoints=rpc"
-      - "traefik.rpc.frontend.rule=PathPrefix:/"
-      - "traefik.docker.network=chainpoint-core_chainpoint"
-      - "traefik.backend.loadbalancer.swarm=true"
+      - target: 26656
+        published: 26656
+        protocol: tcp
+        mode: hosts
+      - target: 26657
+        published: 26657
+        protocol: tcp
+        mode: host
     networks:
     - chainpoint
     secrets:
@@ -108,7 +100,6 @@ services:
       - redis
       - rabbitmq
       - postgres
-      - traefik
     networks:
       - chainpoint
     ports:
@@ -329,6 +320,8 @@ services:
       labels:
       - "traefik.enable=true"
       - "traefik.port=9000"
+      - "traefik.frontend.entryPoints=portainer"
+      - "traefik.frontend.rule=PathPrefix:/"
       - "traefik.docker.network=chainpoint-core_chainpoint"
       - "traefik.backend.loadbalancer.swarm=true"
       placement:
@@ -341,23 +334,15 @@ services:
     - chainpoint
     ports:
     - target: 8080
-      published: 8080
+      published: 80
       protocol: tcp
       mode: host
     - target: 8443
-      published: 8443
+      published: 443
       protocol: tcp
       mode: hosts
     - target: 9000
       published: 9000
-      protocol: tcp
-      mode: host
-    - target: 26656
-      published: 26656
-      protocol: tcp
-      mode: host
-    - target: 26657
-      published: 26657
       protocol: tcp
       mode: host
     volumes:

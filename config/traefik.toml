@@ -11,10 +11,8 @@ defaultEntryPoints = ["http", "https", "dash", "peer", "rpc"]
             entryPoint="http"
         [entryPoints.dash]
             address = ":8081"
-        [entryPoints.peer]
-            address=":26656"
-        [entryPoints.rpc]
-            address=":26657"
+        [entryPoints.portainer]
+            address = ":9000"
 
 [api]
     entrypoint = "dash"
