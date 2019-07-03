@@ -1,5 +1,5 @@
 logLevel = "DEBUG"
-defaultEntryPoints = ["http", "https", "dash", "peer", "rpc"]
+defaultEntryPoints = ["http", "https", "dash", "rpc"]
 
 [web]
     [entryPoints]
@@ -7,12 +7,14 @@ defaultEntryPoints = ["http", "https", "dash", "peer", "rpc"]
             address = ":8080"
         [entryPoints.https]
             address = ":8443"
-        [entryPoints.https.redirect]
-            entryPoint="http"
-        [entryPoints.dash]
-            address = ":8081"
+            [entryPoints.https.redirect]
+                entryPoint="http"
         [entryPoints.portainer]
             address = ":9000"
+        [entryPoints.dash]
+            address = ":8081"
+        [entryPoints.rpc]
+            address=":26657"
 
 [api]
     entrypoint = "dash"

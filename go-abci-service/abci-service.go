@@ -226,6 +226,8 @@ func initTendermintConfig() (*cfg.Config, error) {
 	defaultConfig.SetRoot(homeDir)
 	defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
 	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(62 * time.Second) // allows us to wait for tx to commit + 2 sec latency margin
+	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
+	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
 	fmt.Printf("Config : %#v\n", defaultConfig)
 	cfg.EnsureRoot(defaultConfig.RootDir)
 	return defaultConfig, nil

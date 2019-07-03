@@ -50,24 +50,31 @@ services:
       LOG_FILTER: "main:debug,state:info,*:error"
       LOG_LEVEL: "info"
     volumes:
-      - ~/.chainpoint/core/config/node_1:/tendermint/config
-      - ~/.chainpoint/core/config/node_1/data:/tendermint/data
+    - ~/.chainpoint/core/config/node_1:/tendermint/config
+    - ~/.chainpoint/core/config/node_1/data:/tendermint/data
     ports:
-      - target: 26656
-        published: 26656
-        protocol: tcp
-        mode: hosts
-      - target: 26657
-        published: 26657
-        protocol: tcp
-        mode: host
+    - target: 26656
+      published: 26656
+      protocol: tcp
+      mode: host
+    deploy:
+      mode: global
+      labels:
+      - "traefik.enable=true"
+      - "traefik.rpc.port=26657"
+      - "traefik.rpc.frontend.entryPoints=rpc"
+      - "traefik.rpc.frontend.rule=PathPrefix:/"
+      - "traefik.docker.network=chainpoint-core_chainpoint"
+      - "traefik.backend.loadbalancer.swarm=true"
+      placement:
+        constraints: [node.role==manager]
     networks:
     - chainpoint
     secrets:
-      - ETH_INFURA_API_KEY
-      - ETH_ETHERSCAN_API_KEY
-      - ETH_PRIVATE_KEY
-      - ECDSA_PKPEM
+    - ETH_INFURA_API_KEY
+    - ETH_ETHERSCAN_API_KEY
+    - ETH_PRIVATE_KEY
+    - ECDSA_PKPEM
 
 
   # HTTP API
@@ -97,23 +104,21 @@ services:
       dockerfile: docker/Dockerfile.api
     user: ${USERID}:${GROUPID}
     depends_on:
-      - redis
-      - rabbitmq
-      - postgres
+    - redis
+    - rabbitmq
+    - postgres
     networks:
-      - chainpoint
-    ports:
-      - "8080"
+    - chainpoint
     deploy:
       mode: replicated
       replicas: 2
       labels:
-        - "traefik.enable=true"
-        - "traefik.port=8080"
-        - "traefik.frontend.entryPoints=http"
-        - "traefik.frontend.rule=PathPrefix:/"
-        - "traefik.docker.network=chainpoint-core_chainpoint"
-        - "traefik.backend.loadbalancer.swarm=true"
+      - "traefik.enable=true"
+      - "traefik.port=8080"
+      - "traefik.frontend.entryPoints=http"
+      - "traefik.frontend.rule=PathPrefix:/"
+      - "traefik.docker.network=chainpoint-core_chainpoint"
+      - "traefik.backend.loadbalancer.swarm=true"
       update_config:
         parallelism: 1
         delay: 1s
@@ -153,11 +158,11 @@ services:
     user: ${USERID}:${GROUPID}
     container_name: btc-tx-core
     depends_on:
-      - rabbitmq
+    - rabbitmq
     networks:
-      - chainpoint
+    - chainpoint
     secrets:
-      - BITCOIN_WIF
+    - BITCOIN_WIF
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
@@ -179,10 +184,10 @@ services:
     container_name: btc-mon-core
     user: ${USERID}:${GROUPID}
     depends_on:
-      - rabbitmq
-      - redis
+    - rabbitmq
+    - redis
     networks:
-      - chainpoint
+    - chainpoint
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
@@ -203,10 +208,10 @@ services:
     deploy:
       replicas: 2
     depends_on:
-      - rabbitmq
-      - postgres
+    - rabbitmq
+    - postgres
     networks:
-      - chainpoint
+    - chainpoint
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
@@ -228,10 +233,10 @@ services:
     deploy:
       replicas: 2
     depends_on:
-      - rabbitmq
-      - postgres
+    - rabbitmq
+    - postgres
     networks:
-      - chainpoint
+    - chainpoint
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
@@ -260,7 +265,7 @@ services:
       RABBITMQ_DEFAULT_USER: chainpoint
       RABBITMQ_DEFAULT_PASS: chainpoint
     networks:
-      - chainpoint
+    - chainpoint
 
   # Redis
   #
@@ -270,17 +275,17 @@ services:
     container_name: redis-core
     user: ${USERID}:${GROUPID}
     ports:
-      - "6379"
+    - "6379"
     volumes:
-      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
-      - ~/.chainpoint/core/data/redis:/data
+    - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    - ~/.chainpoint/core/data/redis:/data
     networks:
-      - chainpoint
+    - chainpoint
     command:
-      - redis-server
-      - /usr/local/etc/redis/redis.conf
+    - redis-server
+    - /usr/local/etc/redis/redis.conf
 
-  # Postgres	
+  # Postgres
   #
   # See : https://hub.docker.com/_/postgres/
   # Note: Connect locally on OS X:
@@ -297,14 +302,14 @@ services:
     container_name: postgres-core
     user: ${USERID}:${GROUPID}
     volumes:
-      - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
+    - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: chainpoint
       POSTGRES_PASSWORD: chainpoint
     ports:
-      - "5433:5432"
+    - "5433:5432"
     networks:
-      - chainpoint
+    - chainpoint
 
   portainer:
     image: portainer/portainer
@@ -345,13 +350,13 @@ services:
       published: 9000
       protocol: tcp
       mode: host
+    - target: 26657
+      published: 26657
+      protocol: tcp
+      mode: host
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     - ~/.chainpoint/core/data/traefik:/data
     deploy:
       placement:
         constraints: [node.role==manager]
-
-
-
-
