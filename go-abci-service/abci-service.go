@@ -131,7 +131,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		ethTokenContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/TierionNetworkToken.json", useTestNets)
 		if ethTokenContract == "" {
 			fmt.Println("Token Contract: Cannot read from JSON ABI file, defaulting to hardcoded contract address")
-			ethTokenContract = util.GetEnv("TokenContractAddr", "0xA1D7c1bEA37AE780B61D7fb472B4E704F3545831")
+			ethTokenContract = util.GetEnv("TokenContractAddr", "0x1A297A2112c6aB076794462B2e9153374AcbB832")
 		}
 	}
 	ethRegistryContract := ""
@@ -139,7 +139,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		ethRegistryContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/ChainpointRegistry.json", useTestNets)
 		if ethRegistryContract == "" && doNodeManagement {
 			fmt.Println("Registry Contract: Cannot read from JSON ABI file, defaulting to hardcoded contract address")
-			ethRegistryContract = util.GetEnv("RegistryContractAddr", "0x787b994Ba53badF4c61404BB5444998282d6B22E")
+			ethRegistryContract = util.GetEnv("RegistryContractAddr", "0x0574EDbeDC2c2f7675581B60372Daa10dDD2ad5F")
 		}
 	}
 	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
