@@ -43,7 +43,7 @@ async function cacheTokenHashes(prevTokenHash, currTokenHash) {
       await redis.set(currTokenHash, prevTokenHash, 'EX', 30 * 60 * 60 * 24)
       return true
     } catch (error) {
-      logger.warn(`Redis write error : isKnownPeerIPAsync : ${error.message}`)
+      logger.warn(`Redis write error : cacheTokenHashes : ${error.message}`)
       return false
     }
   }
@@ -57,7 +57,7 @@ async function getPrevTokenHash(currTokenHash) {
         return cacheResult
       }
     } catch (error) {
-      logger.warn(`Redis read error : getCachedCoreIDAsync : ${error.message}`)
+      logger.warn(`Redis read error : getPrevTokenHash : ${error.message}`)
     }
   }
   return null
@@ -69,7 +69,7 @@ async function delPrevTokenHash(currTokenHash) {
       await redis.del(currTokenHash)
       return true
     } catch (error) {
-      logger.warn(`Redis read error : getCachedCoreIDAsync : ${error.message}`)
+      logger.warn(`Redis delete error : delPrevTokenHash : ${error.message}`)
     }
   }
   return false
