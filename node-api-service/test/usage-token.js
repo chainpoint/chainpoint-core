@@ -8,6 +8,7 @@ const request = require('supertest')
 
 const app = require('../server.js')
 const usageToken = require('../lib/endpoints/usage-token.js')
+const tokenUtils = require('../lib/token-utils.js')
 const jwt = require('jsonwebtoken')
 
 describe('Usage Token Controller - Public Mode', () => {
@@ -928,7 +929,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           throw new Error('tm error!')
         }
@@ -1009,7 +1010,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return { error: { responseCode: 409, message: 'badarg' } }
         }
@@ -1090,7 +1091,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return { error: { responseCode: 500, message: 'commerr' } }
         }
@@ -1167,7 +1168,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return {}
         }
@@ -1663,7 +1664,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           throw new Error('tm error!')
         }
@@ -1731,7 +1732,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return { error: { responseCode: 409, message: 'badarg' } }
         }
@@ -1799,7 +1800,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return { error: { responseCode: 500, message: 'commerr' } }
         }
@@ -1864,7 +1865,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return {}
         }
@@ -3071,7 +3072,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           throw new Error('tm error!')
         }
@@ -3152,7 +3153,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return { error: { responseCode: 409, message: 'badarg' } }
         }
@@ -3233,7 +3234,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return { error: { responseCode: 500, message: 'commerr' } }
         }
@@ -3310,7 +3311,7 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
           return { status: { node_info: { id: 'myId!' } } }
         }
       })
-      usageToken.setTMRPC({
+      tokenUtils.setTMRPC({
         broadcastTxAsync: async () => {
           return {}
         }
