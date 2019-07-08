@@ -37,19 +37,19 @@ const CACHED_ISS_VALUES_KEY = 'CachedISSValues'
 let redis = null
 
 // cache old token hash so we can confirm node received new token in /hashes
-async function cacheTokenHashes(prevTokenHash, currTokenHash) {
+async function cacheTokenHashesAsync(prevTokenHash, currTokenHash) {
   if (redis) {
     try {
       await redis.set(currTokenHash, prevTokenHash, 'EX', 30 * 60 * 60 * 24)
       return true
     } catch (error) {
-      logger.warn(`Redis write error : cacheTokenHashes : ${error.message}`)
+      logger.warn(`Redis write error : cacheTokenHashesAsync : ${error.message}`)
       return false
     }
   }
 }
 
-async function getPrevTokenHash(currTokenHash) {
+async function getPrevTokenHashAsync(currTokenHash) {
   if (redis) {
     try {
       let cacheResult = await redis.get(currTokenHash)
@@ -57,19 +57,19 @@ async function getPrevTokenHash(currTokenHash) {
         return cacheResult
       }
     } catch (error) {
-      logger.warn(`Redis read error : getPrevTokenHash : ${error.message}`)
+      logger.warn(`Redis read error : getPrevTokenHashAsync : ${error.message}`)
     }
   }
   return null
 }
 
-async function delPrevTokenHash(currTokenHash) {
+async function delPrevTokenHashAsync(currTokenHash) {
   if (redis) {
     try {
       await redis.del(currTokenHash)
       return true
     } catch (error) {
-      logger.warn(`Redis delete error : delPrevTokenHash : ${error.message}`)
+      logger.warn(`Redis delete error : delPrevTokenHashAsync : ${error.message}`)
     }
   }
   return false
@@ -269,9 +269,9 @@ async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
 }
 
 module.exports = {
-  cacheTokenHashes: cacheTokenHashes,
-  getPrevTokenHash: getPrevTokenHash,
-  delPrevTokenHash: delPrevTokenHash,
+  cacheTokenHashesAsync: cacheTokenHashesAsync,
+  getPrevTokenHashAsync: getPrevTokenHashAsync,
+  delPrevTokenHashAsync: delPrevTokenHashAsync,
   verifySigAsync: verifySigAsync,
   getCachedCoreIDAsync: getCachedCoreIDAsync,
   broadcastCoreTxAsync: broadcastCoreTxAsync,

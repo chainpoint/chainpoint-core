@@ -235,7 +235,7 @@ async function postHashV1Async(req, res, next) {
       .update(tokenString)
       .digest('hex')
 
-    let prevToken = await tokenUtils.getPrevTokenHash(activeTokenHash)
+    let prevToken = await tokenUtils.getPrevTokenHashAsync(activeTokenHash)
     if (prevToken) {
       // save new active token information in local database
       // this is to allow multiple consecutive JWT method calls
@@ -261,7 +261,7 @@ async function postHashV1Async(req, res, next) {
         return next(new errors.InternalServerError(`server error, ${error.message}`))
       }
 
-      await tokenUtils.delPrevTokenHash(activeTokenHash)
+      await tokenUtils.delPrevTokenHashAsync(activeTokenHash)
     }
   }
 
