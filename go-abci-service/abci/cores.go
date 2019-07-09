@@ -167,7 +167,7 @@ func (app *AnchorApplication) PollCoresFromContract() {
 	highestBlock := big.NewInt(0)
 	first := true
 	for {
-		app.logger.Info(fmt.Sprintf("Polling for Registry events after block %d", highestBlock.Int64()))
+		app.logger.Info(fmt.Sprintf("Polling for Core Registry events after block %d", highestBlock.Int64()))
 		if first {
 			first = false
 		} else {
