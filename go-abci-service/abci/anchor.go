@@ -73,44 +73,23 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				return err
 			}
 		}
-		app.state.LatestBtcaHeight = app.state.Height //So no one will try to re-anchor while processing the btc tx
+		app.state.EndCalTxInt = endTxRange            // Ensure we update our range of CAL txs for next anchor period
+		app.state.LatestBtcaHeight = app.state.Height // So no one will try to re-anchor while processing the btc tx
 
-		// wait for a BTC-M tx
+		// wait for a BTC-A tx
 		deadline := time.Now().Add(3 * time.Minute)
 		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && !time.Now().After(deadline) {
 			time.Sleep(10 * time.Second)
 		}
 
-		// A BTC-M tx should have hit by now
-		if app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot { //If not, it'll be less than the start of the current range.
+		// A BTC-A tx should have hit by now
+		if app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot { // If not, it'll be less than the start of the current range.
 			app.resetAnchor(startTxRange)
 		} else {
 			err = app.calendar.QueueBtcaStateDataMessage(treeData)
 			if app.LogError(err) != nil {
 				app.resetAnchor(startTxRange)
 				return err
-			}
-			app.state.EndCalTxInt = endTxRange
-			if iAmLeader {
-				BtcA := types.BtcA{
-					AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
-					BtcTxID:          app.state.LatestBtcTx,
-				}
-				BtcAData, err := json.Marshal(BtcA)
-				if app.LogError(err) != nil {
-					app.resetAnchor(startTxRange)
-					return err
-				}
-				result, err := app.rpc.BroadcastTx("BTC-A", string(BtcAData), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-				app.logger.Debug(fmt.Sprintf("Anchor result: %v", result))
-				if app.LogError(err) != nil {
-					if strings.Contains(err.Error(), "-32603") {
-						app.logger.Debug(fmt.Sprintf("BTC-A block already committed; Leader is %v", leaderIDs))
-						return err
-					}
-					app.resetAnchor(startTxRange)
-					return err
-				}
 			}
 		}
 		return nil
@@ -231,7 +210,16 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	switch msg.Type {
 	case "btctx":
 		time.Sleep(30 * time.Second)
-		_, err := app.rpc.BroadcastTx("BTC-M", string(msg.Body), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		var btcMonObj types.BtcMonMsg
+		err := json.Unmarshal(msg.Body, &btcMonObj)
+		if app.LogError(err) != nil {
+			return err
+		}
+		btcMonBytes, err := json.Marshal(btcMonObj)
+		if app.LogError(err) != nil {
+			return err
+		}
+		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			return err
 		}

@@ -77,18 +77,15 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		app.state.LatestCalTxInt = app.state.TxInt
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
-	case "BTC-M":
-		//Begin monitoring using the data contained in this gossiped transaction
-		if app.state.ChainSynced {
-			app.ConsumeBtcTxMsg([]byte(tx.Data))
-			app.logger.Info(fmt.Sprintf("BTC-M Anchor Data: %s", tx.Data))
-		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
 	case "BTC-A":
-		var btca types.BtcA
+		var btca types.BtcTxMsg
 		if util.LoggerError(app.logger, json.Unmarshal([]byte(tx.Data), &btca)) != nil {
 			break
+		}
+		//Begin monitoring using the data contained in this transaction
+		if app.state.ChainSynced {
+			go app.ConsumeBtcTxMsg([]byte(tx.Data))
+			app.logger.Info(fmt.Sprintf("BTC-A Anchor Data: %s", tx.Data))
 		}
 		app.state.LatestBtcaTx = rawTx
 		app.state.LatestBtcaHeight = app.state.Height + 1
