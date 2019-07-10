@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chainpoint/tendermint/abci/example/code"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -290,8 +292,11 @@ func (app *AnchorApplication) DeliverTx(tx []byte) types2.ResponseDeliverTx {
 }
 
 func (app *AnchorApplication) DeliverMsg(tx []byte) types2.ResponseDeliverMsg {
-	resp := app.updateStateFromTx(tx, true)
-	return types2.ResponseDeliverMsg{Code: resp.Code}
+	code := code.CodeTypeUnknownError
+	if app.state.ChainSynced {
+		code = app.updateStateFromTx(tx, true).Code
+	}
+	return types2.ResponseDeliverMsg{Code: code}
 }
 
 // CheckTx : Pre-gossip validation
