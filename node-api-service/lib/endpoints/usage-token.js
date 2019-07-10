@@ -165,9 +165,12 @@ async function postTokenRefreshAsync(req, res, next) {
     `NodeIP ${submittingNodeIP} : Active Token ${activeTokenHash} : Provided Token ${tokenHash} : Refresh Token ${refreshTokenHash}`
   )
 
-  let cacheSuccess = await tokenUtils.cacheTokenHashesAsync(activeTokenHash, refreshTokenHash)
+  // cache the new token hash
+  // when the new token is confirmed to have been used, we know it has been sucessfully received by the Node
+  // at that point, the new token hash will be broadcast to the network
+  let cacheSuccess = await tokenUtils.addToTokenHashCache(refreshTokenHash)
   if (!cacheSuccess) {
-    return next(new errors.InternalServerError('server error, could cache token hashes for confirmation'))
+    return next(new errors.InternalServerError('server error, could cache token hash for confirmation'))
   }
 
   res.contentType = 'application/json'

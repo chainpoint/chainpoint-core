@@ -37,39 +37,39 @@ const CACHED_ISS_VALUES_KEY = 'CachedISSValues'
 let redis = null
 
 // cache old token hash so we can confirm node received new token in /hashes
-async function cacheTokenHashesAsync(prevTokenHash, currTokenHash) {
+async function addToTokenHashCache(newTokenHash) {
   if (redis) {
     try {
-      await redis.set(currTokenHash, prevTokenHash, 'EX', 30 * 60 * 60 * 24)
+      await redis.set(newTokenHash, 'cached', 'EX', 30 * 60 * 60 * 24)
       return true
     } catch (error) {
-      logger.warn(`Redis write error : cacheTokenHashesAsync : ${error.message}`)
+      logger.warn(`Redis write error : addToTokenHashCache : ${error.message}`)
       return false
     }
   }
 }
 
-async function getPrevTokenHashAsync(currTokenHash) {
+async function isTokenHashCached(tokenHash) {
   if (redis) {
     try {
-      let cacheResult = await redis.get(currTokenHash)
+      let cacheResult = await redis.get(tokenHash)
       if (cacheResult) {
-        return cacheResult
+        return true
       }
     } catch (error) {
-      logger.warn(`Redis read error : getPrevTokenHashAsync : ${error.message}`)
+      logger.warn(`Redis read error : isTokenHashCached : ${error.message}`)
     }
   }
-  return null
+  return false
 }
 
-async function delPrevTokenHashAsync(currTokenHash) {
+async function removeFromTokenHashCache(tokenHash) {
   if (redis) {
     try {
-      await redis.del(currTokenHash)
+      await redis.del(tokenHash)
       return true
     } catch (error) {
-      logger.warn(`Redis delete error : delPrevTokenHashAsync : ${error.message}`)
+      logger.warn(`Redis delete error : removeFromTokenHashCache : ${error.message}`)
     }
   }
   return false
@@ -269,9 +269,9 @@ async function broadcastCoreTxAsync(coreId, submittingNodeIP, tokenHash) {
 }
 
 module.exports = {
-  cacheTokenHashesAsync: cacheTokenHashesAsync,
-  getPrevTokenHashAsync: getPrevTokenHashAsync,
-  delPrevTokenHashAsync: delPrevTokenHashAsync,
+  addToTokenHashCache: addToTokenHashCache,
+  isTokenHashCached: isTokenHashCached,
+  removeFromTokenHashCache: removeFromTokenHashCache,
   verifySigAsync: verifySigAsync,
   getCachedCoreIDAsync: getCachedCoreIDAsync,
   broadcastCoreTxAsync: broadcastCoreTxAsync,
