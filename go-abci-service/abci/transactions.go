@@ -110,6 +110,9 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "NIST":
 		app.state.LatestNistRecord = tx.Data
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		if app.config.DoCal {
+			app.aggregator.LatestNist = app.state.LatestNistRecord
+		}
 		break
 	case "NODE-MINT":
 		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)

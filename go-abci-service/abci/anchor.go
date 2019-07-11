@@ -20,7 +20,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 	app.logger.Debug("starting scheduled aggregation")
 
 	// Get agg objects
-	aggs := app.aggregator.Aggregate(app.state.LatestNistRecord)
+	aggs := app.aggregator.AggregateAndReset()
 
 	// Pass the agg objects to generate a calendar tree
 	calAgg := app.calendar.GenerateCalendarTree(aggs)

@@ -5,6 +5,8 @@ defaultEntryPoints = ["http", "https", "dash", "rpc"]
     [entryPoints]
         [entryPoints.http]
             address = ":8080"
+            [entryPoints.http.forwardedHeaders]
+                trustedIPs = ["127.0.0.0/32", "10.0.0.0/32", "192.168.0.0/16"] # some trusted ip which will never match
         [entryPoints.https]
             address = ":8443"
             [entryPoints.https.redirect]

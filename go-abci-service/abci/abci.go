@@ -21,8 +21,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 
-	cron "gopkg.in/robfig/cron.v3"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	types2 "github.com/chainpoint/tendermint/abci/types"
 	cmn "github.com/chainpoint/tendermint/libs/common"
@@ -218,9 +216,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		CoreKeys:    map[string]ecdsa.PublicKey{},
 	}
 
-	// Create cron scheduler
-	scheduler := cron.New(cron.WithLocation(time.UTC))
-
 	//Initialize and monitor node state
 	if config.DoNodeManagement {
 		go app.PollNodesFromContract()
@@ -229,13 +224,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	//Initialize calendar writing if enabled
 	if config.DoCal {
-		// Run calendar aggregation every minute with pointer to nist object
-		scheduler.AddFunc("0/1 0-23 * * *", func() {
-			if app.state.ChainSynced { // don't aggregate if Tendermint isn't synced or functioning correctly
-				time.Sleep(30 * time.Second) //offset from nist loop by 30 seconds
-				app.AggregateCalendar()
-			}
-		})
+		go app.aggregator.StartAggregation()
 	}
 
 	//Initialize anchoring to bitcoin if enabled
@@ -243,9 +232,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
-
-	//Start scheduled cron tasks
-	scheduler.Start()
 
 	// Load JWK into local mapping from redis
 	app.LoadJWK()
@@ -317,6 +303,20 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 
 //Commit is called at the end of every block to finalize and save chain state
 func (app *AnchorApplication) Commit() types2.ResponseCommit {
+	// If the chain is synced, run all polling methods
+	if app.state.ChainSynced {
+		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
+		if app.config.DoNodeAudit && app.JWKSent {
+			go app.MintMonitor()
+		}
+		if !app.JWKSent {
+			go app.KeyMonitor() // send out this Core's JWK to the rest of the network
+		}
+		if app.config.DoCal {
+			go app.AggregateCalendar()
+		}
+	}
+
 	// Anchor every anchorInterval of blocks
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
@@ -330,16 +330,6 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
-		}
-	}
-
-	if app.state.ChainSynced {
-		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
-		if app.config.DoNodeAudit && app.JWKSent {
-			go app.MintMonitor()
-		}
-		if !app.JWKSent {
-			go app.KeyMonitor() // send out this Core's JWK to the rest of the network
 		}
 	}
 

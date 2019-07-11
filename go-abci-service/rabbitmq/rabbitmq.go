@@ -17,10 +17,12 @@ type Session struct {
 }
 
 // LogError : Describes an RMQ error
-func LogError(err error, msg string) {
+func LogError(err error, msg string) error {
 	if err != nil {
 		log.Printf("RabbitMQ Error: %s; %s", msg, err)
+		return err
 	}
+	return nil
 }
 
 // End : Closes and ends an RMQ session

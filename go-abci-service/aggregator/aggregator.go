@@ -11,9 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/chainpoint/tendermint/libs/log"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	"github.com/chainpoint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/google/uuid"
@@ -29,72 +28,89 @@ const proofStateQueueOut = "work.proofstate"
 
 // Aggregator : object includes rabbitURI and Logger
 type Aggregator struct {
-	RabbitmqURI string
-	Logger      log.Logger
+	RabbitmqURI  string
+	Logger       log.Logger
+	LatestNist   string
+	Aggregations []types.Aggregation
+	AggMutex     sync.Mutex
+	RestartMutex sync.Mutex
+	TempStop     chan struct{}
+	WaitGroup    sync.WaitGroup
 }
 
-// Aggregate retrieves hash messages from rabbitmq, stores them, and creates a proof path for each
-func (aggregator *Aggregator) Aggregate(nist string) (agg []types.Aggregation) {
+func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
+	close(aggregator.TempStop)
+	aggregator.RestartMutex.Lock()
+	aggregations := make([]types.Aggregation, len(aggregator.Aggregations))
+	if len(aggregator.Aggregations) > 0 {
+		copy(aggregations, aggregator.Aggregations)
+		aggregator.Aggregations = make([]types.Aggregation, 0)
+	}
+	aggregator.RestartMutex.Unlock()
+	return aggregations
+}
+
+// ReceiveCalRMQ : Continually consume the calendar work queue and
+// process any resulting messages from the tx and monitor services
+func (aggregator *Aggregator) StartAggregation() error {
 	var session rabbitmq.Session
+	var err error
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "25000"))
-	sleep := int(60 / aggThreads)
 
 	//Consume queue in goroutines with output slice guarded by mutex
-	aggStructSlice := make([]types.Aggregation, 0)
-	shutdown := make(chan struct{})
-	var wg sync.WaitGroup
-	var mux sync.Mutex
-	endConsume := false
-
-	session, err := rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
-	rabbitmq.LogError(err, "RabbitMQ connection failed")
-	defer session.End()
-
-	// Spin up {aggThreads} number of threads to process incoming hashes from the API
-	for i := 0; i < aggThreads; i++ {
-
-		go func() {
-			msgStructSlice := make([]amqp.Delivery, 0)
-			wg.Add(1)
-			defer wg.Done()
-
-			//loop consumes queue and appends to mutex protected data slice
-			for !endConsume {
-				select {
-				//if we close the shutdown channel, we exit. Otherwise we process incoming messages
-				case <-shutdown:
-					endConsume = true
-					break //exit
-				case hash := <-session.Msgs:
-					msgStructSlice = append(msgStructSlice, hash)
-					aggregator.Logger.Info(fmt.Sprintf("Hash: %s\n", string(hash.Body)))
-					//create new agg roots under heavy load
-					if len(msgStructSlice) > hashBatchSize {
-						if agg := aggregator.ProcessAggregation(msgStructSlice, nist); agg.AggRoot != "" {
-							mux.Lock()
-							aggStructSlice = append(aggStructSlice, agg)
-							mux.Unlock()
-							msgStructSlice = make([]amqp.Delivery, 0)
+	aggregator.Aggregations = make([]types.Aggregation, 0)
+	for {
+		aggregator.RestartMutex.Lock()
+		aggregator.TempStop = make(chan struct{})
+		session, err = rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
+		if rabbitmq.LogError(err, "RabbitMQ connection failed") != nil {
+			rabbitmq.LogError(err, "failed to dial for work.in queue")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		// Spin up {aggThreads} number of threads to process incoming hashes from the API
+		for i := 0; i < aggThreads; i++ {
+			go func() {
+				msgStructSlice := make([]amqp.Delivery, 0)
+				aggregator.WaitGroup.Add(1)
+				defer aggregator.WaitGroup.Done()
+				for {
+					select {
+					case <-aggregator.TempStop:
+						return
+					case err = <-session.Notify:
+						return
+					case hash := <-session.Msgs:
+						if len(hash.Body) > 0 {
+							msgStructSlice = append(msgStructSlice, hash)
+							aggregator.Logger.Info(fmt.Sprintf("Hash: %s\n", string(hash.Body)))
+							//create new agg roots under heavy load
+							if len(msgStructSlice) > hashBatchSize {
+								if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
+									aggregator.AggMutex.Lock()
+									aggregator.Aggregations = append(aggregator.Aggregations, agg)
+									aggregator.AggMutex.Unlock()
+									msgStructSlice = make([]amqp.Delivery, 0)
+								}
+							}
+						}
+					}
+					if len(msgStructSlice) > 0 {
+						if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
+							aggregator.AggMutex.Lock()
+							aggregator.Aggregations = append(aggregator.Aggregations, agg)
+							aggregator.AggMutex.Unlock()
 						}
 					}
 				}
-			}
-			if len(msgStructSlice) > 0 {
-				if agg := aggregator.ProcessAggregation(msgStructSlice, nist); agg.AggRoot != "" {
-					mux.Lock()
-					aggStructSlice = append(aggStructSlice, agg)
-					mux.Unlock()
-				}
-			}
-		}()
+			}()
+		}
+		aggregator.WaitGroup.Wait()
+		aggregator.Logger.Debug(fmt.Sprintf("Aggregator resetting RabbitMQ connection...", len(aggregator.Aggregations)))
+		session.End()
+		aggregator.RestartMutex.Unlock()
 	}
-
-	time.Sleep(time.Duration(sleep) * time.Second)
-	close(shutdown)
-	wg.Wait()
-	aggregator.Logger.Debug(fmt.Sprintf("Aggregated %d items", len(aggStructSlice)))
-	return aggStructSlice
 }
 
 // ProcessAggregation creates merkle trees of received hashes a la https://github.com/chainpoint/chainpoint-services/blob/develop/node-aggregator-service/server.js#L66
