@@ -230,13 +230,14 @@ async function postHashV1Async(req, res, next) {
     }
 
     // CONFIRMATION STEP: This ensures the node actually received a new token after refresh
-    let activeTokenHash = crypto
+    let submittedTokenHash = crypto
       .createHash('sha256')
       .update(tokenString)
       .digest('hex')
 
-    let prevToken = await tokenUtils.getPrevTokenHashAsync(activeTokenHash)
-    if (prevToken) {
+    // if this token's hash is in the cache, then it is awaiting broadcast on the network
+    let isCached = await tokenUtils.isTokenHashCached(submittedTokenHash)
+    if (isCached) {
       // save new active token information in local database
       // this is to allow multiple consecutive JWT method calls
       // from the same Core without waiting for the broadcast delay
@@ -246,7 +247,7 @@ async function postHashV1Async(req, res, next) {
       try {
         await activeToken.writeActiveTokenAsync({
           nodeIp: submittingNodeIP,
-          tokenHash: activeTokenHash
+          tokenHash: submittedTokenHash
         })
       } catch (error) {
         logger.warn(`Could not update active token data in local database on refresh`)
@@ -256,12 +257,12 @@ async function postHashV1Async(req, res, next) {
       // broadcast Node IP and new token hash for Cores to update their local active token table
       try {
         let coreId = await tokenUtils.getCachedCoreIDAsync()
-        await tokenUtils.broadcastCoreTxAsync(coreId, submittingNodeIP, activeTokenHash)
+        await tokenUtils.broadcastCoreTxAsync(coreId, submittingNodeIP, submittedTokenHash)
       } catch (error) {
         return next(new errors.InternalServerError(`server error, ${error.message}`))
       }
 
-      await tokenUtils.delPrevTokenHashAsync(activeTokenHash)
+      await tokenUtils.removeFromTokenHashCache(submittedTokenHash)
     }
   }
 
