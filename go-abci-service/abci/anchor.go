@@ -210,12 +210,12 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	switch msg.Type {
 	case "btctx":
 		time.Sleep(30 * time.Second)
-		var btcMonObj types.BtcMonMsg
-		err := json.Unmarshal(msg.Body, &btcMonObj)
+		var btcTxObj types.BtcTxMsg
+		err := json.Unmarshal(msg.Body, &btcTxObj)
 		if app.LogError(err) != nil {
 			return err
 		}
-		btcMonBytes, err := json.Marshal(btcMonObj)
+		btcMonBytes, err := json.Marshal(btcTxObj)
 		if app.LogError(err) != nil {
 			return err
 		}
