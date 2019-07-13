@@ -62,7 +62,6 @@ func (aggregator *Aggregator) StartAggregation() error {
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggregator.Aggregations = make([]types.Aggregation, 0)
 	for {
-		aggregator.Logger.Info(fmt.Sprintf("Starting aggregation loop"))
 		aggregator.RestartMutex.Lock()
 		aggregator.TempStop = make(chan struct{})
 		session, err = rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
