@@ -39,6 +39,7 @@ type Aggregator struct {
 }
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
+	aggregator.Logger.Info(fmt.Sprintf("Retrieving aggregation tree and resetting...."))
 	close(aggregator.TempStop)
 	aggregator.RestartMutex.Lock()
 	aggregations := make([]types.Aggregation, len(aggregator.Aggregations))
@@ -61,12 +62,14 @@ func (aggregator *Aggregator) StartAggregation() error {
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggregator.Aggregations = make([]types.Aggregation, 0)
 	for {
+		aggregator.Logger.Info(fmt.Sprintf("Starting aggregation loop"))
 		aggregator.RestartMutex.Lock()
 		aggregator.TempStop = make(chan struct{})
 		session, err = rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
 		if rabbitmq.LogError(err, "RabbitMQ connection failed") != nil {
 			rabbitmq.LogError(err, "failed to dial for work.in queue")
 			time.Sleep(5 * time.Second)
+			aggregator.RestartMutex.Unlock()
 			continue
 		}
 		// Spin up {aggThreads} number of threads to process incoming hashes from the API
