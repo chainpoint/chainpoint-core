@@ -41,9 +41,8 @@ type Aggregator struct {
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered from improper channel close", r)
+			fmt.Println("Recovered", r)
 		}
-		aggregator.RestartMutex.Unlock()
 	}()
 	close(aggregator.TempStop)
 	aggregator.RestartMutex.Lock()
@@ -53,6 +52,7 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 		aggregator.Aggregations = make([]types.Aggregation, 0)
 	}
 	aggregator.Logger.Info(fmt.Sprintf("Retrieved aggregation tree of %d items and resetting", len(aggregations)))
+	aggregator.RestartMutex.Unlock()
 	return aggregations
 }
 
