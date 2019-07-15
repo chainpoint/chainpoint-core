@@ -39,7 +39,6 @@ type Aggregator struct {
 }
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
-	aggregator.Logger.Info(fmt.Sprintf("Retrieving aggregation tree and resetting...."))
 	_, channelOpen := (<-aggregator.TempStop)
 	if channelOpen {
 		close(aggregator.TempStop)
@@ -51,6 +50,7 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 		aggregator.Aggregations = make([]types.Aggregation, 0)
 	}
 	aggregator.RestartMutex.Unlock()
+	aggregator.Logger.Info(fmt.Sprintf("Retrieving aggregation tree of %d items and resetting", len(aggregations)))
 	return aggregations
 }
 
@@ -83,13 +83,14 @@ func (aggregator *Aggregator) StartAggregation() error {
 				msgStructSlice := make([]amqp.Delivery, 0)
 				aggregator.WaitGroup.Add(1)
 				defer aggregator.WaitGroup.Done()
-				for {
+				for connected {
 					select {
 					case <-aggregator.TempStop:
-						return
+						connected = false
+						break
 					case err = <-session.Notify:
 						connected = false
-						return
+						break
 					case hash := <-session.Msgs:
 						if len(hash.Body) > 0 {
 							msgStructSlice = append(msgStructSlice, hash)
