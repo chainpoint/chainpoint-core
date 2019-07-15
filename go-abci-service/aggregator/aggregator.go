@@ -58,18 +58,21 @@ func (aggregator *Aggregator) StartAggregation() error {
 	var err error
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "25000"))
-
+	connected := false
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggregator.Aggregations = make([]types.Aggregation, 0)
 	for {
 		aggregator.RestartMutex.Lock()
 		aggregator.TempStop = make(chan struct{})
-		session, err = rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
-		if rabbitmq.LogError(err, "RabbitMQ connection failed") != nil {
-			rabbitmq.LogError(err, "failed to dial for work.in queue")
-			time.Sleep(5 * time.Second)
-			aggregator.RestartMutex.Unlock()
-			continue
+		if !connected {
+			session, err = rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
+			if rabbitmq.LogError(err, "RabbitMQ connection failed") != nil {
+				rabbitmq.LogError(err, "failed to dial for work.in queue")
+				time.Sleep(5 * time.Second)
+				aggregator.RestartMutex.Unlock()
+				continue
+			}
+			connected = true
 		}
 		// Spin up {aggThreads} number of threads to process incoming hashes from the API
 		for i := 0; i < aggThreads; i++ {
@@ -82,6 +85,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 					case <-aggregator.TempStop:
 						return
 					case err = <-session.Notify:
+						connected = false
 						return
 					case hash := <-session.Msgs:
 						if len(hash.Body) > 0 {
@@ -110,7 +114,9 @@ func (aggregator *Aggregator) StartAggregation() error {
 		}
 		aggregator.WaitGroup.Wait()
 		aggregator.Logger.Debug(fmt.Sprintf("Aggregator resetting RabbitMQ connection...", len(aggregator.Aggregations)))
-		session.End()
+		if !connected {
+			session.End()
+		}
 		aggregator.RestartMutex.Unlock()
 	}
 }
