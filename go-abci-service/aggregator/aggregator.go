@@ -39,19 +39,20 @@ type Aggregator struct {
 }
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
-	_, channelOpen := (<-aggregator.TempStop)
-	if channelOpen {
-		close(aggregator.TempStop)
-	} else {
-		aggregator.Logger.Info("RMQ channel already closed, continuing...")
-	}
+	aggregator.Logger.Info("obtaining roots from aggregator")
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from improper channel close", r)
+		}
+		aggregator.RestartMutex.Unlock()
+	}()
+	close(aggregator.TempStop)
 	aggregator.RestartMutex.Lock()
 	aggregations := make([]types.Aggregation, len(aggregator.Aggregations))
 	if len(aggregator.Aggregations) > 0 {
 		copy(aggregations, aggregator.Aggregations)
 		aggregator.Aggregations = make([]types.Aggregation, 0)
 	}
-	aggregator.RestartMutex.Unlock()
 	aggregator.Logger.Info(fmt.Sprintf("Retrieving aggregation tree of %d items and resetting", len(aggregations)))
 	return aggregations
 }
@@ -89,6 +90,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 				for connected && consume {
 					select {
 					case <-aggregator.TempStop:
+						aggregator.Logger.Info("stopping aggregation thread")
 						consume = false
 						break
 					case err = <-session.Notify:
@@ -117,6 +119,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 						aggregator.AggMutex.Unlock()
 					}
 				}
+				aggregator.Logger.Info("aggregation thread ended")
 			}()
 		}
 		aggregator.WaitGroup.Wait()
