@@ -39,7 +39,6 @@ type Aggregator struct {
 }
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
-	aggregator.Logger.Info("obtaining roots from aggregator")
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered from improper channel close", r)
@@ -53,7 +52,7 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 		copy(aggregations, aggregator.Aggregations)
 		aggregator.Aggregations = make([]types.Aggregation, 0)
 	}
-	aggregator.Logger.Info(fmt.Sprintf("Retrieving aggregation tree of %d items and resetting", len(aggregations)))
+	aggregator.Logger.Info(fmt.Sprintf("Retrieved aggregation tree of %d items and resetting", len(aggregations)))
 	return aggregations
 }
 
@@ -64,6 +63,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 	var err error
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "25000"))
+	aggregator.Logger.Info(fmt.Sprintf("Starting aggregation with %d threads and %d batch size", aggThreads, hashBatchSize))
 	connected := false
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggregator.Aggregations = make([]types.Aggregation, 0)
@@ -90,7 +90,6 @@ func (aggregator *Aggregator) StartAggregation() error {
 				for connected && consume {
 					select {
 					case <-aggregator.TempStop:
-						aggregator.Logger.Info("stopping aggregation thread")
 						consume = false
 						break
 					case err = <-session.Notify:
@@ -119,15 +118,14 @@ func (aggregator *Aggregator) StartAggregation() error {
 						aggregator.AggMutex.Unlock()
 					}
 				}
-				aggregator.Logger.Info("aggregation thread ended")
 			}()
 		}
 		aggregator.WaitGroup.Wait()
+		aggregator.Logger.Info("aggregation threads stopped")
 		if !connected {
 			session.End()
 		}
 		aggregator.RestartMutex.Unlock()
-		aggregator.Logger.Info(fmt.Sprintf("Aggregator resetting...", len(aggregator.Aggregations)))
 		time.Sleep(5 * time.Second)
 	}
 }
