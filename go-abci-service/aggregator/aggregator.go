@@ -42,6 +42,8 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 	_, channelOpen := (<-aggregator.TempStop)
 	if channelOpen {
 		close(aggregator.TempStop)
+	} else {
+		aggregator.Logger.Info("RMQ channel already closed, continuing...")
 	}
 	aggregator.RestartMutex.Lock()
 	aggregations := make([]types.Aggregation, len(aggregator.Aggregations))
@@ -80,13 +82,14 @@ func (aggregator *Aggregator) StartAggregation() error {
 		// Spin up {aggThreads} number of threads to process incoming hashes from the API
 		for i := 0; i < aggThreads; i++ {
 			go func() {
+				consume := true
 				msgStructSlice := make([]amqp.Delivery, 0)
 				aggregator.WaitGroup.Add(1)
 				defer aggregator.WaitGroup.Done()
-				for connected {
+				for connected && consume {
 					select {
 					case <-aggregator.TempStop:
-						connected = false
+						consume = false
 						break
 					case err = <-session.Notify:
 						connected = false
@@ -106,22 +109,23 @@ func (aggregator *Aggregator) StartAggregation() error {
 							}
 						}
 					}
-					if len(msgStructSlice) > 0 {
-						if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
-							aggregator.AggMutex.Lock()
-							aggregator.Aggregations = append(aggregator.Aggregations, agg)
-							aggregator.AggMutex.Unlock()
-						}
+				}
+				if len(msgStructSlice) > 0 {
+					if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
+						aggregator.AggMutex.Lock()
+						aggregator.Aggregations = append(aggregator.Aggregations, agg)
+						aggregator.AggMutex.Unlock()
 					}
 				}
 			}()
 		}
 		aggregator.WaitGroup.Wait()
-		aggregator.Logger.Debug(fmt.Sprintf("Aggregator resetting RabbitMQ connection...", len(aggregator.Aggregations)))
 		if !connected {
 			session.End()
 		}
 		aggregator.RestartMutex.Unlock()
+		aggregator.Logger.Info(fmt.Sprintf("Aggregator resetting...", len(aggregator.Aggregations)))
+		time.Sleep(5 * time.Second)
 	}
 }
 
