@@ -97,7 +97,6 @@ async function ConsumeCalendarBatchMessageAsync(msg) {
 
     // Write the cal state objects to the database
     // The writes are split into batches to limit the total insert query size
-    // CRDB has a query limit of 256k
     while (stateObjs.length > 0) {
       await cachedProofState.writeCalStateObjectsBulkAsync(stateObjs.splice(0, CAL_STATE_WRITE_BATCH_SIZE))
     }
@@ -148,7 +147,6 @@ async function ConsumeAnchorBTCAggBatchMessageAsync(msg) {
   try {
     // Write the anchor_btc_agg state objects to the database
     // The writes are split into batches to limit the total insert query size
-    // CRDB has a query limit of 256k
     while (stateObjs.length > 0) {
       await cachedProofState.writeAnchorBTCAggStateObjectsAsync(stateObjs.splice(0, ANCHOR_BTC_STATE_WRITE_BATCH_SIZE))
     }
