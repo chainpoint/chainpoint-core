@@ -40,7 +40,10 @@ type Aggregator struct {
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 	aggregator.Logger.Info(fmt.Sprintf("Retrieving aggregation tree and resetting...."))
-	close(aggregator.TempStop)
+	_, channelOpen := (<-aggregator.TempStop)
+	if channelOpen {
+		close(aggregator.TempStop)
+	}
 	aggregator.RestartMutex.Lock()
 	aggregations := make([]types.Aggregation, len(aggregator.Aggregations))
 	if len(aggregator.Aggregations) > 0 {
