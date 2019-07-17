@@ -21,6 +21,7 @@ func (app *AnchorApplication) AggregateCalendar() error {
 
 	// Get agg objects
 	aggs := app.aggregator.AggregateAndReset()
+	app.logger.Debug(fmt.Sprintf("Aggregated %d roots", len(aggs)))
 
 	// Pass the agg objects to generate a calendar tree
 	calAgg := app.calendar.GenerateCalendarTree(aggs)

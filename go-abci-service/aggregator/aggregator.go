@@ -39,7 +39,11 @@ type Aggregator struct {
 }
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
-	aggregator.Logger.Info(fmt.Sprintf("Retrieving aggregation tree and resetting...."))
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered", r)
+		}
+	}()
 	close(aggregator.TempStop)
 	aggregator.RestartMutex.Lock()
 	aggregations := make([]types.Aggregation, len(aggregator.Aggregations))
@@ -47,6 +51,7 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 		copy(aggregations, aggregator.Aggregations)
 		aggregator.Aggregations = make([]types.Aggregation, 0)
 	}
+	aggregator.Logger.Info(fmt.Sprintf("Retrieved aggregation tree of %d items and resetting", len(aggregations)))
 	aggregator.RestartMutex.Unlock()
 	return aggregations
 }
@@ -58,35 +63,42 @@ func (aggregator *Aggregator) StartAggregation() error {
 	var err error
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "25000"))
-
+	aggregator.Logger.Info(fmt.Sprintf("Starting aggregation with %d threads and %d batch size", aggThreads, hashBatchSize))
+	connected := false
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggregator.Aggregations = make([]types.Aggregation, 0)
 	for {
 		aggregator.RestartMutex.Lock()
 		aggregator.TempStop = make(chan struct{})
-		session, err = rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
-		if rabbitmq.LogError(err, "RabbitMQ connection failed") != nil {
-			rabbitmq.LogError(err, "failed to dial for work.in queue")
-			time.Sleep(5 * time.Second)
-			aggregator.RestartMutex.Unlock()
-			continue
+		if !connected {
+			session, err = rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
+			if rabbitmq.LogError(err, "RabbitMQ connection failed") != nil {
+				rabbitmq.LogError(err, "failed to dial for work.in queue")
+				time.Sleep(5 * time.Second)
+				aggregator.RestartMutex.Unlock()
+				continue
+			}
+			connected = true
 		}
 		// Spin up {aggThreads} number of threads to process incoming hashes from the API
 		for i := 0; i < aggThreads; i++ {
 			go func() {
+				consume := true
 				msgStructSlice := make([]amqp.Delivery, 0)
 				aggregator.WaitGroup.Add(1)
 				defer aggregator.WaitGroup.Done()
-				for {
+				for connected && consume {
 					select {
 					case <-aggregator.TempStop:
-						return
+						consume = false
+						break
 					case err = <-session.Notify:
-						return
+						connected = false
+						break
 					case hash := <-session.Msgs:
 						if len(hash.Body) > 0 {
 							msgStructSlice = append(msgStructSlice, hash)
-							aggregator.Logger.Info(fmt.Sprintf("Hash: %s\n", string(hash.Body)))
+							aggregator.Logger.Info(fmt.Sprintf("Hash: %s", string(hash.Body)))
 							//create new agg roots under heavy load
 							if len(msgStructSlice) > hashBatchSize {
 								if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
@@ -98,20 +110,23 @@ func (aggregator *Aggregator) StartAggregation() error {
 							}
 						}
 					}
-					if len(msgStructSlice) > 0 {
-						if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
-							aggregator.AggMutex.Lock()
-							aggregator.Aggregations = append(aggregator.Aggregations, agg)
-							aggregator.AggMutex.Unlock()
-						}
+				}
+				if len(msgStructSlice) > 0 {
+					if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
+						aggregator.AggMutex.Lock()
+						aggregator.Aggregations = append(aggregator.Aggregations, agg)
+						aggregator.AggMutex.Unlock()
 					}
 				}
 			}()
 		}
 		aggregator.WaitGroup.Wait()
-		aggregator.Logger.Debug(fmt.Sprintf("Aggregator resetting RabbitMQ connection...", len(aggregator.Aggregations)))
-		session.End()
+		aggregator.Logger.Info("aggregation threads stopped")
+		if !connected {
+			session.End()
+		}
 		aggregator.RestartMutex.Unlock()
+		time.Sleep(5 * time.Second)
 	}
 }
 
