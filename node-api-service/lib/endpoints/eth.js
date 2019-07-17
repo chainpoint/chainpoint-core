@@ -35,6 +35,9 @@ let registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'
 let registryContractInterface = new ethers.utils.Interface(regDefinition.abi)
 const registryContract = new ethers.Contract(registryAddress, regDefinition.abi, fallbackProvider)
 const ContractEvents = {
+  [tokenAddress]: {
+    approve: 'Approval'
+  },
   [registryAddress]: {
     stake: 'NodeStaked',
     unStake: 'NodeUnStaked',
