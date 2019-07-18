@@ -21,7 +21,7 @@ type RPC struct {
 }
 
 // NewRPCClient : Creates a new client connected to a tendermint instance at web socket "tendermintRPC"
-func NewRPCClient(tendermintRPC types.TendermintURI, logger log.Logger) (rpc *RPC) {
+func NewRPCClient(tendermintRPC types.TendermintConfig, logger log.Logger) (rpc *RPC) {
 	return &RPC{
 		client: client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket"),
 		logger: logger,

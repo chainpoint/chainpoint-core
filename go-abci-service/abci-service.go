@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	types2 "github.com/chainpoint/tendermint/types"
+
 	"github.com/chainpoint/tendermint/node"
 	"github.com/chainpoint/tendermint/proxy"
 
@@ -26,62 +28,33 @@ import (
 	cfg "github.com/chainpoint/tendermint/config"
 	tmflags "github.com/chainpoint/tendermint/libs/cli/flags"
 	cmn "github.com/chainpoint/tendermint/libs/common"
+	tmtime "github.com/chainpoint/tendermint/types/time"
 )
 
 func main() {
 
 	//Instantiate Tendermint Node Config
-	defaultConfig, err := initTendermintConfig()
-	if err != nil {
-		util.LogError(err)
-		return
-	}
-	logger := initTMLogger(defaultConfig)
-	nodeKey, err := p2p.LoadOrGenNodeKey(defaultConfig.NodeKeyFile())
+	tmConfig, err := initTendermintConfig()
 	if util.LogError(err) != nil {
 		return
 	}
-	if tendermintPeers := util.GetEnv("PEERS", ""); tendermintPeers != "" {
-		defaultConfig.P2P.PersistentPeers = tendermintPeers
-	}
-	if tendermintSeeds := util.GetEnv("SEEDS", ""); tendermintSeeds != "" {
-		defaultConfig.P2P.Seeds = tendermintSeeds
-	}
-
-	// Convert old PrivValidator if it exists.
-	oldPrivVal := defaultConfig.OldPrivValidatorFile()
-	newPrivValKey := defaultConfig.PrivValidatorKeyFile()
-	newPrivValState := defaultConfig.PrivValidatorStateFile()
-	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
-		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
-		if err != nil {
-			util.LogError(err)
-			return
-		}
-		logger.Info("Upgrading PrivValidator file",
-			"old", oldPrivVal,
-			"newKey", newPrivValKey,
-			"newState", newPrivValState,
-		)
-		oldPV.Upgrade(newPrivValKey, newPrivValState)
-	}
-	pvFile := privval.LoadOrGenFilePV(newPrivValKey, newPrivValState)
+	logger := tmConfig.Logger
 
 	//Instantiate ABCI application
-	config := initABCIConfig(*pvFile)
+	config := initABCIConfig(tmConfig.FilePV)
 	app := abci.NewAnchorApplication(config)
 
 	//declare connection to abci app
 	appProxy := proxy.NewLocalClientCreator(app)
 
 	/* Instantiate Tendermint Node with given config and abci app */
-	n, err := node.NewNode(defaultConfig,
-		pvFile,
-		nodeKey,
+	n, err := node.NewNode(tmConfig.Config,
+		&tmConfig.FilePV,
+		tmConfig.NodeKey,
 		appProxy,
-		node.DefaultGenesisDocProviderFunc(defaultConfig),
+		node.DefaultGenesisDocProviderFunc(tmConfig.Config),
 		node.DefaultDBProvider,
-		node.DefaultMetricsProvider(defaultConfig.Instrumentation),
+		node.DefaultMetricsProvider(tmConfig.Config.Instrumentation),
 		logger,
 	)
 	if err != nil {
@@ -146,7 +119,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	if len(ethPrivateKey) > 0 && strings.Contains(ethPrivateKey, "0x") {
 		ethPrivateKey = ethPrivateKey[2:]
 	}
-	tendermintRPC := types.TendermintURI{
+	tendermintRPC := types.TendermintConfig{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 	}
@@ -181,7 +154,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	return types.AnchorConfig{
 		DBType:           "goleveldb",
 		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
-		TendermintRPC:    tendermintRPC,
+		TendermintConfig: tendermintRPC,
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,
 		APIURI:           apiURI,
@@ -201,7 +174,8 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 }
 
 // initTendermintConfig : imports tendermint config.toml and initializes config variables
-func initTendermintConfig() (*cfg.Config, error) {
+func initTendermintConfig() (types.TendermintConfig, error) {
+	var TMConfig types.TendermintConfig
 	initEnv("TM")
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
 	homeDir := "/tendermint"
@@ -216,12 +190,12 @@ func initTendermintConfig() (*cfg.Config, error) {
 		// fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 		// ignore not found error, return other errors
-		return nil, err
+		return TMConfig, err
 	}
 	defaultConfig := cfg.DefaultConfig()
 	err := viper.Unmarshal(defaultConfig)
 	if err != nil {
-		return nil, err
+		return TMConfig, err
 	}
 	defaultConfig.SetRoot(homeDir)
 	defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
@@ -229,24 +203,73 @@ func initTendermintConfig() (*cfg.Config, error) {
 	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
 	defaultConfig.TxIndex.IndexAllTags = true
+	if tendermintPeers := util.GetEnv("PEERS", ""); tendermintPeers != "" {
+		defaultConfig.P2P.PersistentPeers = tendermintPeers
+	}
+	if tendermintSeeds := util.GetEnv("SEEDS", ""); tendermintSeeds != "" {
+		defaultConfig.P2P.Seeds = tendermintSeeds
+	}
 	fmt.Printf("Config : %#v\n", defaultConfig)
 	cfg.EnsureRoot(defaultConfig.RootDir)
-	return defaultConfig, nil
-}
 
-// initTMLogger : initializes
-func initTMLogger(defaultConfig *cfg.Config) log.Logger {
-	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-
+	//initialize logger
+	tmlogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	if defaultConfig.LogFormat == cfg.LogFormatJSON {
-		logger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
+		tmlogger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
 	}
-	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_FILTER", "main:debug,state:info,*:error"), logger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_FILTER", "main:debug,state:info,*:error"), tmlogger, cfg.DefaultLogLevel())
 	if err != nil {
-		return nil
+		panic(err)
 	}
 	logger = logger.With("module", "main")
-	return logger
+	TMConfig.Logger = logger
+
+	// initialize private validator key
+	// Convert old PrivValidator if it exists.
+	oldPrivVal := defaultConfig.OldPrivValidatorFile()
+	newPrivValKey := defaultConfig.PrivValidatorKeyFile()
+	newPrivValState := defaultConfig.PrivValidatorStateFile()
+	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
+		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
+		if err != nil {
+			panic(err)
+		}
+		logger.Info("Upgrading PrivValidator file",
+			"old", oldPrivVal,
+			"newKey", newPrivValKey,
+			"newState", newPrivValState,
+		)
+		oldPV.Upgrade(newPrivValKey, newPrivValState)
+	}
+	TMConfig.FilePV = *privval.LoadOrGenFilePV(newPrivValKey, newPrivValState)
+
+	//initialize this node's keys
+	nodeKey, err := p2p.LoadOrGenNodeKey(defaultConfig.NodeKeyFile())
+	TMConfig.NodeKey = nodeKey
+
+	// initialize genesis file
+	genFile := defaultConfig.GenesisFile()
+	if cmn.FileExists(genFile) {
+		logger.Info("Found genesis file", "path", genFile)
+	} else {
+		genDoc := types2.GenesisDoc{
+			ChainID:         fmt.Sprintf("test-chain-%v", cmn.RandStr(6)),
+			GenesisTime:     tmtime.Now(),
+			ConsensusParams: types2.DefaultConsensusParams(),
+		}
+		key := TMConfig.FilePV.GetPubKey()
+		genDoc.Validators = []types2.GenesisValidator{{
+			Address: key.Address(),
+			PubKey:  key,
+			Power:   10,
+		}}
+		if err := genDoc.SaveAs(genFile); err != nil {
+			panic(err)
+		}
+		logger.Info("Generated genesis file", "path", genFile)
+	}
+
+	return TMConfig, nil
 }
 
 // initEnv sets to use ENV variables if set.

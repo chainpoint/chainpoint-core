@@ -212,7 +212,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		pgClient:    pgClient,
 		redisClient: redisClient,
 		ethClient:   ethClient,
-		rpc:         NewRPCClient(config.TendermintRPC, *config.Logger),
+		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
 		CoreKeys:    map[string]ecdsa.PublicKey{},
 	}
 
