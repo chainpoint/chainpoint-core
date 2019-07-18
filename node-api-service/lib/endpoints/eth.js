@@ -34,6 +34,16 @@ const regDefinition = require('../../artifacts/ethcontracts/ChainpointRegistry.j
 let registryAddress = regDefinition.networks[network === 'homestead' ? '1' : '3'].address
 let registryContractInterface = new ethers.utils.Interface(regDefinition.abi)
 const registryContract = new ethers.Contract(registryAddress, regDefinition.abi, fallbackProvider)
+const ContractEvents = {
+  [tokenAddress]: {
+    approve: 'Approval'
+  },
+  [registryAddress]: {
+    stake: 'NodeStaked',
+    unStake: 'NodeUnStaked',
+    updateStake: 'NodeStakeUpdated'
+  }
+}
 
 async function getEthStatsAsync(req, res, next) {
   const ethAddress = req.params.addr
@@ -150,6 +160,17 @@ async function postEthBroadcastAsync(req, res, next) {
     let blockNumber = txReceipt.blockNumber
     let gasUsed = txReceipt.gasUsed.toNumber() // convert from BigNumber to native number
     result = { transactionHash, blockHash, blockNumber, gasUsed }
+
+    // Retrieve Logs for the Contract Address decoded from the Tx
+    let regEvents = txReceipt.logs.filter(currVal => currVal.address === decodedTx.to)
+    if (!regEvents.length) {
+      throw new Error(`${parsedTx.name} did not generate a corresponding event, and thus failed to run successfully`)
+    }
+    // Make sure that the Logs of emitted events corresponds to the contract action attempted in rawTx
+    let event = registryContractInterface.parseLog(regEvents[0])
+    if (ContractEvents[parsedTx.name] !== event.name) {
+      throw new Error(`${parsedTx.name} failed to run`)
+    }
   } catch (error) {
     logger.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
     return next(new errors.InternalServerError(error.message))
