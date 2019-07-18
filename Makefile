@@ -221,13 +221,7 @@ stop:
 
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint: stop
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/tx_index.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/state.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/blockstore.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/evidence.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/cs.wal
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/anchor.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/priv_validator_state.json
+	@sleep 20 && rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -af
 
