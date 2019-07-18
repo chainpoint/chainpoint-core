@@ -145,14 +145,22 @@ init-volumes:
 	@mkdir -p ${CORE_DATADIR}/data/postgresql
 	@mkdir -p ${CORE_DATADIR}/data/redis
 	@mkdir -p ${CORE_DATADIR}/data/traefik
+	@mkdir -p ${CORE_DATADIR}/config/node_1/data
+	@mkdir -p ${CORE_DATADIR}/data/keys
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init
 init: init-volumes
-	@mkdir -p ${CORE_DATADIR}/config/node_1/data
-	@mkdir -p ${CORE_DATADIR}/data/keys
 	@cli/scripts/install_deps.sh
 	@node cli/init
+	@rsync .env ${CORE_DATADIR}/.env
+	@cp -rf config/traefik.toml ${CORE_DATADIR}/data/traefik/traefik.toml
+
+## init-noninteractive       : Create data folder with proper permissions
+.PHONY : init-noninteractive
+init-noninteractive: init-volumes
+	@cli/scripts/install_deps.sh
+	@node cli/init --PRIVATE_NETWORK=$(PRIVATE_NETWORK) --CORE_PUBLIC_IP_ADDRESS=$(CORE_PUBLIC_IP_ADDRESS) --BITCOIN_WIF=$(BITCOIN_WIF) --INSIGHT_API_URI=$(INSIGHT_API_URI)
 	@rsync .env ${CORE_DATADIR}/.env
 	@cp -rf config/traefik.toml ${CORE_DATADIR}/data/traefik/traefik.toml
 
