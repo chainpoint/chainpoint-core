@@ -269,6 +269,8 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 		logger.Info("Generated genesis file", "path", genFile)
 	}
 
+	TMConfig.Config = defaultConfig
+
 	return TMConfig, nil
 }
 
