@@ -164,10 +164,11 @@ async function postEthBroadcastAsync(req, res, next) {
 
     // Retrieve Logs for the Contract Address decoded from the Tx
     let regEvents = txReceipt.logs.filter(currVal => currVal.address === decodedTx.to)
+    console.log('INFO : ETH BROADCAST : Tx Events : ', JSON.stringify(regEvents))
+
     if (!regEvents.length) {
       throw new Error(`${parsedTx.name} did not generate a corresponding event, and thus failed to run successfully`)
     }
-    console.log('INFO : ETH BROADCAST : Tx Events : ', JSON.stringify(regEvents))
 
     // Make sure that the Logs of emitted events corresponds to the contract action attempted in rawTx
     let event = registryContractInterface.parseLog(regEvents[0])
