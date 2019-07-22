@@ -46,6 +46,18 @@ async function createSwarmAndSecrets(valuePairs) {
     console.log(chalk.red('Setting secrets failed (is docker installed?)'))
   }
 
+  try {
+    let infuraApiKey = valuePairs.INFURA_API_KEY
+    let etherscanApiKey = valuePairs.ETHERSCAN_API_KEY
+    await exec.quiet([
+      `printf ${infuraApiKey} | docker secret create ETH_INFURA_API_KEY -`,
+      `printf ${etherscanApiKey} | docker secret create ETH_ETHERSCAN_API_KEY -`
+    ])
+    console.log(chalk.yellow('ETH API secrets saved to Docker Secrets'))
+  } catch (err) {
+    console.log(chalk.red('Setting ETH API secrets failed (is docker installed?)'))
+  }
+
   if (!privateNetwork) {
     try {
       let privateKey
@@ -54,8 +66,6 @@ async function createSwarmAndSecrets(valuePairs) {
       } else {
         privateKey = valuePairs.ETH_PRIVATE_KEY
       }
-      let infuraApiKey = valuePairs.INFURA_API_KEY
-      let etherscanApiKey = valuePairs.ETHERSCAN_API_KEY
       /* Derive address from private key */
       let privateKeyBytes = new Buffer(privateKey.slice(2), 'hex')
       let pubKey = secp256k1.publicKeyCreate(privateKeyBytes, false).slice(1)
@@ -68,9 +78,7 @@ async function createSwarmAndSecrets(valuePairs) {
           .toString('hex')
       await exec.quiet([
         `printf ${address} | docker secret create ETH_ADDRESS -`,
-        `printf ${privateKey} | docker secret create ETH_PRIVATE_KEY -`,
-        `printf ${infuraApiKey} | docker secret create ETH_INFURA_API_KEY -`,
-        `printf ${etherscanApiKey} | docker secret create ETH_ETHERSCAN_API_KEY -`
+        `printf ${privateKey} | docker secret create ETH_PRIVATE_KEY -`
       ])
       await displayInfo.displayWalletInfo({ address: address, privateKey: privateKey })
     } catch (err) {
