@@ -356,31 +356,6 @@ services:
         max-size: "1g"
         max-file: "5"
 
-  portainer:
-    image: portainer/portainer
-    command: -H unix:///var/run/docker.sock
-    user: ${USERID}:${GROUPID}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ~/.chainpoint/core/data/portainer:/data
-    networks:
-      - chainpoint
-    deploy:
-      mode: global
-      labels:
-      - "traefik.enable=true"
-      - "traefik.port=9000"
-      - "traefik.frontend.entryPoints=portainer"
-      - "traefik.frontend.rule=PathPrefix:/"
-      - "traefik.docker.network=chainpoint-core_chainpoint"
-      - "traefik.backend.loadbalancer.swarm=true"
-      placement:
-        constraints: [node.role == manager]
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "1g"
-        max-file: "5"
 
   traefik:
     image: traefik
