@@ -163,23 +163,23 @@ async function postEthBroadcastAsync(req, res, next) {
     result = { transactionHash, blockHash, blockNumber, gasUsed }
 
     // Retrieve Logs for the Contract Address decoded from the Tx
-    let regEvents = txReceipt.logs.filter(currVal => currVal.address === decodedTx.to)
-    console.log('INFO : ETH BROADCAST : Tx Events : ', JSON.stringify(regEvents))
+    // let regEvents = txReceipt.logs.filter(currVal => currVal.address === decodedTx.to)
+    // console.log('INFO : ETH BROADCAST : Tx Events : ', JSON.stringify(regEvents))
 
-    if (!regEvents.length) {
-      throw new Error(`${parsedTx.name} did not generate a corresponding event, and thus failed to run successfully`)
-    }
+    // if (!regEvents.length) {
+    //   throw new Error(`${parsedTx.name} did not generate a corresponding event, and thus failed to run successfully`)
+    // }
 
-    // Make sure that the Logs of emitted events corresponds to the contract action attempted in rawTx
-    let event = registryContractInterface.parseLog(regEvents[0])
-    console.log('INFO : ETH BROADCAST : Event : ', event)
-    if (
-      _.isNull(event) ||
-      (ContractEvents[tokenAddress][parsedTx.name] !== event.name &&
-        ContractEvents[registryAddress][parsedTx.name] !== event.name)
-    ) {
-      throw new Error(`${parsedTx.name} failed to run`)
-    }
+    // // Make sure that the Logs of emitted events corresponds to the contract action attempted in rawTx
+    // let event = registryContractInterface.parseLog(regEvents[0])
+    // console.log('INFO : ETH BROADCAST : Event : ', event)
+    // if (
+    //   _.isNull(event) ||
+    //   (ContractEvents[tokenAddress][parsedTx.name] !== event.name &&
+    //     ContractEvents[registryAddress][parsedTx.name] !== event.name)
+    // ) {
+    //   throw new Error(`${parsedTx.name} failed to run`)
+    // }
   } catch (error) {
     logger.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
     return next(new errors.InternalServerError(error.message))
