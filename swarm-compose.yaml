@@ -75,6 +75,11 @@ services:
     - ETH_ETHERSCAN_API_KEY
     - ETH_PRIVATE_KEY
     - ECDSA_PKPEM
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
 
   # HTTP API
@@ -144,6 +149,11 @@ services:
     - ETH_ETHERSCAN_API_KEY
     - ETH_PRIVATE_KEY
     tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
 
   # Bitcoin Transmit
@@ -171,6 +181,11 @@ services:
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
       BITCOIN_WIF: DOCKER-SECRET->BITCOIN_WIF
     tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
   # Bitcoin Transmit MonitorF
   # Monitor and report on the state of BTC transactions this app has submitted.
@@ -194,6 +209,11 @@ services:
       NETWORK: ${NETWORK:-testnet}
       INSIGHT_API_BASE_URI: ${INSIGHT_API_BASE_URI}
     tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
   # Proof State
   # Encapsulates all persistent data storage for partial proof data.
@@ -218,6 +238,11 @@ services:
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
     tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
   # Proof Generation
   # Responsible for constructing, signing, and validating Chainpoint proofs
@@ -242,6 +267,11 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
     tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
   # RabbitMQ
   #
@@ -266,6 +296,11 @@ services:
       RABBITMQ_DEFAULT_PASS: chainpoint
     networks:
     - chainpoint
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
   # Redis
   #
@@ -284,6 +319,11 @@ services:
     command:
     - redis-server
     - /usr/local/etc/redis/redis.conf
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
   # Postgres
   #
@@ -310,6 +350,11 @@ services:
     - "5433:5432"
     networks:
     - chainpoint
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
   portainer:
     image: portainer/portainer
@@ -331,6 +376,11 @@ services:
       - "traefik.backend.loadbalancer.swarm=true"
       placement:
         constraints: [node.role == manager]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"
 
   traefik:
     image: traefik
@@ -360,3 +410,8 @@ services:
     deploy:
       placement:
         constraints: [node.role==manager]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "5"

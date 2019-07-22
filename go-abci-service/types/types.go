@@ -9,19 +9,26 @@ import (
 	"github.com/chainpoint/tendermint/privval"
 
 	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/chainpoint/tendermint/p2p"
+
+	cfg "github.com/chainpoint/tendermint/config"
 )
 
-// TendermintURI holds connection info for RPC
-type TendermintURI struct {
+// TendermintConfig holds connection info for RPC
+type TendermintConfig struct {
 	TMServer string
 	TMPort   string
+	Config   *cfg.Config
+	Logger   log.Logger
+	FilePV   privval.FilePV
+	NodeKey  *p2p.NodeKey
 }
 
 //AnchorConfig represents values to configure all connections within the ABCI anchor app
 type AnchorConfig struct {
 	DBType           string
 	RabbitmqURI      string
-	TendermintRPC    TendermintURI
+	TendermintConfig TendermintConfig
 	PostgresURI      string
 	RedisURI         string
 	APIURI           string

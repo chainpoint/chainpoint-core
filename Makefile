@@ -145,16 +145,21 @@ init-volumes:
 	@mkdir -p ${CORE_DATADIR}/data/postgresql
 	@mkdir -p ${CORE_DATADIR}/data/redis
 	@mkdir -p ${CORE_DATADIR}/data/traefik
+	@mkdir -p ${CORE_DATADIR}/config/node_1/data
+	@mkdir -p ${CORE_DATADIR}/data/keys
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init
 init: init-volumes
-	@mkdir -p ${CORE_DATADIR}/config/node_1/data
-	@mkdir -p ${CORE_DATADIR}/data/keys
-	@docker run -it --rm --user ${UID}:${GID} -v ${CORE_DATADIR}/config/node_1:/tendermint/config  -v ${CORE_DATADIR}/config/node_1/data:/tendermint/data tendermint/tendermint init || echo "Tendermint already initialized"
-	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "not yet run for the first time"
 	@cli/scripts/install_deps.sh
 	@node cli/init
+	@rsync .env ${CORE_DATADIR}/.env
+	@cp -rf config/traefik.toml ${CORE_DATADIR}/data/traefik/traefik.toml
+
+## init-noninteractive       : Create data folder with proper permissions
+.PHONY : init-noninteractive
+init-noninteractive: init-volumes
+	@node cli/init --PRIVATE_NETWORK=$(PRIVATE_NETWORK) --CORE_PUBLIC_IP_ADDRESS=$(CORE_PUBLIC_IP_ADDRESS) --BITCOIN_WIF=$(BITCOIN_WIF) --INSIGHT_API_URI=$(INSIGHT_API_URI)
 	@rsync .env ${CORE_DATADIR}/.env
 	@cp -rf config/traefik.toml ${CORE_DATADIR}/data/traefik/traefik.toml
 
@@ -221,13 +226,7 @@ stop:
 
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint: stop
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/tx_index.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/state.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/blockstore.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/evidence.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/cs.wal
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/anchor.db
-	@rm -rf ${CORE_DATADIR}/config/node_1/data/priv_validator_state.json
+	@sleep 20 && rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -af
 
