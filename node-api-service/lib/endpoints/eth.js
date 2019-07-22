@@ -173,7 +173,11 @@ async function postEthBroadcastAsync(req, res, next) {
     // Make sure that the Logs of emitted events corresponds to the contract action attempted in rawTx
     let event = registryContractInterface.parseLog(regEvents[0])
     console.log('INFO : ETH BROADCAST : Event : ', event)
-    if (_.isNull(event) || ContractEvents[parsedTx.name] !== event.name) {
+    if (
+      _.isNull(event) ||
+      (ContractEvents[tokenAddress][parsedTx.name] !== event.name &&
+        ContractEvents[registryAddress][parsedTx.name] !== event.name)
+    ) {
       throw new Error(`${parsedTx.name} failed to run`)
     }
   } catch (error) {
