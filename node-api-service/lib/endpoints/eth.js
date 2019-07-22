@@ -19,6 +19,7 @@ const env = require('../parse-env.js')('api')
 const errors = require('restify-errors')
 const utils = require('../utils.js')
 const logger = require('../logger.js')
+const _ = require('lodash')
 
 const network = env.NETWORK === 'mainnet' ? 'homestead' : 'ropsten'
 
@@ -166,9 +167,12 @@ async function postEthBroadcastAsync(req, res, next) {
     if (!regEvents.length) {
       throw new Error(`${parsedTx.name} did not generate a corresponding event, and thus failed to run successfully`)
     }
+    console.log('INFO : ETH BROADCAST : Tx Events : ', JSON.stringify(regEvents))
+
     // Make sure that the Logs of emitted events corresponds to the contract action attempted in rawTx
     let event = registryContractInterface.parseLog(regEvents[0])
-    if (ContractEvents[parsedTx.name] !== event.name) {
+    console.log('INFO : ETH BROADCAST : Event : ', event)
+    if (_.isNull(event) || ContractEvents[parsedTx.name] !== event.name) {
       throw new Error(`${parsedTx.name} failed to run`)
     }
   } catch (error) {
