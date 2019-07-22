@@ -159,7 +159,7 @@ init: init-volumes
 ## init-noninteractive       : Create data folder with proper permissions
 .PHONY : init-noninteractive
 init-noninteractive: init-volumes
-	@node cli/init --PRIVATE_NETWORK=$(PRIVATE_NETWORK) --CORE_PUBLIC_IP_ADDRESS=$(CORE_PUBLIC_IP_ADDRESS) --BITCOIN_WIF=$(BITCOIN_WIF) --INSIGHT_API_URI=$(INSIGHT_API_URI) --INFURA_API_KEY=$(INFURA_API_KEY) --ETHERSCAN_API_KEY=$(ETHERSCAN_API_KEY)
+	@node cli/init --PRIVATE_NETWORK=$(PRIVATE_NETWORK) --NETWORK=$(NETWORK) --CORE_PUBLIC_IP_ADDRESS=$(CORE_PUBLIC_IP_ADDRESS) --BITCOIN_WIF=$(BITCOIN_WIF) --INSIGHT_API_URI=$(INSIGHT_API_URI) --INFURA_API_KEY=$(INFURA_API_KEY) --ETHERSCAN_API_KEY=$(ETHERSCAN_API_KEY)
 	@rsync .env ${CORE_DATADIR}/.env
 	@cp -rf config/traefik.toml ${CORE_DATADIR}/data/traefik/traefik.toml
 

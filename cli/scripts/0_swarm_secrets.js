@@ -28,6 +28,7 @@ async function createSwarmAndSecrets(valuePairs) {
   let wif = valuePairs.BITCOIN_WIF
   let insightUri = valuePairs.INSIGHT_API_URI
   let privateNetwork = valuePairs.PRIVATE_NETWORK
+  let network = valuePairs.NETWORK
 
   let sed = `sed -i 's#external_address = .*#external_address = "${ip}:26656"#' ${
     home.stdout
@@ -85,6 +86,7 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   return updateOrCreateEnv({
+    NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
     INSIGHT_API_BASE_URI: insightUri,
     CORE_DATADIR: `${home.stdout}/.chainpoint/core`,

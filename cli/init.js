@@ -23,6 +23,7 @@ const stakingQuestions = require('./utils/stakingQuestions')
 
 const argsDefinitions = [
   { name: 'PRIVATE_NETWORK', defaultValue: false },
+  { name: 'NETWORK', defaultValue: 'mainnet' },
   { name: 'CORE_PUBLIC_IP_ADDRESS' },
   { name: 'INSIGHT_API_URI' },
   { name: 'BITCOIN_WIF' },
