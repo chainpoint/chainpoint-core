@@ -29,7 +29,8 @@ const argsDefinitions = [
   { name: 'BITCOIN_WIF' },
   { name: 'INFURA_API_KEY' },
   { name: 'ETHERSCAN_API_KEY' },
-  { name: 'ETH_PRIVATE_KEY' }
+  { name: 'ETH_PRIVATE_KEY' },
+  { name: 'PEERS' }
 ]
 const args = commandLineArgs(argsDefinitions)
 console.log(args)

@@ -24,6 +24,7 @@ const displayInfo = require('./1b_display_info')
 
 async function createSwarmAndSecrets(valuePairs) {
   let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
+  let peers = ''
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
   let wif = valuePairs.BITCOIN_WIF
   let insightUri = valuePairs.INSIGHT_API_URI
@@ -85,7 +86,14 @@ async function createSwarmAndSecrets(valuePairs) {
     console.log(chalk.red(`Error creating Docker secrets for ETH_ADDRESS & ETH_PRIVATE_KEY: ${err}`))
   }
 
+  try {
+    peers = valuePairs.PEERS
+  } catch (err) {
+    console.log(chalk.yellow(`No Peers argument provided: ${err}`))
+  }
+
   return updateOrCreateEnv({
+    PEERS: peers,
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
     INSIGHT_API_BASE_URI: insightUri,
