@@ -170,15 +170,15 @@ module.exports = service => {
       envDefinitions.ECDSA_PKPEM = envalid.str({ desc: 'ECDSA private key in PEM format' })
       break
     case 'btc-mon':
-      envDefinitions.BTC_RPC_URI_LIST = envalid.url({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
-      envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.url({ default: '', desc: 'A Blockcypher API token' })
+      envDefinitions.BTC_RPC_URI_LIST = envalid.str({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
+      envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
       break
     case 'btc-tx':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.BTC_RPC_URI_LIST = envalid.url({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
-      envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.url({ default: '', desc: 'A Blockcypher API token' })
+      envDefinitions.BTC_RPC_URI_LIST = envalid.str({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
+      envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
       envDefinitions.BITCOIN_WIF = envalid.str({ desc: 'The Bitcoin private key WIF used for transaction creation' })
       break
     case 'state':
