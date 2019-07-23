@@ -30,7 +30,8 @@ const argsDefinitions = [
   { name: 'INFURA_API_KEY' },
   { name: 'ETHERSCAN_API_KEY' },
   { name: 'ETH_PRIVATE_KEY' },
-  { name: 'PEERS' }
+  { name: 'PEERS' },
+  { name: 'PRIVATE_NODE_IPS' }
 ]
 const args = commandLineArgs(argsDefinitions)
 console.log(args)
