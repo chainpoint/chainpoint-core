@@ -18,9 +18,10 @@
 const env = require('./lib/parse-env.js')('btc-tx')
 
 const amqp = require('amqplib')
-const BlockchainAnchor = require('blockchain-anchor')
+const btcBridge = require('btc-bridge')
 const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
+const BigNumber = require('bignumber.js')
 
 // The channel used for all amqp communication
 // This value is set once the connection has been established
@@ -33,15 +34,15 @@ let lastKnownFeeSatPerByte = null
 // and estimated fee retrieval fails
 const defaultFeeSatPerByte = 250
 
-const btcUseTestnet = env.NETWORK === 'mainnet' ? false : true
-
-// Initialize BlockchainAnchor object
-let anchor = new BlockchainAnchor({
-  btcUseTestnet: btcUseTestnet,
-  service: 'insightapi',
-  insightApiBase: env.INSIGHT_API_BASE_URI,
-  insightFallback: true
-})
+const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
+let providers = []
+let rpcUris = env.NODE_RPC_URI_LIST.split(',')
+for (let rpcUri of rpcUris) {
+  providers.push(new btcBridge.providers.JsonRpcProvider(btcNetwork, rpcUri))
+}
+if (env.BLOCKCYPHER_API_TOKEN)
+  providers.push(new btcBridge.providers.BlockcypherProvider(btcNetwork, env.BLOCKCYPHER_API_TOKEN))
+const fallbackProvider = new btcBridge.providers.FallbackProvider([providers], false)
 
 /**
  * Send a POST request to /wallet/:id/send with a POST body
@@ -55,7 +56,12 @@ const sendTxToBTCAsync = async hash => {
   let feeSatPerByte
   let feeTotalSatoshi
   try {
-    feeSatPerByte = await anchor.btcGetEstimatedFeeRateSatPerByteAsync()
+    let result = await fallbackProvider.getEstimatedFeeAsync(2)
+    let feeBtcPerKb = result.feerate
+    feeSatPerByte = BigNumber(feeBtcPerKb)
+      .div(1024)
+      .times(10 ** 8)
+      .toNumber()
     lastKnownFeeSatPerByte = feeSatPerByte
   } catch (error) {
     logger.warn(`Error retrieving estimated fee: ${error.message}`)
@@ -80,7 +86,11 @@ const sendTxToBTCAsync = async hash => {
 
   let txResult
   try {
-    txResult = await anchor.btcOpReturnAsync(privateKeyWIF, hash, feeTotalSatoshi)
+    let wallet = new btcBridge.Wallet(privateKeyWIF, fallbackProvider)
+    let btcFee = BigNumber(feeTotalSatoshi)
+      .div(10 ** 8)
+      .toNumber()
+    txResult = await wallet.generateOpReturnTxWithFeeAsync(hash, btcFee, true)
     txResult.publishDate = Date.now()
     txResult.feeSatoshiPerByte = feeSatPerByte
     txResult.feePaidSatoshi = feeTotalSatoshi
@@ -116,7 +126,7 @@ async function processIncomingAnchorBTCJobAsync(msg) {
       // queue return message for calendar containing the new transaction information
       // adding btc transaction id and full transaction body to original message and returning
       messageObj.btctx_id = txResult.txId
-      messageObj.btctx_body = txResult.rawTx
+      messageObj.btctx_body = txResult.txHex
       try {
         await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
           persistent: true,

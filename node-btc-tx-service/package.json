@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "amqplib": "^0.5.2",
-    "blockchain-anchor": "^2.3.2",
+    "bignumber.js": "^9.0.0",
+    "btc-bridge": "^0.0.4",
     "envalid": "^5.0.0",
     "winston": "^3.2.1"
   }

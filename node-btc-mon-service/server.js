@@ -18,7 +18,7 @@
 const env = require('./lib/parse-env.js')('btc-mon')
 
 const MerkleTools = require('merkle-tools')
-const BlockchainAnchor = require('blockchain-anchor')
+const btcBridge = require('btc-bridge')
 const amqp = require('amqplib')
 const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
@@ -38,15 +38,15 @@ let redis = null
 
 let CHECKS_IN_PROGRESS = false
 
-const btcUseTestnet = env.NETWORK === 'mainnet' ? false : true
-
-// Initialize BlockchainAnchor object
-let anchor = new BlockchainAnchor({
-  btcUseTestnet: btcUseTestnet,
-  service: 'insightapi',
-  insightApiBase: env.INSIGHT_API_BASE_URI,
-  insightFallback: true
-})
+const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
+let providers = []
+let rpcUris = env.NODE_RPC_URI_LIST.split(',')
+for (let rpcUri of rpcUris) {
+  providers.push(new btcBridge.providers.JsonRpcProvider(btcNetwork, rpcUri))
+}
+if (env.BLOCKCYPHER_API_TOKEN)
+  providers.push(new btcBridge.providers.BlockcypherProvider(btcNetwork, env.BLOCKCYPHER_API_TOKEN))
+const fallbackProvider = new btcBridge.providers.FallbackProvider([providers], false)
 
 async function consumeBtcTxIdMessageAsync(msg) {
   if (msg !== null) {
@@ -82,37 +82,37 @@ let monitorTransactionsAsync = async () => {
       // Get BTC Transaction Stats
       let txStats
       try {
-        txStats = await anchor.btcGetTxStatsAsync(btcTxIdObj.tx_id)
+        txStats = await fallbackProvider.getTransactionDataAsync(btcTxIdObj.tx_id)
       } catch (error) {
         throw new Error(`Could not get stats for transaction ${btcTxIdObj.tx_id}`)
       }
       if (txStats.confirmations < env.MIN_BTC_CONFIRMS) {
-        logger.info(`${txStats.id} not ready : ${txStats.confirmations} of ${env.MIN_BTC_CONFIRMS} confirmations`)
+        logger.info(`${txStats.txid} not ready : ${txStats.confirmations} of ${env.MIN_BTC_CONFIRMS} confirmations`)
         continue
       }
 
       // if ready, Get BTC Block Stats with Transaction Ids
       let blockStats
       try {
-        blockStats = await anchor.btcGetBlockStatsAsync(txStats.blockHash)
+        blockStats = await fallbackProvider.getBlockDataAsync(txStats.blockHash)
       } catch (error) {
-        throw new Error(`Could not get stats for block ${txStats.blockHeight} (${txStats.blockHash})`)
+        throw new Error(`Could not get stats for block ${txStats.blockHash}`)
       }
-      let txIndex = blockStats.txIds.indexOf(txStats.id)
-      if (txIndex === -1) throw new Error(`transaction ${txStats.id} not found in block ${txStats.blockHeight}`)
+      let txIndex = blockStats.tx.indexOf(txStats.txid)
+      if (txIndex === -1) throw new Error(`transaction ${txStats.txid} not found in block ${blockStats.height}`)
       // adjusting for endieness, reverse txids for further processing
-      blockStats.txIds = blockStats.txIds.map(txId =>
+      blockStats.tx = blockStats.tx.map(txId =>
         txId
           .match(/.{2}/g)
           .reverse()
           .join('')
       )
 
-      if (blockStats.txIds.length === 0) throw new Error(`No transactions found in block ${txStats.blockHeight}`)
+      if (blockStats.tx.length === 0) throw new Error(`No transactions found in block ${blockStats.height}`)
 
       // build BTC merkle tree with txIds
       merkleTools.resetTree()
-      merkleTools.addLeaves(blockStats.txIds)
+      merkleTools.addLeaves(blockStats.tx)
       merkleTools.makeBTCTree(true)
       let rootValueBuffer = merkleTools.getMerkleRoot()
       // re-adjust for endieness, reverse and convert back to hex
@@ -125,14 +125,14 @@ let monitorTransactionsAsync = async () => {
         throw new Error(
           `calculated merkle root (${rootValueHex}) does not match block merkle root (${
             blockStats.merkleRoot
-          }) for tx ${txStats.id}`
+          }) for tx ${txStats.txid}`
         )
       // get proof path from tx to block root
       let proofPath = merkleTools.getProof(txIndex)
       // send data back to calendar
       let messageObj = {}
-      messageObj.btctx_id = txStats.id
-      messageObj.btchead_height = txStats.blockHeight
+      messageObj.btctx_id = txStats.txid
+      messageObj.btchead_height = blockStats.height
       messageObj.btchead_root = rootValueHex
       messageObj.path = proofPath
       try {
