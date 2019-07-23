@@ -19,7 +19,6 @@ const env = require('../parse-env.js')('api')
 const errors = require('restify-errors')
 const utils = require('../utils.js')
 const logger = require('../logger.js')
-const _ = require('lodash')
 
 const network = env.NETWORK === 'mainnet' ? 'homestead' : 'ropsten'
 
@@ -37,12 +36,34 @@ let registryContractInterface = new ethers.utils.Interface(regDefinition.abi)
 const registryContract = new ethers.Contract(registryAddress, regDefinition.abi, fallbackProvider)
 const ContractEvents = {
   [tokenAddress]: {
-    approve: 'Approval'
+    Approval: {
+      methodName: 'approve',
+      parseValues: values => ({
+        owner: values['0'],
+        spender: values['1'],
+        amount: values['2']
+      })
+    }
   },
   [registryAddress]: {
-    stake: 'NodeStaked',
-    unStake: 'NodeUnStaked',
-    updateStake: 'NodeStakeUpdated'
+    NodeStaked: {
+      methodName: 'stake',
+      parseValues: values => ({
+        owner: values['0'],
+        nodeIp: parseInt(values['1'].toString(), 10),
+        rewardsAddr: values['2'],
+        amountStaked: parseInt(values['3'].toString(), 10),
+        duration: parseInt(values['4'].toString(), 10)
+      })
+    },
+    NodeUnStaked: {
+      methodName: 'unStake',
+      parseValues: values => ({
+        owner: values['0'],
+        nodeIp: parseInt(values['1'].toString(), 10),
+        amountStaked: parseInt(values['2'].toString(), 10)
+      })
+    }
   }
 }
 
@@ -163,23 +184,34 @@ async function postEthBroadcastAsync(req, res, next) {
     result = { transactionHash, blockHash, blockNumber, gasUsed }
 
     // Retrieve Logs for the Contract Address decoded from the Tx
-    // let regEvents = txReceipt.logs.filter(currVal => currVal.address === decodedTx.to)
-    // console.log('INFO : ETH BROADCAST : Tx Events : ', JSON.stringify(regEvents))
+    let contractEventLogs = txReceipt.logs.filter(currVal => currVal.address === decodedTx.to)
 
-    // if (!regEvents.length) {
-    //   throw new Error(`${parsedTx.name} did not generate a corresponding event, and thus failed to run successfully`)
-    // }
+    // Assert that the smart contract method invocation ran successfully
+    switch (decodedTx.to) {
+      case tokenAddress: {
+        for (const evtLog of contractEventLogs) {
+          const event = tokenContractInterface.parseLog(evtLog)
+          const result = ContractEvents[event.name].parseValues(event.values)
 
-    // // Make sure that the Logs of emitted events corresponds to the contract action attempted in rawTx
-    // let event = registryContractInterface.parseLog(regEvents[0])
-    // console.log('INFO : ETH BROADCAST : Event : ', event)
-    // if (
-    //   _.isNull(event) ||
-    //   (ContractEvents[tokenAddress][parsedTx.name] !== event.name &&
-    //     ContractEvents[registryAddress][parsedTx.name] !== event.name)
-    // ) {
-    //   throw new Error(`${parsedTx.name} failed to run`)
-    // }
+          if (event.name === 'Approval' && result.spender !== registryAddress)
+            throw new Error(`"spender" is not the Chainpoint Registry contract address`)
+        }
+        break
+      }
+      case registryAddress: {
+        for (const evtLog of contractEventLogs) {
+          const event = registryContractInterface.parseLog(evtLog)
+          const result = ContractEvents[event.name].parseValues(event.values)
+
+          if (event.name === 'NodeStaked' && (result.amountStaked <= 0 || result.duration <= 0))
+            throw new Error(`Chainpoint Node did not successfully Register.`)
+
+          if (event.name === 'NodeUnStaked' && (result.amountStaked <= 0 || result.duration <= 0))
+            throw new Error(`Chainpoint Node did not UnStake successfully.`)
+        }
+        break
+      }
+    }
   } catch (error) {
     logger.error(`Error when attempting to broadcast ETH Tx : ${error.message}`)
     return next(new errors.InternalServerError(error.message))
