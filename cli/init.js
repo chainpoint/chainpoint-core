@@ -25,13 +25,14 @@ const argsDefinitions = [
   { name: 'PRIVATE_NETWORK', defaultValue: false },
   { name: 'NETWORK', defaultValue: 'mainnet' },
   { name: 'CORE_PUBLIC_IP_ADDRESS' },
-  { name: 'INSIGHT_API_URI' },
   { name: 'BITCOIN_WIF' },
   { name: 'INFURA_API_KEY' },
   { name: 'ETHERSCAN_API_KEY' },
   { name: 'ETH_PRIVATE_KEY' },
   { name: 'PEERS' },
-  { name: 'PRIVATE_NODE_IPS' }
+  { name: 'PRIVATE_NODE_IPS' },
+  { name: 'BTC_RPC_URI_LIST' },
+  { name: 'BLOCKCYPHER_API_TOKEN' }
 ]
 const args = commandLineArgs(argsDefinitions)
 console.log(args)
@@ -45,7 +46,7 @@ async function main() {
         inquirer.prompt([
           stakingQuestions['PRIVATE_NETWORK'],
           stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
-          stakingQuestions['INSIGHT_API_URI'],
+          stakingQuestions['BTC_RPC_URI_LIST'],
           stakingQuestions['BITCOIN_WIF'],
           stakingQuestions['INFURA_API_KEY'],
           stakingQuestions['ETHERSCAN_API_KEY']

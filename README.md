@@ -3,7 +3,7 @@
 [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint Core is a data integrity service which collects hash input from [Chainpoint Nodes](https://github.com/chainpoint/chainpoint-node-src) via a web API, aggregates the hashes into a single root hash, then periodically commits the root hash to the Bitcoin blockchain as a form of distributed digital notarization.
+Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes from Chainpoint Nodes, aggregate these hashes into a root hash, and periodically commit the root hash to the Bitcoin blockchain.
 
 ## Important Notice
 
@@ -12,24 +12,6 @@ This software is intended to be run as part of Chainpoint's Core Network. It is 
 [https://github.com/chainpoint/chainpoint-node-src](https://github.com/chainpoint/chainpoint-node-src)
 
 [https://github.com/chainpoint/chainpoint-cli](https://github.com/chainpoint/chainpoint-cli)
-
-## Introduction to Chainpoint
-
-Chainpoint is a protocol for digitally notarizing data using the Bitcoin blockchain. It makes the process of anchoring data fingerprints (hashes) to Bitcoin more cost-effective by creating an intermediate, decentralized network between the user and the Bitcoin blockchain.
-
-The first tier is the Chainpoint Node, which aggregates user submissions into a single datapoint every minute. This datapoint is then submitted to the second tier, the Chainpoint Core Network. The Core Network consists of many Cores running in concert to create the Calendar, a Tendermint-based blockchain. Every hour, a random Core anchors the state of the Calendar to Bitcoin. The more Cores there are, the less often a given Core is selected to anchor, which reduces the burden of paying Bitcoin fees.
-
-After the Cores anchor to Bitcoin, the Chainpoint Nodes retrieve the result and use it to construct a cryptographic proof. This proof shows that the Bitcoin blockchain contains a hash of the user's data. 
-
-Users can install a release of Chainpoint-CLI to submit data to a Chainpoint Node and retrieve a Chainpoint Proof.
-
-## What is Chainpoint Core?
-
-Chainpoint Core forms the backbone of the Chainpoint Network and is operated by 'operators'- dedicated users and organizations. By running a Core and joining the Chainpoint Network, an operator helps defray the cost of transactions fees associated with anchoring data to Bitcoin.
-Additionally, the decentralized nature of Core adds significant resiliency to the Network. If a Core drops offline, the remaining Cores continue to elect a leader to anchor the Calendar to Bitcoin.
-
-Core uses [Tendermint](https://github.com/tendermint/tendermint) to communicate with other Cores and generate the Calendar blockchain. Because Tendermint uses a Validator-based model, generating new blocks through _mining_ is not necessary.
-Instead, certain trustworthy, secure Cores (Validators) agree on new Calendar blocks. It should be noted that it is _not_ necessary for a Core operator to be a Validator in order to anchor to Bitcoin. You only need a wallet with some Bitcoin and the instructions below!
 
 ## Installing Chainpoint Core
 
@@ -70,7 +52,7 @@ Provided BASH is installed, a script to install all other dependencies (make, op
 
 Core requires a few external services to facilitate communication with the Bitcoin and Ethereum blockchains. You will need:
 
-- `IP address of a Bitcore Node` - Bitcoin Node running the Insight-API
+- `RPC address of a Bitcore Node` - Bitcoin Node with RPC enabled
 - `Infura API Key` - generated from infura.io
 - `Etherscan API key`
 - `Bitcoin WIF`- Bitcoin Wallet Import Format (WIF) string in Base58.

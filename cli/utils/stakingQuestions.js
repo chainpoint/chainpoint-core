@@ -21,20 +21,20 @@ const web3 = new Web3(Web3.givenProvider || 'ws://localhost:8546', null, {})
 
 module.exports = {
   PRIVATE_NETWORK: {
-      type: 'list',
-      name: 'PRIVATE_NETWORK',
-      message: 'Will this Core run in private mode (independently of the public Chainpoint Network)?',
-      choices: [
-          {
-              name: 'Private Network',
-              value: true
-          },
-          {
-              name: 'Public Network',
-              value: false
-          }
-      ],
-      default: false
+    type: 'list',
+    name: 'PRIVATE_NETWORK',
+    message: 'Will this Core run in private mode (independently of the public Chainpoint Network)?',
+    choices: [
+      {
+        name: 'Private Network',
+        value: true
+      },
+      {
+        name: 'Public Network',
+        value: false
+      }
+    ],
+    default: false
   },
   NODE_ETH_REWARDS_ADDRESS: {
     type: 'input',
@@ -69,10 +69,10 @@ module.exports = {
     name: 'ETHERSCAN_API_KEY',
     message: 'Enter your Etherscan API key (free):'
   },
-  INSIGHT_API_URI: {
+  BTC_RPC_URI_LIST: {
     type: 'input',
-    name: 'INSIGHT_API_URI',
-    message: "Enter the full URL to your bitcoin node's Insight API:"
+    name: 'BTC_RPC_URI_LIST',
+    message: "Enter the full URL (including protocol and port) to your bitcoin node's RPC endpoint:"
   },
   AUTO_REFILL_ENABLED: {
     type: 'list',

@@ -26,9 +26,10 @@ async function createSwarmAndSecrets(valuePairs) {
   let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
   let peers = ''
   let privateNodes = ''
+  let blockCypher = ''
+  let btcRpc = valuePairs.BTC_RPC_URI_LIST
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
   let wif = valuePairs.BITCOIN_WIF
-  let insightUri = valuePairs.INSIGHT_API_URI
   let privateNetwork = valuePairs.PRIVATE_NETWORK
   let network = valuePairs.NETWORK
 
@@ -90,16 +91,18 @@ async function createSwarmAndSecrets(valuePairs) {
   try {
     peers = valuePairs.PEERS
     privateNodes = valuePairs.PRIVATE_NODE_IPS
+    blockCypher = valuePairs.BLOCKCYPHER_API_TOKEN
   } catch (err) {
     console.log(chalk.yellow(`No Peers argument provided: ${err}`))
   }
 
   return updateOrCreateEnv({
+    BTC_RPC_URI_LIST: btcRpc,
+    BLOCKCYPHER_API_TOKEN: blockCypher,
     PRIVATE_NODE_IPS: privateNodes,
     PEERS: peers,
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
-    INSIGHT_API_BASE_URI: insightUri,
     CORE_DATADIR: `${home.stdout}/.chainpoint/core`,
     PRIVATE_NETWORK: privateNetwork
   })
