@@ -46,7 +46,7 @@ for (let rpcUri of rpcUris) {
 }
 if (env.BLOCKCYPHER_API_TOKEN)
   providers.push(new btcBridge.providers.BlockcypherProvider(btcNetwork, env.BLOCKCYPHER_API_TOKEN))
-const fallbackProvider = new btcBridge.providers.FallbackProvider([providers], false)
+const fallbackProvider = new btcBridge.providers.FallbackProvider(providers, false)
 
 async function consumeBtcTxIdMessageAsync(msg) {
   if (msg !== null) {

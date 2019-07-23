@@ -42,7 +42,7 @@ for (let rpcUri of rpcUris) {
 }
 if (env.BLOCKCYPHER_API_TOKEN)
   providers.push(new btcBridge.providers.BlockcypherProvider(btcNetwork, env.BLOCKCYPHER_API_TOKEN))
-const fallbackProvider = new btcBridge.providers.FallbackProvider([providers], false)
+const fallbackProvider = new btcBridge.providers.FallbackProvider(providers, false)
 
 /**
  * Send a POST request to /wallet/:id/send with a POST body
