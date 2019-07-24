@@ -22,8 +22,8 @@ const cliHelloLogger = require('./utils/cliHelloLogger')
 const stakingQuestions = require('./utils/stakingQuestions')
 
 const argsDefinitions = [
-  { name: 'PRIVATE_NETWORK', defaultValue: false },
-  { name: 'NETWORK', defaultValue: 'mainnet' },
+  { name: 'PRIVATE_NETWORK' },
+  { name: 'NETWORK' },
   { name: 'CORE_PUBLIC_IP_ADDRESS' },
   { name: 'BITCOIN_WIF' },
   { name: 'INFURA_API_KEY' },
@@ -44,6 +44,7 @@ async function main() {
     await pipeP(
       () =>
         inquirer.prompt([
+          stakingQuestions['NETWORK'],
           stakingQuestions['PRIVATE_NETWORK'],
           stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
           stakingQuestions['BTC_RPC_URI_LIST'],

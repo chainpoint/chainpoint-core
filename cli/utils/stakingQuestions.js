@@ -20,6 +20,22 @@ const validator = require('validator')
 const web3 = new Web3(Web3.givenProvider || 'ws://localhost:8546', null, {})
 
 module.exports = {
+  NETWORK: {
+    type: 'list',
+    name: 'NETWORK',
+    message: 'Will this Core use Bitcoin mainnet or testnet)?',
+    choices: [
+      {
+        name: 'Mainnet',
+        value: 'mainnet'
+      },
+      {
+        name: 'Testnet',
+        value: 'testnet'
+      }
+    ],
+    default: 'mainnet'
+  },
   PRIVATE_NETWORK: {
     type: 'list',
     name: 'PRIVATE_NETWORK',

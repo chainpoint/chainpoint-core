@@ -24,14 +24,14 @@ const displayInfo = require('./1b_display_info')
 
 async function createSwarmAndSecrets(valuePairs) {
   let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
-  let peers = ''
-  let privateNodes = ''
-  let blockCypher = ''
   let btcRpc = valuePairs.BTC_RPC_URI_LIST
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
   let wif = valuePairs.BITCOIN_WIF
   let privateNetwork = valuePairs.PRIVATE_NETWORK
   let network = valuePairs.NETWORK
+  let peers = valuePairs.PEERS != null ? valuePairs.PEERS : ''
+  let privateNodes = valuePairs.PRIVATE_NODE_IPS != null ? valuePairs.PRIVATE_NODE_IPS : ''
+  let blockCypher = valuePairs.BLOCKCYPHER_API_TOKEN != null ? valuePairs.BLOCKCYPHER_API_TOKEN : ''
 
   let sed = `sed -i 's#external_address = .*#external_address = "${ip}:26656"#' ${
     home.stdout
@@ -86,14 +86,6 @@ async function createSwarmAndSecrets(valuePairs) {
     await displayInfo.displayWalletInfo({ address: address, privateKey: privateKey })
   } catch (err) {
     console.log(chalk.red(`Error creating Docker secrets for ETH_ADDRESS & ETH_PRIVATE_KEY: ${err}`))
-  }
-
-  try {
-    peers = valuePairs.PEERS
-    privateNodes = valuePairs.PRIVATE_NODE_IPS
-    blockCypher = valuePairs.BLOCKCYPHER_API_TOKEN
-  } catch (err) {
-    console.log(chalk.yellow(`No Peers argument provided: ${err}`))
   }
 
   return updateOrCreateEnv({

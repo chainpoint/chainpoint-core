@@ -46,7 +46,7 @@ services:
       AGGREGATE: "true"
       AGGREGATION_THREADS: "4"
       HASHES_PER_MERKLE_TREE: "25000"
-      ANCHOR_INTERVAL: "60"
+      ANCHOR_INTERVAL: "3"
       LOG_FILTER: "main:debug,state:info,*:error"
       LOG_LEVEL: "info"
     volumes:
