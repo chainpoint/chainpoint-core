@@ -87,7 +87,7 @@ let monitorTransactionsAsync = async () => {
         throw new Error(`Could not get stats for transaction ${btcTxIdObj.tx_id}`)
       }
       if (txStats.confirmations < env.MIN_BTC_CONFIRMS) {
-        logger.info(`${txStats.txid} not ready : ${txStats.confirmations} of ${env.MIN_BTC_CONFIRMS} confirmations`)
+        logger.info(`${txStats.txId} not ready : ${txStats.confirmations} of ${env.MIN_BTC_CONFIRMS} confirmations`)
         continue
       }
 
@@ -98,8 +98,8 @@ let monitorTransactionsAsync = async () => {
       } catch (error) {
         throw new Error(`Could not get stats for block ${txStats.blockHash}`)
       }
-      let txIndex = blockStats.tx.indexOf(txStats.txid)
-      if (txIndex === -1) throw new Error(`transaction ${txStats.txid} not found in block ${blockStats.height}`)
+      let txIndex = blockStats.tx.indexOf(txStats.txId)
+      if (txIndex === -1) throw new Error(`transaction ${txStats.txId} not found in block ${blockStats.height}`)
       // adjusting for endieness, reverse txids for further processing
       blockStats.tx = blockStats.tx.map(txId =>
         txId
@@ -125,13 +125,13 @@ let monitorTransactionsAsync = async () => {
         throw new Error(
           `calculated merkle root (${rootValueHex}) does not match block merkle root (${
             blockStats.merkleRoot
-          }) for tx ${txStats.txid}`
+          }) for tx ${txStats.txId}`
         )
       // get proof path from tx to block root
       let proofPath = merkleTools.getProof(txIndex)
       // send data back to calendar
       let messageObj = {}
-      messageObj.btctx_id = txStats.txid
+      messageObj.btctx_id = txStats.txId
       messageObj.btchead_height = blockStats.height
       messageObj.btchead_root = rootValueHex
       messageObj.path = proofPath
