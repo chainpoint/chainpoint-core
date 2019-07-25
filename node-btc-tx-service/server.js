@@ -140,7 +140,7 @@ async function processIncomingAnchorBTCJobAsync(msg) {
       amqpChannel.ack(msg)
     } catch (error) {
       // An error has occurred publishing the transaction, nack consumption of message
-      // set a 30 second delay for nacking this message to prevent a flood of retries hitting insight api
+      // set a 30 second delay for nacking this message to prevent a flood of retries hitting the bitcoin rpc provider
       let retryMS = 30000
       logger.error(`Unable to process BTC anchor message : ${error.message} : Retrying in ${retryMS / 1000} seconds`)
       setTimeout(() => {
