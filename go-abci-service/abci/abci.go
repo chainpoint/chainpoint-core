@@ -233,6 +233,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
 
+	go app.KeyMonitor()
+
 	// Load JWK into local mapping from redis
 	app.LoadJWK()
 
@@ -266,9 +268,11 @@ func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.Respo
 		infoJSON = []byte("{}")
 	}
 	return types2.ResponseInfo{
-		Data:       string(infoJSON),
-		Version:    version.ABCIVersion,
-		AppVersion: ProtocolVersion.Uint64(),
+		Data:             string(infoJSON),
+		Version:          version.ABCIVersion,
+		AppVersion:       ProtocolVersion.Uint64(),
+		LastBlockAppHash: app.state.AppHash,
+		LastBlockHeight:  app.state.Height,
 	}
 }
 
@@ -308,9 +312,6 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
 		if app.config.DoNodeAudit && app.JWKSent {
 			go app.MintMonitor()
-		}
-		if !app.JWKSent {
-			go app.KeyMonitor() // send out this Core's JWK to the rest of the network
 		}
 		if app.config.DoCal {
 			go app.AggregateCalendar()

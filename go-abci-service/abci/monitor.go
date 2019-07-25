@@ -2,6 +2,7 @@ package abci
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
 	for {
+		time.Sleep(30 * time.Second)
 		status, err := app.rpc.GetStatus()
 		if app.LogError(err) != nil {
 			time.Sleep(5 * time.Second)
@@ -29,35 +31,40 @@ func (app *AnchorApplication) SyncMonitor() {
 		} else {
 			app.state.ChainSynced = true
 		}
-		time.Sleep(30 * time.Second)
 	}
 }
 
 //KeyMonitor : updates active ECDSA public keys from all accessible peers
 func (app *AnchorApplication) KeyMonitor() {
-	selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
-	response, err := http.Get(selfStatusURL)
-	if app.LogError(err) != nil {
-		return
+	for i := 0; i < 2; i++ {
+		time.Sleep(30 * time.Second)
+		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
+		response, err := http.Get(selfStatusURL)
+		if app.LogError(err) != nil {
+			continue
+		}
+		contents, err := ioutil.ReadAll(response.Body)
+		if app.LogError(err) != nil {
+			continue
+		}
+		var apiStatus types.CoreAPIStatus
+		err = json.Unmarshal(contents, &apiStatus)
+		if app.LogError(err) != nil {
+			continue
+		}
+		app.JWK = apiStatus.Jwk
+		jwkJson, err := json.Marshal(apiStatus.Jwk)
+		if app.LogError(err) != nil {
+			continue
+		}
+		_, err = app.rpc.BroadcastTxCommit("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		if app.LogError(err) != nil {
+			continue
+		} else {
+			return
+		}
 	}
-	contents, err := ioutil.ReadAll(response.Body)
-	if app.LogError(err) != nil {
-		return
-	}
-	var apiStatus types.CoreAPIStatus
-	err = json.Unmarshal(contents, &apiStatus)
-	if app.LogError(err) != nil {
-		return
-	}
-	app.JWK = apiStatus.Jwk
-	jwkJson, err := json.Marshal(apiStatus.Jwk)
-	if app.LogError(err) != nil {
-		return
-	}
-	_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-	if app.LogError(err) != nil {
-		return
-	}
+	panic(errors.New("Cannot broadcast Core public key"))
 }
 
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
