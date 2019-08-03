@@ -32,7 +32,6 @@ import (
 )
 
 func main() {
-
 	//Instantiate Tendermint Node Config
 	tmConfig, err := initTendermintConfig()
 	if util.LogError(err) != nil {
@@ -95,30 +94,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
-	ethInfuraApiKey := util.GetEnv("ETH_INFURA_API_KEY", "")
-	ethereumURL := util.GetEnv("ETH_URI", fmt.Sprintf("https://ropsten.infura.io/v3/%s", ethInfuraApiKey))
-	testMode := util.GetEnv("NETWORK", "testnet")
-	useTestNets := (testMode == "testnet")
-	ethTokenContract := ""
-	if doAuditLoop {
-		ethTokenContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/TierionNetworkToken.json", useTestNets)
-		if ethTokenContract == "" {
-			fmt.Println("Token Contract: Cannot read from JSON ABI file, defaulting to hardcoded contract address")
-			ethTokenContract = util.GetEnv("TokenContractAddr", "0x84294776884A92E6E06989DE0c675db81f8C9bD3")
-		}
-	}
-	ethRegistryContract := ""
-	if doNodeManagement {
-		ethRegistryContract = util.ReadContractJSON("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts/ChainpointRegistry.json", useTestNets)
-		if ethRegistryContract == "" && doNodeManagement {
-			fmt.Println("Registry Contract: Cannot read from JSON ABI file, defaulting to hardcoded contract address")
-			ethRegistryContract = util.GetEnv("RegistryContractAddr", "0xE05da394fAE477De2eE6F64d5C64cf1D8F67a803")
-		}
-	}
-	ethPrivateKey := util.GetEnv("ETH_PRIVATE_KEY", "")
-	if len(ethPrivateKey) > 0 && strings.Contains(ethPrivateKey, "0x") {
-		ethPrivateKey = ethPrivateKey[2:]
-	}
+	//testMode := util.GetEnv("NETWORK", "testnet")
 	tendermintRPC := types.TendermintConfig{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
@@ -133,13 +109,6 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "info")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
-
-	ethConfig := types.EthConfig{
-		EthereumURL:          ethereumURL,
-		EthPrivateKey:        ethPrivateKey,
-		TokenContractAddr:    ethTokenContract,
-		RegistryContractAddr: ethRegistryContract,
-	}
 
 	store, err := pemutil.LoadFile("/run/secrets/ECDSA_PKPEM")
 	if err != nil {
@@ -158,7 +127,6 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,
 		APIURI:           apiURI,
-		EthConfig:        ethConfig,
 		ECPrivateKey:     *ecPrivKey,
 		DoNodeAudit:      doAuditLoop,
 		DoNodeManagement: doNodeManagement,

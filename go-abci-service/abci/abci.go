@@ -11,7 +11,6 @@ import (
 
 	"github.com/chainpoint/tendermint/abci/example/code"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/go-redis/redis"
@@ -77,7 +76,6 @@ type AnchorApplication struct {
 	aggregator           *aggregator.Aggregator
 	pgClient             *postgres.Postgres
 	redisClient          *redis.Client
-	ethClient            *ethcontracts.EthClient
 	rpc                  *RPC
 	ID                   string
 	JWK                  types.Jwk
@@ -182,17 +180,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		util.LoggerError(*config.Logger, err)
 	}
 
-	//Declare ethereum Client
-	var ethClient *ethcontracts.EthClient
-	if config.DoNodeManagement {
-		ethClient, err = ethcontracts.NewClient(config.EthConfig.EthereumURL, config.EthConfig.EthPrivateKey,
-			config.EthConfig.TokenContractAddr, config.EthConfig.RegistryContractAddr,
-			*config.Logger)
-		if util.LoggerError(*config.Logger, err) != nil {
-			panic(err)
-		}
-	}
-
 	//Construct application
 	app := AnchorApplication{
 		Db:                   db,
@@ -211,15 +198,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		},
 		pgClient:    pgClient,
 		redisClient: redisClient,
-		ethClient:   ethClient,
 		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
 		CoreKeys:    map[string]ecdsa.PublicKey{},
-	}
-
-	//Initialize and monitor node state
-	if config.DoNodeManagement {
-		go app.PollNodesFromContract()
-		go app.PollCoresFromContract()
 	}
 
 	//Initialize calendar writing if enabled
@@ -310,9 +290,6 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	// If the chain is synced, run all polling methods
 	if app.state.ChainSynced {
 		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
-		if app.config.DoNodeAudit && app.JWKSent {
-			go app.MintMonitor()
-		}
 		if app.config.DoCal {
 			go app.AggregateCalendar()
 		}
@@ -322,13 +299,6 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
 			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
-			if app.config.DoNodeAudit && !app.state.NodeMintPending {
-				go app.AuditNodes() //retrieve, audit, and reward some nodes
-				go app.StartNodeMintProcess()
-			}
-			if app.config.DoNodeAudit && !app.state.CoreMintPending {
-				go app.StartCoreMintProcess()
-			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
