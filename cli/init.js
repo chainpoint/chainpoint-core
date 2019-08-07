@@ -22,12 +22,10 @@ const cliHelloLogger = require('./utils/cliHelloLogger')
 const stakingQuestions = require('./utils/stakingQuestions')
 
 const argsDefinitions = [
-  { name: 'PRIVATE_NETWORK' },
   { name: 'NETWORK' },
   { name: 'CORE_PUBLIC_IP_ADDRESS' },
   { name: 'BITCOIN_WIF' },
   { name: 'PEERS' },
-  { name: 'PRIVATE_NODE_IPS' },
   { name: 'BTC_RPC_URI_LIST' },
   { name: 'BLOCKCYPHER_API_TOKEN' }
 ]
@@ -42,7 +40,6 @@ async function main() {
       () =>
         inquirer.prompt([
           stakingQuestions['NETWORK'],
-          stakingQuestions['PRIVATE_NETWORK'],
           stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
           stakingQuestions['BTC_RPC_URI_LIST'],
           stakingQuestions['BITCOIN_WIF']

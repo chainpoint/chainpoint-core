@@ -33,22 +33,6 @@ module.exports = {
     ],
     default: 'mainnet'
   },
-  PRIVATE_NETWORK: {
-    type: 'list',
-    name: 'PRIVATE_NETWORK',
-    message: 'Will this Core run in private mode (independently of the public Chainpoint Network)?',
-    choices: [
-      {
-        name: 'Private Network',
-        value: true
-      },
-      {
-        name: 'Public Network',
-        value: false
-      }
-    ],
-    default: false
-  },
   CORE_PUBLIC_IP_ADDRESS: {
     type: 'input',
     name: 'CORE_PUBLIC_IP_ADDRESS',

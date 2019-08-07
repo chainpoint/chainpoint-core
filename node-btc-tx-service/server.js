@@ -184,11 +184,10 @@ async function openRMQConnectionAsync(connectURI) {
 // process all steps need to start the application
 async function start() {
   if (env.NODE_ENV === 'test') return
-  if (env.PRIVATE_NETWORK) logger.info(`*** Private Network Mode ***`)
   try {
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
-    logger.info(`Startup completed successfully ${env.PRIVATE_NETWORK ? ': *** Private Network Mode ***' : ''}`)
+    logger.info(`Startup completed successfully`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)

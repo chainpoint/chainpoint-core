@@ -33,13 +33,6 @@ const validateNetwork = envalid.makeValidator(name => {
   if (name === 'testnet') return 'testnet'
   throw new Error('The NETWORK value is invalid')
 })
-const validatePrivateNetwork = envalid.makeValidator(x => {
-  if (!x) return false
-  x = x.toString().toLowerCase()
-  if (x === 'false') return false
-  if (x === 'true') return true
-  throw new Error('The PRIVATE_NETWORK value is invalid')
-})
 
 let envDefinitions = {
   // The following variables are exposed by this stack's /status endpoint
@@ -53,7 +46,6 @@ let envDefinitions = {
   // Chainpoint Core environment related variables
   NODE_ENV: envalid.str({ default: 'production', desc: 'The type of environment in which the service is running' }),
   NETWORK: validateNetwork({ default: 'mainnet', desc: `The network to use, 'mainnet' or 'testnet'` }),
-  PRIVATE_NETWORK: validatePrivateNetwork({ default: 'false', desc: 'Run this Core within your own private network' }),
 
   // RabbitMQ related variables
   RABBITMQ_CONNECT_URI: envalid.url({

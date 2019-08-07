@@ -24,9 +24,6 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}]
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
-      PRIVATE_NODE_IPS: ""
-      PRIVATE_CORE_IPS: ""
       NETWORK: ${NETWORK:-testnet}
       ANCHOR: "true"
       AUDIT: "true"
@@ -116,7 +113,6 @@ services:
         max_attempts: 5
         window: 120s
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -149,7 +145,6 @@ services:
     secrets:
     - BITCOIN_WIF
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -180,7 +175,6 @@ services:
     networks:
     - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
@@ -210,7 +204,6 @@ services:
     networks:
     - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -240,7 +233,6 @@ services:
     networks:
     - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
     tty: true

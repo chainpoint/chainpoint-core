@@ -23,10 +23,8 @@ async function createSwarmAndSecrets(valuePairs) {
   let btcRpc = valuePairs.BTC_RPC_URI_LIST
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
   let wif = valuePairs.BITCOIN_WIF
-  let privateNetwork = valuePairs.PRIVATE_NETWORK
   let network = valuePairs.NETWORK
   let peers = valuePairs.PEERS != null ? valuePairs.PEERS : ''
-  let privateNodes = valuePairs.PRIVATE_NODE_IPS != null ? valuePairs.PRIVATE_NODE_IPS : ''
   let blockCypher = valuePairs.BLOCKCYPHER_API_TOKEN != null ? valuePairs.BLOCKCYPHER_API_TOKEN : ''
 
   let sed = `sed -i 's#external_address = .*#external_address = "${ip}:26656"#' ${
@@ -47,12 +45,10 @@ async function createSwarmAndSecrets(valuePairs) {
   return updateOrCreateEnv({
     BTC_RPC_URI_LIST: btcRpc,
     BLOCKCYPHER_API_TOKEN: blockCypher,
-    PRIVATE_NODE_IPS: privateNodes,
     PEERS: peers,
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
-    CORE_DATADIR: `${home.stdout}/.chainpoint/core`,
-    PRIVATE_NETWORK: privateNetwork
+    CORE_DATADIR: `${home.stdout}/.chainpoint/core`
   })
 }
 module.exports = createSwarmAndSecrets

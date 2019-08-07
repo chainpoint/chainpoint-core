@@ -141,9 +141,9 @@ function setupRestifyConfigAndRoutes(server) {
 }
 
 // HTTP Server
-async function startInsecureRestifyServerAsync(privateMode) {
+async function startInsecureRestifyServerAsync() {
   let restifyServer = restify.createServer(httpOptions)
-  setupRestifyConfigAndRoutes(restifyServer, privateMode)
+  setupRestifyConfigAndRoutes(restifyServer)
 
   // Begin listening for requests
   await connections.listenRestifyAsync(restifyServer, 8080)
@@ -222,7 +222,6 @@ async function openRMQConnectionAsync(connectURI) {
 // process all steps need to start the application
 async function start() {
   if (env.NODE_ENV === 'test') return
-  if (env.PRIVATE_NETWORK) logger.info(`*** Private Network Mode ***`)
   try {
     // init Redis
     await openRedisConnection(env.REDIS_CONNECT_URIS)
@@ -233,8 +232,8 @@ async function start() {
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
-    await startInsecureRestifyServerAsync(env.PRIVATE_NETWORK)
-    logger.info(`Startup completed successfully ${env.PRIVATE_NETWORK ? ': *** Private Network Mode ***' : ''}`)
+    await startInsecureRestifyServerAsync()
+    logger.info(`Startup completed successfully`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)

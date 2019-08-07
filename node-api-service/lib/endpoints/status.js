@@ -57,8 +57,7 @@ async function buildStatusObjectAsync() {
     version: version,
     time: new Date().toISOString(),
     base_uri: env.CHAINPOINT_CORE_BASE_URI,
-    network: env.NETWORK,
-    mode: env.PRIVATE_NETWORK ? 'private' : 'public'
+    network: env.NETWORK
   }
 
   return {
