@@ -184,9 +184,6 @@ module.exports = {
   setAMQPChannel: chan => {
     amqpChannel = chan
   },
-  setGetIP: func => {
-    utils.getClientIP = func
-  },
   setENV: obj => {
     env = obj
   }
