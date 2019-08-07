@@ -34,7 +34,6 @@ services:
       LOG_FILTER: "main:debug,state:info,*:error"
       LOG_LEVEL: "info"
     volumes:
-    - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
     - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
     ports:
@@ -96,8 +95,6 @@ services:
         published: 443
         protocol: tcp
         mode: host
-    volumes:
-      - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     environment:
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
@@ -105,7 +102,6 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
-      ECDSA_PKPEM: ${ECDSA_PKPEM}
       UV_THREADPOOL_SIZE: 128
     tty: true
 
@@ -127,7 +123,6 @@ services:
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
-      ECDSA_PKPEM: ${ECDSA_PKPEM}
     tty: true
 
   # Bitcoin Transmit

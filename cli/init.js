@@ -26,7 +26,6 @@ const argsDefinitions = [
   { name: 'NETWORK' },
   { name: 'CORE_PUBLIC_IP_ADDRESS' },
   { name: 'BITCOIN_WIF' },
-  { name: 'ETH_PRIVATE_KEY' },
   { name: 'PEERS' },
   { name: 'PRIVATE_NODE_IPS' },
   { name: 'BTC_RPC_URI_LIST' },

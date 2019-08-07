@@ -6,10 +6,6 @@ networks:
 secrets:
   BITCOIN_WIF:
     external: true
-  ETH_PRIVATE_KEY:
-    external: true
-  ECDSA_PKPEM:
-    external: true
 
 services:
 
@@ -25,9 +21,7 @@ services:
     environment:
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      ETH_PRIVATE_KEY: DOCKER-SECRET->ETH_PRIVATE_KEY
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
+      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}]
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
@@ -64,9 +58,6 @@ services:
         constraints: [node.role==manager]
     networks:
     - chainpoint
-    secrets:
-    - ETH_PRIVATE_KEY
-    - ECDSA_PKPEM
     logging:
       driver: "json-file"
       options:
@@ -131,11 +122,7 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       UV_THREADPOOL_SIZE: 128
-    secrets:
-    - ECDSA_PKPEM
-    - ETH_PRIVATE_KEY
     tty: true
     logging:
       driver: "json-file"
