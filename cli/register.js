@@ -17,23 +17,14 @@
 const chalk = require('chalk')
 const cliHelloLogger = require('./utils/cliHelloLogger')
 const updateOrCreateEnv = require('./scripts/2_update_env')
-const register = require('./scripts/3_registration')
 
 async function main() {
   cliHelloLogger()
 
-  console.log(chalk.bold.yellow('Stake your Core:'))
-
   try {
-    let ip = (await updateOrCreateEnv({})).CORE_PUBLIC_IP_ADDRESS
-    await register.approve()
-    await register.register(ip)
-
-    console.log(chalk.green('\n===================================='))
-    console.log(chalk.green('==   SUCCESSFULLY STAKED CORE!    =='))
-    console.log(chalk.green('====================================', '\n'))
+    await updateOrCreateEnv({})
   } catch (error) {
-    console.log(chalk.red('Failed to Stake Core to Chainpoint Network. Please try again.'))
+    console.log(chalk.red('Failed to update or create the environment. Please try again.'))
   }
 }
 
