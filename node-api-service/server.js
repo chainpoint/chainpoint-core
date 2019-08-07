@@ -26,7 +26,6 @@ const peers = require('./lib/endpoints/peers.js')
 const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
-const usageToken = require('./lib/endpoints/usage-token.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
 const activeToken = require('./lib/models/ActiveToken.js')
@@ -63,7 +62,7 @@ let throttle = (burst, rate, opts = { ip: true }) => {
   return restify.plugins.throttle(Object.assign({}, { burst, rate }, opts))
 }
 
-function setupRestifyConfigAndRoutes(server, privateMode) {
+function setupRestifyConfigAndRoutes(server) {
   // LOG EVERY REQUEST
   // server.pre(function (request, response, next) {
   //   request.log.info({ req: [request.url, request.method, request.rawHeaders] }, 'API-REQUEST')
@@ -139,15 +138,6 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
   server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), peers.getPeersAsync)
   // get status
   server.get({ path: '/status', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), status.getCoreStatusAsync)
-  // do not enable ETH and JWT related endpoint if running in Private Mode
-  if (privateMode === false) {
-    // post token refresh
-    server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
-    // post token credit
-    server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
-    // post token audience update
-    server.post({ path: '/usagetoken/audience', version: '1.0.0' }, usageToken.postTokenAudienceUpdateAsync)
-  }
   // teapot
   server.get({ path: '/', version: '1.0.0' }, root.getV1)
 }
