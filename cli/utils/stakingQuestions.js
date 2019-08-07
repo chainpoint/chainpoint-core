@@ -75,11 +75,6 @@ module.exports = {
     name: 'BITCOIN_WIF',
     message: 'Enter the Bitcoin private key for your hotwallet:'
   },
-  INFURA_API_KEY: {
-    type: 'input',
-    name: 'INFURA_API_KEY',
-    message: 'Enter your Infura API key (free):'
-  },
   ETHERSCAN_API_KEY: {
     type: 'input',
     name: 'ETHERSCAN_API_KEY',

@@ -39,5 +39,5 @@ At any time, the ABCI application may:
 ## Troubleshooting
 
 - If the Tendermint Core crashes, it will log a `panic` message. Usually this is due to the Tendermint Core having a corrupt copy of the chain. When in doubt, don't be afraid to `make remove` and `make clean` to stop the node and delete the chainstate, then redeploy with `make deploy`. A fast-sync with the rest of the Network should fix the issue.
-- If the Tendermint Core returns connection errors to other services (including external web APIs such as Infura), make sure all URIs and API keys are correct in your configuration.
+- If the Tendermint Core returns connection errors to other services, make sure all URIs and API keys are correct in your configuration.
 - If you need to move hosts, be sure to save the `~/.chainpoint` directory and move it to the new host. You will want to adjust the Core's public IP in `~/.chainpoint/core/.env` to reflect the new host.

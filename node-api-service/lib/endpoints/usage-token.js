@@ -28,9 +28,8 @@ const logger = require('../logger.js')
 const url = require('url').URL
 
 const network = env.NETWORK === 'mainnet' ? 'homestead' : 'ropsten'
-const infuraProvider = new ethers.providers.InfuraProvider(network, env.ETH_INFURA_API_KEY)
 const etherscanProvider = new ethers.providers.EtherscanProvider(network, env.ETH_ETHERSCAN_API_KEY)
-let fallbackProvider = new ethers.providers.FallbackProvider([infuraProvider, etherscanProvider])
+let fallbackProvider = new ethers.providers.FallbackProvider([etherscanProvider])
 
 let tknDefinition = require('../../artifacts/ethcontracts/TierionNetworkToken.json')
 const tokenABI = tknDefinition.abi

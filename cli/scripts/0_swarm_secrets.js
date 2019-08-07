@@ -51,18 +51,6 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   try {
-    let infuraApiKey = valuePairs.INFURA_API_KEY
-    let etherscanApiKey = valuePairs.ETHERSCAN_API_KEY
-    await exec.quiet([
-      `printf ${infuraApiKey} | docker secret create ETH_INFURA_API_KEY -`,
-      `printf ${etherscanApiKey} | docker secret create ETH_ETHERSCAN_API_KEY -`
-    ])
-    console.log(chalk.yellow('ETH API secrets saved to Docker Secrets'))
-  } catch (err) {
-    console.log(chalk.red('Setting ETH API secrets failed (is docker installed?)'))
-  }
-
-  try {
     let privateKey
     if (!('ETH_PRIVATE_KEY' in valuePairs)) {
       privateKey = (await createWallet()).privateKey

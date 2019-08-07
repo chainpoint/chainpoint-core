@@ -53,7 +53,6 @@ Provided BASH is installed, a script to install all other dependencies (make, op
 Core requires a few external services to facilitate communication with the Bitcoin and Ethereum blockchains. You will need:
 
 - `RPC address of a Bitcore Node` - Bitcoin Node with RPC enabled
-- `Infura API Key` - generated from infura.io
 - `Etherscan API key`
 - `Bitcoin WIF`- Bitcoin Wallet Import Format (WIF) string in Base58.
 
@@ -93,8 +92,6 @@ The following are the descriptions of the configuration parameters:
 | NODE_ENV                 | String  | .env                         | Sets Core to use either ethereum/bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
 | PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
-| ETH_INFURA_API_KEY       | String  | Docker Secrets (`make init`) | API key to use Infura ethereum web services                                                                                                      |
-| ETH_ETHERSCAN_API_KEY    | String  | Docker Secrets (`make init`) | API key to use etherscan ethereum web services as a fallback to infura                                                                           |
 | ETH_PRIVATE_KEY          | String  | Docker Secrets (`make init`) | Private key for this Core's Ethereum account.                                                                                                    |
 | ECDSA_PKPEM              | String  | Docker Secrets (`make init`) | Keypair used to create JWKs for Core's API auth                                                                                                  |
 | BITCOIN_WIF              | String  | Docker Secrets (`make init`) | Private key for bitcoin hotwallet, used to paying anchoring fees                                                                                 |
