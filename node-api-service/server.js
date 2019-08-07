@@ -30,7 +30,6 @@ const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
 const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
-const tokenUtils = require('./lib/token-utils.js')
 const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
 const apicache = require('apicache')
@@ -163,7 +162,6 @@ function openRedisConnection(redisURIs) {
       redisURIs,
       newRedis => {
         resolve(newRedis)
-        tokenUtils.setRedis(newRedis)
         redisCache = apicache.options({
           redisClient: newRedis,
           debug: true,
@@ -171,7 +169,6 @@ function openRedisConnection(redisURIs) {
         }).middleware
       },
       () => {
-        tokenUtils.setRedis(null)
         setTimeout(() => {
           openRedisConnection(redisURIs).then(() => resolve())
         }, 5000)
@@ -196,7 +193,6 @@ async function openPostgresConnectionAsync() {
 async function openTendermintConnectionAsync() {
   let rpcClient = await connections.openTendermintConnectionAsync(env.TENDERMINT_URI)
   tmRpc.setRpcClient(rpcClient)
-  tokenUtils.setTMRPC(tmRpc)
 }
 
 /**
