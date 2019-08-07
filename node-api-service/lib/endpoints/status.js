@@ -18,7 +18,6 @@ const errors = require('restify-errors')
 let tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
 let env = require('../parse-env.js')('api')
-const jose = require('node-jose')
 const logger = require('../logger.js')
 
 async function getCoreStatusAsync(req, res, next) {
@@ -60,15 +59,6 @@ async function buildStatusObjectAsync() {
     base_uri: env.CHAINPOINT_CORE_BASE_URI,
     network: env.NETWORK,
     mode: env.PRIVATE_NETWORK ? 'private' : 'public'
-  }
-
-  let privateKeyPEM = env.ECDSA_PKPEM
-  try {
-    let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
-    // add 'jwk' data to coreInfo result object
-    coreInfo.jwk = jwk.toJSON()
-  } catch (error) {
-    logger.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
   }
 
   return {

@@ -50,20 +50,8 @@ describe('Status Controller - Public Mode', () => {
 
   describe('GET /status', () => {
     let baseURI = 'http://base.uri'
-    let ecdsa = `-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgnwHQZK/KRmLIlm3l
-zfB8ygE3fGv5tKTCVQUg8I/gB8OhRANCAATQppszaJzIR+Ri1L7LgyVqEkUFsfAO
-HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
------END PRIVATE KEY-----`
-    let jwk = {
-      kty: 'EC',
-      kid: 'P6uVIqS0Dnp7TD5xDXAZ-5xBzkhtmtAA13JIdDEXzSU',
-      crv: 'P-256',
-      x: '0KabM2icyEfkYtS-y4MlahJFBbHwDhz2biqYdinUjZ8',
-      y: 'aOscpZJkK-Ij0npERjofWQzjtoWLKuuWz0OddI3U6gE'
-    }
     before(() => {
-      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, ECDSA_PKPEM: ecdsa, NETWORK: 'testnet', PRIVATE_NETWORK: false })
+      status.setENV({ CHAINPOINT_CORE_BASE_URI: baseURI, NETWORK: 'testnet', PRIVATE_NETWORK: false })
       let statusResult = { tmresult: 1 }
       status.setTmRpc({
         getStatusAsync: async () => {
@@ -97,10 +85,6 @@ HPZuKph2KdSNn2jrHKWSZCviI9J6REY6H1kM47aFiyrrls9DnXSN1OoB
             .to.have.property('mode')
             .and.to.be.a('string')
             .and.to.equal('public')
-          expect(res.body)
-            .to.have.property('jwk')
-            .and.to.be.a('object')
-            .and.to.deep.equal(jwk)
           expect(res.body)
             .to.have.property('tmresult')
             .and.to.be.a('number')
