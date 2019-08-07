@@ -142,7 +142,6 @@ describe('Status Controller - Private Mode', () => {
             .to.have.property('mode')
             .and.to.be.a('string')
             .and.to.equal('private')
-          expect(res.body).to.not.have.property('jwk')
           expect(res.body)
             .to.have.property('tmresult')
             .and.to.be.a('number')
