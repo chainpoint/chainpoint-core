@@ -18,7 +18,6 @@ services:
     environment:
       PEERS: ${PEERS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
@@ -106,7 +105,6 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
-      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       ECDSA_PKPEM: ${ECDSA_PKPEM}
       UV_THREADPOOL_SIZE: 128
     tty: true
@@ -129,7 +127,6 @@ services:
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
-      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       ECDSA_PKPEM: ${ECDSA_PKPEM}
     tty: true
 

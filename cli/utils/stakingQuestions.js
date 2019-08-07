@@ -75,11 +75,6 @@ module.exports = {
     name: 'BITCOIN_WIF',
     message: 'Enter the Bitcoin private key for your hotwallet:'
   },
-  ETHERSCAN_API_KEY: {
-    type: 'input',
-    name: 'ETHERSCAN_API_KEY',
-    message: 'Enter your Etherscan API key (free):'
-  },
   BTC_RPC_URI_LIST: {
     type: 'input',
     name: 'BTC_RPC_URI_LIST',

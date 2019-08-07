@@ -53,7 +53,6 @@ Provided BASH is installed, a script to install all other dependencies (make, op
 Core requires a few external services to facilitate communication with the Bitcoin and Ethereum blockchains. You will need:
 
 - `RPC address of a Bitcore Node` - Bitcoin Node with RPC enabled
-- `Etherscan API key`
 - `Bitcoin WIF`- Bitcoin Wallet Import Format (WIF) string in Base58.
 
 The Bitcoin WIF is the private key of your _Hot Wallet_, which is used to pay for Anchoring fees. Do not use your main Bitcoin wallet here!

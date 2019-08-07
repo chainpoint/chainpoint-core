@@ -26,7 +26,6 @@ const argsDefinitions = [
   { name: 'NETWORK' },
   { name: 'CORE_PUBLIC_IP_ADDRESS' },
   { name: 'BITCOIN_WIF' },
-  { name: 'ETHERSCAN_API_KEY' },
   { name: 'ETH_PRIVATE_KEY' },
   { name: 'PEERS' },
   { name: 'PRIVATE_NODE_IPS' },
@@ -47,8 +46,7 @@ async function main() {
           stakingQuestions['PRIVATE_NETWORK'],
           stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
           stakingQuestions['BTC_RPC_URI_LIST'],
-          stakingQuestions['BITCOIN_WIF'],
-          stakingQuestions['ETHERSCAN_API_KEY']
+          stakingQuestions['BITCOIN_WIF']
         ]),
       createSwarmAndSecrets
     )()

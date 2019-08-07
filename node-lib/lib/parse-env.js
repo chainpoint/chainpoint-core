@@ -165,7 +165,6 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.ETH_ETHERSCAN_API_KEY = envalid.str({ desc: 'Etherscan API Key' })
       envDefinitions.ECDSA_PKPEM = envalid.str({ desc: 'ECDSA private key in PEM format' })
       break
     case 'btc-mon':
