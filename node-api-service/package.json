@@ -21,7 +21,6 @@
     "eslint-plugin-prettier": "^3.0.1",
     "ioredis": "^4.9.0",
     "ip": "^1.1.5",
-    "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.4",
     "pg": "^7.8.1",
     "pg-hstore": "^2.3.2",
