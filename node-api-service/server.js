@@ -28,7 +28,6 @@ const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
-const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
@@ -181,10 +180,9 @@ function openRedisConnection(redisURIs) {
  * Opens a Postgres connection
  **/
 async function openPostgresConnectionAsync() {
-  let sqlzModelArray = [proof, activeToken]
+  let sqlzModelArray = [proof]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.op, cxObjects.models[0])
-  activeToken.setDatabase(cxObjects.sequelize, cxObjects.models[1])
 }
 
 /**
