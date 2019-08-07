@@ -26,13 +26,9 @@ const peers = require('./lib/endpoints/peers.js')
 const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
-const nodes = require('./lib/endpoints/nodes.js')
-const eth = require('./lib/endpoints/eth.js')
 const usageToken = require('./lib/endpoints/usage-token.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
-const stakedNode = require('./lib/models/StakedNode.js')
-const stakedCore = require('./lib/models/StakedCore.js')
 const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const tokenUtils = require('./lib/token-utils.js')
@@ -139,26 +135,12 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
       proofs.getProofsByIDsAsync
     )
   }
-  // get nodes from core
-  server.get({ path: '/nodes/random', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), nodes.getNodesAsync)
   // get random core peers
   server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), peers.getPeersAsync)
   // get status
   server.get({ path: '/status', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), status.getCoreStatusAsync)
   // do not enable ETH and JWT related endpoint if running in Private Mode
   if (privateMode === false) {
-    // get eth tx data
-    server.get(
-      { path: '/eth/:addr/stats', version: '1.0.0' },
-      ...applyMiddleware([throttle(5, 1)]),
-      eth.getEthStatsAsync
-    )
-    // post eth broadcast
-    server.post(
-      { path: '/eth/broadcast', version: '1.0.0' },
-      ...applyMiddleware([throttle(5, 1)]),
-      eth.postEthBroadcastAsync
-    )
     // post token refresh
     server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
     // post token credit
@@ -212,12 +194,10 @@ function openRedisConnection(redisURIs) {
  * Opens a Postgres connection
  **/
 async function openPostgresConnectionAsync() {
-  let sqlzModelArray = [proof, stakedNode, activeToken, stakedCore]
+  let sqlzModelArray = [proof, activeToken]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.op, cxObjects.models[0])
-  stakedNode.setDatabase(cxObjects.sequelize, cxObjects.models[1])
-  activeToken.setDatabase(cxObjects.sequelize, cxObjects.models[2])
-  stakedCore.setDatabase(cxObjects.sequelize, cxObjects.models[3])
+  activeToken.setDatabase(cxObjects.sequelize, cxObjects.models[1])
 }
 
 /**
