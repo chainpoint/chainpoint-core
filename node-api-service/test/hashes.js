@@ -1,4 +1,4 @@
-/* global describe, it, before, beforeEach, afterEach */
+/* global describe, it, beforeEach, afterEach */
 
 process.env.NODE_ENV = 'test'
 
@@ -70,8 +70,6 @@ describe('Hashes Controller', () => {
     it('should return proper error with hash not a string', done => {
       request(insecureServer)
         .post('/hashes')
-        .set('Authorization', 'bearer ababab121212')
-        .set('tnt-address', '0x1234567890123456789012345678901234567890')
         .send({ hash: ['badhash'] })
         .expect('Content-type', /json/)
         .expect(409)
@@ -134,235 +132,6 @@ describe('Hashes Controller', () => {
     })
   })
 
-  describe('POST /hashes with no token', () => {
-    it('should return proper error', done => {
-      app.setAMQPChannel({
-        sendToQueue: function() {}
-      })
-      request(insecureServer)
-        .post('/hashes')
-        .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, token must be supplied')
-          done()
-        })
-    })
-  })
-
-  describe('POST /hashes with bad token data', () => {
-    it('should return proper error', done => {
-      app.setAMQPChannel({
-        sendToQueue: function() {}
-      })
-      request(insecureServer)
-        .post('/hashes')
-        .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token: 'qweqweqwe'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, token cannot be decoded')
-          done()
-        })
-    })
-  })
-
-  describe('POST /hashes with missing kid', () => {
-    it('should return proper error', done => {
-      app.setAMQPChannel({
-        sendToQueue: function() {}
-      })
-      request(insecureServer)
-        .post('/hashes')
-        .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIzNDFmODNkMC02YjdmLTExZTktYWM3Ni1kNTcyYjBmMzllNDgiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1NjU3MCwiYmFsIjoyNywiaWF0IjoxNTU2NjUyOTY5fQ.3sAXn6X7qhMXAriDBr470ciqyKTADeplWUN4skvscE9MaNkj6DtXWSw0ZujUqPwlpmAF3mq4kbJn-7SEXUa4JQ'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, token missing `kid` value')
-          done()
-        })
-    })
-  })
-
-  describe('POST /hashes with missing iss', () => {
-    it('should return proper error', done => {
-      app.setAMQPChannel({
-        sendToQueue: function() {}
-      })
-      request(insecureServer)
-        .post('/hashes')
-        .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjU1OTI5ODQwLTZiN2YtMTFlOS04Yzk2LWM3NDY4MGE4MDQ4ZiJ9.eyJqdGkiOiI1NTkxYWRlMC02YjdmLTExZTktOGM5Ni1jNzQ2ODBhODA0OGYiLCJzdWIiOiIyNC4xNTQuMjEuMTEiLCJleHAiOjE1NTY2NTY2MjYsImJhbCI6MjcsImlhdCI6MTU1NjY1MzAyNX0.-JbQlyGo7cy5iWJTZhRizjndltpTFbxJCJoSOI5SVtepJuCp5SWHbdL7xdhWE78oKCpy6nVk5IjKTZUCVnK0cQ'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, token missing `iss` value')
-          done()
-        })
-    })
-  })
-
-  describe('POST /hashes with non-cached non-peer iss', () => {
-    before(() => {
-      hashes.setRedis({
-        get: async () => null
-      })
-      hashes.setSC({
-        hasMemberIPAsync: async () => false
-      })
-    })
-    it('should return proper error', done => {
-      app.setAMQPChannel({
-        sendToQueue: function() {}
-      })
-      request(insecureServer)
-        .post('/hashes')
-        .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, `iss` not a known network peer')
-          done()
-        })
-    })
-  })
-
-  describe('POST /hashes with cached non-peer iss', () => {
-    before(() => {
-      hashes.setRedis({
-        get: async () => 'false'
-      })
-      hashes.setSC({
-        hasMemberIPAsync: async () => false
-      })
-    })
-    it('should return proper error', done => {
-      app.setAMQPChannel({
-        sendToQueue: function() {}
-      })
-      request(insecureServer)
-        .post('/hashes')
-        .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, `iss` not a known network peer')
-          done()
-        })
-    })
-  })
-
-  describe('POST /hashes with non-cached peer iss', () => {
-    let cache = ''
-    before(() => {
-      hashes.setRedis({
-        get: async () => null,
-        set: async (key, val) => {
-          cache = val
-        }
-      })
-      hashes.setSC({
-        hasMemberIPAsync: async () => true
-      })
-    })
-    it('should return proper error', done => {
-      app.setAMQPChannel({
-        sendToQueue: function() {}
-      })
-      request(insecureServer)
-        .post('/hashes')
-        .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImYxYTg1M2YwLTZiN2YtMTFlOS04MmViLWNiMDRiOGFlYjI4NiJ9.eyJqdGkiOiJmMWE3Njk5MC02YjdmLTExZTktODJlYi1jYjA0YjhhZWIyODYiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjI0LjE1NC4yMS4xMSIsImV4cCI6MTU1NjY1Njg4OCwiYmFsIjoyNywiaWF0IjoxNTU2NjUzMjg3fQ.rqOklC2mhxWcYyLnfE9jOfr1i7Nx4uIVC7S5AszqxfkLIjts7eniSF1gyvvqZ4BkEvn0qROP9QcwPjUCD5_BaA'
-        })
-        .expect('Content-type', /json/)
-        .expect(409)
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          expect(res.body)
-            .to.have.property('code')
-            .and.to.be.a('string')
-            .and.to.equal('InvalidArgument')
-          expect(res.body)
-            .to.have.property('message')
-            .and.to.be.a('string')
-            .and.to.equal('invalid request, unable to find public key for given kid')
-          expect(cache).to.equal(true)
-          done()
-        })
-    })
-  })
-
   describe('POST /hashes', () => {
     it('should return a matched set of metadata and UUID embedded timestamps', done => {
       app.setAMQPChannel({
@@ -372,9 +141,7 @@ describe('Hashes Controller', () => {
       request(insecureServer)
         .post('/hashes')
         .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJhNWRhNTc5MC03NjcyLTExZTktODE1Mi1lOTA3YWYzZjRhY2EiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE3MDQwLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2NS4xLjEuMTAwIiwiaWF0IjoxNTU3ODU3MDM5fQ.nXUiZ_FzWMZGIgHlgf92Jx0jMhPnFfAundv0USEqQKqceeKoXI6YmtgjzuVXoYcmK0b9r6I0vN_20b3mK8oX9w'
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
         })
         .expect('Content-type', /json/)
         .expect(200)
@@ -399,9 +166,7 @@ describe('Hashes Controller', () => {
       request(insecureServer)
         .post('/hashes')
         .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJhNWRhNTc5MC03NjcyLTExZTktODE1Mi1lOTA3YWYzZjRhY2EiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE3MDQwLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2NS4xLjEuMTAwIiwiaWF0IjoxNTU3ODU3MDM5fQ.nXUiZ_FzWMZGIgHlgf92Jx0jMhPnFfAundv0USEqQKqceeKoXI6YmtgjzuVXoYcmK0b9r6I0vN_20b3mK8oX9w'
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
         })
         .expect('Content-type', /json/)
         .expect(200)
@@ -437,9 +202,7 @@ describe('Hashes Controller', () => {
       request(insecureServer)
         .post('/hashes')
         .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-          token:
-            'eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IlA2dVZJcVMwRG5wN1RENXhEWEFaLTV4QnpraHRtdEFBMTNKSWRERVh6U1UifQ.eyJqdGkiOiJhNWRhNTc5MC03NjcyLTExZTktODE1Mi1lOTA3YWYzZjRhY2EiLCJpc3MiOiJodHRwOi8vMzUuMjQ1LjIxMS45NyIsInN1YiI6IjY2LjEyLjEyLjEyIiwiZXhwIjoxODczMjE3MDQwLCJiYWwiOjEwLCJhdWQiOiI2NS4xMi4xMi40NSw2NS4xMy4xMy41NSw2NS4xLjEuMTAwIiwiaWF0IjoxNTU3ODU3MDM5fQ.nXUiZ_FzWMZGIgHlgf92Jx0jMhPnFfAundv0USEqQKqceeKoXI6YmtgjzuVXoYcmK0b9r6I0vN_20b3mK8oX9w'
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
         })
         .expect('Content-type', /json/)
         .expect(200)
