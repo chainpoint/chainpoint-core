@@ -102,8 +102,14 @@ function setupRestifyConfigAndRoutes(server) {
 
   // API RESOURCES
 
-  // submit hash(es)
-  server.post({ path: '/hashes', version: '1.0.0' }, ...applyMiddleware([throttle(5, 0.02)]), hashes.postHashV1Async) // throttl
+  // get hash invoice
+  server.get(
+    { path: '/hash/invoice', version: '1.0.0' },
+    ...applyMiddleware([throttle(5, 1)]),
+    hashes.getHashInvoiceV1Async
+  )
+  // submit hash
+  server.post({ path: '/hash', version: '1.0.0' }, ...applyMiddleware([throttle(5, 1)]), hashes.postHashV1Async)
   // get the block objects for the calendar in the specified block range
   server.get(
     { path: '/calendar/:txid', version: '1.0.0' },
@@ -160,6 +166,7 @@ function openRedisConnection(redisURIs) {
     connections.openRedisConnection(
       redisURIs,
       newRedis => {
+        hashes.setRedis(newRedis)
         resolve(newRedis)
         redisCache = apicache.options({
           redisClient: newRedis,
@@ -168,6 +175,7 @@ function openRedisConnection(redisURIs) {
         }).middleware
       },
       () => {
+        hashes.setRedis(null)
         setTimeout(() => {
           openRedisConnection(redisURIs).then(() => resolve())
         }, 5000)

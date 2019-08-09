@@ -20,6 +20,16 @@ const utils = require('../utils.js')
 const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
 const logger = require('../logger.js')
+const crypto = require('crypto')
+const lnService = require('ln-service')
+
+// The redis connection used for all redis communication
+// This value is set once the connection has been established
+// eslint-disable-next-line no-unused-vars
+let redis = null
+
+// initialize lightning grpc object
+let { lnd } = lnService.authenticatedLndGrpc({ cert: env.LND_CERT, macaroon: env.LND_MACAROON, socket: env.LND_HOST })
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -117,6 +127,29 @@ function generateProcessingHints(timestampDate) {
 }
 
 /**
+ * GET /hash/invoice handler
+ *
+ * Returns a lightning invoice with embedded unique id
+ * After paying the invoice, use the unique id to access hash submission endpoint
+ *
+ */
+async function getHashInvoiceV1Async(req, res, next) {
+  let randomInvoiceId = crypto.randomBytes(32).toString('hex')
+  try {
+    let inv = await lnService.createInvoice({
+      description: `SubmitHashInvoiceId:${randomInvoiceId}`,
+      tokens: 1000,
+      lnd
+    })
+    res.send({ invoice: inv.request })
+    return next()
+  } catch (error) {
+    logger.error(`Unable to generate invoice : ${error[1]} ${error[2] ? ': ' + error[2] : ''}`)
+    return next(new errors.InternalServerError('Unable to generate invoice'))
+  }
+}
+
+/**
  * POST /hash handler
  *
  * Expects a JSON body with the form:
@@ -179,7 +212,11 @@ async function postHashV1Async(req, res, next) {
 
 module.exports = {
   postHashV1Async: postHashV1Async,
+  getHashInvoiceV1Async: getHashInvoiceV1Async,
   generatePostHashResponse: generatePostHashResponse,
+  setRedis: r => {
+    redis = r
+  },
   // additional functions for testing purposes
   setAMQPChannel: chan => {
     amqpChannel = chan
