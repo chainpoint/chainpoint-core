@@ -13,6 +13,7 @@
     "btc-bridge": "^0.0.4",
     "envalid": "^5.0.0",
     "ioredis": "^4.9.0",
+    "ln-service": "^41.1.3",
     "merkle-tools": "^1.3.2",
     "winston": "^3.2.1"
   }

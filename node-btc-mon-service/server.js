@@ -22,6 +22,7 @@ const btcBridge = require('btc-bridge')
 const amqp = require('amqplib')
 const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
+const lnService = require('ln-service')
 
 // Key for the Redis set of all Bitcoin transaction id objects needing to be monitored.
 const BTC_TX_IDS_KEY = 'BTC_Mon:BTCTxIds'
@@ -35,6 +36,9 @@ var amqpChannel = null
 
 // This value is set once the connection has been established
 let redis = null
+
+// initialize lightning grpc object
+let { lnd } = lnService.authenticatedLndGrpc({ cert: env.LND_CERT, macaroon: env.LND_MACAROON, socket: env.LND_HOST })
 
 let CHECKS_IN_PROGRESS = false
 
@@ -220,6 +224,33 @@ function startIntervals() {
   connections.startIntervals(intervals)
 }
 
+function startInvoiceSubscription() {
+  try {
+    let invoiceSubscription = lnService.subscribeToInvoices({ lnd })
+    invoiceSubscription.on('invoice_updated', async invoice => {
+      logger.info('Invoice received: ' + invoice.description)
+      if (invoice.is_confirmed) {
+        logger.info('Invoice paid: ' + invoice.description)
+        // This invoice has been paid
+        // Add a short lived key to redis indicating the payment has been made
+        // With this key added, the invoice id can be used to submit a hash one time
+        let invoiceId = invoice.description.split(':')[1]
+        let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
+        try {
+          await redis.set(paidInvoiceKey, 1, 'EX', 1) // this key will expire 1 minute after invoice payment
+        } catch (error) {
+          logger.error(`Redis SET error : error setting item with key = ${paidInvoiceKey}`)
+        }
+      }
+    })
+    invoiceSubscription.on('error', err => {
+      logger.error(`An invoice subscription error occurred : ${err.message}`)
+    })
+  } catch (error) {
+    throw new Error(`Unable to subscribe to lnd invoices : ${error.message}`)
+  }
+}
+
 // process all steps need to start the application
 async function start() {
   if (env.NODE_ENV === 'test') return
@@ -230,6 +261,8 @@ async function start() {
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // init interval functions
     startIntervals()
+    // init listening for lnd invoice update events
+    startInvoiceSubscription()
     logger.info(`Startup completed successfully`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
