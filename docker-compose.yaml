@@ -5,15 +5,14 @@ networks:
     driver: bridge
 
 services:
-
   abci:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG}
     build:
       context: .
       dockerfile: docker/Dockerfile.abci
     depends_on:
-    - rabbitmq
-    - api
+      - rabbitmq
+      - api
     user: ${USERID}:${GROUPID}
     environment:
       PEERS: ${PEERS}
@@ -21,25 +20,24 @@ services:
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
-      AUDIT: "true"
-      NODE_MANAGEMENT: "true"
-      ANCHOR: "true"
-      AGGREGATE: "true"
-      AGGREGATION_THREADS: "4"
-      HASHES_PER_MERKLE_TREE: "25000"
-      ANCHOR_INTERVAL: "3"
-      LOG_FILTER: "main:debug,state:info,*:error"
-      LOG_LEVEL: "info"
+      AUDIT: 'true'
+      NODE_MANAGEMENT: 'true'
+      ANCHOR: 'true'
+      AGGREGATE: 'true'
+      AGGREGATION_THREADS: '4'
+      HASHES_PER_MERKLE_TREE: '25000'
+      ANCHOR_INTERVAL: '3'
+      LOG_FILTER: 'main:debug,state:info,*:error'
+      LOG_LEVEL: 'info'
     volumes:
-    - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
-    - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
+      - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
+      - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
     ports:
-    - "26656:26656"
-    - "26657:26657"
+      - '26656:26656'
+      - '26657:26657'
     command: bash -c "abci-service"
     networks:
-    - chainpoint
-
+      - chainpoint
 
   # Node.js Base Image
   # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
@@ -70,6 +68,8 @@ services:
   # PORTS : 8080
   #
   api:
+    extra_hosts:
+       - "outside:127.0.0.1"
     restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG}
     build:
@@ -96,6 +96,9 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      LND_CERT: ${LND_CERT}
+      LND_MACAROON: ${LND_MACAROON}
+      LND_HOST: ${LND_HOST}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
@@ -116,6 +119,9 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
+      LND_CERT: ${LND_CERT}
+      LND_MACAROON: ${LND_MACAROON}
+      LND_HOST: ${LND_HOST}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
     tty: true
@@ -145,8 +151,8 @@ services:
       BITCOIN_WIF: ${BITCOIN_WIF}
     tty: true
 
-  # Bitcoin Transmit MonitorF
-  # Monitor and report on the state of BTC transactions this app has submitted.
+  # Bitcoin Transmit Monitor
+  # Monitor and report on the state of BTC and LND transactions.
   #
   btc-mon:
     restart: always
@@ -167,6 +173,9 @@ services:
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
+      LND_CERT: ${LND_CERT}
+      LND_MACAROON: ${LND_MACAROON}
+      LND_HOST: ${LND_HOST}
     tty: true
 
   # Proof State
@@ -229,8 +238,8 @@ services:
     hostname: rabbitmq
     user: ${USERID}:${GROUPID}
     ports:
-    - 5673:5672
-    - 15673:15672
+      - 5673:5672
+      - 15673:15672
     environment:
       RABBITMQ_DEFAULT_USER: chainpoint
       RABBITMQ_DEFAULT_PASS: chainpoint
@@ -245,7 +254,7 @@ services:
     container_name: redis-core
     user: ${USERID}:${GROUPID}
     ports:
-      - "6382:6379"
+      - '6382:6379'
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - ~/.chainpoint/core/data/redis:/data:Z
@@ -255,7 +264,7 @@ services:
       - redis-server
       - /usr/local/etc/redis/redis.conf
 
-  # Postgres	
+  # Postgres
   #
   # See : https://hub.docker.com/_/postgres/
   # Note: Connect locally on OS X:
@@ -277,7 +286,6 @@ services:
       POSTGRES_USER: chainpoint
       POSTGRES_PASSWORD: chainpoint
     ports:
-      - "5433:5432"
+      - '5433:5432'
     networks:
       - chainpoint
-
