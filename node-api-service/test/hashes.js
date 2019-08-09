@@ -1,4 +1,4 @@
-/* global describe, it, beforeEach, afterEach */
+/* global describe, it, before, beforeEach, afterEach */
 
 process.env.NODE_ENV = 'test'
 
@@ -22,10 +22,10 @@ describe('Hashes Controller', () => {
     insecureServer.close()
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hash', () => {
     it('should return proper error with invalid content type', done => {
       request(insecureServer)
-        .post('/hashes')
+        .post('/hash')
         .set('Content-type', 'text/plain')
         .expect('Content-type', /json/)
         .expect(409)
@@ -44,10 +44,10 @@ describe('Hashes Controller', () => {
     })
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hash', () => {
     it('should return proper error with missing hash', done => {
       request(insecureServer)
-        .post('/hashes')
+        .post('/hash')
         .send({ name: 'Manny' })
         .expect('Content-type', /json/)
         .expect(409)
@@ -66,10 +66,10 @@ describe('Hashes Controller', () => {
     })
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hash', () => {
     it('should return proper error with hash not a string', done => {
       request(insecureServer)
-        .post('/hashes')
+        .post('/hash')
         .send({ hash: ['badhash'] })
         .expect('Content-type', /json/)
         .expect(409)
@@ -88,10 +88,10 @@ describe('Hashes Controller', () => {
     })
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hash', () => {
     it('should return proper error with invalid hash', done => {
       request(insecureServer)
-        .post('/hashes')
+        .post('/hash')
         .send({ hash: 'badhash' })
         .expect('Content-type', /json/)
         .expect(409)
@@ -110,11 +110,116 @@ describe('Hashes Controller', () => {
     })
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hash', () => {
+    it('should return proper error with missing invoice_id', done => {
+      request(insecureServer)
+        .post('/hash')
+        .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid JSON body: missing invoice_id')
+          done()
+        })
+    })
+  })
+
+  describe('POST /hash', () => {
+    it('should return proper error with invoice_id not a string', done => {
+      request(insecureServer)
+        .post('/hash')
+        .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12', invoice_id: [1] })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid JSON body: bad invoice_id submitted')
+          done()
+        })
+    })
+  })
+
+  describe('POST /hash', () => {
+    it('should return proper error with invalid invoice_id', done => {
+      request(insecureServer)
+        .post('/hash')
+        .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12', invoice_id: 'deadbeef' })
+        .expect('Content-type', /json/)
+        .expect(409)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InvalidArgument')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('invalid JSON body: bad invoice_id submitted')
+          done()
+        })
+    })
+  })
+
+  describe('POST /hash', () => {
+    before(() => {
+      hashes.setRedis({
+        get: () => null
+      })
+    })
+    it('should return proper error with unpaid invoice_id', done => {
+      let invoiceId = 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
+      request(insecureServer)
+        .post('/hash')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          invoice_id: invoiceId
+        })
+        .expect('Content-type', /json/)
+        .expect(402)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('PaymentRequired')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal(`invoice ${invoiceId} has not been paid`)
+          done()
+        })
+    })
+  })
+
+  describe('POST /hash', () => {
+    before(() => {
+      hashes.setRedis({
+        get: () => '1'
+      })
+    })
     it('should return proper error with no AMQP connection', done => {
       request(insecureServer)
-        .post('/hashes')
-        .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12' })
+        .post('/hash')
+        .send({
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          invoice_id: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
+        })
         .expect('Content-type', /json/)
         .expect(500)
         .end((err, res) => {
@@ -132,16 +237,23 @@ describe('Hashes Controller', () => {
     })
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hash', () => {
+    before(() => {
+      hashes.setRedis({
+        get: () => '1',
+        del: () => null
+      })
+    })
     it('should return a matched set of metadata and UUID embedded timestamps', done => {
       app.setAMQPChannel({
         sendToQueue: function() {}
       })
 
       request(insecureServer)
-        .post('/hashes')
+        .post('/hash')
         .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          invoice_id: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
         })
         .expect('Content-type', /json/)
         .expect(200)
@@ -157,16 +269,23 @@ describe('Hashes Controller', () => {
     })
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hash', () => {
+    before(() => {
+      hashes.setRedis({
+        get: () => '1',
+        del: () => null
+      })
+    })
     it('should return a v1 UUID node embedded with a partial SHA256 over timestamp and hash', done => {
       app.setAMQPChannel({
         sendToQueue: function() {}
       })
 
       request(insecureServer)
-        .post('/hashes')
+        .post('/hash')
         .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          invoice_id: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
         })
         .expect('Content-type', /json/)
         .expect(200)
@@ -193,16 +312,23 @@ describe('Hashes Controller', () => {
     })
   })
 
-  describe('POST /hashes', () => {
+  describe('POST /hash', () => {
+    before(() => {
+      hashes.setRedis({
+        get: () => '1',
+        del: () => null
+      })
+    })
     it('should return proper result with valid call', done => {
       app.setAMQPChannel({
         sendToQueue: function() {}
       })
 
       request(insecureServer)
-        .post('/hashes')
+        .post('/hash')
         .send({
-          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
+          hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
+          invoice_id: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
         })
         .expect('Content-type', /json/)
         .expect(200)
