@@ -164,6 +164,8 @@ module.exports = service => {
     case 'btc-mon':
       envDefinitions.BTC_RPC_URI_LIST = envalid.str({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
       envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
+      break
+    case 'lnd-mon':
       envDefinitions.LND_CERT = envalid.str({ desc: 'Base64 encoded tls.cert' })
       envDefinitions.LND_MACAROON = envalid.str({ desc: 'Base64 encoded admin.macaroon' })
       envDefinitions.LND_HOST = envalid.str({ desc: 'Lightning GRPC host and port' })

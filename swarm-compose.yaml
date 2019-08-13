@@ -158,7 +158,7 @@ services:
         max-size: '1g'
         max-file: '5'
 
-  # Bitcoin Transmit MonitorF
+  # Bitcoin Transmit Monitor
   # Monitor and report on the state of BTC transactions this app has submitted.
   #
   btc-mon:
@@ -171,6 +171,33 @@ services:
     user: ${USERID}:${GROUPID}
     depends_on:
       - rabbitmq
+      - redis
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      NETWORK: ${NETWORK:-testnet}
+      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
+      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
+    tty: true
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '1g'
+        max-file: '5'
+
+  # Lightning Invoice Monitor
+  # Monitor and report on the state of LND invoices.
+  #
+  lnd-mon:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.lnd-mon
+    container_name: lnd-mon-core
+    user: ${USERID}:${GROUPID}
+    depends_on:
       - redis
     networks:
       - chainpoint

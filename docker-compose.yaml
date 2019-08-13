@@ -152,7 +152,7 @@ services:
     tty: true
 
   # Bitcoin Transmit Monitor
-  # Monitor and report on the state of BTC and LND transactions.
+  # Monitor and report on the state of BTC transactions.
   #
   btc-mon:
     restart: always
@@ -173,6 +173,27 @@ services:
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
+    tty: true
+  
+
+  # Lightning Invoice Monitor
+  # Monitor and report on the state of LND invoices.
+  #
+  lnd-mon:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.lnd-mon
+    container_name: lnd-mon-core
+    user: ${USERID}:${GROUPID}
+    depends_on:
+      - base
+      - redis
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: ${NODE_ENV}
       LND_CERT: ${LND_CERT}
       LND_MACAROON: ${LND_MACAROON}
       LND_HOST: ${LND_HOST}

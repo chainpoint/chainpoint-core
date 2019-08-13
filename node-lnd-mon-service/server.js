@@ -1,0 +1,110 @@
+/* Copyright (C) 2019 Tierion
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+// load all environment variables into env object
+const env = require('./lib/parse-env.js')('lnd-mon')
+
+const connections = require('./lib/connections.js')
+const logger = require('./lib/logger.js')
+const utils = require('./lib/utils.js')
+const lnService = require('ln-service')
+
+// This value is set once the connection has been established
+let redis = null
+
+// initialize lightning grpc object
+let { lnd } = lnService.authenticatedLndGrpc({ cert: env.LND_CERT, macaroon: env.LND_MACAROON, socket: env.LND_HOST })
+
+/**
+ * Opens a Redis connection
+ *
+ * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
+ */
+function openRedisConnection(redisURIs) {
+  connections.openRedisConnection(
+    redisURIs,
+    newRedis => {
+      redis = newRedis
+    },
+    () => {
+      redis = null
+      setTimeout(() => {
+        openRedisConnection(redisURIs)
+      }, 5000)
+    }
+  )
+}
+
+async function startInvoiceSubscription() {
+  let subscriptionEstablished = false
+  while (!subscriptionEstablished) {
+    try {
+      let invoiceSubscription = lnService.subscribeToInvoices({ lnd })
+      invoiceSubscription.on('invoice_updated', async invoice => {
+        if (invoice.is_confirmed) {
+          logger.info('Invoice paid: ' + invoice.description)
+          // This invoice has been paid
+          // Add a short lived key to redis indicating the payment has been made
+          // With this key added, the invoice id can be used to submit a hash one time
+          let invoiceId = invoice.description.split(':')[1]
+          let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
+          try {
+            await redis.set(paidInvoiceKey, 1, 'EX', 1) // this key will expire 1 minute after invoice payment
+          } catch (error) {
+            logger.error(`Redis SET error : error setting item with key = ${paidInvoiceKey}`)
+          }
+        } else {
+          // This invoice was just created and delivered
+          logger.info('Invoice generated: ' + JSON.stringify(invoice, null, 2))
+        }
+      })
+      invoiceSubscription.on('error', async err => {
+        logger.error(`An invoice subscription error occurred : ${err.details}`)
+        invoiceSubscription = null
+        // startInvoiceSubscription()
+      })
+      invoiceSubscription.on('end', () => {
+        logger.error(`The invoice subscription has unexpectedly ended`)
+        invoiceSubscription = null
+        //startInvoiceSubscription()
+      })
+      logger.info('Invoices subscription established')
+      subscriptionEstablished = true
+    } catch (error) {
+      // catch errors when attempting to establish invoice subscription
+      logger.error(`Unable to subscribe to lnd invoices : ${error.message} : Attempting in 5 seconds...`)
+      await utils.sleepAsync(5000)
+    }
+  }
+}
+
+// process all steps need to start the application
+async function start() {
+  if (env.NODE_ENV === 'test') return
+  try {
+    // init Redis
+    openRedisConnection(env.REDIS_CONNECT_URIS)
+    // init listening for lnd invoice update events
+    startInvoiceSubscription()
+    logger.info(`Startup completed successfully`)
+  } catch (error) {
+    logger.error(`An error has occurred on startup : ${error.message}`)
+    process.exit(1)
+  }
+}
+
+// get the whole show started
+start()
