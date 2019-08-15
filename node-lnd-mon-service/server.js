@@ -20,13 +20,10 @@ const env = require('./lib/parse-env.js')('lnd-mon')
 const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
-const lnService = require('ln-service')
+const LndGrpc = require('lnd-grpc')
 
 // This value is set once the connection has been established
 let redis = null
-
-// initialize lightning grpc object
-let { lnd } = lnService.authenticatedLndGrpc({ cert: env.LND_CERT, macaroon: env.LND_MACAROON, socket: env.LND_HOST })
 
 /**
  * Opens a Redis connection
@@ -48,44 +45,63 @@ function openRedisConnection(redisURIs) {
   )
 }
 
+// initialize lightning grpc object
+let lnd = new LndGrpc({
+  host: env.LND_HOST,
+  cert: Buffer.from(env.LND_CERT, 'base64').toString(),
+  macaroon: Buffer.from(env.LND_MACAROON, 'base64').toString('hex')
+})
+
 async function startInvoiceSubscription() {
   let subscriptionEstablished = false
   while (!subscriptionEstablished) {
     try {
-      let invoiceSubscription = lnService.subscribeToInvoices({ lnd })
-      invoiceSubscription.on('invoice_updated', async invoice => {
-        if (invoice.is_confirmed) {
-          logger.info('Invoice paid: ' + invoice.description)
-          // This invoice has been paid
-          // Add a short lived key to redis indicating the payment has been made
-          // With this key added, the invoice id can be used to submit a hash one time
-          let invoiceId = invoice.description.split(':')[1]
-          let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
-          try {
-            await redis.set(paidInvoiceKey, 1, 'EX', 1) // this key will expire 1 minute after invoice payment
-          } catch (error) {
-            logger.error(`Redis SET error : error setting item with key = ${paidInvoiceKey}`)
+      try {
+        await lnd.connect()
+      } catch (error) {
+        throw new Error(`Unable to connect to LND : ${error.message}`)
+      }
+      try {
+        let invoiceSubscription = lnd.services.Lightning.subscribeInvoices()
+
+        invoiceSubscription.on('data', async invoice => {
+          if (invoice.settled) {
+            logger.info('Invoice paid: ' + invoice.memo)
+            // This invoice has been paid
+            // Add a short lived key to redis indicating the payment has been made
+            // With this key added, the invoice id can be used to submit a hash one time
+            let invoiceId = invoice.memo.split(':')[1]
+            let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
+            try {
+              await redis.set(paidInvoiceKey, 1, 'EX', 1) // this key will expire 1 minute after invoice payment
+            } catch (error) {
+              logger.error(`Redis SET error : error setting item with key = ${paidInvoiceKey}`)
+            }
+          } else {
+            // This invoice was just created and delivered
+            logger.info('Invoice generated: ' + invoice.memo)
           }
-        } else {
-          // This invoice was just created and delivered
-          logger.info('Invoice generated: ' + JSON.stringify(invoice, null, 2))
-        }
-      })
-      invoiceSubscription.on('error', async err => {
-        logger.error(`An invoice subscription error occurred : ${err.details}`)
-        invoiceSubscription = null
-        // startInvoiceSubscription()
-      })
-      invoiceSubscription.on('end', () => {
-        logger.error(`The invoice subscription has unexpectedly ended`)
-        invoiceSubscription = null
-        //startInvoiceSubscription()
-      })
-      logger.info('Invoices subscription established')
-      subscriptionEstablished = true
+        })
+        invoiceSubscription.on('error', err => {
+          logger.warn(`An invoice subscription error occurred : ${JSON.stringify(err)}`)
+        })
+        invoiceSubscription.on('end', async () => {
+          logger.error(`The invoice subscription has unexpectedly ended`)
+          try {
+            await lnd.disconnect()
+          } catch (error) {
+            logger.error(`Unable to disconnect : ${error.message}`)
+          }
+          startInvoiceSubscription()
+        })
+        logger.info('Invoices subscription established')
+        subscriptionEstablished = true
+      } catch (error) {
+        throw new Error(`Unable to establish LND invoice subscription : ${error.message}`)
+      }
     } catch (error) {
-      // catch errors when attempting to establish invoice subscription
-      logger.error(`Unable to subscribe to lnd invoices : ${error.message} : Attempting in 5 seconds...`)
+      // catch errors when attempting to connect and establish invoice subscription
+      logger.error(`Invoice monitoring : ${error.message} : Attempting in 5 seconds...`)
       await utils.sleepAsync(5000)
     }
   }
