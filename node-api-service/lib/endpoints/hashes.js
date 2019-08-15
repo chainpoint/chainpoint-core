@@ -16,15 +16,19 @@
 
 const errors = require('restify-errors')
 let env = require('../parse-env.js')('api')
-let activeToken = require('../models/ActiveToken.js')
 const utils = require('../utils.js')
 const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
-const jwt = require('jsonwebtoken')
-const tokenUtils = require('../token-utils.js')
 const logger = require('../logger.js')
-const url = require('url').URL
 const crypto = require('crypto')
+const lnService = require('ln-service')
+
+// The redis connection used for all redis communication
+// This value is set once the connection has been established
+let redis = null
+
+// initialize lightning grpc object
+let { lnd } = lnService.authenticatedLndGrpc({ cert: env.LND_CERT, macaroon: env.LND_MACAROON, socket: env.LND_HOST })
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -122,6 +126,29 @@ function generateProcessingHints(timestampDate) {
 }
 
 /**
+ * GET /hash/invoice handler
+ *
+ * Returns a lightning invoice with embedded unique id
+ * After paying the invoice, use the unique id to access hash submission endpoint
+ *
+ */
+async function getHashInvoiceV1Async(req, res, next) {
+  let randomInvoiceId = crypto.randomBytes(32).toString('hex')
+  try {
+    let inv = await lnService.createInvoice({
+      description: `SubmitHashInvoiceId:${randomInvoiceId}`,
+      tokens: 1000,
+      lnd
+    })
+    res.send({ invoice: inv.request })
+    return next()
+  } catch (error) {
+    logger.error(`Unable to generate invoice : ${error[1]} ${error[2] ? ': ' + error[2] : ''}`)
+    return next(new errors.InternalServerError('Unable to generate invoice'))
+  }
+}
+
+/**
  * POST /hash handler
  *
  * Expects a JSON body with the form:
@@ -157,113 +184,38 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
   }
 
+  // validate params has parse a 'invoice_id' key
+  if (!req.params.hasOwnProperty('invoice_id')) {
+    return next(new errors.InvalidArgumentError('invalid JSON body: missing invoice_id'))
+  }
+
+  // validate 'invoice_id' is a string
+  let invoiceId = req.params.invoice_id
+  if (!_.isString(invoiceId)) {
+    return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
+  }
+
+  // validate invoice_id param is a valid hex string
+  let isValidInvoiceId = /^([a-fA-F0-9]{2}){32}$/.test(invoiceId)
+  if (!isValidInvoiceId) {
+    return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
+  }
+
+  // validate invoice_id has been paid
+  let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
+  try {
+    let keyPresent = await redis.get(paidInvoiceKey)
+    if (!keyPresent) {
+      return next(new errors.PaymentRequiredError(`invoice ${invoiceId} has not been paid`))
+    }
+  } catch (error) {
+    logger.error(`Redis GET error : error getting item with key = ${paidInvoiceKey}`)
+    return next(new errors.InternalServerError('Could not retrieve invoice status'))
+  }
+
   // validate amqp channel has been established
   if (!amqpChannel) {
     return next(new errors.InternalServerError('Message could not be delivered'))
-  }
-
-  // do not require JWT when running in Private Mode
-  if (env.PRIVATE_NETWORK === false) {
-    const tokenString = req.params.token
-    // ensure that token is supplied
-    if (!tokenString) {
-      return next(new errors.InvalidArgumentError('invalid request, token must be supplied'))
-    }
-
-    let decodedToken = null
-    // attempt to parse token, if not valid, return error
-    try {
-      decodedToken = jwt.decode(tokenString, { complete: true })
-      if (!decodedToken) throw new Error()
-    } catch (error) {
-      return next(new errors.InvalidArgumentError('invalid request, token cannot be decoded'))
-    }
-
-    // verify signature of token
-    let verifyError = await tokenUtils.verifySigAsync(tokenString, decodedToken)
-    // verifyError will be a restify error on error, or null on successful verification
-    if (verifyError !== null) return next(verifyError)
-
-    // ensure that we can retrieve the Node IP from the request
-    let submittingNodeIP = utils.getClientIP(req)
-    if (submittingNodeIP === null) return next(new errors.BadRequestError('bad request, unable to determine Node IP'))
-    logger.info(`Received request from Node at ${submittingNodeIP}`)
-
-    // get the token's subject
-    let sub = decodedToken.payload.sub
-    if (!sub) return next(new errors.InvalidArgumentError('invalid request, token missing `sub` value'))
-
-    // ensure the Node IP is the subject of the JWT
-    if (sub !== submittingNodeIP)
-      return next(new errors.InvalidArgumentError('invalid request, token subject does not match Node IP'))
-
-    // cannot accept expired token
-    let exp = decodedToken.payload.exp
-    if (!exp) return next(new errors.InvalidArgumentError('invalid request, token missing `exp` value'))
-    if (isNaN(exp)) return next(new errors.InvalidArgumentError('invalid request, `exp` value must be a number'))
-    let expMS = exp * 1000
-    if (expMS < Date.now()) return next(new errors.UnauthorizedError('not authorized, token has expired'))
-
-    // get the token's audience
-    let aud = decodedToken.payload.aud
-    if (!aud) return next(new errors.InvalidArgumentError('invalid request, token missing `aud` value'))
-
-    let ipCSV = aud.toString()
-    let ips = ipCSV.split(',')
-    // ensure that aud is a csv with three values
-    if (ips.length !== 3) {
-      return next(new errors.InvalidArgumentError('invalid request, aud must contain 3 values'))
-    }
-
-    // ensure that each ip value is a real ip
-    for (let ip of ips) {
-      if (!utils.isIP(ip)) {
-        return next(new errors.InvalidArgumentError(`invalid request, bad IP value in aud - ${ip}`))
-      }
-    }
-
-    // ensure that the ip values contain this Core ip
-    let coreURL = new url(env.CHAINPOINT_CORE_BASE_URI)
-    let coreIP = coreURL.hostname
-    if (!ips.includes(coreIP)) {
-      return next(new errors.InvalidArgumentError(`invalid request, aud must include this Core IP`))
-    }
-
-    // CONFIRMATION STEP: This ensures the node actually received a new token after refresh
-    let submittedTokenHash = crypto
-      .createHash('sha256')
-      .update(tokenString)
-      .digest('hex')
-
-    // if this token's hash is in the cache, then it is awaiting broadcast on the network
-    let isCached = await tokenUtils.isTokenHashCached(submittedTokenHash)
-    if (isCached) {
-      // save new active token information in local database
-      // this is to allow multiple consecutive JWT method calls
-      // from the same Core without waiting for the broadcast delay
-      // if this fails, we can proceed because the subsequent broadcast
-      // call will update the local database eventually as well,
-      // and Nodes will eventually recover
-      try {
-        await activeToken.writeActiveTokenAsync({
-          nodeIp: submittingNodeIP,
-          tokenHash: submittedTokenHash
-        })
-      } catch (error) {
-        logger.warn(`Could not update active token data in local database on refresh`)
-        return next(new errors.InternalServerError(`server error, ${error.message}`))
-      }
-
-      // broadcast Node IP and new token hash for Cores to update their local active token table
-      try {
-        let coreId = await tokenUtils.getCachedCoreIDAsync()
-        await tokenUtils.broadcastCoreTxAsync(coreId, submittingNodeIP, submittedTokenHash)
-      } catch (error) {
-        return next(new errors.InternalServerError(`server error, ${error.message}`))
-      }
-
-      await tokenUtils.removeFromTokenHashCache(submittedTokenHash)
-    }
   }
 
   let responseObj = generatePostHashResponse(req.params.hash)
@@ -282,31 +234,26 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
+  try {
+    await redis.del(paidInvoiceKey)
+  } catch (error) {
+    logger.error(`Redis DEL error : error deleting item with key = ${paidInvoiceKey}`)
+  }
+
   res.send(responseObj)
   return next()
 }
 
 module.exports = {
   postHashV1Async: postHashV1Async,
+  getHashInvoiceV1Async: getHashInvoiceV1Async,
   generatePostHashResponse: generatePostHashResponse,
+  setRedis: r => {
+    redis = r
+  },
   // additional functions for testing purposes
   setAMQPChannel: chan => {
     amqpChannel = chan
-  },
-  setAT: at => {
-    activeToken = at
-  },
-  setRedis: r => {
-    tokenUtils.setRedis(r)
-  },
-  setSC: sc => {
-    tokenUtils.setSC(sc)
-  },
-  setRP: rp => {
-    tokenUtils.setRP(rp)
-  },
-  setGetIP: func => {
-    utils.getClientIP = func
   },
   setENV: obj => {
     env = obj

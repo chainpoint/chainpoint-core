@@ -26,16 +26,9 @@ const peers = require('./lib/endpoints/peers.js')
 const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
-const nodes = require('./lib/endpoints/nodes.js')
-const eth = require('./lib/endpoints/eth.js')
-const usageToken = require('./lib/endpoints/usage-token.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
-const stakedNode = require('./lib/models/StakedNode.js')
-const stakedCore = require('./lib/models/StakedCore.js')
-const activeToken = require('./lib/models/ActiveToken.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
-const tokenUtils = require('./lib/token-utils.js')
 const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
 const apicache = require('apicache')
@@ -67,7 +60,7 @@ let throttle = (burst, rate, opts = { ip: true }) => {
   return restify.plugins.throttle(Object.assign({}, { burst, rate }, opts))
 }
 
-function setupRestifyConfigAndRoutes(server, privateMode) {
+function setupRestifyConfigAndRoutes(server) {
   // LOG EVERY REQUEST
   // server.pre(function (request, response, next) {
   //   request.log.info({ req: [request.url, request.method, request.rawHeaders] }, 'API-REQUEST')
@@ -109,8 +102,14 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
 
   // API RESOURCES
 
-  // submit hash(es)
-  server.post({ path: '/hashes', version: '1.0.0' }, ...applyMiddleware([throttle(5, 0.02)]), hashes.postHashV1Async) // throttl
+  // get hash invoice
+  server.get(
+    { path: '/hash/invoice', version: '1.0.0' },
+    ...applyMiddleware([throttle(5, 1)]),
+    hashes.getHashInvoiceV1Async
+  )
+  // submit hash
+  server.post({ path: '/hash', version: '1.0.0' }, ...applyMiddleware([throttle(5, 1)]), hashes.postHashV1Async)
   // get the block objects for the calendar in the specified block range
   server.get(
     { path: '/calendar/:txid', version: '1.0.0' },
@@ -139,41 +138,18 @@ function setupRestifyConfigAndRoutes(server, privateMode) {
       proofs.getProofsByIDsAsync
     )
   }
-  // get nodes from core
-  server.get({ path: '/nodes/random', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), nodes.getNodesAsync)
   // get random core peers
   server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), peers.getPeersAsync)
   // get status
   server.get({ path: '/status', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), status.getCoreStatusAsync)
-  // do not enable ETH and JWT related endpoint if running in Private Mode
-  if (privateMode === false) {
-    // get eth tx data
-    server.get(
-      { path: '/eth/:addr/stats', version: '1.0.0' },
-      ...applyMiddleware([throttle(5, 1)]),
-      eth.getEthStatsAsync
-    )
-    // post eth broadcast
-    server.post(
-      { path: '/eth/broadcast', version: '1.0.0' },
-      ...applyMiddleware([throttle(5, 1)]),
-      eth.postEthBroadcastAsync
-    )
-    // post token refresh
-    server.post({ path: '/usagetoken/refresh', version: '1.0.0' }, usageToken.postTokenRefreshAsync)
-    // post token credit
-    server.post({ path: '/usagetoken/credit', version: '1.0.0' }, usageToken.postTokenCreditAsync)
-    // post token audience update
-    server.post({ path: '/usagetoken/audience', version: '1.0.0' }, usageToken.postTokenAudienceUpdateAsync)
-  }
   // teapot
   server.get({ path: '/', version: '1.0.0' }, root.getV1)
 }
 
 // HTTP Server
-async function startInsecureRestifyServerAsync(privateMode) {
+async function startInsecureRestifyServerAsync() {
   let restifyServer = restify.createServer(httpOptions)
-  setupRestifyConfigAndRoutes(restifyServer, privateMode)
+  setupRestifyConfigAndRoutes(restifyServer)
 
   // Begin listening for requests
   await connections.listenRestifyAsync(restifyServer, 8080)
@@ -190,8 +166,8 @@ function openRedisConnection(redisURIs) {
     connections.openRedisConnection(
       redisURIs,
       newRedis => {
+        hashes.setRedis(newRedis)
         resolve(newRedis)
-        tokenUtils.setRedis(newRedis)
         redisCache = apicache.options({
           redisClient: newRedis,
           debug: true,
@@ -199,7 +175,7 @@ function openRedisConnection(redisURIs) {
         }).middleware
       },
       () => {
-        tokenUtils.setRedis(null)
+        hashes.setRedis(null)
         setTimeout(() => {
           openRedisConnection(redisURIs).then(() => resolve())
         }, 5000)
@@ -212,12 +188,9 @@ function openRedisConnection(redisURIs) {
  * Opens a Postgres connection
  **/
 async function openPostgresConnectionAsync() {
-  let sqlzModelArray = [proof, stakedNode, activeToken, stakedCore]
+  let sqlzModelArray = [proof]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.op, cxObjects.models[0])
-  stakedNode.setDatabase(cxObjects.sequelize, cxObjects.models[1])
-  activeToken.setDatabase(cxObjects.sequelize, cxObjects.models[2])
-  stakedCore.setDatabase(cxObjects.sequelize, cxObjects.models[3])
 }
 
 /**
@@ -226,7 +199,6 @@ async function openPostgresConnectionAsync() {
 async function openTendermintConnectionAsync() {
   let rpcClient = await connections.openTendermintConnectionAsync(env.TENDERMINT_URI)
   tmRpc.setRpcClient(rpcClient)
-  tokenUtils.setTMRPC(tmRpc)
 }
 
 /**
@@ -258,7 +230,6 @@ async function openRMQConnectionAsync(connectURI) {
 // process all steps need to start the application
 async function start() {
   if (env.NODE_ENV === 'test') return
-  if (env.PRIVATE_NETWORK) logger.info(`*** Private Network Mode ***`)
   try {
     // init Redis
     await openRedisConnection(env.REDIS_CONNECT_URIS)
@@ -269,8 +240,8 @@ async function start() {
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
-    await startInsecureRestifyServerAsync(env.PRIVATE_NETWORK)
-    logger.info(`Startup completed successfully ${env.PRIVATE_NETWORK ? ': *** Private Network Mode ***' : ''}`)
+    await startInsecureRestifyServerAsync()
+    logger.info(`Startup completed successfully`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
     process.exit(1)

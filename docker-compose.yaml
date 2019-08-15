@@ -5,47 +5,39 @@ networks:
     driver: bridge
 
 services:
-
   abci:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG}
     build:
       context: .
       dockerfile: docker/Dockerfile.abci
     depends_on:
-    - rabbitmq
-    - api
+      - rabbitmq
+      - api
     user: ${USERID}:${GROUPID}
     environment:
       PEERS: ${PEERS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
-      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
-      PRIVATE_NODE_IPS: ""
-      PRIVATE_CORE_IPS: ""
       NETWORK: ${NETWORK:-testnet}
-      AUDIT: "true"
-      NODE_MANAGEMENT: "true"
-      ANCHOR: "true"
-      AGGREGATE: "true"
-      AGGREGATION_THREADS: "4"
-      HASHES_PER_MERKLE_TREE: "25000"
-      ANCHOR_INTERVAL: "3"
-      LOG_FILTER: "main:debug,state:info,*:error"
-      LOG_LEVEL: "info"
+      AUDIT: 'true'
+      NODE_MANAGEMENT: 'true'
+      ANCHOR: 'true'
+      AGGREGATE: 'true'
+      AGGREGATION_THREADS: '4'
+      HASHES_PER_MERKLE_TREE: '25000'
+      ANCHOR_INTERVAL: '3'
+      LOG_FILTER: 'main:debug,state:info,*:error'
+      LOG_LEVEL: 'info'
     volumes:
-    - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
-    - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
-    - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
+      - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
+      - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
     ports:
-    - "26656:26656"
-    - "26657:26657"
+      - '26656:26656'
+      - '26657:26657'
     command: bash -c "abci-service"
     networks:
-    - chainpoint
-
+      - chainpoint
 
   # Node.js Base Image
   # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
@@ -76,6 +68,8 @@ services:
   # PORTS : 8080
   #
   api:
+    extra_hosts:
+       - "outside:127.0.0.1"
     restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG}
     build:
@@ -98,18 +92,15 @@ services:
         published: 443
         protocol: tcp
         mode: host
-    volumes:
-      - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      LND_CERT: ${LND_CERT}
+      LND_MACAROON: ${LND_MACAROON}
+      LND_HOST: ${LND_HOST}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
-      ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
-      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
-      ECDSA_PKPEM: ${ECDSA_PKPEM}
       UV_THREADPOOL_SIZE: 128
     tty: true
 
@@ -125,15 +116,14 @@ services:
     networks:
       - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
+      LND_CERT: ${LND_CERT}
+      LND_MACAROON: ${LND_MACAROON}
+      LND_HOST: ${LND_HOST}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
-      ETH_INFURA_API_KEY: ${ETH_INFURA_API_KEY}
-      ETH_ETHERSCAN_API_KEY: ${ETH_ETHERSCAN_API_KEY}
-      ECDSA_PKPEM: ${ECDSA_PKPEM}
     tty: true
 
   # Bitcoin Transmit
@@ -153,7 +143,6 @@ services:
     networks:
       - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -162,8 +151,8 @@ services:
       BITCOIN_WIF: ${BITCOIN_WIF}
     tty: true
 
-  # Bitcoin Transmit MonitorF
-  # Monitor and report on the state of BTC transactions this app has submitted.
+  # Bitcoin Transmit Monitor
+  # Monitor and report on the state of BTC transactions.
   #
   btc-mon:
     restart: always
@@ -180,11 +169,34 @@ services:
     networks:
       - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
+    tty: true
+  
+
+  # Lightning Invoice Monitor
+  # Monitor and report on the state of LND invoices.
+  #
+  lnd-mon:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.lnd-mon
+    container_name: lnd-mon-core
+    user: ${USERID}:${GROUPID}
+    depends_on:
+      - base
+      - redis
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      LND_CERT: ${LND_CERT}
+      LND_MACAROON: ${LND_MACAROON}
+      LND_HOST: ${LND_HOST}
     tty: true
 
   # Proof State
@@ -204,7 +216,6 @@ services:
     networks:
       - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -228,7 +239,6 @@ services:
     networks:
       - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
     tty: true
@@ -249,8 +259,8 @@ services:
     hostname: rabbitmq
     user: ${USERID}:${GROUPID}
     ports:
-    - 5673:5672
-    - 15673:15672
+      - 5673:5672
+      - 15673:15672
     environment:
       RABBITMQ_DEFAULT_USER: chainpoint
       RABBITMQ_DEFAULT_PASS: chainpoint
@@ -265,7 +275,7 @@ services:
     container_name: redis-core
     user: ${USERID}:${GROUPID}
     ports:
-      - "6382:6379"
+      - '6382:6379'
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - ~/.chainpoint/core/data/redis:/data:Z
@@ -275,7 +285,7 @@ services:
       - redis-server
       - /usr/local/etc/redis/redis.conf
 
-  # Postgres	
+  # Postgres
   #
   # See : https://hub.docker.com/_/postgres/
   # Note: Connect locally on OS X:
@@ -297,7 +307,6 @@ services:
       POSTGRES_USER: chainpoint
       POSTGRES_PASSWORD: chainpoint
     ports:
-      - "5433:5432"
+      - '5433:5432'
     networks:
       - chainpoint
-

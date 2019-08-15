@@ -33,13 +33,6 @@ const validateNetwork = envalid.makeValidator(name => {
   if (name === 'testnet') return 'testnet'
   throw new Error('The NETWORK value is invalid')
 })
-const validatePrivateNetwork = envalid.makeValidator(x => {
-  if (!x) return false
-  x = x.toString().toLowerCase()
-  if (x === 'false') return false
-  if (x === 'true') return true
-  throw new Error('The PRIVATE_NETWORK value is invalid')
-})
 
 let envDefinitions = {
   // The following variables are exposed by this stack's /status endpoint
@@ -53,7 +46,6 @@ let envDefinitions = {
   // Chainpoint Core environment related variables
   NODE_ENV: envalid.str({ default: 'production', desc: 'The type of environment in which the service is running' }),
   NETWORK: validateNetwork({ default: 'mainnet', desc: `The network to use, 'mainnet' or 'testnet'` }),
-  PRIVATE_NETWORK: validatePrivateNetwork({ default: 'false', desc: 'Run this Core within your own private network' }),
 
   // RabbitMQ related variables
   RABBITMQ_CONNECT_URI: envalid.url({
@@ -165,13 +157,18 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.ETH_INFURA_API_KEY = envalid.str({ desc: 'Infura API Key' })
-      envDefinitions.ETH_ETHERSCAN_API_KEY = envalid.str({ desc: 'Etherscan API Key' })
-      envDefinitions.ECDSA_PKPEM = envalid.str({ desc: 'ECDSA private key in PEM format' })
+      envDefinitions.LND_CERT = envalid.str({ desc: 'Base64 encoded tls.cert' })
+      envDefinitions.LND_MACAROON = envalid.str({ desc: 'Base64 encoded admin.macaroon' })
+      envDefinitions.LND_HOST = envalid.str({ desc: 'Lightning GRPC host and port' })
       break
     case 'btc-mon':
       envDefinitions.BTC_RPC_URI_LIST = envalid.str({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
       envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
+      break
+    case 'lnd-mon':
+      envDefinitions.LND_CERT = envalid.str({ desc: 'Base64 encoded tls.cert' })
+      envDefinitions.LND_MACAROON = envalid.str({ desc: 'Base64 encoded admin.macaroon' })
+      envDefinitions.LND_HOST = envalid.str({ desc: 'Lightning GRPC host and port' })
       break
     case 'btc-tx':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({

@@ -53,8 +53,6 @@ Provided BASH is installed, a script to install all other dependencies (make, op
 Core requires a few external services to facilitate communication with the Bitcoin and Ethereum blockchains. You will need:
 
 - `RPC address of a Bitcore Node` - Bitcoin Node with RPC enabled
-- `Infura API Key` - generated from infura.io
-- `Etherscan API key`
 - `Bitcoin WIF`- Bitcoin Wallet Import Format (WIF) string in Base58.
 
 The Bitcoin WIF is the private key of your _Hot Wallet_, which is used to pay for Anchoring fees. Do not use your main Bitcoin wallet here!
@@ -87,16 +85,10 @@ The following are the descriptions of the configuration parameters:
 | Name                     | Type    | Location                     | Description                                                                                                                                      |
 | :----------------------- | :------ | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
 | CHAINPOINT_CORE_BASE_URI | String  | .env                         | Public URI of host machine, of the form `http://35.245.53.181`                                                                                   |
-| PRIVATE_NETWORK          | Boolean | .env                         | Sets Core to use pre-seeded list of Nodes instead of registry smart contract discovery. Default is false.                                        |
 | NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin and Ethereum testnets. Default is `mainnet`.                                                                     |
-| PRIVATE_NODE_IPS         | String  | .env                         | Comma-delimited list of private Nodes for use with PRIVATE_NETWORK. Default is empty string.                                                     |
 | NODE_ENV                 | String  | .env                         | Sets Core to use either ethereum/bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
 | PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
-| ETH_INFURA_API_KEY       | String  | Docker Secrets (`make init`) | API key to use Infura ethereum web services                                                                                                      |
-| ETH_ETHERSCAN_API_KEY    | String  | Docker Secrets (`make init`) | API key to use etherscan ethereum web services as a fallback to infura                                                                           |
-| ETH_PRIVATE_KEY          | String  | Docker Secrets (`make init`) | Private key for this Core's Ethereum account.                                                                                                    |
-| ECDSA_PKPEM              | String  | Docker Secrets (`make init`) | Keypair used to create JWKs for Core's API auth                                                                                                  |
 | BITCOIN_WIF              | String  | Docker Secrets (`make init`) | Private key for bitcoin hotwallet, used to paying anchoring fees                                                                                 |
 | ANCHOR_INTERVAL          | String  | swarm-compose.yaml           | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
 | HASHES_PER_MERKLE_TREE   | String  | swarm-compose.yaml           | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000                                        |
@@ -153,6 +145,7 @@ READMEs for each Core micro-service are available:
 | node-api-service         | Web API for interacting with Chainpoint-Nodes                                                                            | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-api-service/README.md)         |
 | node-btc-tx-service      | Transmits a Merkle Root to Bitcoin and returns the Bitcoin TX ID                                                         | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-tx-service/README.md)      |
 | node-btc-mon-service     | Monitors the above Bitcoin TX for 6 confirmations and informs go-abci-service when complete                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-mon-service/README.md)     |
+| node-lnd-mon-service     | Monitors the lnd invoices for payment status                                                                             | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-lnd-mon-service/README.md)     |
 | node-proof-gen-service   | Generates cryptographic proofs demonstrating how Chainpoint-Node data is included in the Chainpoint Calendar and Bitcoin | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-gen-service/README.md)   |
 | node-proof-state-service | Stores proofs in PostgreSQL                                                                                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-state-service/README.md) |
 

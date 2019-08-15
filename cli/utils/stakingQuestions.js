@@ -14,10 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Web3 = require('web3')
 const validator = require('validator')
-
-const web3 = new Web3(Web3.givenProvider || 'ws://localhost:8546', null, {})
 
 module.exports = {
   NETWORK: {
@@ -36,28 +33,6 @@ module.exports = {
     ],
     default: 'mainnet'
   },
-  PRIVATE_NETWORK: {
-    type: 'list',
-    name: 'PRIVATE_NETWORK',
-    message: 'Will this Core run in private mode (independently of the public Chainpoint Network)?',
-    choices: [
-      {
-        name: 'Private Network',
-        value: true
-      },
-      {
-        name: 'Public Network',
-        value: false
-      }
-    ],
-    default: false
-  },
-  NODE_ETH_REWARDS_ADDRESS: {
-    type: 'input',
-    name: 'NODE_ETH_REWARDS_ADDRESS',
-    message: 'Enter a valid Ethereum Rewards Address:',
-    validate: input => web3.utils.isAddress(input)
-  },
   CORE_PUBLIC_IP_ADDRESS: {
     type: 'input',
     name: 'CORE_PUBLIC_IP_ADDRESS',
@@ -75,48 +50,9 @@ module.exports = {
     name: 'BITCOIN_WIF',
     message: 'Enter the Bitcoin private key for your hotwallet:'
   },
-  INFURA_API_KEY: {
-    type: 'input',
-    name: 'INFURA_API_KEY',
-    message: 'Enter your Infura API key (free):'
-  },
-  ETHERSCAN_API_KEY: {
-    type: 'input',
-    name: 'ETHERSCAN_API_KEY',
-    message: 'Enter your Etherscan API key (free):'
-  },
   BTC_RPC_URI_LIST: {
     type: 'input',
     name: 'BTC_RPC_URI_LIST',
     message: "Enter the full URL (including protocol and port) to your bitcoin node's RPC endpoint:"
-  },
-  AUTO_REFILL_ENABLED: {
-    type: 'list',
-    name: 'AUTO_REFILL_ENABLED',
-    message: 'Enable automatic acquisition of credit when balance reaches 0?',
-    choices: [
-      {
-        name: 'Enable',
-        value: true
-      },
-      {
-        name: 'Disable',
-        value: false
-      }
-    ],
-    default: true
-  },
-  AUTO_REFILL_AMOUNT: {
-    type: 'number',
-    name: 'AUTO_REFILL_AMOUNT',
-    message: 'Enter Auto Refill Amount - specify in number of Credits (optional: specify if auto refill is enabled)',
-    default: 720,
-    validate: (val, answers) => {
-      if (answers['AUTO_REFILL_ENABLED'] == true) {
-        return val >= 1 && val <= 8760
-      } else {
-        return val >= 0 && val <= 8760
-      }
-    }
   }
 }

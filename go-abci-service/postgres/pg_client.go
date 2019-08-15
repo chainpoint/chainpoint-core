@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/ethcontracts"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -308,49 +306,4 @@ func (pg *Postgres) GetCoreByID(coreId string) (types.Core, error) {
 		util.LoggerError(pg.Logger, err)
 		return types.Core{}, err
 	}
-}
-
-//HandleNodeStaking : receive watch event and upsert it into db
-func (pg *Postgres) HandleNodeStaking(node ethcontracts.ChpRegistryNodeStaked) error {
-	newNode := types.Node{
-		EthAddr:     node.Sender.Hex(),
-		PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
-		BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
-	}
-	inserted, err := pg.NodeUpsert(newNode)
-	if util.LoggerError(pg.Logger, err) != nil {
-		return err
-	}
-	pg.Logger.Info(fmt.Sprintf("Inserted for %#v: %t\n", newNode, inserted))
-	return nil
-}
-
-//HandleNodeStakeUpdating : receive update event and upsert it into db if it supercedes the existing row
-func (pg *Postgres) HandleNodeStakeUpdating(node ethcontracts.ChpRegistryNodeStakeUpdated) error {
-	newNode := types.Node{
-		EthAddr:     node.Sender.Hex(),
-		PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
-		BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
-	}
-	inserted, err := pg.NodeUpsert(newNode)
-	if util.LoggerError(pg.Logger, err) != nil {
-		return err
-	}
-	pg.Logger.Info(fmt.Sprintf("Updated for %#v: %t\n", newNode, inserted))
-	return nil
-}
-
-//HandleNodeUnstaking : receive unstake event and delete it if the event is more recent than the stake or update
-func (pg *Postgres) HandleNodeUnstake(node ethcontracts.ChpRegistryNodeUnStaked) error {
-	newNode := types.Node{
-		EthAddr:     node.Sender.Hex(),
-		PublicIP:    sql.NullString{String: util.Int2Ip(node.NodeIp).String(), Valid: true},
-		BlockNumber: sql.NullInt64{Int64: int64(node.Raw.BlockNumber), Valid: true},
-	}
-	inserted, err := pg.NodeDelete(newNode)
-	if util.LoggerError(pg.Logger, err) != nil {
-		return err
-	}
-	pg.Logger.Info(fmt.Sprintf("Deleted for %#v: %t\n", newNode, inserted))
-	return nil
 }

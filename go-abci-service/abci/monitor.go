@@ -1,13 +1,19 @@
 package abci
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
+	"strings"
 	"time"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/go-redis/redis"
 
 	beacon "github.com/chainpoint/go-nist-beacon"
 
@@ -84,32 +90,79 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 	}
 }
 
-//MintMonitor : efficiently monitor for new minting and gossip that block to other cores
-func (app *AnchorApplication) MintMonitor() {
-	if leader, _ := app.ElectValidator(1); leader && app.state.ChainSynced {
-		lastNodeMintedAt, err := app.ethClient.GetNodeLastMintedAt()
-		if app.LogError(err) != nil {
-			app.logger.Error("Unable to obtain new NodeLastMintedAt value")
-			return
+//LoadJWK : load public keys derived from JWTs from redis
+func (app *AnchorApplication) LoadJWK() error {
+	var cursor uint64
+	var idKeys []string
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = app.redisClient.Scan(cursor, "CoreID:*", 10).Result()
+		if err != nil {
+			return err
 		}
-		if lastNodeMintedAt.Int64() != 0 && lastNodeMintedAt.Int64() >= app.state.LastNodeMintedAtBlock+MINT_EPOCH {
-			app.logger.Info("Mint success, sending Node MINT tx")
-			_, err = app.rpc.BroadcastTx("NODE-MINT", strconv.FormatInt(lastNodeMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
-			if err != nil {
-				app.logger.Debug("Failed to gossip Node MINT for LastNodeMintedAtBlock gossip")
-			}
-		}
-		lastCoreMintedAt, err := app.ethClient.GetCoreLastMintedAt()
-		if app.LogError(err) != nil {
-			app.logger.Error("Unable to obtain new CoreLastMintedAt value")
-			return
-		}
-		if lastCoreMintedAt.Int64() != 0 && lastCoreMintedAt.Int64() >= app.state.LastCoreMintedAtBlock+MINT_EPOCH {
-			app.logger.Info("Mint success, sending Core MINT tx")
-			_, err = app.rpc.BroadcastTx("CORE-MINT", strconv.FormatInt(lastCoreMintedAt.Int64(), 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
-			if err != nil {
-				app.logger.Debug("Failed to gossip Core MINT for LastNodeMintedAtBlock gossip")
-			}
+		idKeys = append(idKeys, keys...)
+		if cursor == 0 {
+			break
 		}
 	}
+	if len(idKeys) == 0 {
+		return util.LoggerError(app.logger, errors.New("no JWT keys found in redis"))
+	}
+	for _, k := range idKeys {
+		var coreID string
+		idStr := strings.Split(k, ":")
+		if len(idStr) == 2 {
+			coreID = idStr[1]
+		} else {
+			continue
+		}
+		b64Str, err := app.redisClient.Get(k).Result()
+		if app.LogError(err) != nil {
+			continue
+		}
+		pubKeyBytes, err := base64.StdEncoding.DecodeString(b64Str)
+		if app.LogError(err) != nil {
+			continue
+		}
+		x, y := elliptic.Unmarshal(elliptic.P256(), pubKeyBytes)
+		pubKey := ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X:     x,
+			Y:     y,
+		}
+		app.logger.Info(fmt.Sprintf("Setting JWK for Core %s: %s", coreID, b64Str))
+		app.CoreKeys[coreID] = pubKey
+	}
+	return nil
+}
+
+//SaveJWK : save the JWT value retrieved
+func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
+	var jwkType types.Jwk
+	json.Unmarshal([]byte(tx.Data), &jwkType)
+	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
+	if jwkType.Kid == app.JWK.Kid {
+		app.logger.Info("JWK keysync tx committed")
+		app.JWKSent = true
+	}
+	jsonJwk, err := json.Marshal(jwkType)
+	if app.LogError(err) != nil {
+		return err
+	}
+	pubKey, err := util.DecodePubKey(tx)
+	if app.LogError(err) == nil {
+		app.CoreKeys[tx.CoreID] = *pubKey
+		pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+		util.LoggerError(app.logger, app.redisClient.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
+	}
+	value, err := app.redisClient.Get(key).Result()
+	if err == redis.Nil || value != string(jsonJwk) {
+		err = app.redisClient.Set(key, value, 0).Err()
+		if app.LogError(err) != nil {
+			return err
+		}
+		app.logger.Info(fmt.Sprintf("Set JWK cache for kid %s", jwkType.Kid))
+	}
+	return nil
 }

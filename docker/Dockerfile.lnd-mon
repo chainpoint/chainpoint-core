@@ -1,0 +1,10 @@
+FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base
+
+COPY node-lib/lib /home/node/app/lib
+
+COPY node-lnd-mon-service/package.json node-lnd-mon-service/yarn.lock /home/node/app/
+RUN yarn
+
+COPY node-lnd-mon-service/server.js /home/node/app/
+
+CMD ["yarn", "start"]

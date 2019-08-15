@@ -6,81 +6,59 @@ networks:
 secrets:
   BITCOIN_WIF:
     external: true
-  ETH_INFURA_API_KEY:
-    external: true
-  ETH_ETHERSCAN_API_KEY:
-    external: true
-  ETH_PRIVATE_KEY:
-    external: true
-  ECDSA_PKPEM:
-    external: true
 
 services:
-
   abci:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG:-latest}
     build:
       context: .
       dockerfile: docker/Dockerfile.abci
     depends_on:
-    - rabbitmq
-    - api
+      - rabbitmq
+      - api
     user: ${USERID}:${GROUPID}
     environment:
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
-      ETH_ETHERSCAN_API_KEY: DOCKER-SECRET->ETH_ETHERSCAN_API_KEY
-      ETH_PRIVATE_KEY: DOCKER-SECRET->ETH_PRIVATE_KEY
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
+      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}]
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
-      PRIVATE_NODE_IPS: ""
-      PRIVATE_CORE_IPS: ""
       NETWORK: ${NETWORK:-testnet}
-      ANCHOR: "true"
-      AUDIT: "true"
-      NODE_MANAGEMENT: "true"
-      AGGREGATE: "true"
-      AGGREGATION_THREADS: "4"
-      HASHES_PER_MERKLE_TREE: "25000"
-      ANCHOR_INTERVAL: "60"
-      LOG_FILTER: "main:debug,state:info,*:error"
-      LOG_LEVEL: "info"
+      ANCHOR: 'true'
+      AUDIT: 'true'
+      NODE_MANAGEMENT: 'true'
+      AGGREGATE: 'true'
+      AGGREGATION_THREADS: '4'
+      HASHES_PER_MERKLE_TREE: '25000'
+      ANCHOR_INTERVAL: '60'
+      LOG_FILTER: 'main:debug,state:info,*:error'
+      LOG_LEVEL: 'info'
     volumes:
-    - ~/.chainpoint/core/config/node_1:/tendermint/config
-    - ~/.chainpoint/core/config/node_1/data:/tendermint/data
+      - ~/.chainpoint/core/config/node_1:/tendermint/config
+      - ~/.chainpoint/core/config/node_1/data:/tendermint/data
     ports:
-    - target: 26656
-      published: 26656
-      protocol: tcp
-      mode: host
+      - target: 26656
+        published: 26656
+        protocol: tcp
+        mode: host
     deploy:
       mode: global
       labels:
-      - "traefik.enable=true"
-      - "traefik.rpc.port=26657"
-      - "traefik.rpc.frontend.entryPoints=rpc"
-      - "traefik.rpc.frontend.rule=PathPrefix:/"
-      - "traefik.docker.network=chainpoint-core_chainpoint"
-      - "traefik.backend.loadbalancer.swarm=true"
+        - 'traefik.enable=true'
+        - 'traefik.rpc.port=26657'
+        - 'traefik.rpc.frontend.entryPoints=rpc'
+        - 'traefik.rpc.frontend.rule=PathPrefix:/'
+        - 'traefik.docker.network=chainpoint-core_chainpoint'
+        - 'traefik.backend.loadbalancer.swarm=true'
       placement:
         constraints: [node.role==manager]
     networks:
-    - chainpoint
-    secrets:
-    - ETH_INFURA_API_KEY
-    - ETH_ETHERSCAN_API_KEY
-    - ETH_PRIVATE_KEY
-    - ECDSA_PKPEM
+      - chainpoint
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
-
+        max-size: '1g'
+        max-file: '5'
 
   # HTTP API
   # Restify Node public web API service.
@@ -109,21 +87,21 @@ services:
       dockerfile: docker/Dockerfile.api
     user: ${USERID}:${GROUPID}
     depends_on:
-    - redis
-    - rabbitmq
-    - postgres
+      - redis
+      - rabbitmq
+      - postgres
     networks:
-    - chainpoint
+      - chainpoint
     deploy:
       mode: replicated
       replicas: 2
       labels:
-      - "traefik.enable=true"
-      - "traefik.port=8080"
-      - "traefik.frontend.entryPoints=http"
-      - "traefik.frontend.rule=PathPrefix:/"
-      - "traefik.docker.network=chainpoint-core_chainpoint"
-      - "traefik.backend.loadbalancer.swarm=true"
+        - 'traefik.enable=true'
+        - 'traefik.port=8080'
+        - 'traefik.frontend.entryPoints=http'
+        - 'traefik.frontend.rule=PathPrefix:/'
+        - 'traefik.docker.network=chainpoint-core_chainpoint'
+        - 'traefik.backend.loadbalancer.swarm=true'
       update_config:
         parallelism: 1
         delay: 1s
@@ -133,28 +111,21 @@ services:
         max_attempts: 5
         window: 120s
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      LND_CERT: ${LND_CERT}
+      LND_MACAROON: ${LND_MACAROON}
+      LND_HOST: ${LND_HOST}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
-      ETH_INFURA_API_KEY: DOCKER-SECRET->ETH_INFURA_API_KEY
-      ETH_ETHERSCAN_API_KEY: DOCKER-SECRET->ETH_ETHERSCAN_API_KEY
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       UV_THREADPOOL_SIZE: 128
-    secrets:
-    - ECDSA_PKPEM
-    - ETH_INFURA_API_KEY
-    - ETH_ETHERSCAN_API_KEY
-    - ETH_PRIVATE_KEY
     tty: true
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
-
+        max-size: '1g'
+        max-file: '5'
 
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
@@ -168,13 +139,12 @@ services:
     user: ${USERID}:${GROUPID}
     container_name: btc-tx-core
     depends_on:
-    - rabbitmq
+      - rabbitmq
     networks:
-    - chainpoint
+      - chainpoint
     secrets:
-    - BITCOIN_WIF
+      - BITCOIN_WIF
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
@@ -183,12 +153,12 @@ services:
       BITCOIN_WIF: DOCKER-SECRET->BITCOIN_WIF
     tty: true
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
+        max-size: '1g'
+        max-file: '5'
 
-  # Bitcoin Transmit MonitorF
+  # Bitcoin Transmit Monitor
   # Monitor and report on the state of BTC transactions this app has submitted.
   #
   btc-mon:
@@ -200,22 +170,51 @@ services:
     container_name: btc-mon-core
     user: ${USERID}:${GROUPID}
     depends_on:
-    - rabbitmq
-    - redis
+      - rabbitmq
+      - redis
     networks:
-    - chainpoint
+      - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
     tty: true
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
+        max-size: '1g'
+        max-file: '5'
+
+  # Lightning Invoice Monitor
+  # Monitor and report on the state of LND invoices.
+  #
+  lnd-mon:
+    restart: always
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.lnd-mon
+    container_name: lnd-mon-core
+    user: ${USERID}:${GROUPID}
+    depends_on:
+      - redis
+    networks:
+      - chainpoint
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      NETWORK: ${NETWORK:-testnet}
+      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
+      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
+      LND_CERT: ${LND_CERT}
+      LND_MACAROON: ${LND_MACAROON}
+      LND_HOST: ${LND_HOST}
+    tty: true
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '1g'
+        max-file: '5'
 
   # Proof State
   # Encapsulates all persistent data storage for partial proof data.
@@ -230,21 +229,20 @@ services:
     deploy:
       replicas: 2
     depends_on:
-    - rabbitmq
-    - postgres
+      - rabbitmq
+      - postgres
     networks:
-    - chainpoint
+      - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
     tty: true
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
+        max-size: '1g'
+        max-file: '5'
 
   # Proof Generation
   # Responsible for constructing, signing, and validating Chainpoint proofs
@@ -260,20 +258,19 @@ services:
     deploy:
       replicas: 2
     depends_on:
-    - rabbitmq
-    - postgres
+      - rabbitmq
+      - postgres
     networks:
-    - chainpoint
+      - chainpoint
     environment:
-      PRIVATE_NETWORK: ${PRIVATE_NETWORK:-false}
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
     tty: true
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
+        max-size: '1g'
+        max-file: '5'
 
   # RabbitMQ
   #
@@ -291,18 +288,18 @@ services:
     hostname: rabbitmq
     user: ${USERID}:${GROUPID}
     ports:
-    - "5672"
-    - "15672"
+      - '5672'
+      - '15672'
     environment:
       RABBITMQ_DEFAULT_USER: chainpoint
       RABBITMQ_DEFAULT_PASS: chainpoint
     networks:
-    - chainpoint
+      - chainpoint
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
+        max-size: '1g'
+        max-file: '5'
 
   # Redis
   #
@@ -312,20 +309,20 @@ services:
     container_name: redis-core
     user: ${USERID}:${GROUPID}
     ports:
-    - "6379"
+      - '6379'
     volumes:
-    - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
-    - ~/.chainpoint/core/data/redis:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ~/.chainpoint/core/data/redis:/data
     networks:
-    - chainpoint
+      - chainpoint
     command:
-    - redis-server
-    - /usr/local/etc/redis/redis.conf
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
+        max-size: '1g'
+        max-file: '5'
 
   # Postgres
   #
@@ -344,51 +341,50 @@ services:
     container_name: postgres-core
     user: ${USERID}:${GROUPID}
     volumes:
-    - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
+      - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: chainpoint
       POSTGRES_PASSWORD: chainpoint
     ports:
-    - "5433:5432"
+      - '5433:5432'
     networks:
-    - chainpoint
+      - chainpoint
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
-
+        max-size: '1g'
+        max-file: '5'
 
   traefik:
     image: traefik
     command: --configfile="/data/traefik.toml"
     networks:
-    - chainpoint
+      - chainpoint
     ports:
-    - target: 8080
-      published: 80
-      protocol: tcp
-      mode: host
-    - target: 8443
-      published: 443
-      protocol: tcp
-      mode: hosts
-    - target: 9000
-      published: 9000
-      protocol: tcp
-      mode: host
-    - target: 26657
-      published: 26657
-      protocol: tcp
-      mode: host
+      - target: 8080
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 8443
+        published: 443
+        protocol: tcp
+        mode: hosts
+      - target: 9000
+        published: 9000
+        protocol: tcp
+        mode: host
+      - target: 26657
+        published: 26657
+        protocol: tcp
+        mode: host
     volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ~/.chainpoint/core/data/traefik:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.chainpoint/core/data/traefik:/data
     deploy:
       placement:
         constraints: [node.role==manager]
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "1g"
-        max-file: "5"
+        max-size: '1g'
+        max-file: '5'
