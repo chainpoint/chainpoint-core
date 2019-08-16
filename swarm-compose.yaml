@@ -114,9 +114,9 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      LND_CERT: ${LND_CERT}
+      LND_TLS_CERT: ${LND_TLS_CERT}
       LND_MACAROON: ${LND_MACAROON}
-      LND_HOST: ${LND_HOST}
+      LND_SOCKET: ${LND_SOCKET}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
@@ -206,9 +206,9 @@ services:
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
-      LND_CERT: ${LND_CERT}
+      LND_TLS_CERT: ${LND_TLS_CERT}
       LND_MACAROON: ${LND_MACAROON}
-      LND_HOST: ${LND_HOST}
+      LND_SOCKET: ${LND_SOCKET}
     tty: true
     logging:
       driver: 'json-file'

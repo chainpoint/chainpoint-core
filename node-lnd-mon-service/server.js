@@ -50,8 +50,8 @@ function openRedisConnection(redisURIs) {
 
 // initialize lightning grpc object
 let lnd = new LndGrpc({
-  host: env.LND_HOST,
-  cert: Buffer.from(env.LND_CERT, 'base64').toString(),
+  host: env.LND_SOCKET,
+  cert: Buffer.from(env.LND_TLS_CERT, 'base64').toString(),
   macaroon: Buffer.from(env.LND_MACAROON, 'base64').toString('hex')
 })
 

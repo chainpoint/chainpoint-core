@@ -28,7 +28,11 @@ const lnService = require('ln-service')
 let redis = null
 
 // initialize lightning grpc object
-let { lnd } = lnService.authenticatedLndGrpc({ cert: env.LND_CERT, macaroon: env.LND_MACAROON, socket: env.LND_HOST })
+let { lnd } = lnService.authenticatedLndGrpc({
+  cert: env.LND_TLS_CERT,
+  macaroon: env.LND_MACAROON,
+  socket: env.LND_SOCKET
+})
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
