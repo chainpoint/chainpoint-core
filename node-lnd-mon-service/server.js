@@ -22,6 +22,9 @@ const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const LndGrpc = require('lnd-grpc')
 
+const LAST_KNOWN_INVOICE_INDEX_KEY = 'LastKnownInvoiceIndex'
+const INVOICE_BATCH_SIZE = 1000
+
 // This value is set once the connection has been established
 let redis = null
 
@@ -52,53 +55,135 @@ let lnd = new LndGrpc({
   macaroon: Buffer.from(env.LND_MACAROON, 'base64').toString('hex')
 })
 
-async function startInvoiceSubscription() {
+async function processInvoiceBatchAsync(invoices) {
+  let invoiceRedisOps = invoices
+    .map(invoice => {
+      if (!invoice.settled) {
+        // This invoice was created but not yet paid
+        logger.info(`Invoice generated : ${invoice.memo} : index ${invoice.add_index}, ${invoice.settle_index}`)
+        return null
+      } else {
+        // This invoice has been paid
+        logger.info(`Invoice paid : ${invoice.memo} : index ${invoice.add_index}, ${invoice.settle_index}`)
+        // Add a key to redis indicating the payment has been made
+        // With this key added, the invoice id can be used to submit a hash one time
+        let invoiceId = invoice.memo.split(':')[1]
+        let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
+        return ['set', paidInvoiceKey, '1', 'EX', '120']
+      }
+    })
+    .filter(invoice => invoice !== null)
+  // process all the redis oprations and return the most recently processed invoice add_index
+  let lastInvoiceAddIndex = invoices[invoices.length - 1].add_index
+  try {
+    await redis.multi(invoiceRedisOps).exec()
+    return lastInvoiceAddIndex
+  } catch (error) {
+    logger.error(
+      `Redis MULTI SET error : error setting item batch ending with invoice index = ${lastInvoiceAddIndex} : ${
+        error.message
+      }`
+    )
+    return null
+  }
+}
+
+async function connectToLndAsync() {
+  try {
+    await lnd.connect()
+  } catch (error) {
+    throw new Error(`Unable to connect to LND : ${error.message}`)
+  }
+}
+
+async function getLastKnownInvoiceIndexAsync() {
+  // return the add_index value of the newest invoice processed
+  let lastKnownInvoiceIndex
+  try {
+    lastKnownInvoiceIndex = parseInt(await redis.get(LAST_KNOWN_INVOICE_INDEX_KEY))
+    if (isNaN(lastKnownInvoiceIndex)) throw new Error('LAST_KNOWN_INVOICE_INDEX_KEY does not yet have a value')
+  } catch (error) {
+    logger.warn(`Unable to retrieve last known invoice index, skipping : ${error.message}`)
+    lastKnownInvoiceIndex = null
+  }
+  return lastKnownInvoiceIndex
+}
+
+async function establishInvoiceSubscriptionAsync() {
+  try {
+    let invoiceSubscription = lnd.services.Lightning.subscribeInvoices()
+    invoiceSubscription.on('data', async invoice => {
+      let invoiceAddIndex = await processInvoiceBatchAsync([invoice])
+      await updateLastKnownInvoiceIndexAsync(invoiceAddIndex)
+    })
+    invoiceSubscription.on('error', err => {
+      logger.warn(`An invoice subscription error occurred : ${JSON.stringify(err)}`)
+    })
+    invoiceSubscription.on('end', async () => {
+      logger.error(`The invoice subscription has unexpectedly ended`)
+      try {
+        await lnd.disconnect()
+      } catch (error) {
+        logger.error(`Unable to disconnect : ${error.message}`)
+      }
+      startInvoiceMonitoring()
+    })
+    logger.info('Invoices subscription established')
+  } catch (error) {
+    throw new Error(`Unable to establish LND invoice subscription : ${error.message}`)
+  }
+}
+
+async function checkForUnprocessedPayments(lastKnownInvoiceIndex) {
+  let indexOffset = lastKnownInvoiceIndex
+  let resultLength = 0
+  let totalProcessed = 0
+  let lastInvoiceAddIndex = null
+  logger.info('Checking for unhandled invoice items')
+  do {
+    let unprocessedInvoices = await lnd.services.Lightning.listInvoices({
+      num_max_invoices: INVOICE_BATCH_SIZE,
+      index_offset: indexOffset
+    })
+    if (unprocessedInvoices.invoices.length === 0) break
+    lastInvoiceAddIndex = await processInvoiceBatchAsync(unprocessedInvoices.invoices)
+    resultLength = unprocessedInvoices.invoices.length
+    indexOffset += INVOICE_BATCH_SIZE
+    totalProcessed += resultLength
+  } while (resultLength >= INVOICE_BATCH_SIZE)
+  logger.info(`${totalProcessed} invoice item(s) found and processed`)
+  // return the most recent invoice index from all invoices processed in this call
+  return lastInvoiceAddIndex
+}
+
+async function updateLastKnownInvoiceIndexAsync(newInvoiceAddIndex) {
+  try {
+    // retrieve the current last known invoice index value
+    // update this value only if the new value is greater than the current value
+    let lastKnownIndex = await getLastKnownInvoiceIndexAsync()
+    if (newInvoiceAddIndex > lastKnownIndex) await redis.set(LAST_KNOWN_INVOICE_INDEX_KEY, newInvoiceAddIndex)
+  } catch (error) {
+    logger.error(`Unable to update LAST_KNOWN_INVOICE_INDEX_KEY : value = ${newInvoiceAddIndex} : ${error.message}`)
+  }
+}
+
+async function startInvoiceMonitoring() {
   let subscriptionEstablished = false
   while (!subscriptionEstablished) {
     try {
-      try {
-        await lnd.connect()
-      } catch (error) {
-        throw new Error(`Unable to connect to LND : ${error.message}`)
+      // establish a connection to lnd
+      await connectToLndAsync()
+      // retrieve the add_index of the most recently handled invoice
+      let lastKnownInvoiceIndex = await getLastKnownInvoiceIndexAsync()
+      // starting listening for and handle new invoice activity
+      await establishInvoiceSubscriptionAsync()
+      // check if there are any backlogged invoices needing to be processed
+      if (lastKnownInvoiceIndex !== null) {
+        lastKnownInvoiceIndex = await checkForUnprocessedPayments(lastKnownInvoiceIndex)
+        // if any invoices processed, update the last known invoice index to the proper value
+        if (lastKnownInvoiceIndex) await updateLastKnownInvoiceIndexAsync(lastKnownInvoiceIndex)
       }
-      try {
-        let invoiceSubscription = lnd.services.Lightning.subscribeInvoices()
-
-        invoiceSubscription.on('data', async invoice => {
-          if (invoice.settled) {
-            logger.info('Invoice paid: ' + invoice.memo)
-            // This invoice has been paid
-            // Add a short lived key to redis indicating the payment has been made
-            // With this key added, the invoice id can be used to submit a hash one time
-            let invoiceId = invoice.memo.split(':')[1]
-            let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
-            try {
-              await redis.set(paidInvoiceKey, 1, 'EX', 1) // this key will expire 1 minute after invoice payment
-            } catch (error) {
-              logger.error(`Redis SET error : error setting item with key = ${paidInvoiceKey}`)
-            }
-          } else {
-            // This invoice was just created and delivered
-            logger.info('Invoice generated: ' + invoice.memo)
-          }
-        })
-        invoiceSubscription.on('error', err => {
-          logger.warn(`An invoice subscription error occurred : ${JSON.stringify(err)}`)
-        })
-        invoiceSubscription.on('end', async () => {
-          logger.error(`The invoice subscription has unexpectedly ended`)
-          try {
-            await lnd.disconnect()
-          } catch (error) {
-            logger.error(`Unable to disconnect : ${error.message}`)
-          }
-          startInvoiceSubscription()
-        })
-        logger.info('Invoices subscription established')
-        subscriptionEstablished = true
-      } catch (error) {
-        throw new Error(`Unable to establish LND invoice subscription : ${error.message}`)
-      }
+      subscriptionEstablished = true
     } catch (error) {
       // catch errors when attempting to connect and establish invoice subscription
       logger.error(`Invoice monitoring : ${error.message} : Attempting in 5 seconds...`)
@@ -114,7 +199,7 @@ async function start() {
     // init Redis
     openRedisConnection(env.REDIS_CONNECT_URIS)
     // init listening for lnd invoice update events
-    startInvoiceSubscription()
+    await startInvoiceMonitoring()
     logger.info(`Startup completed successfully`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
