@@ -60,6 +60,31 @@ services:
         max-size: '1g'
         max-file: '5'
 
+  lnd:
+    image: tierion/lnd:latest
+    user: ${USERID}:${GROUPID}
+    build:
+      context: lnd-neutrino/
+    ports:
+    - target: 9735
+      published: 9735
+      protocol: tcp
+      mode: host
+    restart: always
+    environment:
+    - PUBLICIP
+    - RPCUSER
+    - RPCPASS
+    - NETWORK
+    - CHAIN
+    - DEBUG
+    - NEUTRINO
+    - LND_REST_PORT
+    - LND_RPC_PORT
+    - TLSPATH
+    volumes:
+    - ~/.lnd:/root/.lnd/
+
   # HTTP API
   # Restify Node public web API service.
   #

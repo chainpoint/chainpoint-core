@@ -19,10 +19,17 @@ let tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
 let env = require('../parse-env.js')('api')
 const logger = require('../logger.js')
+const lnService = require('ln-service')
+
+// initialize lightning grpc object
+let { lnd } = lnService.authenticatedLndGrpc({
+  cert: env.LND_TLS_CERT,
+  macaroon: env.LND_MACAROON,
+  socket: env.LND_SOCKET
+})
 
 async function getCoreStatusAsync(req, res, next) {
   let result = await buildStatusObjectAsync()
-
   if (result.errorCode) {
     switch (result.errorCode) {
       case 404:
@@ -40,6 +47,7 @@ async function getCoreStatusAsync(req, res, next) {
 }
 
 async function buildStatusObjectAsync() {
+  let walletInfo
   let statusResponse = await tmRpc.getStatusAsync()
   if (statusResponse.error) {
     switch (statusResponse.error.responseCode) {
@@ -52,12 +60,21 @@ async function buildStatusObjectAsync() {
         return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
     }
   }
+  try {
+    walletInfo = await lnService.getWalletInfo({ lnd })
+  } catch (error) {
+    return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
+  }
 
   let coreInfo = {
     version: version,
     time: new Date().toISOString(),
     base_uri: env.CHAINPOINT_CORE_BASE_URI,
-    network: env.NETWORK
+    network: env.NETWORK,
+    public_key: walletInfo.identity_pubkey,
+    uris: walletInfo.uris,
+    active_channels_count: walletInfo.num_active_channels,
+    alias: walletInfo.alias
   }
 
   return {
