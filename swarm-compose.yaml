@@ -84,6 +84,13 @@ services:
     - TLSPATH
     volumes:
     - ~/.lnd:/root/.lnd/
+    networks:
+    - chainpoint
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '1g'
+        max-file: '5'
 
   # HTTP API
   # Restify Node public web API service.
