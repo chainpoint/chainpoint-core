@@ -124,6 +124,8 @@ services:
       LND_SOCKET: ${LND_SOCKET}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
+    volumes:
+      - ~/.lnd:/root/.lnd/
     tty: true
 
   # Bitcoin Transmit
