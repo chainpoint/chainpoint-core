@@ -7,7 +7,8 @@ SHELL := /bin/bash
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # Get home directory of current users
-CORE_DATADIR := $(shell eval printf "~$$USER")/.chainpoint/core
+HOMEDIR := $(shell eval printf "~$$USER")
+CORE_DATADIR := $HOMEDIR/.chainpoint/core
 
 UID := $(shell id -u $$USER)
 GID := $(shell id -g $$USER)
@@ -147,6 +148,7 @@ init-volumes:
 	@mkdir -p ${CORE_DATADIR}/data/traefik
 	@mkdir -p ${CORE_DATADIR}/config/node_1/data
 	@mkdir -p ${CORE_DATADIR}/data/keys
+	@mkdir -p ${HOMEDIR}/.lnd
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init

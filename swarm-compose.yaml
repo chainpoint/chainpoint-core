@@ -65,11 +65,13 @@ services:
   lnd:
     image: tierion/lnd:latest
     user: ${USERID}:${GROUPID}
-    build:
-      context: lnd-neutrino/
     ports:
     - target: 9735
       published: 9735
+      protocol: tcp
+      mode: host
+    - target: 10009
+      published: 10009
       protocol: tcp
       mode: host
     restart: always

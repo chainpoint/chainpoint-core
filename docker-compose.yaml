@@ -102,7 +102,7 @@ services:
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
     volumes:
-      - ~/.lnd:/root/.lnd/
+      - ~/.lnd:/root/.lnd
     tty: true
 
   api-test:
@@ -125,8 +125,42 @@ services:
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
     volumes:
-      - ~/.lnd:/root/.lnd/
+      - ~/.lnd:/root/.lnd
     tty: true
+
+  lnd:
+    image: tierion/lnd:latest
+    user: ${USERID}:${GROUPID}
+    ports:
+    - target: 9735
+      published: 9735
+      protocol: tcp
+      mode: host
+    - target: 10009
+      published: 10009
+      protocol: tcp
+      mode: host
+    restart: always
+    environment:
+    - PUBLICIP=0.0.0.0
+    - RPCUSER
+    - RPCPASS
+    - NETWORK
+    - CHAIN
+    - DEBUG
+    - NEUTRINO
+    - LND_REST_PORT
+    - LND_RPC_PORT
+    - TLSPATH
+    volumes:
+    - ~/.lnd:/root/.lnd
+    networks:
+    - chainpoint
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '1g'
+        max-file: '5'
 
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
