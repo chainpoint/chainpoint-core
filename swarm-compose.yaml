@@ -4,6 +4,8 @@ networks:
   chainpoint:
 
 secrets:
+  HOT_WALLET_PASS:
+    external: true
   BITCOIN_WIF:
     external: true
 
@@ -142,16 +144,19 @@ services:
         delay: 1s
         max_attempts: 5
         window: 120s
+    secrets:
+      - HOT_WALLET_PASS
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
+    volumes:
+      - ~/.lnd:/root/.lnd/
     tty: true
     logging:
       driver: 'json-file'
@@ -233,14 +238,17 @@ services:
       - redis
     networks:
       - chainpoint
+    secrets:
+      - HOT_WALLET_PASS
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd:/root/.lnd/
     tty: true
     logging:
       driver: 'json-file'

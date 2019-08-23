@@ -20,11 +20,14 @@ const { version } = require('../../package.json')
 let env = require('../parse-env.js')('api')
 const logger = require('../logger.js')
 const lnService = require('ln-service')
+const utils = require('../utils.js')
 
 // initialize lightning grpc object
+let macaroon = utils.toBase64(`/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`)
+let tlsCert = utils.toBase64(`/root/.lnd/tls.cert`)
 let { lnd } = lnService.authenticatedLndGrpc({
-  cert: env.LND_TLS_CERT,
-  macaroon: env.LND_MACAROON,
+  cert: tlsCert,
+  macaroon: macaroon,
   socket: env.LND_SOCKET
 })
 

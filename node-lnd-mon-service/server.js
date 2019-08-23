@@ -51,8 +51,8 @@ function openRedisConnection(redisURIs) {
 // initialize lightning grpc object
 let lnd = new LndGrpc({
   host: env.LND_SOCKET,
-  cert: Buffer.from(env.LND_TLS_CERT, 'base64').toString(),
-  macaroon: Buffer.from(env.LND_MACAROON, 'base64').toString('hex')
+  cert: `/root/.lnd/tls.cert`,
+  macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
 })
 
 async function processInvoiceBatchAsync(invoices) {
@@ -91,6 +91,12 @@ async function processInvoiceBatchAsync(invoices) {
 async function connectToLndAsync() {
   try {
     await lnd.connect()
+    if (lnd.state === 'locked') {
+      const { WalletUnlocker } = lnd.services
+      await WalletUnlocker.unlockWallet({
+        wallet_password: Buffer.from(env.HOT_WALLET_PASS)
+      })
+    }
   } catch (error) {
     throw new Error(`Unable to connect to LND : ${error.message}`)
   }

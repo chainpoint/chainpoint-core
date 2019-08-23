@@ -96,12 +96,13 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
+    volumes:
+      - ~/.lnd:/root/.lnd/
     tty: true
 
   api-test:
@@ -119,8 +120,7 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
@@ -194,9 +194,10 @@ services:
       - chainpoint
     environment:
       NODE_ENV: ${NODE_ENV}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd:/root/.lnd/
     tty: true
 
   # Proof State

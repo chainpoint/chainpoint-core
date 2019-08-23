@@ -157,8 +157,6 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.LND_TLS_CERT = envalid.str({ desc: 'Base64 encoded tls.cert' })
-      envDefinitions.LND_MACAROON = envalid.str({ desc: 'Base64 encoded admin.macaroon' })
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
       break
     case 'btc-mon':
@@ -166,9 +164,8 @@ module.exports = service => {
       envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
       break
     case 'lnd-mon':
-      envDefinitions.LND_TLS_CERT = envalid.str({ desc: 'Base64 encoded tls.cert' })
-      envDefinitions.LND_MACAROON = envalid.str({ desc: 'Base64 encoded admin.macaroon' })
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.HOT_WALLET_PASS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
       break
     case 'btc-tx':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
