@@ -13,6 +13,9 @@ COPY node-api-service/server.js /home/node/app/
 COPY node-api-service/env_secrets_expand.sh /home/node/app
 COPY node-api-service/run.sh /home/node/app
 
+RUN mkdir -p /root/.lnd
+RUN chmod -R 777 /root
+
 EXPOSE 8080
 
 CMD ["/bin/bash", "-c", "/home/node/app/run.sh"]

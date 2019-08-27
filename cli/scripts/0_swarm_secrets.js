@@ -28,8 +28,6 @@ async function createSwarmAndSecrets(valuePairs) {
   let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
   let gid = (await exec.quiet('id -g $USER')).stdout.trim()
-  console.log(uid)
-  console.log(gid)
   let btcRpc = valuePairs.BTC_RPC_URI_LIST
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
   let wif = valuePairs.BITCOIN_WIF
