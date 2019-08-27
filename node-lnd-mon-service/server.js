@@ -96,6 +96,7 @@ async function connectToLndAsync() {
       await WalletUnlocker.unlockWallet({
         wallet_password: Buffer.from(env.HOT_WALLET_PASS)
       })
+      await lnd.activateLightning()
     }
   } catch (error) {
     throw new Error(`Unable to connect to LND : ${error.message}`)
