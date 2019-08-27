@@ -132,6 +132,10 @@ services:
     image: tierion/lnd:latest
     user: ${USERID}:${GROUPID}
     ports:
+    - target: 8080
+      published: 8080
+      protocol: tcp
+      mode: host
     - target: 9735
       published: 9735
       protocol: tcp
@@ -142,7 +146,7 @@ services:
       mode: host
     restart: always
     environment:
-    - PUBLICIP=0.0.0.0
+    - PUBLICIP
     - RPCUSER
     - RPCPASS
     - NETWORK

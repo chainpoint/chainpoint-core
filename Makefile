@@ -121,7 +121,7 @@ ps:
 	docker-compose ps
 
 ## restart                   : Restart a dev mode container
-.PHONY : restart
+.PHONY : 	restart
 restart:
 	docker-compose up -d --build $(app)
 
@@ -137,6 +137,7 @@ clean: down
 	@rm -rf ${CORE_DATADIR}/data/redis
 	@rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
+	@rm -rf ${HOMEDIR}/.lnd
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
 	@docker system prune --volumes -f
 

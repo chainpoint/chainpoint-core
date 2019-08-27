@@ -37,6 +37,7 @@
     "inquirer": "^6.5.0",
     "keccak": "^2.0.0",
     "keccakjs": "^0.2.3",
+    "lnrpc-node-client": "^1.0.1",
     "ora": "^3.4.0",
     "ramda": "^0.26.1",
     "validator": "^10.11.0"
