@@ -91,7 +91,7 @@ services:
     - LND_RPC_PORT
     - TLSPATH
     volumes:
-    - ~/.lnd:/root/.lnd/
+    - ~/.lnd:/root/.lnd:z
     networks:
     - chainpoint
     logging:
@@ -158,11 +158,11 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
-      VIRTUAL_HOST: api.local
+      VIRTUA  L_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
     volumes:
-      - ~/.lnd:/root/.lnd/
+      - ~/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -254,7 +254,7 @@ services:
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
     volumes:
-      - ~/.lnd:/root/.lnd/
+      - ~/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'

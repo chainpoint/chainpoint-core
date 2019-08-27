@@ -18,14 +18,13 @@ const exec = require('executive')
 const chalk = require('chalk')
 const resolve = require('path').resolve
 const generator = require('generate-password')
-const lightning = require("lnrpc-node-client")
+const lightning = require('lnrpc-node-client')
 const updateOrCreateEnv = require('./2_update_env')
 const utils = require(resolve('./node-lib/lib/utils.js'))
 const homedir = require('os').homedir()
 
 async function createSwarmAndSecrets(valuePairs) {
-  let unlocker = lightning.unlocker()
-  lightning.promisifyGrpc(unlocker)
+  let address = { value: { address: valuePairs.HOT_WALLET_ADDRESS } }
   let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
   let gid = (await exec.quiet('id -g $USER')).stdout.trim()
@@ -63,47 +62,67 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   lightning.setTls('127.0.0.1:10009', `${homedir}/.lnd/tls.cert`)
+  let unlocker = lightning.unlocker()
+  lightning.promisifyGrpc(unlocker)
   try {
-    let init
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
-        init = await unlocker.initWalletAsync({wallet_password: lndWalletPass, cipher_seed_mnemonic: lndWalletSeed.split(" ")})
-        console.log(init)
+      await unlocker.initWalletAsync({ wallet_password: lndWalletPass, cipher_seed_mnemonic: lndWalletSeed.split(' ') })
+      await utils.sleep(5000)
+      await unlocker.unlockWalletAsync({ wallet_password: lndWalletPass, recovery_window: 25000 })
     } else {
+      console.log('Creating a new LND wallet...')
       lndWalletPass = generator.generate({
         length: 20,
-        numbers: true
+        numbers: false
       })
+      console.log(lndWalletPass)
+      console.log('Generating wallet seed...')
       let seed = await unlocker.genSeedAsync({})
-      init = await unlocker.initWalletAsync({wallet_password: lndWalletPass, cipher_seed_mnemonic: seed.value.cipher_seed_mnemonic})
-      console.log(chalk.green(`LND Wallet Password: ${lndWalletPass}`))
-      console.log(chalk.green(`LND Wallet Seed: ${seed.value.cipher_seed_mnemonic}`))
+      console.log(JSON.stringify(seed))
+      let init = await unlocker.initWalletAsync({
+        wallet_password: lndWalletPass,
+        cipher_seed_mnemonic: seed.value.cipher_seed_mnemonic
+      })
+      console.log(`LND wallet initialized: ${JSON.stringify(init)}`)
+      await utils.sleep(5000)
+      lightning.setCredentials(
+        '127.0.0.1:10009',
+        `${homedir}/.lnd/data/chain/bitcoin/testnet/admin.macaroon`,
+        `${homedir}/.lnd/tls.cert`
+      )
+      console.log('LND wallet unlocked')
+      let client = lightning.lightning()
+      lightning.promisifyGrpc(client)
+      address = await client.newAddressAsync({ type: 0 })
+      console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
+      console.log(chalk.yellow(`\nLND Wallet Seed: ${seed.value.cipher_seed_mnemonic.join(' ')}`))
+      console.log(chalk.yellow(`\nLND Wallet Address: ${address.value.address}\n`))
     }
-    console.log(init)
-    let unlock = await unlocker.unlockWalletAsync({wallet_password: lndWalletPass, recovery_window: 25000})
-    console.log(unlock)
   } catch (err) {
     console.log(chalk.red(`Could not unlock the lnd wallet: ${err}`))
     return
   }
 
   //once we know the above password works (whether generated or provided), save it
-  if (typeof lndWalletPass !== 'undefined'){
+  if (typeof lndWalletPass !== 'undefined') {
     try {
-      await exec([`printf ${lndWalletPass} | docker secret create HOT_WALLET_PASS -`])
-    }
-    catch (err) {
+      await exec.quiet([
+        `printf ${lndWalletPass} | docker secret create HOT_WALLET_PASS -`,
+        `printf ${address.value.address} | docker secret create HOT_WALLET_ADDRESS -`
+      ])
+    } catch (err) {
       console.log(chalk.red(`Could not exec docker secret creation: ${err}`))
       return
     }
   }
 
   try {
-      console.log('shutting down LND...')
-      await exec([`docker-compose down`])
-      console.log('LND shut down')
+    console.log('shutting down LND...')
+    await exec([`docker-compose down`])
+    console.log('LND shut down')
   } catch (err) {
-      console.log(chalk.red(`Could not bring down LND: ${err}`))
-      return
+    console.log(chalk.red(`Could not bring down LND: ${err}`))
+    return
   }
 
   return updateOrCreateEnv({
