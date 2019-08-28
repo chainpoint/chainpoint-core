@@ -82,22 +82,23 @@ async function createSwarmAndSecrets(valuePairs) {
         cipher_seed_mnemonic: seed.value.cipher_seed_mnemonic
       })
       console.log(`LND wallet initialized: ${JSON.stringify(init)}`)
-      await utils.sleep(5000)
+      console.log('Creating bitcoin address for wallet...')
+      await utils.sleep(7000)
       lightning.setCredentials(
         '127.0.0.1:10009',
         `${homedir}/.lnd/data/chain/bitcoin/testnet/admin.macaroon`,
         `${homedir}/.lnd/tls.cert`
       )
-      console.log('LND wallet unlocked')
       let client = lightning.lightning()
       lightning.promisifyGrpc(client)
       address = await client.newAddressAsync({ type: 0 })
+      console.log(address)
       console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
       console.log(chalk.yellow(`\nLND Wallet Seed: ${seed.value.cipher_seed_mnemonic.join(' ')}`))
       console.log(chalk.yellow(`\nLND Wallet Address: ${address.value.address}\n`))
     }
   } catch (err) {
-    console.log(chalk.red(`Could not unlock the lnd wallet: ${err}`))
+    console.log(chalk.red(`LND setup error: ${err}`))
     return
   }
 
