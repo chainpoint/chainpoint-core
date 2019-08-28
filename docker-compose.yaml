@@ -5,6 +5,8 @@ networks:
     driver: bridge
 
 services:
+
+  # Tendermint and ABCI app in go. Coordinates the calendar
   abci:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG}
     build:
@@ -38,6 +40,40 @@ services:
     command: bash -c "abci-service"
     networks:
       - chainpoint
+
+  # Lightning node
+  lnd:
+    image: tierion/lnd:latest
+    user: ${USERID}:${GROUPID}
+    ports:
+    - target: 8080
+      published: 8080
+      protocol: tcp
+      mode: host
+    - target: 9735
+      published: 9735
+      protocol: tcp
+      mode: host
+    - target: 10009
+      published: 10009
+      protocol: tcp
+      mode: host
+    restart: always
+    environment:
+    - PUBLICIP
+    - RPCUSER
+    - RPCPASS
+    - NETWORK
+    - CHAIN
+    - DEBUG
+    - NEUTRINO
+    - LND_REST_PORT
+    - LND_RPC_PORT
+    - TLSPATH
+    volumes:
+    - ~/.lnd:/root/.lnd
+    networks:
+    - chainpoint
 
   # Node.js Base Image
   # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
@@ -127,44 +163,6 @@ services:
     volumes:
       - ~/.lnd:/root/.lnd
     tty: true
-
-  lnd:
-    image: tierion/lnd:latest
-    user: ${USERID}:${GROUPID}
-    ports:
-    - target: 8080
-      published: 8080
-      protocol: tcp
-      mode: host
-    - target: 9735
-      published: 9735
-      protocol: tcp
-      mode: host
-    - target: 10009
-      published: 10009
-      protocol: tcp
-      mode: host
-    restart: always
-    environment:
-    - PUBLICIP
-    - RPCUSER
-    - RPCPASS
-    - NETWORK
-    - CHAIN
-    - DEBUG
-    - NEUTRINO
-    - LND_REST_PORT
-    - LND_RPC_PORT
-    - TLSPATH
-    volumes:
-    - ~/.lnd:/root/.lnd
-    networks:
-    - chainpoint
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
 
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
