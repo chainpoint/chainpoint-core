@@ -8,6 +8,8 @@ secrets:
     external: true
   BITCOIN_WIF:
     external: true
+  ECDSA_PKPEM:
+    external: true
 
 services:
   abci:
@@ -26,6 +28,7 @@ services:
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
+      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       ANCHOR: 'true'
       AUDIT: 'true'
       NODE_MANAGEMENT: 'true'
@@ -35,6 +38,8 @@ services:
       ANCHOR_INTERVAL: '60'
       LOG_FILTER: 'main:debug,state:info,*:error'
       LOG_LEVEL: 'info'
+    secrets:
+      - ECDSA_PKPEM
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data
