@@ -141,7 +141,7 @@ async function getHashInvoiceV1Async(req, res, next) {
   try {
     let inv = await lnService.createInvoice({
       description: `SubmitHashInvoiceId:${randomInvoiceId}`,
-      tokens: 1000,
+      tokens: 10,
       lnd
     })
     res.send({ invoice: inv.request })
