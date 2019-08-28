@@ -309,6 +309,7 @@ type CoreAPIStatus struct {
 	Version             string    `json:"version"`
 	Time                time.Time `json:"time"`
 	BaseURI             string    `json:"base_uri"`
+	Jwk                 Jwk       `json:"jwk"`
 	Network             string    `json:"network"`
 	PublicKey           string    `json:"public_key"`
 	Uris                []string  `json:"uris"`
