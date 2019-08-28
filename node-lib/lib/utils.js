@@ -115,12 +115,6 @@ function toBase64(file) {
   return body.toString('base64').replace(/\s/g, '')
 }
 
-function sleep(ms) {
-  return new Promise(resolve => {
-    setTimeout(resolve, ms)
-  })
-}
-
 module.exports = {
   sleepAsync: sleepAsync,
   addMinutes: addMinutes,
@@ -129,6 +123,5 @@ module.exports = {
   isHex: isHex,
   isIP: isIP,
   formatAsChainpointV3Ops: formatAsChainpointV3Ops,
-  toBase64: toBase64,
-  sleep: sleep
+  toBase64: toBase64
 }

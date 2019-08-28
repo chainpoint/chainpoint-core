@@ -54,7 +54,7 @@ async function createSwarmAndSecrets(valuePairs) {
   try {
     console.log('initializing LND...')
     await exec([`export USERID=${uid} && export GROUPID=${gid} && docker-compose run -d --service-ports lnd`])
-    await utils.sleep(5000)
+    await utils.sleepAsync(5000)
     console.log('LND initialized')
   } catch (err) {
     console.log(chalk.red(`Could not bring up lnd for initialization: ${err}`))
@@ -67,7 +67,7 @@ async function createSwarmAndSecrets(valuePairs) {
   try {
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       await unlocker.initWalletAsync({ wallet_password: lndWalletPass, cipher_seed_mnemonic: lndWalletSeed.split(' ') })
-      await utils.sleep(5000)
+      await utils.sleepAsync(5000)
       await unlocker.unlockWalletAsync({ wallet_password: lndWalletPass, recovery_window: 25000 })
     } else {
       console.log('Creating a new LND wallet...')
@@ -85,7 +85,7 @@ async function createSwarmAndSecrets(valuePairs) {
       })
       console.log(`LND wallet initialized: ${JSON.stringify(init)}`)
       console.log('Creating bitcoin address for wallet...')
-      await utils.sleep(7000)
+      await utils.sleepAsync(7000)
       lightning.setCredentials(
         '127.0.0.1:10009',
         `${homedir}/.lnd/data/chain/bitcoin/testnet/admin.macaroon`,

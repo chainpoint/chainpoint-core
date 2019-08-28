@@ -74,9 +74,9 @@ async function buildStatusObjectAsync() {
     time: new Date().toISOString(),
     base_uri: env.CHAINPOINT_CORE_BASE_URI,
     network: env.NETWORK,
-    public_key: walletInfo.identity_pubkey,
+    public_key: walletInfo.public_key,
     uris: walletInfo.uris,
-    active_channels_count: walletInfo.num_active_channels,
+    active_channels_count: walletInfo.active_channels_count,
     alias: walletInfo.alias
   }
 
