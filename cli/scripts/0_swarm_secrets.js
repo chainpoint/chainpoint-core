@@ -61,10 +61,10 @@ async function createSwarmAndSecrets(valuePairs) {
     return
   }
 
-  lightning.setTls('127.0.0.1:10009', `${homedir}/.lnd/tls.cert`)
-  let unlocker = lightning.unlocker()
-  lightning.promisifyGrpc(unlocker)
   try {
+    lightning.setTls('127.0.0.1:10009', `${homedir}/.lnd/tls.cert`)
+    let unlocker = lightning.unlocker()
+    lightning.promisifyGrpc(unlocker)
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       await unlocker.initWalletAsync({ wallet_password: lndWalletPass, cipher_seed_mnemonic: lndWalletSeed.split(' ') })
     } else {
