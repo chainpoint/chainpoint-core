@@ -67,8 +67,6 @@ async function createSwarmAndSecrets(valuePairs) {
   try {
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       await unlocker.initWalletAsync({ wallet_password: lndWalletPass, cipher_seed_mnemonic: lndWalletSeed.split(' ') })
-      await utils.sleepAsync(5000)
-      await unlocker.unlockWalletAsync({ wallet_password: lndWalletPass, recovery_window: 25000 })
     } else {
       console.log('Creating a new LND wallet...')
       lndWalletPass = generator.generate({
