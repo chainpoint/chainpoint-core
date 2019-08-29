@@ -28,9 +28,11 @@ const lnService = require('ln-service')
 let redis = null
 
 // initialize lightning grpc object
+let macaroon = utils.toBase64(`/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`)
+let tlsCert = utils.toBase64(`/root/.lnd/tls.cert`)
 let { lnd } = lnService.authenticatedLndGrpc({
-  cert: env.LND_TLS_CERT,
-  macaroon: env.LND_MACAROON,
+  cert: tlsCert,
+  macaroon: macaroon,
   socket: env.LND_SOCKET
 })
 

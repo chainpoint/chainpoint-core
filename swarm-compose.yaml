@@ -4,7 +4,11 @@ networks:
   chainpoint:
 
 secrets:
+  HOT_WALLET_PASS:
+    external: true
   BITCOIN_WIF:
+    external: true
+  ECDSA_PKPEM:
     external: true
 
 services:
@@ -20,10 +24,11 @@ services:
     environment:
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}]
+      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
+      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       ANCHOR: 'true'
       AUDIT: 'true'
       NODE_MANAGEMENT: 'true'
@@ -33,6 +38,8 @@ services:
       ANCHOR_INTERVAL: '60'
       LOG_FILTER: 'main:debug,state:info,*:error'
       LOG_LEVEL: 'info'
+    secrets:
+      - ECDSA_PKPEM
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data
@@ -54,6 +61,44 @@ services:
         constraints: [node.role==manager]
     networks:
       - chainpoint
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '1g'
+        max-file: '5'
+
+  lnd:
+    image: tierion/lnd:latest
+    user: ${USERID}:${GROUPID}
+    ports:
+    - target: 8080
+      published: 8080
+      protocol: tcp
+      mode: host
+    - target: 9735
+      published: 9735
+      protocol: tcp
+      mode: host
+    - target: 10009
+      published: 10009
+      protocol: tcp
+      mode: host
+    restart: always
+    environment:
+    - PUBLICIP
+    - RPCUSER
+    - RPCPASS
+    - NETWORK
+    - CHAIN
+    - DEBUG
+    - NEUTRINO
+    - LND_REST_PORT
+    - LND_RPC_PORT
+    - TLSPATH
+    volumes:
+    - ~/.lnd:/root/.lnd:z
+    networks:
+    - chainpoint
     logging:
       driver: 'json-file'
       options:
@@ -110,16 +155,21 @@ services:
         delay: 1s
         max_attempts: 5
         window: 120s
+    secrets:
+      - HOT_WALLET_PASS
+      - ECDSA_PKPEM
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
+      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
+    volumes:
+      - ~/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -201,14 +251,17 @@ services:
       - redis
     networks:
       - chainpoint
+    secrets:
+      - HOT_WALLET_PASS
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'

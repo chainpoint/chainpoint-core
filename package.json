@@ -33,9 +33,11 @@
     "command-line-args": "^5.1.1",
     "envfile": "^3.0.0",
     "executive": "^1.6.3",
+    "generate-password": "^1.4.2",
     "inquirer": "^6.5.0",
     "keccak": "^2.0.0",
     "keccakjs": "^0.2.3",
+    "lnrpc-node-client": "^1.0.1",
     "ora": "^3.4.0",
     "ramda": "^0.26.1",
     "validator": "^10.11.0"

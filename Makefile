@@ -7,7 +7,8 @@ SHELL := /bin/bash
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # Get home directory of current users
-CORE_DATADIR := $(shell eval printf "~$$USER")/.chainpoint/core
+HOMEDIR := $(shell eval printf "~$$USER")
+CORE_DATADIR := $HOMEDIR/.chainpoint/core
 
 UID := $(shell id -u $$USER)
 GID := $(shell id -g $$USER)
@@ -120,7 +121,7 @@ ps:
 	docker-compose ps
 
 ## restart                   : Restart a dev mode container
-.PHONY : restart
+.PHONY : 	restart
 restart:
 	docker-compose up -d --build $(app)
 
@@ -136,6 +137,7 @@ clean: down
 	@rm -rf ${CORE_DATADIR}/data/redis
 	@rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
+	@rm -rf ${HOMEDIR}/.lnd
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
 	@docker system prune --volumes -f
 
@@ -147,6 +149,7 @@ init-volumes:
 	@mkdir -p ${CORE_DATADIR}/data/traefik
 	@mkdir -p ${CORE_DATADIR}/config/node_1/data
 	@mkdir -p ${CORE_DATADIR}/data/keys
+	@mkdir -p ${HOMEDIR}/.lnd
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init

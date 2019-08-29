@@ -19,10 +19,21 @@ let tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
 let env = require('../parse-env.js')('api')
 const logger = require('../logger.js')
+const lnService = require('ln-service')
+const utils = require('../utils.js')
+const jose = require('node-jose')
+
+// initialize lightning grpc object
+let macaroon = utils.toBase64(`/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`)
+let tlsCert = utils.toBase64(`/root/.lnd/tls.cert`)
+let { lnd } = lnService.authenticatedLndGrpc({
+  cert: tlsCert,
+  macaroon: macaroon,
+  socket: env.LND_SOCKET
+})
 
 async function getCoreStatusAsync(req, res, next) {
   let result = await buildStatusObjectAsync()
-
   if (result.errorCode) {
     switch (result.errorCode) {
       case 404:
@@ -40,6 +51,7 @@ async function getCoreStatusAsync(req, res, next) {
 }
 
 async function buildStatusObjectAsync() {
+  let walletInfo
   let statusResponse = await tmRpc.getStatusAsync()
   if (statusResponse.error) {
     switch (statusResponse.error.responseCode) {
@@ -52,12 +64,29 @@ async function buildStatusObjectAsync() {
         return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
     }
   }
+  try {
+    walletInfo = await lnService.getWalletInfo({ lnd })
+  } catch (error) {
+    return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
+  }
 
   let coreInfo = {
     version: version,
     time: new Date().toISOString(),
     base_uri: env.CHAINPOINT_CORE_BASE_URI,
-    network: env.NETWORK
+    network: env.NETWORK,
+    public_key: walletInfo.public_key,
+    uris: walletInfo.uris,
+    active_channels_count: walletInfo.active_channels_count,
+    alias: walletInfo.alias
+  }
+
+  let privateKeyPEM = env.ECDSA_PKPEM
+  try {
+    let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
+    coreInfo.jwk = jwk.toJSON()
+  } catch (error) {
+    logger.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
   }
 
   return {

@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+const fs = require('fs')
+
 /**
  * Sleep for a specified number of milliseconds
  *
@@ -102,6 +104,17 @@ function formatAsChainpointV3Ops(proof, op) {
   return ChainpointV3Ops
 }
 
+/**
+ * Reads a file and converts content to base64 string
+ *
+ * @param {file} file - The file to be converted to base64
+ * @returns {string}
+ */
+function toBase64(file) {
+  var body = fs.readFileSync(file)
+  return body.toString('base64').replace(/\s/g, '')
+}
+
 module.exports = {
   sleepAsync: sleepAsync,
   addMinutes: addMinutes,
@@ -109,5 +122,6 @@ module.exports = {
   formatDateISO8601NoMs: formatDateISO8601NoMs,
   isHex: isHex,
   isIP: isIP,
-  formatAsChainpointV3Ops: formatAsChainpointV3Ops
+  formatAsChainpointV3Ops: formatAsChainpointV3Ops,
+  toBase64: toBase64
 }

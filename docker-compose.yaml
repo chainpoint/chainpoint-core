@@ -5,6 +5,8 @@ networks:
     driver: bridge
 
 services:
+
+  # Tendermint and ABCI app in go. Coordinates the calendar
   abci:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG}
     build:
@@ -32,12 +34,47 @@ services:
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
+      - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     ports:
       - '26656:26656'
       - '26657:26657'
     command: bash -c "abci-service"
     networks:
       - chainpoint
+
+  # Lightning node
+  lnd:
+    image: tierion/lnd:latest
+    user: ${USERID}:${GROUPID}
+    ports:
+    - target: 8080
+      published: 8080
+      protocol: tcp
+      mode: host
+    - target: 9735
+      published: 9735
+      protocol: tcp
+      mode: host
+    - target: 10009
+      published: 10009
+      protocol: tcp
+      mode: host
+    restart: always
+    environment:
+    - PUBLICIP
+    - RPCUSER
+    - RPCPASS
+    - NETWORK
+    - CHAIN
+    - DEBUG
+    - NEUTRINO
+    - LND_REST_PORT
+    - LND_RPC_PORT
+    - TLSPATH
+    volumes:
+    - ~/.lnd:/root/.lnd
+    networks:
+    - chainpoint
 
   # Node.js Base Image
   # See : https://stackoverflow.com/questions/37933204/building-common-dependencies-with-docker-compose
@@ -96,12 +133,15 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
+      ECDSA_PKPEM: ${ECDSA_PKPEM}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
+    volumes:
+      - ~/.lnd:/root/.lnd
+      - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     tty: true
 
   api-test:
@@ -119,11 +159,12 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
+    volumes:
+      - ~/.lnd:/root/.lnd
     tty: true
 
   # Bitcoin Transmit
@@ -194,9 +235,10 @@ services:
       - chainpoint
     environment:
       NODE_ENV: ${NODE_ENV}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-      LND_MACAROON: ${LND_MACAROON}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd:/root/.lnd/
     tty: true
 
   # Proof State

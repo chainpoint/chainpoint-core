@@ -21,6 +21,7 @@ const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const LndGrpc = require('lnd-grpc')
+const lightning = require('lnrpc-node-client')
 
 const LAST_KNOWN_INVOICE_INDEX_KEY = 'LastKnownInvoiceIndex'
 const INVOICE_BATCH_SIZE = 1000
@@ -51,9 +52,10 @@ function openRedisConnection(redisURIs) {
 // initialize lightning grpc object
 let lnd = new LndGrpc({
   host: env.LND_SOCKET,
-  cert: Buffer.from(env.LND_TLS_CERT, 'base64').toString(),
-  macaroon: Buffer.from(env.LND_MACAROON, 'base64').toString('hex')
+  cert: `/root/.lnd/tls.cert`,
+  macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
 })
+lightning.setTls(env.LND_SOCKET, '/root/.lnd/tls.cert')
 
 async function processInvoiceBatchAsync(invoices) {
   let invoiceRedisOps = invoices
@@ -89,6 +91,10 @@ async function processInvoiceBatchAsync(invoices) {
 }
 
 async function connectToLndAsync() {
+  lightning.unlocker().unlockWallet({ wallet_password: env.HOT_WALLET_PASS }, (err, res) => {
+    console.log(res)
+    console.log(err)
+  })
   try {
     await lnd.connect()
   } catch (error) {
