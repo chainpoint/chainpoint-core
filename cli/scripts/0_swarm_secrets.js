@@ -58,7 +58,6 @@ async function createSwarmAndSecrets(valuePairs) {
     console.log('LND initialized')
   } catch (err) {
     console.log(chalk.red(`Could not bring up lnd for initialization: ${err}`))
-    return
   }
 
   try {
@@ -99,7 +98,6 @@ async function createSwarmAndSecrets(valuePairs) {
     }
   } catch (err) {
     console.log(chalk.red(`LND setup error: ${err}`))
-    return
   }
 
   //once we know the above password works (whether generated or provided), save it
@@ -121,7 +119,6 @@ async function createSwarmAndSecrets(valuePairs) {
     console.log('LND shut down')
   } catch (err) {
     console.log(chalk.red(`Could not bring down LND: ${err}`))
-    return
   }
 
   return updateOrCreateEnv({
