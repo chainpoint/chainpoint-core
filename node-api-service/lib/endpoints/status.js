@@ -21,6 +21,7 @@ let env = require('../parse-env.js')('api')
 const logger = require('../logger.js')
 const lnService = require('ln-service')
 const utils = require('../utils.js')
+const jose = require('node-jose')
 
 // initialize lightning grpc object
 let macaroon = utils.toBase64(`/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`)
@@ -78,6 +79,14 @@ async function buildStatusObjectAsync() {
     uris: walletInfo.uris,
     active_channels_count: walletInfo.active_channels_count,
     alias: walletInfo.alias
+  }
+
+  let privateKeyPEM = env.ECDSA_PKPEM
+  try {
+    let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
+    coreInfo.jwk = jwk.toJSON()
+  } catch (error) {
+    logger.error(`Could not convert ECDSA private key PEM to public key JWK : ${error.message}`)
   }
 
   return {
