@@ -8,7 +8,7 @@ ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 # Get home directory of current users
 HOMEDIR := $(shell eval printf "~$$USER")
-CORE_DATADIR := $HOMEDIR/.chainpoint/core
+CORE_DATADIR := ${HOMEDIR}/.chainpoint/core
 
 UID := $(shell id -u $$USER)
 GID := $(shell id -g $$USER)
