@@ -99,6 +99,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		pgClient, err = postgres.NewPGFromURI(config.PostgresURI, *config.Logger)
 		if util.LoggerError(*config.Logger, err) != nil {
 			time.Sleep(5 * time.Second)
+		} else {
 			break
 		}
 	}
