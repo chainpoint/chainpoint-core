@@ -99,20 +99,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		pgClient, err = postgres.NewPGFromURI(config.PostgresURI, *config.Logger)
 		if util.LoggerError(*config.Logger, err) != nil {
 			time.Sleep(5 * time.Second)
-			continue
-		} else {
-			_, err = pgClient.GetNodeCount()
-			if util.LoggerError(*config.Logger, err) != nil {
-				(*config.Logger).Info("table 'staked_nodes' doesn't exist, did API start successfully?")
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			_, err = pgClient.GetCoreCount()
-			if util.LoggerError(*config.Logger, err) != nil {
-				(*config.Logger).Info("table 'staked_cores' doesn't exist, did API start successfully?")
-				time.Sleep(5 * time.Second)
-				continue
-			}
 			break
 		}
 	}
@@ -144,19 +130,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		panic(err)
 	} else if redisClient != nil {
 		fmt.Println("Connection to Redis established")
-	}
-
-	for _, nodeIPString := range config.PrivateNodeIPs {
-		node := types.Node{
-			EthAddr:     "0",
-			PublicIP:    sql.NullString{String: nodeIPString, Valid: true},
-			BlockNumber: sql.NullInt64{Int64: 0, Valid: true},
-		}
-		inserted, err := pgClient.NodeUpsert(node)
-		if inserted {
-			(*config.Logger).Info(fmt.Sprintf("Inserted private node %s: %t", nodeIPString, inserted))
-		}
-		util.LoggerError(*config.Logger, err)
 	}
 
 	for _, coreIPString := range config.PrivateCoreIPs {

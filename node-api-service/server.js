@@ -27,6 +27,7 @@ const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
 const connections = require('./lib/connections.js')
+const stakedCore = require('./lib/models/StakedCore.js')
 const proof = require('./lib/models/Proof.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
@@ -188,7 +189,7 @@ function openRedisConnection(redisURIs) {
  * Opens a Postgres connection
  **/
 async function openPostgresConnectionAsync() {
-  let sqlzModelArray = [proof]
+  let sqlzModelArray = [proof, stakedCore]
   let cxObjects = await connections.openPostgresConnectionAsync(sqlzModelArray)
   proof.setDatabase(cxObjects.sequelize, cxObjects.op, cxObjects.models[0])
 }
