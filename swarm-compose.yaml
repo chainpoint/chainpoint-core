@@ -139,7 +139,7 @@ services:
       - chainpoint
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
       labels:
         - 'traefik.enable=true'
         - 'traefik.port=8080'

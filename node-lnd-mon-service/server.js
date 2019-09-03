@@ -21,7 +21,6 @@ const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const LndGrpc = require('lnd-grpc')
-const lightning = require('lnrpc-node-client')
 
 const LAST_KNOWN_INVOICE_INDEX_KEY = 'LastKnownInvoiceIndex'
 const INVOICE_BATCH_SIZE = 1000
@@ -55,7 +54,6 @@ let lnd = new LndGrpc({
   cert: `/root/.lnd/tls.cert`,
   macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
 })
-lightning.setTls(env.LND_SOCKET, '/root/.lnd/tls.cert')
 
 async function processInvoiceBatchAsync(invoices) {
   let invoiceRedisOps = invoices
@@ -91,12 +89,24 @@ async function processInvoiceBatchAsync(invoices) {
 }
 
 async function connectToLndAsync() {
-  lightning.unlocker().unlockWallet({ wallet_password: env.HOT_WALLET_PASS }, (err, res) => {
-    console.log(res)
-    console.log(err)
-  })
+  try {
+    await lnd.disconnect()
+  } catch (error) {
+    throw new Error(`LND disconnect failed: ${error.message}`)
+  }
   try {
     await lnd.connect()
+    try {
+      await lnd.services.WalletUnlocker.unlockWallet({
+        wallet_password: Buffer.from(env.HOT_WALLET_PASS)
+      })
+    } catch (error) {
+      throw new Error(`Can't unlocked LND, already unlocked? : ${error.message}`)
+    }
+    await lnd.activateLightning()
+    lnd.once('active', async () => {
+      logger.info('GRPC state active')
+    })
   } catch (error) {
     throw new Error(`Unable to connect to LND : ${error.message}`)
   }
