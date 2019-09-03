@@ -42,8 +42,8 @@ func (app *AnchorApplication) SyncMonitor() {
 
 //KeyMonitor : updates active ECDSA public keys from all accessible peers
 func (app *AnchorApplication) KeyMonitor() {
-	for i := 0; i < 2; i++ {
-		time.Sleep(30 * time.Second)
+	for i := 0; i < 5; i++ {
+		time.Sleep(60 * time.Second)
 		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
 		response, err := http.Get(selfStatusURL)
 		if app.LogError(err) != nil {
@@ -63,7 +63,7 @@ func (app *AnchorApplication) KeyMonitor() {
 		if app.LogError(err) != nil {
 			continue
 		}
-		_, err = app.rpc.BroadcastTxCommit("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			continue
 		} else {
