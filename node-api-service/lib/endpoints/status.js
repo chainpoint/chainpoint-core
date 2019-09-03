@@ -67,7 +67,7 @@ async function buildStatusObjectAsync() {
   try {
     walletInfo = await lnService.getWalletInfo({ lnd })
   } catch (error) {
-    logger.error(`GRPC error communicating with LND : ${statusResponse.error.message}`)
+    logger.error(`GRPC error communicating with LND : ${error.message}`)
     return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
   }
 
