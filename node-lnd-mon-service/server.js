@@ -92,7 +92,7 @@ async function connectToLndAsync() {
   try {
     await lnd.disconnect()
   } catch (error) {
-    throw new Error(`LND disconnect failed: ${error.message}`)
+    logger.error(`LND disconnect failed: ${error.message}`)
   }
   try {
     await lnd.connect()
@@ -101,7 +101,7 @@ async function connectToLndAsync() {
         wallet_password: Buffer.from(env.HOT_WALLET_PASS)
       })
     } catch (error) {
-      throw new Error(`Can't unlocked LND, already unlocked? : ${error.message}`)
+      logger.error(`Can't unlocked LND, already unlocked? : ${error.message}`)
     }
     await lnd.activateLightning()
     lnd.once('active', async () => {
