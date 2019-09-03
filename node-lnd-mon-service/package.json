@@ -12,6 +12,7 @@
     "envalid": "^5.0.0",
     "ioredis": "^4.9.0",
     "lnd-grpc": "next",
+    "lnrpc-node-client": "^1.0.1",
     "winston": "^3.2.1"
   }
 }

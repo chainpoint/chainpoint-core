@@ -21,6 +21,7 @@ const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const LndGrpc = require('lnd-grpc')
+const lightning = require("lnrpc-node-client");
 
 const LAST_KNOWN_INVOICE_INDEX_KEY = 'LastKnownInvoiceIndex'
 const INVOICE_BATCH_SIZE = 1000
@@ -54,6 +55,8 @@ let lnd = new LndGrpc({
   cert: `/root/.lnd/tls.cert`,
   macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
 })
+lightning.setTls(env.LND_SOCKET, `/root/.lnd/tls.cert`)
+let unlocker = lightning.unlocker()
 
 async function processInvoiceBatchAsync(invoices) {
   let invoiceRedisOps = invoices
@@ -98,6 +101,10 @@ async function connectToLndAsync() {
     await lnd.connect()
     logger.info(`wallet password: ${env.HOT_WALLET_PASS}`)
     try {
+      unlocker.unlockWallet({ wallet_password: env.HOT_WALLET_PASS }, (err, res) => {
+          console.log(res)
+          console.log(err)
+      })
       await lnd.services.WalletUnlocker.unlockWallet({
         wallet_password: Buffer.from(env.HOT_WALLET_PASS)
       })
