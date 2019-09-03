@@ -49,7 +49,6 @@ function openRedisConnection(redisURIs) {
 }
 
 // initialize lightning grpc object
-lightning.setTls(env.LND_SOCKET, `/root/.lnd/tls.cert`)
 let unlocker
 let client
 
@@ -88,6 +87,7 @@ async function processInvoiceBatchAsync(invoices) {
 
 async function connectToLndAsync() {
   try {
+    lightning.setTls(env.LND_SOCKET, `/root/.lnd/tls.cert`) //retry instantiating unlocker client if dns resolution fails
     unlocker = lightning.unlocker()
   } catch (error) {
     logger.error(`LND disconnect failed: ${error.message}`)
