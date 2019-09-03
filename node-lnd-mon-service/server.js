@@ -96,12 +96,13 @@ async function connectToLndAsync() {
   }
   try {
     await lnd.connect()
+    logger.info(`wallet password: ${env.HOT_WALLET_PASS}`)
     try {
       await lnd.services.WalletUnlocker.unlockWallet({
         wallet_password: Buffer.from(env.HOT_WALLET_PASS)
       })
     } catch (error) {
-      logger.error(`Can't unlocked LND, already unlocked? : ${error.message}`)
+      logger.error(`Can't unlock LND, already unlocked? : ${error.message}`)
     }
     await lnd.activateLightning()
     lnd.once('active', async () => {
