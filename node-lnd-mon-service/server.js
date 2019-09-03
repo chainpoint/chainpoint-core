@@ -20,8 +20,7 @@ const env = require('./lib/parse-env.js')('lnd-mon')
 const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
-const LndGrpc = require('lnd-grpc')
-const lightning = require("lnrpc-node-client");
+const lightning = require('lnrpc-node-client')
 
 const LAST_KNOWN_INVOICE_INDEX_KEY = 'LastKnownInvoiceIndex'
 const INVOICE_BATCH_SIZE = 1000
@@ -50,13 +49,9 @@ function openRedisConnection(redisURIs) {
 }
 
 // initialize lightning grpc object
-let lnd = new LndGrpc({
-  host: env.LND_SOCKET,
-  cert: `/root/.lnd/tls.cert`,
-  macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
-})
 lightning.setTls(env.LND_SOCKET, `/root/.lnd/tls.cert`)
-let unlocker = lightning.unlocker()
+let unlocker
+let client
 
 async function processInvoiceBatchAsync(invoices) {
   let invoiceRedisOps = invoices
@@ -93,30 +88,24 @@ async function processInvoiceBatchAsync(invoices) {
 
 async function connectToLndAsync() {
   try {
-    await lnd.disconnect()
+    unlocker = lightning.unlocker()
   } catch (error) {
     logger.error(`LND disconnect failed: ${error.message}`)
   }
   try {
-    await lnd.connect()
-    logger.info(`wallet password: ${env.HOT_WALLET_PASS}`)
-    try {
-      unlocker.unlockWallet({ wallet_password: env.HOT_WALLET_PASS }, (err, res) => {
-          console.log(res)
-          console.log(err)
-      })
-      await lnd.services.WalletUnlocker.unlockWallet({
-        wallet_password: Buffer.from(env.HOT_WALLET_PASS)
-      })
-    } catch (error) {
-      logger.error(`Can't unlock LND, already unlocked? : ${error.message}`)
-    }
-    await lnd.activateLightning()
-    lnd.once('active', async () => {
-      logger.info('GRPC state active')
+    unlocker.unlockWallet({ wallet_password: env.HOT_WALLET_PASS }, (err, res) => {
+        console.log(res)
+        console.log(err)
     })
   } catch (error) {
-    throw new Error(`Unable to connect to LND : ${error.message}`)
+      logger.error(`LND unlock failed, already unlocked? : ${error.message}`)
+  }
+  try{
+    await utils.sleepAsync(5000)
+    lightning.setCredentials(env.LND_SOCKET, `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`, `/root/.lnd/tls.cert`)
+    client = lightning.lightning()
+  } catch (error) {
+    throw new Error(`Unable to instantiate authenticated lnd client : ${error.message}`)
   }
 }
 
@@ -135,7 +124,7 @@ async function getLastKnownInvoiceIndexAsync() {
 
 async function establishInvoiceSubscriptionAsync() {
   try {
-    let invoiceSubscription = lnd.services.Lightning.subscribeInvoices()
+    let invoiceSubscription = client.subscribeInvoices()
     invoiceSubscription.on('data', async invoice => {
       let invoiceAddIndex = await processInvoiceBatchAsync([invoice])
       await updateLastKnownInvoiceIndexAsync(invoiceAddIndex)
@@ -145,11 +134,6 @@ async function establishInvoiceSubscriptionAsync() {
     })
     invoiceSubscription.on('end', async () => {
       logger.error(`The invoice subscription has unexpectedly ended`)
-      try {
-        await lnd.disconnect()
-      } catch (error) {
-        logger.error(`Unable to disconnect : ${error.message}`)
-      }
       startInvoiceMonitoring()
     })
     logger.info('Invoices subscription established')
@@ -165,7 +149,7 @@ async function checkForUnprocessedPayments(lastKnownInvoiceIndex) {
   let lastInvoiceAddIndex = null
   logger.info('Checking for unhandled invoice items')
   do {
-    let unprocessedInvoices = await lnd.services.Lightning.listInvoices({
+    let unprocessedInvoices = await client.listInvoices({
       num_max_invoices: INVOICE_BATCH_SIZE,
       index_offset: indexOffset
     })
