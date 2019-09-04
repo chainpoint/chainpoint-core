@@ -117,6 +117,7 @@ services:
       - redis
       - rabbitmq
       - postgres
+      - lnd
     user: ${USERID}:${GROUPID}
     networks:
       - chainpoint
@@ -231,6 +232,7 @@ services:
     depends_on:
       - base
       - redis
+      - lnd
     networks:
       - chainpoint
     environment:
