@@ -236,11 +236,12 @@ services:
     networks:
       - chainpoint
     environment:
+      NETWORK: ${NETWORK:-testnet}
       NODE_ENV: ${NODE_ENV}
       HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
     volumes:
-      - ~/.lnd:/root/.lnd/
+      - ~/.lnd:/root/.lnd
     tty: true
 
   # Proof State
