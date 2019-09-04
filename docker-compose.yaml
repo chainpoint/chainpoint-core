@@ -46,6 +46,7 @@ services:
   lnd:
     image: tierion/lnd:latest
     user: ${USERID}:${GROUPID}
+    container_name: lnd-core
     ports:
     - target: 8080
       published: 8080
