@@ -94,15 +94,19 @@ async function connectToLndAsync() {
   }
   try {
     unlocker.unlockWallet({ wallet_password: env.HOT_WALLET_PASS }, (err, res) => {
-        console.log(res)
-        console.log(err)
+      console.log(res)
+      console.log(err)
     })
   } catch (error) {
-      logger.error(`LND unlock failed, already unlocked? : ${error.message}`)
+    logger.error(`LND unlock failed, already unlocked? : ${error.message}`)
   }
-  try{
+  try {
     await utils.sleepAsync(5000)
-    lightning.setCredentials(env.LND_SOCKET, `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`, `/root/.lnd/tls.cert`)
+    lightning.setCredentials(
+      env.LND_SOCKET,
+      `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`,
+      `/root/.lnd/tls.cert`
+    )
     client = lightning.lightning()
   } catch (error) {
     throw new Error(`Unable to instantiate authenticated lnd client : ${error.message}`)
