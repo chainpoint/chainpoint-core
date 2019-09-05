@@ -11,7 +11,7 @@
   "dependencies": {
     "envalid": "^5.0.0",
     "ioredis": "^4.9.0",
-    "lnrpc-node-client": "^1.0.1",
+    "lnd-grpc": "^0.2.16",
     "winston": "^3.2.1"
   }
 }
