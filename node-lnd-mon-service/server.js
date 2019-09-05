@@ -124,7 +124,7 @@ async function getLastKnownInvoiceIndexAsync() {
 
 async function establishInvoiceSubscriptionAsync() {
   try {
-    let invoiceSubscription = client.subscribeInvoices()
+    let invoiceSubscription = client.subscribeInvoices({})
     invoiceSubscription.on('data', async invoice => {
       let invoiceAddIndex = await processInvoiceBatchAsync([invoice])
       await updateLastKnownInvoiceIndexAsync(invoiceAddIndex)
