@@ -20,7 +20,7 @@ module.exports = {
   NETWORK: {
     type: 'list',
     name: 'NETWORK',
-    message: 'Will this Core use Bitcoin mainnet or testnet)?',
+    message: 'Will this Core use Bitcoin mainnet or testnet?',
     choices: [
       {
         name: 'Mainnet',

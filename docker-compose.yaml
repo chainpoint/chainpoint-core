@@ -46,6 +46,7 @@ services:
   lnd:
     image: tierion/lnd:latest
     user: ${USERID}:${GROUPID}
+    container_name: lnd-core
     ports:
     - target: 8080
       published: 8080
@@ -117,6 +118,7 @@ services:
       - redis
       - rabbitmq
       - postgres
+      - lnd
     user: ${USERID}:${GROUPID}
     networks:
       - chainpoint
@@ -231,6 +233,7 @@ services:
     depends_on:
       - base
       - redis
+      - lnd
     networks:
       - chainpoint
     environment:
