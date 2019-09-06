@@ -241,7 +241,7 @@ async function connectToLndAsync() {
     await ensureWalletUnlockedAsync(lnd)
     return lnd
   } catch (error) {
-    throw new Error(`Unable to connect to LND : ${error.message || error}`)
+    throw new Error(`Unable to connect to LND : ${error.message}`)
   }
 }
 
@@ -249,7 +249,7 @@ async function ensureWalletUnlockedAsync(lnd) {
   return new Promise(async (resolve, reject) => {
     // if locked, we must try again after lnd monitoring service has unlocked the wallet
     if (lnd.state === 'locked') {
-      return reject(`Waiting for lnd-mon to unlock wallet`)
+      return reject(new Error(`Waiting for lnd-mon to unlock wallet`))
     } else {
       return resolve()
     }
