@@ -48,13 +48,6 @@ function openRedisConnection(redisURIs) {
   )
 }
 
-// initialize lightning grpc object
-let lnd = new LndGrpc({
-  host: env.LND_SOCKET,
-  cert: `/root/.lnd/tls.cert`,
-  macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
-})
-
 async function processInvoiceBatchAsync(invoices) {
   let invoiceRedisOps = invoices
     .map(invoice => {
@@ -90,14 +83,21 @@ async function processInvoiceBatchAsync(invoices) {
 
 async function connectToLndAsync() {
   try {
+    // initialize lightning grpc object
+    let lnd = new LndGrpc({
+      host: env.LND_SOCKET,
+      cert: `/root/.lnd/tls.cert`,
+      macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
+    })
     await lnd.connect()
+    await ensureWalletUnlockedAsync(lnd)
+    return lnd
   } catch (error) {
     throw new Error(`Unable to connect to LND : ${error.message}`)
   }
-  await ensureWalletUnlockedAsync()
 }
 
-async function ensureWalletUnlockedAsync() {
+async function ensureWalletUnlockedAsync(lnd) {
   return new Promise(async (resolve, reject) => {
     try {
       // unlock if wallet is locked
@@ -130,7 +130,7 @@ async function getLastKnownInvoiceIndexAsync() {
   return lastKnownInvoiceIndex
 }
 
-async function establishInvoiceSubscriptionAsync() {
+async function establishInvoiceSubscriptionAsync(lnd) {
   try {
     let invoiceSubscription = lnd.services.Lightning.subscribeInvoices()
     invoiceSubscription.on('data', async invoice => {
@@ -155,7 +155,7 @@ async function establishInvoiceSubscriptionAsync() {
   }
 }
 
-async function checkForUnprocessedPayments(lastKnownInvoiceIndex) {
+async function checkForUnprocessedPayments(lnd, lastKnownInvoiceIndex) {
   let indexOffset = lastKnownInvoiceIndex
   let resultLength = 0
   let totalProcessed = 0
@@ -193,14 +193,14 @@ async function startInvoiceMonitoring() {
   while (!subscriptionEstablished) {
     try {
       // establish a connection to lnd
-      await connectToLndAsync()
+      let lnd = await connectToLndAsync()
       // retrieve the add_index of the most recently handled invoice
       let lastKnownInvoiceIndex = await getLastKnownInvoiceIndexAsync()
       // starting listening for and handle new invoice activity
-      await establishInvoiceSubscriptionAsync()
+      await establishInvoiceSubscriptionAsync(lnd)
       // check if there are any backlogged invoices needing to be processed
       if (lastKnownInvoiceIndex !== null) {
-        lastKnownInvoiceIndex = await checkForUnprocessedPayments(lastKnownInvoiceIndex)
+        lastKnownInvoiceIndex = await checkForUnprocessedPayments(lnd, lastKnownInvoiceIndex)
         // if any invoices processed, update the last known invoice index to the proper value
         if (lastKnownInvoiceIndex) await updateLastKnownInvoiceIndexAsync(lastKnownInvoiceIndex)
       }
