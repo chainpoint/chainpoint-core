@@ -112,7 +112,7 @@ async function ensureWalletUnlockedAsync(lnd) {
         return resolve()
       }
     } catch (error) {
-      return reject(`Unable to unlock wallet : ${error.message}`)
+      return reject(new Error(`Unable to unlock wallet : ${error.message}`))
     }
   })
 }
@@ -160,7 +160,7 @@ async function checkForUnprocessedPayments(lnd, lastKnownInvoiceIndex) {
   let resultLength = 0
   let totalProcessed = 0
   let lastInvoiceAddIndex = null
-  logger.info('Checking for unhandled invoice items')
+  logger.info('Checking for unhandled invoices')
   do {
     let unprocessedInvoices = await lnd.services.Lightning.listInvoices({
       num_max_invoices: INVOICE_BATCH_SIZE,
@@ -172,7 +172,7 @@ async function checkForUnprocessedPayments(lnd, lastKnownInvoiceIndex) {
     indexOffset += INVOICE_BATCH_SIZE
     totalProcessed += resultLength
   } while (resultLength >= INVOICE_BATCH_SIZE)
-  logger.info(`${totalProcessed} invoice item(s) found and processed`)
+  logger.info(`${totalProcessed} invoice${totalProcessed === 1 ? '' : 's'} found and processed`)
   // return the most recent invoice index from all invoices processed in this call
   return lastInvoiceAddIndex
 }

@@ -249,7 +249,7 @@ async function ensureWalletUnlockedAsync(lnd) {
   return new Promise(async (resolve, reject) => {
     // if locked, we must try again after lnd monitoring service has unlocked the wallet
     if (lnd.state === 'locked') {
-      return reject(`Waiting for lnd-mon to unlock wallet.`)
+      return reject(`Waiting for lnd-mon to unlock wallet`)
     } else {
       return resolve()
     }
@@ -259,9 +259,7 @@ async function ensureWalletUnlockedAsync(lnd) {
 async function establishTransactionSubscriptionAsync(lnd) {
   try {
     let transactionSubscription = lnd.services.Lightning.subscribeTransactions()
-    transactionSubscription.on('data', data => {
-      logger.info(`Subscription data received: ${data}`)
-    })
+    transactionSubscription.on('data', () => {})
     transactionSubscription.on('error', err => {
       logger.warn(`An transaction subscription error occurred : ${JSON.stringify(err)}`)
     })
