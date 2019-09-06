@@ -161,6 +161,7 @@ services:
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
       LND_SOCKET: ${LND_SOCKET}
+      ECDSA_PKPEM: ${ECDSA_PKPEM}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
     volumes:
