@@ -92,7 +92,7 @@ async function createSwarmAndSecrets(valuePairs) {
       await utils.sleepAsync(7000)
       lightning.setCredentials(
         '127.0.0.1:10009',
-        `${homedir}/.lnd/data/chain/bitcoin/testnet/admin.macaroon`,
+        `${homedir}/.lnd/data/chain/bitcoin/${network}/admin.macaroon`,
         `${homedir}/.lnd/tls.cert`
       )
       let client = lightning.lightning()
