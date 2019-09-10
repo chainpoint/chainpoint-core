@@ -65,7 +65,14 @@ async function createSwarmAndSecrets(valuePairs) {
     let unlocker = lightning.unlocker()
     lightning.promisifyGrpc(unlocker)
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
-      await unlocker.initWalletAsync({ wallet_password: lndWalletPass, cipher_seed_mnemonic: lndWalletSeed.split(' ') })
+      try {
+          await unlocker.initWalletAsync({
+              wallet_password: lndWalletPass,
+              cipher_seed_mnemonic: lndWalletSeed.split(' ')
+          })
+      } catch (err) {
+          console.log(chalk.red(`InitWallet error, likely already initialized: ${err}`))
+      }
     } else {
       console.log('Creating a new LND wallet...')
       lndWalletPass = generator.generate({

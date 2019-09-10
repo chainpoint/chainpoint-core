@@ -11,6 +11,7 @@ fi
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     sudo apt-get -qq update -y
+    sudo apt-get -qq install -y apt-utils
     sudo apt-get -qq install -y docker-compose git make jq nodejs openssl
     sudo apt-get -qq install -y npm || echo "NPM already installed with nodejs"
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
