@@ -126,3 +126,12 @@ func (rpc *RPC) GetValidators(height int64) (core_types.ResultValidators, error)
 	}
 	return *resp, nil
 }
+
+//GetGenesis : retrieves genesis file for initialization
+func (rpc *RPC) GetGenesis() (core_types.ResultGenesis, error) {
+	resp, err := rpc.client.Genesis()
+	if err != nil {
+		return core_types.ResultGenesis{}, err
+	}
+	return *resp, nil
+}

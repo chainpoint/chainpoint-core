@@ -84,6 +84,7 @@ func main() {
 // initABCIConfig: receives ENV variables and initializes app config struct
 func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	// Perform env type conversions
+	bitcoinNetwork := util.GetEnv("NETWORK", "testnet")
 	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
 	nodeIPs := strings.Split(util.GetEnv("PRIVATE_NODE_IPS", ""), ",")
 	coreIPs := strings.Split(util.GetEnv("PRIVATE_CORE_IPS", ""), ",")
@@ -122,6 +123,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	// Create config object
 	return types.AnchorConfig{
 		DBType:           "goleveldb",
+		BitcoinNetwork:   bitcoinNetwork,
 		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintConfig: tendermintRPC,
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
@@ -173,10 +175,13 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	defaultConfig.P2P.MaxNumInboundPeers = 300
 	defaultConfig.P2P.MaxNumOutboundPeers = 75
 	defaultConfig.TxIndex.IndexAllTags = true
+	peers := []string{}
 	if tendermintPeers := util.GetEnv("PEERS", ""); tendermintPeers != "" {
+		peers = strings.Split(tendermintPeers, ",")
 		defaultConfig.P2P.PersistentPeers = tendermintPeers
 	}
 	if tendermintSeeds := util.GetEnv("SEEDS", ""); tendermintSeeds != "" {
+		peers = strings.Split(tendermintSeeds, ",")
 		defaultConfig.P2P.Seeds = tendermintSeeds
 	}
 	fmt.Printf("Config : %#v\n", defaultConfig)
@@ -193,6 +198,38 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	}
 	logger = logger.With("module", "main")
 	TMConfig.Logger = logger
+	// The following initializes an rpc client for a peer and pulls its genesis file
+	if len(peers) != 0 {
+		peer := peers[0]                    // get first peer
+		nodeUri := strings.Split(peer, "@") // separate to get IP
+		if len(nodeUri) == 2 {
+			peerUri := strings.Split(nodeUri[1], ":") // split port from IP
+			if len(peerUri) == 2 {
+				peerIP := peerUri[0]
+				//initialize RPC
+				peerRPC := types.TendermintConfig{
+					TMServer: peerIP,
+					TMPort:   "26657",
+				}
+				rpc := abci.NewRPCClient(peerRPC, logger)
+				// Pull and save genesis file
+				genesis, err := rpc.GetGenesis()
+				if err == nil {
+					genFile := defaultConfig.GenesisFile()
+					genDoc := types2.GenesisDoc{
+						ChainID:         genesis.Genesis.ChainID,
+						GenesisTime:     genesis.Genesis.GenesisTime,
+						ConsensusParams: genesis.Genesis.ConsensusParams,
+					}
+					genDoc.Validators = genesis.Genesis.Validators
+					if err := genDoc.SaveAs(genFile); err != nil {
+						panic(err)
+					}
+					logger.Info("Saved genesis file from peer", "path", genFile)
+				}
+			}
+		}
+	}
 
 	// initialize private validator key
 	// Convert old PrivValidator if it exists.
@@ -223,7 +260,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 		logger.Info("Found genesis file", "path", genFile)
 	} else {
 		genDoc := types2.GenesisDoc{
-			ChainID:         fmt.Sprintf("test-chain-%v", cmn.RandStr(6)),
+			ChainID:         fmt.Sprintf(util.GetEnv("NETWORK", "testnet")+"-chain-%v", cmn.RandStr(6)),
 			GenesisTime:     tmtime.Now(),
 			ConsensusParams: types2.DefaultConsensusParams(),
 		}

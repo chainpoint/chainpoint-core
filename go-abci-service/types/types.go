@@ -27,6 +27,7 @@ type TendermintConfig struct {
 //AnchorConfig represents values to configure all connections within the ABCI anchor app
 type AnchorConfig struct {
 	DBType           string
+	BitcoinNetwork   string
 	RabbitmqURI      string
 	TendermintConfig TendermintConfig
 	PostgresURI      string
