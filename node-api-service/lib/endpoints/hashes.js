@@ -21,20 +21,10 @@ const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
 const logger = require('../logger.js')
 const crypto = require('crypto')
-const lnService = require('ln-service')
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
 let redis = null
-
-// initialize lightning grpc object
-let macaroon = utils.toBase64(`/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`)
-let tlsCert = utils.toBase64(`/root/.lnd/tls.cert`)
-let { lnd } = lnService.authenticatedLndGrpc({
-  cert: tlsCert,
-  macaroon: macaroon,
-  socket: env.LND_SOCKET
-})
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -43,6 +33,10 @@ const uuidv1 = require('uuid/v1')
 // The channel used for all amqp communication
 // This value is set once the connection has been established
 let amqpChannel = null
+
+// The lightning connection used for all lightning communication
+// This value is set once the connection has been established
+let lnd = null
 
 /**
  * Converts an array of hash strings to a object suitable to
@@ -141,15 +135,14 @@ function generateProcessingHints(timestampDate) {
 async function getHashInvoiceV1Async(req, res, next) {
   let randomInvoiceId = crypto.randomBytes(32).toString('hex')
   try {
-    let inv = await lnService.createInvoice({
-      description: `SubmitHashInvoiceId:${randomInvoiceId}`,
-      tokens: 10,
-      lnd
+    let inv = await lnd.services.Lightning.addInvoice({
+      value: 10,
+      memo: `SubmitHashInvoiceId:${randomInvoiceId}`
     })
-    res.send({ invoice: inv.request })
+    res.send({ invoice: inv.payment_request })
     return next()
   } catch (error) {
-    logger.error(`Unable to generate invoice : ${error[1]} ${error[2] ? ': ' + error[2] : ''}`)
+    logger.error(`Unable to generate invoice : ${error.message}`)
     return next(new errors.InternalServerError('Unable to generate invoice'))
   }
 }
@@ -263,5 +256,8 @@ module.exports = {
   },
   setENV: obj => {
     env = obj
+  },
+  setLND: l => {
+    lnd = l
   }
 }

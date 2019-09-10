@@ -19,18 +19,11 @@ let tmRpc = require('../tendermint-rpc.js')
 const { version } = require('../../package.json')
 let env = require('../parse-env.js')('api')
 const logger = require('../logger.js')
-const lnService = require('ln-service')
-const utils = require('../utils.js')
 const jose = require('node-jose')
 
-// initialize lightning grpc object
-let macaroon = utils.toBase64(`/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`)
-let tlsCert = utils.toBase64(`/root/.lnd/tls.cert`)
-let { lnd } = lnService.authenticatedLndGrpc({
-  cert: tlsCert,
-  macaroon: macaroon,
-  socket: env.LND_SOCKET
-})
+// The lightning connection used for all lightning communication
+// This value is set once the connection has been established
+let lnd = null
 
 async function getCoreStatusAsync(req, res, next) {
   let result = await buildStatusObjectAsync()
@@ -65,7 +58,7 @@ async function buildStatusObjectAsync() {
     }
   }
   try {
-    walletInfo = await lnService.getWalletInfo({ lnd })
+    walletInfo = await lnd.services.Lightning.getInfo()
   } catch (error) {
     logger.error(`GRPC error communicating with LND : ${error.message}`)
     return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
@@ -76,9 +69,9 @@ async function buildStatusObjectAsync() {
     time: new Date().toISOString(),
     base_uri: env.CHAINPOINT_CORE_BASE_URI,
     network: env.NETWORK,
-    public_key: walletInfo.public_key,
+    identity_pubkey: walletInfo.identity_pubkey,
     uris: walletInfo.uris,
-    active_channels_count: walletInfo.active_channels_count,
+    num_active_channels: walletInfo.num_active_channels,
     alias: walletInfo.alias
   }
 
@@ -104,5 +97,8 @@ module.exports = {
   },
   setTmRpc: rpc => {
     tmRpc = rpc
+  },
+  setLND: l => {
+    lnd = l
   }
 }

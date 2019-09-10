@@ -156,13 +156,11 @@ services:
         max_attempts: 5
         window: 120s
     secrets:
-      - HOT_WALLET_PASS
       - ECDSA_PKPEM
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
       ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       VIRTUAL_HOST: api.local

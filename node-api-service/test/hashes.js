@@ -22,6 +22,66 @@ describe('Hashes Controller', () => {
     insecureServer.close()
   })
 
+  describe('GET /hash/invoice', () => {
+    before(() => {
+      hashes.setLND({
+        services: {
+          Lightning: {
+            addInvoice: () => {
+              throw new Error('err!')
+            }
+          }
+        }
+      })
+    })
+    it('should return proper error with lnd error', done => {
+      request(insecureServer)
+        .get('/hash/invoice')
+        .expect('Content-type', /json/)
+        .expect(500)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('code')
+            .and.to.be.a('string')
+            .and.to.equal('InternalServer')
+          expect(res.body)
+            .to.have.property('message')
+            .and.to.be.a('string')
+            .and.to.equal('Unable to generate invoice')
+          done()
+        })
+    })
+  })
+
+  describe('GET /hash/invoice', () => {
+    before(() => {
+      hashes.setLND({
+        services: {
+          Lightning: {
+            addInvoice: () => {
+              return { payment_request: 'pr' }
+            }
+          }
+        }
+      })
+    })
+    it('should return proper invoice data', done => {
+      request(insecureServer)
+        .get('/hash/invoice')
+        .expect('Content-type', /json/)
+        .expect(200)
+        .end((err, res) => {
+          expect(err).to.equal(null)
+          expect(res.body)
+            .to.have.property('invoice')
+            .and.to.be.a('string')
+            .and.to.equal('pr')
+          done()
+        })
+    })
+  })
+
   describe('POST /hash', () => {
     it('should return proper error with invalid content type', done => {
       request(insecureServer)
