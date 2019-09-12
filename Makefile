@@ -108,7 +108,8 @@ dev-no-build: init-volumes
 ## down                      : Shutdown Application
 .PHONY : down
 down:
-	docker-compose down
+	@docker-compose down
+	@rm -rf ${HOMEDIR}/.lnd/tls.*
 
 ## ps                        : View running processes
 .PHONY : ps
@@ -220,7 +221,8 @@ deploy: init-volumes
 
 ## stop                      : stops a swarm stack
 stop:
-	docker stack rm chainpoint-core || echo "removal in progress"
+	@docker stack rm chainpoint-core || echo "removal in progress"
+	@rm -rf ${HOMEDIR}/.lnd/tls.*
 
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint: stop
