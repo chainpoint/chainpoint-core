@@ -129,6 +129,7 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   return updateOrCreateEnv({
+    HOT_WALLET_ADDRESS: address.value.address,
     BTC_RPC_URI_LIST: btcRpc,
     BLOCKCYPHER_API_TOKEN: blockCypher,
     PEERS: peers,

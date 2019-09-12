@@ -89,32 +89,33 @@ async function connectToLndAsync() {
       cert: `/root/.lnd/tls.cert`,
       macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
     })
-    await lnd.connect()
-    await ensureWalletUnlockedAsync(lnd)
+    try {
+      await lnd.disconnect()
+    } catch (error) {
+      console.error(`LND disconnect failed: ${error.message}`)
+    }
+    try {
+      lnd.once('active', async () => {
+        console.info('GRPC state active')
+      })
+      await lnd.connect()
+      if (lnd.state === 'locked') {
+        try {
+          await lnd.services.WalletUnlocker.unlockWallet({
+              wallet_password: Buffer.from(env.HOT_WALLET_PASS),
+          })
+          await lnd.activateLightning()
+        } catch (error) {
+          console.error(`Can't unlock LND: ${error.message}`)
+        }
+      }
+    } catch (error) {
+      throw new Error(`Unable to connect to LND : ${error.message}`)
+    }
     return lnd
   } catch (error) {
     throw new Error(`Unable to connect to LND : ${error.message}`)
   }
-}
-
-async function ensureWalletUnlockedAsync(lnd) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // unlock if wallet is locked
-      if (lnd.state === 'locked') {
-        logger.info('Wallet is currently locked. Attempting to unlock wallet...')
-        lnd.once(`active`, () => {
-          logger.info('Wallet successfully unlocked')
-          return resolve()
-        })
-        await lnd.services.WalletUnlocker.unlockWallet({ wallet_password: env.HOT_WALLET_PASS })
-      } else {
-        return resolve()
-      }
-    } catch (error) {
-      return reject(new Error(`Unable to unlock wallet : ${error.message}`))
-    }
-  })
 }
 
 async function getLastKnownInvoiceIndexAsync() {
