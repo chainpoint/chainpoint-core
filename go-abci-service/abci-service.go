@@ -198,6 +198,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	}
 	logger = logger.With("module", "main")
 	TMConfig.Logger = logger
+	peerGenesis := false
 	// The following initializes an rpc client for a peer and pulls its genesis file
 	if len(peers) != 0 {
 		peer := peers[0]                    // get first peer
@@ -224,6 +225,8 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 					genDoc.Validators = genesis.Genesis.Validators
 					if err := genDoc.SaveAs(genFile); err != nil {
 						panic(err)
+					} else {
+						peerGenesis = true
 					}
 					logger.Info("Saved genesis file from peer", "path", genFile)
 				}
@@ -256,7 +259,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 
 	// initialize genesis file
 	genFile := defaultConfig.GenesisFile()
-	if cmn.FileExists(genFile) {
+	if cmn.FileExists(genFile) || peerGenesis {
 		logger.Info("Found genesis file", "path", genFile)
 	} else {
 		genDoc := types2.GenesisDoc{
@@ -275,7 +278,6 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 		}
 		logger.Info("Generated genesis file", "path", genFile)
 	}
-
 	TMConfig.Config = defaultConfig
 
 	return TMConfig, nil

@@ -41,9 +41,13 @@ func (app *AnchorApplication) SyncMonitor() {
 }
 
 //KeyMonitor : updates active ECDSA public keys from all accessible peers
+//Also ensures api is online
 func (app *AnchorApplication) KeyMonitor() {
-	for i := 0; i < 5; i++ {
+	for app.JWKSent != true {
 		time.Sleep(60 * time.Second)
+		if !app.state.ChainSynced {
+			continue
+		}
 		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
 		response, err := http.Get(selfStatusURL)
 		if app.LogError(err) != nil {
@@ -59,6 +63,9 @@ func (app *AnchorApplication) KeyMonitor() {
 			continue
 		}
 		app.JWK = apiStatus.Jwk
+		if app.JWK.Kid == "" {
+			continue
+		}
 		jwkJson, err := json.Marshal(apiStatus.Jwk)
 		if app.LogError(err) != nil {
 			continue

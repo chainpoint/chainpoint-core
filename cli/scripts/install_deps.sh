@@ -32,4 +32,3 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 yarn
-newgrp docker
