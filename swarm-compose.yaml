@@ -6,8 +6,6 @@ networks:
 secrets:
   HOT_WALLET_PASS:
     external: true
-  BITCOIN_WIF:
-    external: true
   ECDSA_PKPEM:
     external: true
 
@@ -191,14 +189,17 @@ services:
     networks:
       - chainpoint
     secrets:
-      - BITCOIN_WIF
+      - HOT_WALLET_PASS
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
-      BITCOIN_WIF: DOCKER-SECRET->BITCOIN_WIF
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
+      LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -222,11 +223,17 @@ services:
       - redis
     networks:
       - chainpoint
+    secrets:
+      - HOT_WALLET_PASS
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
+      LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
