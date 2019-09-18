@@ -159,6 +159,7 @@ module.exports = service => {
       })
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
       envDefinitions.ECDSA_PKPEM = envalid.str({ desc: 'ECDSA private key in PEM format' })
+      envDefinitions.HOT_WALLET_PASS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
       break
     case 'lnd-mon':
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
@@ -168,6 +169,13 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
+      envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.HOT_WALLET_PASS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
+      envDefinitions.HOT_WALLET_ADDRESS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
+      break
+    case 'btc-mon':
+      envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.HOT_WALLET_PASS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
       break
     case 'state':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
