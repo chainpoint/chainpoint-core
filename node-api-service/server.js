@@ -230,41 +230,41 @@ async function openRMQConnectionAsync(connectURI) {
 }
 
 async function connectToLndAsync() {
+  try {
+    // initialize lightning grpc object
+    console.log(`connecting to ${env.LND_SOCKET}`)
+    let lnd = new LndGrpc({
+      host: env.LND_SOCKET,
+      cert: `/root/.lnd/tls.cert`,
+      macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
+    })
     try {
-      // initialize lightning grpc object
-      console.log(`connecting to ${env.LND_SOCKET}`)
-      let lnd = new LndGrpc({
-          host: env.LND_SOCKET,
-          cert: `/root/.lnd/tls.cert`,
-          macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
+      await lnd.disconnect()
+    } catch (error) {
+      console.error(`LND disconnect failed: ${error.message}`)
+    }
+    try {
+      lnd.once('active', async () => {
+        console.info('GRPC state active')
       })
-      try {
-        await lnd.disconnect()
-      } catch (error) {
-        console.error(`LND disconnect failed: ${error.message}`)
-      }
-      try {
-        lnd.once('active', async () => {
-          console.info('GRPC state active')
-        })
-        await lnd.connect()
-        if (lnd.state === 'locked') {
-          try {
-            await lnd.services.WalletUnlocker.unlockWallet({
-                wallet_password: env.HOT_WALLET_PASS,
-            })
-            await lnd.activateLightning()
-          } catch (error) {
-            console.error(`Can't unlock LND: ${error.message}`)
-          }
+      await lnd.connect()
+      if (lnd.state === 'locked') {
+        try {
+          await lnd.services.WalletUnlocker.unlockWallet({
+            wallet_password: env.HOT_WALLET_PASS
+          })
+          await lnd.activateLightning()
+        } catch (error) {
+          console.error(`Can't unlock LND: ${error.message}`)
         }
-      } catch (error) {
-        throw new Error(`Unable to connect to LND : ${error.message}`)
       }
-      return lnd
     } catch (error) {
       throw new Error(`Unable to connect to LND : ${error.message}`)
     }
+    return lnd
+  } catch (error) {
+    throw new Error(`Unable to connect to LND : ${error.message}`)
+  }
 }
 
 async function establishTransactionSubscriptionAsync(lnd) {
