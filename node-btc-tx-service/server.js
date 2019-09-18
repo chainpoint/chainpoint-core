@@ -34,64 +34,63 @@ let lastKnownFeeSatPerByte = null
 // and estimated fee retrieval fails
 const defaultFeeSatPerByte = 250
 
-const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
-let providers = []
-let rpcUris = []
-for (let rpcUri of rpcUris) {
-  providers.push(new btcBridge.providers.JsonRpcProvider(btcNetwork, rpcUri))
-}
-const fallbackProvider = new btcBridge.providers.FallbackProvider(providers, false)
-
 /**
- * Send a POST request to /wallet/:id/send with a POST body
- * containing an OP_RETURN TX
+ * Construct and publish a BTC anchor transaction over LND
  *
  * @param {string} hash - The hash to embed in an OP_RETURN
  */
-const sendTxToBTCAsync = async hash => {
-  let privateKeyWIF = ''
+const createAndPublishBTCAnchorTransactionAsync = async hash => {
+  const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
+  let lnd = new btcBridge.providers.LndProvider(
+    btcNetwork,
+    env.LND_SOCKET,
+    `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`,
+    `/root/.lnd/tls.cert`,
+    env.HOT_WALLET_PASS,
+    false
+  )
 
-  let feeSatPerByte
-  let feeTotalSatoshi
   try {
-    let result = await fallbackProvider.getEstimatedFeeAsync(2)
-    let feeBtcPerKb = result.feerate
-    feeSatPerByte = BigNumber(feeBtcPerKb)
-      .div(1024)
-      .times(10 ** 8)
-      .toNumber()
-    lastKnownFeeSatPerByte = feeSatPerByte
-  } catch (error) {
-    logger.warn(`Error retrieving estimated fee: ${error.message}`)
-    feeSatPerByte = lastKnownFeeSatPerByte || defaultFeeSatPerByte
-    logger.warn(`Falling back to a Satoshi per byte fee value of '${feeSatPerByte}'`)
-  }
+    await lnd.ensureWalletUnlocked()
 
-  // if the fee exceeds the maximum, revert to BTC_MAX_FEE_SAT_PER_BYTE for the fee
-  if (feeSatPerByte > env.BTC_MAX_FEE_SAT_PER_BYTE) {
-    logger.warn(
-      `Fee of '${feeSatPerByte}' Satoshi per byte exceeded BTC_MAX_FEE_SAT_PER_BYTE of '${
-        env.BTC_MAX_FEE_SAT_PER_BYTE
-      }'`
-    )
-    logger.warn(`Falling back to a Satoshi per byte fee value of '${env.BTC_MAX_FEE_SAT_PER_BYTE}'`)
-    feeSatPerByte = env.BTC_MAX_FEE_SAT_PER_BYTE
-  }
-  let feeExtra = 1.1 // the factor to use to increase the final transaction fee in order to better position this transaction for fast confirmation
-  feeSatPerByte = Math.ceil(feeSatPerByte * feeExtra) // Math.ceil to keep the value an integer, as expected in the log db
-  let averageTxInBytes = 235 // 235 represents the average btc anchor transaction size in bytes
-  feeTotalSatoshi = feeSatPerByte * averageTxInBytes
+    let feeSatPerByte
+    try {
+      let feeResult = await lnd.getEstimatedFeeAsync(2)
+      let feeRateBtcPerKb = feeResult.feerate
+      feeSatPerByte = BigNumber(feeRateBtcPerKb)
+        .div(1024)
+        .times(10 ** 8)
+        .toNumber()
+      lastKnownFeeSatPerByte = feeSatPerByte
+    } catch (error) {
+      logger.warn(`Error retrieving estimated fee: ${error.message}`)
+      feeSatPerByte = lastKnownFeeSatPerByte || defaultFeeSatPerByte
+      logger.warn(`Falling back to a Satoshi per byte fee value of '${feeSatPerByte}'`)
+    }
 
-  let txResult
-  try {
-    let wallet = new btcBridge.Wallet(privateKeyWIF, fallbackProvider)
-    let btcFee = BigNumber(feeTotalSatoshi)
+    // if the fee exceeds the maximum, revert to BTC_MAX_FEE_SAT_PER_BYTE for the fee
+    if (feeSatPerByte > env.BTC_MAX_FEE_SAT_PER_BYTE) {
+      logger.warn(
+        `Fee of '${feeSatPerByte}' Satoshi per byte exceeded BTC_MAX_FEE_SAT_PER_BYTE of '${
+          env.BTC_MAX_FEE_SAT_PER_BYTE
+        }'`
+      )
+      logger.warn(`Falling back to a Satoshi per byte fee value of '${env.BTC_MAX_FEE_SAT_PER_BYTE}'`)
+      feeSatPerByte = env.BTC_MAX_FEE_SAT_PER_BYTE
+    }
+    let averageTxInBytes = 210 // 210 represents the average btc anchor transaction size in bytes
+    let btcFee = BigNumber(feeSatPerByte)
+      .times(averageTxInBytes)
       .div(10 ** 8)
       .toNumber()
-    txResult = await wallet.generateOpReturnTxWithFeeAsync(hash, btcFee, true)
+
+    let lndWallet = new btcBridge.Lightning(env.HOT_WALLET_ADDRESS, lnd)
+    let txResult = await lndWallet.generateOpReturnTxWithFeeAsync(hash, btcFee, true)
     txResult.publishDate = Date.now()
     txResult.feeSatoshiPerByte = feeSatPerByte
-    txResult.feePaidSatoshi = feeTotalSatoshi
+    txResult.feePaidSatoshi = BigNumber(btcFee)
+      .times(10 ** 8)
+      .toNumber()
     return txResult
   } catch (error) {
     throw new Error(`Error sending anchor transaction: ${error.message}`)
@@ -116,7 +115,7 @@ async function processIncomingAnchorBTCJobAsync(msg) {
       // create and publish the transaction
       let txResult
       try {
-        txResult = await sendTxToBTCAsync(anchorData)
+        txResult = await createAndPublishBTCAnchorTransactionAsync(anchorData)
       } catch (error) {
         throw new Error(`Unable to publish BTC transaction: ${error.message}`)
       }
