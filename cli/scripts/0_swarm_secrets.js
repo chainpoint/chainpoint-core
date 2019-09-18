@@ -25,7 +25,7 @@ const homedir = require('os').homedir()
 
 async function createSwarmAndSecrets(valuePairs) {
   let address = { value: { address: valuePairs.HOT_WALLET_ADDRESS } }
-  let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
+  let home = (await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')).stdout.trim()
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
   let gid = (await exec.quiet('id -g $USER')).stdout.trim()
   let btcRpc = valuePairs.BTC_RPC_URI_LIST
