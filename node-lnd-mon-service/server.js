@@ -102,7 +102,7 @@ async function connectToLndAsync() {
       if (lnd.state === 'locked') {
         try {
           await lnd.services.WalletUnlocker.unlockWallet({
-              wallet_password: env.HOT_WALLET_PASS,
+            wallet_password: env.HOT_WALLET_PASS
           })
           await lnd.activateLightning()
         } catch (error) {
