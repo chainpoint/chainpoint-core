@@ -168,7 +168,6 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.BITCOIN_WIF = envalid.str({ desc: 'The Bitcoin private key WIF used for transaction creation' })
       break
     case 'state':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({

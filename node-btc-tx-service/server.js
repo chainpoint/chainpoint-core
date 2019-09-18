@@ -49,7 +49,7 @@ const fallbackProvider = new btcBridge.providers.FallbackProvider(providers, fal
  * @param {string} hash - The hash to embed in an OP_RETURN
  */
 const sendTxToBTCAsync = async hash => {
-  let privateKeyWIF = env.BITCOIN_WIF
+  let privateKeyWIF = ''
 
   let feeSatPerByte
   let feeTotalSatoshi

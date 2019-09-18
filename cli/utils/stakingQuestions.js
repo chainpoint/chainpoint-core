@@ -44,10 +44,5 @@ module.exports = {
         return true
       }
     }
-  },
-  BITCOIN_WIF: {
-    type: 'input',
-    name: 'BITCOIN_WIF',
-    message: 'Enter the Bitcoin private key for your hotwallet:'
   }
 }
