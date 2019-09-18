@@ -28,7 +28,6 @@ services:
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       ANCHOR: 'true'
       AUDIT: 'true'
       NODE_MANAGEMENT: 'true'
@@ -162,7 +161,6 @@ services:
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       LND_SOCKET: ${LND_SOCKET}
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
