@@ -135,6 +135,7 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
       ECDSA_PKPEM: ${ECDSA_PKPEM}
       VIRTUAL_HOST: api.local
@@ -160,6 +161,7 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
       ECDSA_PKPEM: ${ECDSA_PKPEM}
       VIRTUAL_HOST: api.local
@@ -189,6 +191,7 @@ services:
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       HOT_WALLET_PASS: ${HOT_WALLET_PASS}
+      HOT_WALLET_ADDRESS: ${HOT_WALLET_ADDRESS}
       LND_SOCKET: ${LND_SOCKET}
     volumes:
       - ~/.lnd:/root/.lnd

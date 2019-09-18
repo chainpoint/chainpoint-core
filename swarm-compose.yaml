@@ -6,6 +6,8 @@ networks:
 secrets:
   HOT_WALLET_PASS:
     external: true
+  HOT_WALLET_ADDRESS:
+    external: true
   ECDSA_PKPEM:
     external: true
 
@@ -195,6 +197,7 @@ services:
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
+      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
       LND_SOCKET: ${LND_SOCKET}
     volumes:
       - ~/.lnd:/root/.lnd:z
