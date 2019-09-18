@@ -188,7 +188,6 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
     volumes:
@@ -215,7 +214,6 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
       HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
     volumes:

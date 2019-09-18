@@ -36,7 +36,7 @@ const defaultFeeSatPerByte = 250
 
 const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
 let providers = []
-let rpcUris = env.BTC_RPC_URI_LIST.split(',')
+let rpcUris = []
 for (let rpcUri of rpcUris) {
   providers.push(new btcBridge.providers.JsonRpcProvider(btcNetwork, rpcUri))
 }

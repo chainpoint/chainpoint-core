@@ -28,7 +28,6 @@ async function createSwarmAndSecrets(valuePairs) {
   let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
   let gid = (await exec.quiet('id -g $USER')).stdout.trim()
-  let btcRpc = valuePairs.BTC_RPC_URI_LIST
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
   let wif = valuePairs.BITCOIN_WIF
   let network = valuePairs.NETWORK
@@ -129,7 +128,6 @@ async function createSwarmAndSecrets(valuePairs) {
 
   return updateOrCreateEnv({
     HOT_WALLET_ADDRESS: address.value.address,
-    BTC_RPC_URI_LIST: btcRpc,
     PEERS: peers,
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,

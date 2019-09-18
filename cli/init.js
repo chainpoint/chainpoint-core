@@ -26,7 +26,6 @@ const argsDefinitions = [
   { name: 'CORE_PUBLIC_IP_ADDRESS' },
   { name: 'BITCOIN_WIF' },
   { name: 'PEERS' },
-  { name: 'BTC_RPC_URI_LIST' },
   { name: 'HOT_WALLET_PASS' },
   { name: 'HOT_WALLET_SEED' },
   { name: 'HOT_WALLET_ADDRESS' }
@@ -43,7 +42,6 @@ async function main() {
         inquirer.prompt([
           stakingQuestions['NETWORK'],
           stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
-          stakingQuestions['BTC_RPC_URI_LIST'],
           stakingQuestions['BITCOIN_WIF']
         ]),
       createSwarmAndSecrets
