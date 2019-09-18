@@ -40,8 +40,6 @@ let rpcUris = env.BTC_RPC_URI_LIST.split(',')
 for (let rpcUri of rpcUris) {
   providers.push(new btcBridge.providers.JsonRpcProvider(btcNetwork, rpcUri))
 }
-if (env.BLOCKCYPHER_API_TOKEN)
-  providers.push(new btcBridge.providers.BlockcypherProvider(btcNetwork, env.BLOCKCYPHER_API_TOKEN))
 const fallbackProvider = new btcBridge.providers.FallbackProvider(providers, false)
 
 /**

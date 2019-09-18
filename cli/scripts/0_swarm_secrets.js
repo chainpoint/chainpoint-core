@@ -33,7 +33,6 @@ async function createSwarmAndSecrets(valuePairs) {
   let wif = valuePairs.BITCOIN_WIF
   let network = valuePairs.NETWORK
   let peers = valuePairs.PEERS != null ? valuePairs.PEERS : ''
-  let blockCypher = valuePairs.BLOCKCYPHER_API_TOKEN != null ? valuePairs.BLOCKCYPHER_API_TOKEN : ''
   let lndWalletPass = valuePairs.HOT_WALLET_PASS
   let lndWalletSeed = valuePairs.HOT_WALLET_SEED
 
@@ -66,12 +65,12 @@ async function createSwarmAndSecrets(valuePairs) {
     lightning.promisifyGrpc(unlocker)
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       try {
-          await unlocker.initWalletAsync({
-              wallet_password: lndWalletPass,
-              cipher_seed_mnemonic: lndWalletSeed.split(' ')
-          })
+        await unlocker.initWalletAsync({
+          wallet_password: lndWalletPass,
+          cipher_seed_mnemonic: lndWalletSeed.split(' ')
+        })
       } catch (err) {
-          console.log(chalk.red(`InitWallet error, likely already initialized: ${err}`))
+        console.log(chalk.red(`InitWallet error, likely already initialized: ${err}`))
       }
     } else {
       console.log('Creating a new LND wallet...')
@@ -131,7 +130,6 @@ async function createSwarmAndSecrets(valuePairs) {
   return updateOrCreateEnv({
     HOT_WALLET_ADDRESS: address.value.address,
     BTC_RPC_URI_LIST: btcRpc,
-    BLOCKCYPHER_API_TOKEN: blockCypher,
     PEERS: peers,
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,

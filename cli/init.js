@@ -27,7 +27,6 @@ const argsDefinitions = [
   { name: 'BITCOIN_WIF' },
   { name: 'PEERS' },
   { name: 'BTC_RPC_URI_LIST' },
-  { name: 'BLOCKCYPHER_API_TOKEN' },
   { name: 'HOT_WALLET_PASS' },
   { name: 'HOT_WALLET_SEED' },
   { name: 'HOT_WALLET_ADDRESS' }

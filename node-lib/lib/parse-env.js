@@ -162,7 +162,6 @@ module.exports = service => {
       break
     case 'btc-mon':
       envDefinitions.BTC_RPC_URI_LIST = envalid.str({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
-      envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
       break
     case 'lnd-mon':
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
@@ -173,7 +172,6 @@ module.exports = service => {
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
       envDefinitions.BTC_RPC_URI_LIST = envalid.str({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
-      envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
       envDefinitions.BITCOIN_WIF = envalid.str({ desc: 'The Bitcoin private key WIF used for transaction creation' })
       break
     case 'state':
