@@ -40,17 +40,16 @@ const defaultFeeSatPerByte = 250
  * @param {string} hash - The hash to embed in an OP_RETURN
  */
 const createAndPublishBTCAnchorTransactionAsync = async hash => {
-  const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
-  let lnd = new btcBridge.providers.LndProvider(
-    btcNetwork,
-    env.LND_SOCKET,
-    `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`,
-    `/root/.lnd/tls.cert`,
-    env.HOT_WALLET_PASS,
-    false
-  )
-
   try {
+    const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
+    let lnd = new btcBridge.providers.LndProvider(
+      btcNetwork,
+      env.LND_SOCKET,
+      `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`,
+      `/root/.lnd/tls.cert`,
+      env.HOT_WALLET_PASS,
+      false
+    )
     await lnd.ensureWalletUnlocked()
 
     let feeSatPerByte
