@@ -32,11 +32,8 @@ const proof = require('./lib/models/Proof.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
 const bunyan = require('bunyan')
-const apicache = require('apicache')
 const LndGrpc = require('lnd-grpc')
 const utils = require('./lib/utils.js')
-
-let redisCache = null
 
 var apiLogs = bunyan.createLogger({
   name: 'audit',
@@ -126,21 +123,7 @@ function setupRestifyConfigAndRoutes(server) {
     calendar.getCalTxDataAsync
   )
   // get proofs from storage
-  if (redisCache) {
-    server.get(
-      { path: '/proofs', version: '1.0.0' },
-      ...applyMiddleware(throttle(50, 10)),
-      redisCache('1 minute'),
-      proofs.getProofsByIDsAsync
-    )
-    logger.info('Redis caching middleware added')
-  } else {
-    server.get(
-      { path: '/proofs', version: '1.0.0' },
-      ...applyMiddleware([throttle(50, 10)]),
-      proofs.getProofsByIDsAsync
-    )
-  }
+  server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware([throttle(50, 10)]), proofs.getProofsByIDsAsync)
   // get random core peers
   server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), peers.getPeersAsync)
   // get status
@@ -165,26 +148,18 @@ async function startInsecureRestifyServerAsync() {
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
  */
 function openRedisConnection(redisURIs) {
-  return new Promise(resolve => {
-    connections.openRedisConnection(
-      redisURIs,
-      newRedis => {
-        hashes.setRedis(newRedis)
-        resolve(newRedis)
-        redisCache = apicache.options({
-          redisClient: newRedis,
-          debug: true,
-          appendKey: req => req.headers.hashids
-        }).middleware
-      },
-      () => {
-        hashes.setRedis(null)
-        setTimeout(() => {
-          openRedisConnection(redisURIs).then(() => resolve())
-        }, 5000)
-      }
-    )
-  })
+  connections.openRedisConnection(
+    redisURIs,
+    newRedis => {
+      hashes.setRedis(newRedis)
+    },
+    () => {
+      hashes.setRedis(null)
+      setTimeout(() => {
+        openRedisConnection(redisURIs)
+      }, 5000)
+    }
+  )
 }
 
 /**
