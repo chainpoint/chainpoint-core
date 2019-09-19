@@ -31,22 +31,8 @@ const stakedCore = require('./lib/models/StakedCore.js')
 const proof = require('./lib/models/Proof.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
-const bunyan = require('bunyan')
 const LndGrpc = require('lnd-grpc')
 const utils = require('./lib/utils.js')
-
-var apiLogs = bunyan.createLogger({
-  name: 'audit',
-  stream: process.stdout
-})
-
-// RESTIFY SETUP
-// 'version' : all routes will default to this version
-const httpOptions = {
-  name: 'chainpoint',
-  version: '1.0.0',
-  log: apiLogs
-}
 
 const applyMiddleware = (middlewares = []) => {
   if (process.env.NODE_ENV === 'development' || process.env.NETWORK === 'testnet') {
@@ -134,7 +120,7 @@ function setupRestifyConfigAndRoutes(server) {
 
 // HTTP Server
 async function startAPIServerAsync() {
-  let restifyServer = restify.createServer(httpOptions)
+  let restifyServer = restify.createServer({ name: 'Chainpoint Core' })
   setupRestifyConfigAndRoutes(restifyServer)
 
   // Begin listening for requests
