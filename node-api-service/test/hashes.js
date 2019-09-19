@@ -12,14 +12,14 @@ const uuidTime = require('uuid-time')
 const BLAKE2s = require('blake2s-js')
 
 describe('Hashes Controller', () => {
-  let insecureServer = null
+  let apiServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync(false)
+    apiServer = await app.startAPIServerAsync(false)
     hashes.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.100' })
   })
   afterEach(() => {
-    insecureServer.close()
+    apiServer.close()
   })
 
   describe('GET /hash/invoice', () => {
@@ -35,7 +35,7 @@ describe('Hashes Controller', () => {
       })
     })
     it('should return proper error with lnd error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/hash/invoice')
         .expect('Content-type', /json/)
         .expect(500)
@@ -67,7 +67,7 @@ describe('Hashes Controller', () => {
       })
     })
     it('should return proper invoice data', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/hash/invoice')
         .expect('Content-type', /json/)
         .expect(200)
@@ -84,7 +84,7 @@ describe('Hashes Controller', () => {
 
   describe('POST /hash', () => {
     it('should return proper error with invalid content type', done => {
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .set('Content-type', 'text/plain')
         .expect('Content-type', /json/)
@@ -106,7 +106,7 @@ describe('Hashes Controller', () => {
 
   describe('POST /hash', () => {
     it('should return proper error with missing hash', done => {
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({ name: 'Manny' })
         .expect('Content-type', /json/)
@@ -128,7 +128,7 @@ describe('Hashes Controller', () => {
 
   describe('POST /hash', () => {
     it('should return proper error with hash not a string', done => {
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({ hash: ['badhash'] })
         .expect('Content-type', /json/)
@@ -150,7 +150,7 @@ describe('Hashes Controller', () => {
 
   describe('POST /hash', () => {
     it('should return proper error with invalid hash', done => {
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({ hash: 'badhash' })
         .expect('Content-type', /json/)
@@ -172,7 +172,7 @@ describe('Hashes Controller', () => {
 
   describe('POST /hash', () => {
     it('should return proper error with missing invoice_id', done => {
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12' })
         .expect('Content-type', /json/)
@@ -194,7 +194,7 @@ describe('Hashes Controller', () => {
 
   describe('POST /hash', () => {
     it('should return proper error with invoice_id not a string', done => {
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12', invoice_id: [1] })
         .expect('Content-type', /json/)
@@ -216,7 +216,7 @@ describe('Hashes Controller', () => {
 
   describe('POST /hash', () => {
     it('should return proper error with invalid invoice_id', done => {
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12', invoice_id: 'deadbeef' })
         .expect('Content-type', /json/)
@@ -244,7 +244,7 @@ describe('Hashes Controller', () => {
     })
     it('should return proper error with unpaid invoice_id', done => {
       let invoiceId = 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({
           hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
@@ -274,7 +274,7 @@ describe('Hashes Controller', () => {
       })
     })
     it('should return proper error with no AMQP connection', done => {
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({
           hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
@@ -309,7 +309,7 @@ describe('Hashes Controller', () => {
         sendToQueue: function() {}
       })
 
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({
           hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
@@ -341,7 +341,7 @@ describe('Hashes Controller', () => {
         sendToQueue: function() {}
       })
 
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({
           hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
@@ -384,7 +384,7 @@ describe('Hashes Controller', () => {
         sendToQueue: function() {}
       })
 
-      request(insecureServer)
+      request(apiServer)
         .post('/hash')
         .send({
           hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',

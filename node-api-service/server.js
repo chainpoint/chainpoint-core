@@ -133,7 +133,7 @@ function setupRestifyConfigAndRoutes(server) {
 }
 
 // HTTP Server
-async function startInsecureRestifyServerAsync() {
+async function startAPIServerAsync() {
   let restifyServer = restify.createServer(httpOptions)
   setupRestifyConfigAndRoutes(restifyServer)
 
@@ -303,7 +303,7 @@ async function start() {
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
-    await startInsecureRestifyServerAsync()
+    await startAPIServerAsync()
     // Init LND
     await openLndConnectionAsync()
     logger.info(`Startup completed successfully`)
@@ -322,7 +322,7 @@ module.exports = {
     hashes.setAMQPChannel(chan)
   },
   // additional functions for testing purposes
-  startInsecureRestifyServerAsync: startInsecureRestifyServerAsync,
+  startAPIServerAsync: startAPIServerAsync,
   setThrottle: t => {
     throttle = t
   }

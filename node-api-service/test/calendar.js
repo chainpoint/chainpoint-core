@@ -10,13 +10,13 @@ const app = require('../server.js')
 const calendar = require('../lib/endpoints/calendar.js')
 
 describe('Calendar Controller', () => {
-  let insecureServer = null
+  let apiServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync(false)
+    apiServer = await app.startAPIServerAsync(false)
   })
   afterEach(() => {
-    insecureServer.close()
+    apiServer.close()
   })
 
   describe('GET /calendar/:txid with bad TM connection', () => {
@@ -28,7 +28,7 @@ describe('Calendar Controller', () => {
       })
     })
     it('should return proper error with TM communication error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/calendar/0xdeadbeef')
         .expect('Content-type', /json/)
         .expect(500)
@@ -56,7 +56,7 @@ describe('Calendar Controller', () => {
       })
     })
     it('should return proper error with unknown txId', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/calendar/0xdeadbeef')
         .expect('Content-type', /json/)
         .expect(404)
@@ -85,7 +85,7 @@ describe('Calendar Controller', () => {
       })
     })
     it('should return proper value', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/calendar/0xdeadbeef')
         .expect('Content-type', /json/)
         .expect(200)
@@ -108,7 +108,7 @@ describe('Calendar Controller', () => {
       })
     })
     it('should return proper error with TM communication error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/calendar/0xdeadbeef/data')
         .expect('Content-type', /json/)
         .expect(500)
@@ -136,7 +136,7 @@ describe('Calendar Controller', () => {
       })
     })
     it('should return proper error with unknown txId', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/calendar/0xdeadbeef/data')
         .expect('Content-type', /json/)
         .expect(404)
@@ -164,7 +164,7 @@ describe('Calendar Controller', () => {
       })
     })
     it('should return proper data value', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/calendar/0xdeadbeef/data')
         .expect('Content-type', /text/)
         .expect(200)

@@ -11,13 +11,13 @@ const status = require('../lib/endpoints/status.js')
 const { version } = require('../package.json')
 
 describe('Status Controller', () => {
-  let insecureServer = null
+  let apiServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync(false)
+    apiServer = await app.startAPIServerAsync(false)
   })
   afterEach(() => {
-    insecureServer.close()
+    apiServer.close()
   })
 
   describe('GET /status with bad TM connection', () => {
@@ -29,7 +29,7 @@ describe('Status Controller', () => {
       })
     })
     it('should return proper error with TM communication error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/status')
         .expect('Content-type', /json/)
         .expect(500)
@@ -69,7 +69,7 @@ describe('Status Controller', () => {
       })
     })
     it('should return proper error with LND communication error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/status')
         .expect('Content-type', /json/)
         .expect(500)
@@ -114,7 +114,7 @@ describe('Status Controller', () => {
       })
     })
     it('should return proper status object', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/status')
         .expect('Content-type', /json/)
         .expect(200)
