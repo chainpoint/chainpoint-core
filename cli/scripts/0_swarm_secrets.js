@@ -135,6 +135,7 @@ async function createSwarmAndSecrets(valuePairs) {
     PEERS: peers,
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
+    CORE_PUBLIC_IP_ADDRESS: `${ip}`,
     CORE_DATADIR: `${home.stdout}/.chainpoint/core`
   })
 }

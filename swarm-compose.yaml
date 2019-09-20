@@ -85,7 +85,7 @@ services:
       mode: host
     restart: always
     environment:
-    - PUBLICIP
+    - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
     - RPCUSER
     - RPCPASS
     - NETWORK
@@ -407,7 +407,7 @@ services:
         max-file: '5'
 
   traefik:
-    image: traefik
+    image: traefik:v1.7.16
     command: --configfile="/data/traefik.toml"
     networks:
       - chainpoint
