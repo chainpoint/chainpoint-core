@@ -21,11 +21,10 @@ const generator = require('generate-password')
 const lightning = require('lnrpc-node-client')
 const updateOrCreateEnv = require('./2_update_env')
 const utils = require(resolve('./node-lib/lib/utils.js'))
-const homedir = require('os').homedir()
+const home = require('os').homedir()
 
 async function createSwarmAndSecrets(valuePairs) {
   let address = { value: { address: valuePairs.HOT_WALLET_ADDRESS } }
-  let home = await exec.quiet('/bin/bash -c "$(eval printf ~$USER)"')
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
   let gid = (await exec.quiet('id -g $USER')).stdout.trim()
   let btcRpc = valuePairs.BTC_RPC_URI_LIST
@@ -41,8 +40,8 @@ async function createSwarmAndSecrets(valuePairs) {
   try {
     await exec([
       `docker swarm init --advertise-addr=${ip} || echo "Swarm already initialized"`,
-      `openssl ecparam -genkey -name secp256r1 -noout -out ${home.stdout}/.chainpoint/core/data/keys/ecdsa_key.pem`,
-      `cat ${home.stdout}/.chainpoint/core/data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`,
+      `openssl ecparam -genkey -name secp256r1 -noout -out ${home}/.chainpoint/core/data/keys/ecdsa_key.pem`,
+      `cat ${home}/.chainpoint/core/data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`,
       `printf ${wif} | docker secret create BITCOIN_WIF -`
     ])
     console.log(chalk.yellow('Secrets saved to Docker Secrets'))
@@ -61,7 +60,7 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   try {
-    lightning.setTls('127.0.0.1:10009', `${homedir}/.lnd/tls.cert`)
+    lightning.setTls('127.0.0.1:10009', `${home}/.lnd/tls.cert`)
     let unlocker = lightning.unlocker()
     lightning.promisifyGrpc(unlocker)
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
@@ -92,8 +91,8 @@ async function createSwarmAndSecrets(valuePairs) {
       await utils.sleepAsync(7000)
       lightning.setCredentials(
         '127.0.0.1:10009',
-        `${homedir}/.lnd/data/chain/bitcoin/${network}/admin.macaroon`,
-        `${homedir}/.lnd/tls.cert`
+        `${home}/.lnd/data/chain/bitcoin/${network}/admin.macaroon`,
+        `${home}/.lnd/tls.cert`
       )
       let client = lightning.lightning()
       lightning.promisifyGrpc(client)
@@ -122,7 +121,7 @@ async function createSwarmAndSecrets(valuePairs) {
 
   try {
     console.log('shutting down LND...')
-    await exec([`docker-compose down && rm ${homedir}/.lnd/tls.*`])
+    await exec([`docker-compose down && rm ${home}/.lnd/tls.*`])
     console.log('LND shut down')
   } catch (err) {
     console.log(chalk.red(`Could not bring down LND: ${err}`))
@@ -136,7 +135,7 @@ async function createSwarmAndSecrets(valuePairs) {
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
     CORE_PUBLIC_IP_ADDRESS: `${ip}`,
-    CORE_DATADIR: `${home.stdout}/.chainpoint/core`
+    CORE_DATADIR: `${home}/.chainpoint/core`
   })
 }
 module.exports = createSwarmAndSecrets
