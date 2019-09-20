@@ -24,10 +24,7 @@ const stakingQuestions = require('./utils/stakingQuestions')
 const argsDefinitions = [
   { name: 'NETWORK' },
   { name: 'CORE_PUBLIC_IP_ADDRESS' },
-  { name: 'BITCOIN_WIF' },
   { name: 'PEERS' },
-  { name: 'BTC_RPC_URI_LIST' },
-  { name: 'BLOCKCYPHER_API_TOKEN' },
   { name: 'HOT_WALLET_PASS' },
   { name: 'HOT_WALLET_SEED' },
   { name: 'HOT_WALLET_ADDRESS' }
@@ -40,13 +37,7 @@ async function main() {
     await createSwarmAndSecrets(args)
   } else {
     await pipeP(
-      () =>
-        inquirer.prompt([
-          stakingQuestions['NETWORK'],
-          stakingQuestions['CORE_PUBLIC_IP_ADDRESS'],
-          stakingQuestions['BTC_RPC_URI_LIST'],
-          stakingQuestions['BITCOIN_WIF']
-        ]),
+      () => inquirer.prompt([stakingQuestions['NETWORK'], stakingQuestions['CORE_PUBLIC_IP_ADDRESS']]),
       createSwarmAndSecrets
     )()
   }

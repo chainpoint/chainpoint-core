@@ -170,11 +170,6 @@ any-promise@^1.3.0:
   resolved "https://registry.yarnpkg.com/any-promise/-/any-promise-1.3.0.tgz#abc6afeedcea52e809cdc0376aed3ce39635d17f"
   integrity sha1-q8av7tzqUugJzcA3au0845Y10X8=
 
-apicache@^1.4.0:
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/apicache/-/apicache-1.4.0.tgz#3835fbe18717caca3a44cb6272d49b52cac30d3a"
-  integrity sha512-pX/Sf9q9HNzAC5F+hPgxt8v3eQVZkXL/+8HpAnrDJXFmma80F2aHAAeWTql3BsG87lc3T6A7CFPNWMTl97L/7Q==
-
 argparse@^1.0.7:
   version "1.0.10"
   resolved "https://registry.yarnpkg.com/argparse/-/argparse-1.0.10.tgz#bcd6791ea5ae09725e17e5ad988134cd40b3d911"
@@ -1577,25 +1572,25 @@ levn@^0.3.0, levn@~0.3.0:
     prelude-ls "~1.1.2"
     type-check "~0.3.2"
 
-lnd-grpc@^0.2.16:
-  version "0.2.16"
-  resolved "https://registry.yarnpkg.com/lnd-grpc/-/lnd-grpc-0.2.16.tgz#b4a584a07c1efe9d4cc60f8fa1bd88d2a277c1db"
-  integrity sha512-C4x6Fvep91aK1m1KhuiSuUee4EC1/MlFbelln1CfyDkyAee4z1fXX4bhJ7rca4Tky3rUGscNPe474BH7ch3FqQ==
+lnd-grpc@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/lnd-grpc/-/lnd-grpc-0.3.0.tgz#dea4258ce36bb43f6a72658b2962e679caa1ade2"
+  integrity sha512-+SI8m9B5K/VXZ0OZu3lNWC0xplsgqrIMfSGIjcS1Wu8Xwq/XnzYIp1Jkxhfysg4eKAwmR8BbzGlNFKw4GVfH/A==
   dependencies:
     "@grpc/grpc-js" "0.5.2"
     "@ln-zap/proto-loader" "0.5.1"
     debug "4.1.1"
     javascript-state-machine "3.1.0"
-    lndconnect "0.2.9"
+    lndconnect "0.2.10"
     lodash.defaultsdeep "4.6.1"
     semver "6.3.0"
     untildify "4.0.0"
     validator "11.1.0"
 
-lndconnect@0.2.9:
-  version "0.2.9"
-  resolved "https://registry.yarnpkg.com/lndconnect/-/lndconnect-0.2.9.tgz#82cae8a2d07ea3a03315fb3085096d838f15477c"
-  integrity sha512-kw4A63wg9yygfM3xQZcvSbLLoK0ZGfFLyiCDMJOy5P5Pq6e76sJLDgy9WODqdTg69elK7xwthp806xOjJLdhVw==
+lndconnect@0.2.10:
+  version "0.2.10"
+  resolved "https://registry.yarnpkg.com/lndconnect/-/lndconnect-0.2.10.tgz#9c397dcacc92b9cb1d77bd6dda4aba6600484268"
+  integrity sha512-m+EYP1dWlxuGuUmzXgvJYunYdVkpE689idUP/ztPuJrH4fPVicSFEcC2BtAWH76E+swfrbEacxWXsfNAK3boyA==
   dependencies:
     base64url "^3.0.1"
     decode-uri-component "^0.2.0"

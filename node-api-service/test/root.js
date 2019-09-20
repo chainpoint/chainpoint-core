@@ -9,18 +9,18 @@ const request = require('supertest')
 const app = require('../server.js')
 
 describe('Root Controller', () => {
-  let insecureServer = null
+  let apiServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync(false)
+    apiServer = await app.startAPIServerAsync(false)
   })
   afterEach(() => {
-    insecureServer.close()
+    apiServer.close()
   })
 
   describe('GET /', () => {
     it('should return teapot error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/')
         .expect('Content-type', /json/)
         .expect(418)

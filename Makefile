@@ -158,7 +158,7 @@ init: init-volumes
 ## init-noninteractive       : Create data folder with proper permissions
 .PHONY : init-noninteractive
 init-noninteractive: init-volumes
-	@node cli/init --NETWORK=$(NETWORK) --PEERS=$(PEERS) --CORE_PUBLIC_IP_ADDRESS=$(CORE_PUBLIC_IP_ADDRESS) --BITCOIN_WIF=$(BITCOIN_WIF) --BTC_RPC_URI_LIST=$(BTC_RPC_URI_LIST)
+	@node cli/init --NETWORK=$(NETWORK) --PEERS=$(PEERS) --CORE_PUBLIC_IP_ADDRESS=$(CORE_PUBLIC_IP_ADDRESS)
 	@rsync .env ${CORE_DATADIR}/.env
 	@cp -rf config/traefik.toml ${CORE_DATADIR}/data/traefik/traefik.toml
 

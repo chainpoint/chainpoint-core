@@ -6,6 +6,8 @@ networks:
 secrets:
   HOT_WALLET_PASS:
     external: true
+  HOT_WALLET_ADDRESS:
+    external: true
   ECDSA_PKPEM:
     external: true
 
@@ -26,7 +28,6 @@ services:
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       ANCHOR: 'true'
       AUDIT: 'true'
       NODE_MANAGEMENT: 'true'
@@ -156,7 +157,6 @@ services:
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       LND_SOCKET: ${LND_SOCKET}
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
@@ -190,9 +190,8 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
-      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
+      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
       LND_SOCKET: ${LND_SOCKET}
     volumes:
       - ~/.lnd:/root/.lnd:z
@@ -224,8 +223,6 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
-      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
     volumes:
@@ -257,8 +254,6 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
-      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
     volumes:

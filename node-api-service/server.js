@@ -31,25 +31,8 @@ const stakedCore = require('./lib/models/StakedCore.js')
 const proof = require('./lib/models/Proof.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
-const bunyan = require('bunyan')
-const apicache = require('apicache')
 const LndGrpc = require('lnd-grpc')
 const utils = require('./lib/utils.js')
-
-let redisCache = null
-
-var apiLogs = bunyan.createLogger({
-  name: 'audit',
-  stream: process.stdout
-})
-
-// RESTIFY SETUP
-// 'version' : all routes will default to this version
-const httpOptions = {
-  name: 'chainpoint',
-  version: '1.0.0',
-  log: apiLogs
-}
 
 const applyMiddleware = (middlewares = []) => {
   if (process.env.NODE_ENV === 'development' || process.env.NETWORK === 'testnet') {
@@ -126,21 +109,7 @@ function setupRestifyConfigAndRoutes(server) {
     calendar.getCalTxDataAsync
   )
   // get proofs from storage
-  if (redisCache) {
-    server.get(
-      { path: '/proofs', version: '1.0.0' },
-      ...applyMiddleware(throttle(50, 10)),
-      redisCache('1 minute'),
-      proofs.getProofsByIDsAsync
-    )
-    logger.info('Redis caching middleware added')
-  } else {
-    server.get(
-      { path: '/proofs', version: '1.0.0' },
-      ...applyMiddleware([throttle(50, 10)]),
-      proofs.getProofsByIDsAsync
-    )
-  }
+  server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware([throttle(50, 10)]), proofs.getProofsByIDsAsync)
   // get random core peers
   server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), peers.getPeersAsync)
   // get status
@@ -150,8 +119,8 @@ function setupRestifyConfigAndRoutes(server) {
 }
 
 // HTTP Server
-async function startInsecureRestifyServerAsync() {
-  let restifyServer = restify.createServer(httpOptions)
+async function startAPIServerAsync() {
+  let restifyServer = restify.createServer({ name: 'Chainpoint Core' })
   setupRestifyConfigAndRoutes(restifyServer)
 
   // Begin listening for requests
@@ -165,26 +134,18 @@ async function startInsecureRestifyServerAsync() {
  * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
  */
 function openRedisConnection(redisURIs) {
-  return new Promise(resolve => {
-    connections.openRedisConnection(
-      redisURIs,
-      newRedis => {
-        hashes.setRedis(newRedis)
-        resolve(newRedis)
-        redisCache = apicache.options({
-          redisClient: newRedis,
-          debug: true,
-          appendKey: req => req.headers.hashids
-        }).middleware
-      },
-      () => {
-        hashes.setRedis(null)
-        setTimeout(() => {
-          openRedisConnection(redisURIs).then(() => resolve())
-        }, 5000)
-      }
-    )
-  })
+  connections.openRedisConnection(
+    redisURIs,
+    newRedis => {
+      hashes.setRedis(newRedis)
+    },
+    () => {
+      hashes.setRedis(null)
+      setTimeout(() => {
+        openRedisConnection(redisURIs)
+      }, 5000)
+    }
+  )
 }
 
 /**
@@ -230,41 +191,40 @@ async function openRMQConnectionAsync(connectURI) {
 }
 
 async function connectToLndAsync() {
+  try {
+    // initialize lightning grpc object
+    let lnd = new LndGrpc({
+      host: env.LND_SOCKET,
+      cert: `/root/.lnd/tls.cert`,
+      macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
+    })
     try {
-      // initialize lightning grpc object
-      console.log(`connecting to ${env.LND_SOCKET}`)
-      let lnd = new LndGrpc({
-          host: env.LND_SOCKET,
-          cert: `/root/.lnd/tls.cert`,
-          macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
+      await lnd.disconnect()
+    } catch (error) {
+      logger.debug(`LND disconnect failed: ${error.message}`)
+    }
+    try {
+      lnd.once('active', async () => {
+        logger.info('LND GRPC connection state is active')
       })
-      try {
-        await lnd.disconnect()
-      } catch (error) {
-        console.error(`LND disconnect failed: ${error.message}`)
-      }
-      try {
-        lnd.once('active', async () => {
-          console.info('GRPC state active')
-        })
-        await lnd.connect()
-        if (lnd.state === 'locked') {
-          try {
-            await lnd.services.WalletUnlocker.unlockWallet({
-                wallet_password: env.HOT_WALLET_PASS,
-            })
-            await lnd.activateLightning()
-          } catch (error) {
-            console.error(`Can't unlock LND: ${error.message}`)
-          }
+      await lnd.connect()
+      if (lnd.state === 'locked') {
+        try {
+          await lnd.services.WalletUnlocker.unlockWallet({
+            wallet_password: env.HOT_WALLET_PASS
+          })
+          await lnd.activateLightning()
+        } catch (error) {
+          logger.error(`Can't unlock LND: ${error.message}`)
         }
-      } catch (error) {
-        throw new Error(`Unable to connect to LND : ${error.message}`)
       }
-      return lnd
     } catch (error) {
       throw new Error(`Unable to connect to LND : ${error.message}`)
     }
+    return lnd
+  } catch (error) {
+    throw new Error(`Unable to connect to LND : ${error.message}`)
+  }
 }
 
 async function establishTransactionSubscriptionAsync(lnd) {
@@ -329,7 +289,7 @@ async function start() {
     // init RabbitMQ
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
-    await startInsecureRestifyServerAsync()
+    await startAPIServerAsync()
     // Init LND
     await openLndConnectionAsync()
     logger.info(`Startup completed successfully`)
@@ -348,7 +308,7 @@ module.exports = {
     hashes.setAMQPChannel(chan)
   },
   // additional functions for testing purposes
-  startInsecureRestifyServerAsync: startInsecureRestifyServerAsync,
+  startAPIServerAsync: startAPIServerAsync,
   setThrottle: t => {
     throttle = t
   }

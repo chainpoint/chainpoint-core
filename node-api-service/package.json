@@ -11,11 +11,9 @@
   },
   "dependencies": {
     "amqplib": "^0.5.3",
-    "apicache": "^1.4.0",
     "async-retry": "^1.2.3",
     "bignumber.js": "^8.1.1",
     "blake2s-js": "^1.2.2",
-    "bunyan": "^1.8.12",
     "chainpoint-parse": "^3.3.1",
     "envalid": "^5.0.0",
     "eslint-plugin-prettier": "^3.0.1",

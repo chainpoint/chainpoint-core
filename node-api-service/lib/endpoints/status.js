@@ -20,10 +20,13 @@ const { version } = require('../../package.json')
 let env = require('../parse-env.js')('api')
 const logger = require('../logger.js')
 const jose = require('node-jose')
+const fs = require('fs')
 
 // The lightning connection used for all lightning communication
 // This value is set once the connection has been established
 let lnd = null
+
+const privateKeyPEM = fs.readFileSync('/run/secrets/ECDSA_PKPEM')
 
 async function getCoreStatusAsync(req, res, next) {
   let result = await buildStatusObjectAsync()
@@ -75,7 +78,6 @@ async function buildStatusObjectAsync() {
     alias: walletInfo.alias
   }
 
-  let privateKeyPEM = env.ECDSA_PKPEM
   try {
     let jwk = await jose.JWK.asKey(privateKeyPEM, 'pem')
     coreInfo.jwk = jwk.toJSON()

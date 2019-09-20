@@ -158,11 +158,7 @@ module.exports = service => {
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
-      envDefinitions.ECDSA_PKPEM = envalid.str({ desc: 'ECDSA private key in PEM format' })
-      break
-    case 'btc-mon':
-      envDefinitions.BTC_RPC_URI_LIST = envalid.str({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
-      envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
+      envDefinitions.HOT_WALLET_PASS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
       break
     case 'lnd-mon':
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
@@ -172,9 +168,13 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.BTC_RPC_URI_LIST = envalid.str({ desc: 'A comma separated list of Bitcoin node RPC URIs' })
-      envDefinitions.BLOCKCYPHER_API_TOKEN = envalid.str({ default: '', desc: 'A Blockcypher API token' })
-      envDefinitions.BITCOIN_WIF = envalid.str({ desc: 'The Bitcoin private key WIF used for transaction creation' })
+      envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.HOT_WALLET_PASS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
+      envDefinitions.HOT_WALLET_ADDRESS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
+      break
+    case 'btc-mon':
+      envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.HOT_WALLET_PASS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
       break
     case 'state':
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({

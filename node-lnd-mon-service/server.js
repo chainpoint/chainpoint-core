@@ -92,21 +92,21 @@ async function connectToLndAsync() {
     try {
       await lnd.disconnect()
     } catch (error) {
-      console.error(`LND disconnect failed: ${error.message}`)
+      logger.debug(`LND disconnect failed: ${error.message}`)
     }
     try {
       lnd.once('active', async () => {
-        console.info('GRPC state active')
+        logger.info('LND GRPC connection state is active')
       })
       await lnd.connect()
       if (lnd.state === 'locked') {
         try {
           await lnd.services.WalletUnlocker.unlockWallet({
-              wallet_password: env.HOT_WALLET_PASS,
+            wallet_password: env.HOT_WALLET_PASS
           })
           await lnd.activateLightning()
         } catch (error) {
-          console.error(`Can't unlock LND: ${error.message}`)
+          logger.error(`Can't unlock LND: ${error.message}`)
         }
       }
     } catch (error) {

@@ -10,13 +10,13 @@ const app = require('../server.js')
 const peers = require('../lib/endpoints/peers.js')
 
 describe('Peers Controller', () => {
-  let insecureServer = null
+  let apiServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync(false)
+    apiServer = await app.startAPIServerAsync(false)
   })
   afterEach(() => {
-    insecureServer.close()
+    apiServer.close()
   })
 
   describe('GET /peers with bad TM connection', () => {
@@ -28,7 +28,7 @@ describe('Peers Controller', () => {
       })
     })
     it('should return proper error with TM communication error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/peers')
         .expect('Content-type', /json/)
         .expect(500)
@@ -62,7 +62,7 @@ describe('Peers Controller', () => {
       })
     })
     it('should return proper peers array', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/peers')
         .expect('Content-type', /json/)
         .expect(200)
@@ -94,7 +94,7 @@ describe('Peers Controller', () => {
       })
     })
     it('should return proper filtered peers array', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/peers')
         .expect('Content-type', /json/)
         .expect(200)

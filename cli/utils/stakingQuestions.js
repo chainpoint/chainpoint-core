@@ -44,15 +44,5 @@ module.exports = {
         return true
       }
     }
-  },
-  BITCOIN_WIF: {
-    type: 'input',
-    name: 'BITCOIN_WIF',
-    message: 'Enter the Bitcoin private key for your hotwallet:'
-  },
-  BTC_RPC_URI_LIST: {
-    type: 'input',
-    name: 'BTC_RPC_URI_LIST',
-    message: "Enter the full URL (including protocol and port) to your bitcoin node's RPC endpoint:"
   }
 }
