@@ -83,9 +83,9 @@ func (aggregator *Aggregator) StartAggregation() error {
 		consume := true
 		// Spin up {aggThreads} number of threads to process incoming hashes from the API
 		for i := 0; i < aggThreads; i++ {
+			aggregator.WaitGroup.Add(1)
 			go func() {
 				msgStructSlice := make([]amqp.Delivery, 0)
-				aggregator.WaitGroup.Add(1)
 				defer aggregator.WaitGroup.Done()
 				for connected && consume {
 					select {
