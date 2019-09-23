@@ -1,13 +1,13 @@
 FROM gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-base
 
 COPY node-lib/lib /home/node/app/lib
+COPY node-lib/env_secrets_expand.sh /home/node/app/env_secrets_expand.sh
+COPY node-lib/run.sh /home/node/app/run.sh
 
 COPY node-btc-tx-service/package.json node-btc-tx-service/yarn.lock /home/node/app/
 RUN yarn
 
 COPY node-btc-tx-service/server.js /home/node/app/
-COPY node-btc-tx-service/run.sh /home/node/app/
-COPY node-btc-tx-service/env_secrets_expand.sh /home/node/app/
 
 RUN mkdir -p /root/.lnd
 RUN chmod -R 777 /root
