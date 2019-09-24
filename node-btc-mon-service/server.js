@@ -73,11 +73,9 @@ let monitorTransactionsAsync = async () => {
       btcNetwork,
       env.LND_SOCKET,
       `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`,
-      `/root/.lnd/tls.cert`,
-      env.HOT_WALLET_PASS,
-      false
+      `/root/.lnd/tls.cert`
     )
-    await lnd.ensureWalletUnlocked()
+    await lnd.initWallet()
   } catch (error) {
     logger.error(`Unable to initialize LND provider : ${error.message}`)
     CHECKS_IN_PROGRESS = false

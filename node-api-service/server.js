@@ -31,8 +31,13 @@ const stakedCore = require('./lib/models/StakedCore.js')
 const proof = require('./lib/models/Proof.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
-const LndGrpc = require('lnd-grpc')
 const utils = require('./lib/utils.js')
+const lndClient = require('lnrpc-node-client')
+const bluebird = require('bluebird')
+
+const LND_SOCKET = env.LND_SOCKET
+const LND_CERTPATH = `/root/.lnd/tls.cert`
+const LND_MACAROONPATH = `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
 
 const applyMiddleware = (middlewares = []) => {
   if (process.env.NODE_ENV === 'development' || process.env.NETWORK === 'testnet') {
@@ -190,89 +195,50 @@ async function openRMQConnectionAsync(connectURI) {
   )
 }
 
-async function connectToLndAsync() {
-  try {
-    // initialize lightning grpc object
-    let lnd = new LndGrpc({
-      host: env.LND_SOCKET,
-      cert: `/root/.lnd/tls.cert`,
-      macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
-    })
-    try {
-      await lnd.disconnect()
-    } catch (error) {
-      logger.debug(`LND disconnect failed: ${error.message}`)
-    }
-    try {
-      lnd.once('active', async () => {
-        logger.info('LND GRPC connection state is active')
-      })
-      await lnd.connect()
-      if (lnd.state === 'locked') {
-        try {
-          await lnd.services.WalletUnlocker.unlockWallet({
-            wallet_password: env.HOT_WALLET_PASS
-          })
-          await lnd.activateLightning()
-        } catch (error) {
-          logger.error(`Can't unlock LND: ${error.message}`)
-        }
-      }
-    } catch (error) {
-      throw new Error(`Unable to connect to LND : ${error.message}`)
-    }
-    return lnd
-  } catch (error) {
-    throw new Error(`Unable to connect to LND : ${error.message}`)
-  }
-}
-
-async function establishTransactionSubscriptionAsync(lnd) {
-  try {
-    let transactionSubscription = lnd.services.Lightning.subscribeTransactions()
-    transactionSubscription.on('data', () => {})
-    transactionSubscription.on('error', err => {
-      logger.warn(`An transaction subscription error occurred : ${JSON.stringify(err)}`)
-    })
-    transactionSubscription.on('end', async () => {
-      logger.error(`The transaction subscription has unexpectedly ended`)
-      hashes.setLND(null)
-      status.setLND(null)
-      try {
-        await lnd.disconnect()
-      } catch (error) {
-        logger.error(`Unable to disconnect : ${error.message}`)
-      }
-      openLndConnectionAsync()
-    })
-    logger.info('Transaction subscription established')
-  } catch (error) {
-    throw new Error(`Unable to establish LND transaction subscription : ${error.message}`)
-  }
-}
-
-/**
- * Opens the Lightning node connection
- * Retry logic is included inside transaction subscription event handlers
- *
- * @param {string} connectURI - The connection URI for the RabbitMQ instance
- */
-async function openLndConnectionAsync() {
-  let connectionEstablished = false
-  while (!connectionEstablished) {
+async function startTransactionMonitoring() {
+  let subscriptionEstablished = false
+  while (!subscriptionEstablished) {
     try {
       // establish a connection to lnd
-      let lnd = await connectToLndAsync()
-      // starting listening for new transaction activity and handle subscription/connection loss
-      await establishTransactionSubscriptionAsync(lnd)
-      hashes.setLND(lnd)
-      status.setLND(lnd)
-      connectionEstablished = true
+      try {
+        lndClient.setCredentials(LND_SOCKET, LND_MACAROONPATH, LND_CERTPATH)
+        let lightning = bluebird.promisifyAll(lndClient.lightning())
+        // attempt a get info call, this will fail if wallet is still locked
+        await lightning.getInfoAsync({})
+        hashes.setLND(lightning)
+        status.setLND(lightning)
+      } catch (error) {
+        let message = error.message
+        if (error.code === 12) message = 'Wallet locked'
+        throw new Error(`Cannot establish active LND connection : ${message}`)
+      }
+      // starting listening for and handle new invoice activity
+      await establishTransactionSubscriptionAsync()
+      subscriptionEstablished = true
     } catch (error) {
-      // catch errors when attempting to connect and establish subscription
-      logger.error(`Lightning connection : ${error.message} : Attempting in 5 seconds...`)
+      // catch errors when attempting to connect and establish invoice subscription
+      logger.error(`Transaction monitoring : ${error.message} : Retrying in 5 seconds...`)
       await utils.sleepAsync(5000)
     }
+  }
+}
+
+async function establishTransactionSubscriptionAsync() {
+  try {
+    let transactionSubscription = lndClient.lightning().subscribeTransactions({})
+    transactionSubscription.on('data', async () => {})
+    transactionSubscription.on('status', function(status) {
+      logger.warn(`LND transaction subscription status has changed (${status.code}) ${status.details}`)
+    })
+    transactionSubscription.on('end', function() {
+      logger.error(`The LND transaction subscription has unexpectedly ended`)
+      hashes.setLND(null)
+      status.setLND(null)
+      setTimeout(startTransactionMonitoring, 1000)
+    })
+    logger.info('LND transaction subscription has been established')
+  } catch (error) {
+    throw new Error(`Unable to establish LND transaction subscription : ${error.message}`)
   }
 }
 
@@ -290,8 +256,8 @@ async function start() {
     await openRMQConnectionAsync(env.RABBITMQ_CONNECT_URI)
     // Init Restify
     await startAPIServerAsync()
-    // Init LND
-    await openLndConnectionAsync()
+    // Init listening for lnd transaction update events
+    await startTransactionMonitoring()
     logger.info(`Startup completed successfully`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)

@@ -24,7 +24,7 @@ const fs = require('fs')
 
 // The lightning connection used for all lightning communication
 // This value is set once the connection has been established
-let lnd = null
+let lightning = null
 
 const privateKeyPEM = fs.readFileSync('/run/secrets/ECDSA_PKPEM')
 
@@ -61,7 +61,8 @@ async function buildStatusObjectAsync() {
     }
   }
   try {
-    walletInfo = await lnd.services.Lightning.getInfo()
+    if (!lightning) throw new Error('LND connection not available')
+    walletInfo = await lightning.getInfoAsync({})
   } catch (error) {
     logger.error(`GRPC error communicating with LND : ${error.message}`)
     return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
@@ -101,6 +102,6 @@ module.exports = {
     tmRpc = rpc
   },
   setLND: l => {
-    lnd = l
+    lightning = l
   }
 }

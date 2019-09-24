@@ -9,9 +9,13 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "bluebird": "^3.5.5",
     "envalid": "^5.0.0",
     "ioredis": "^4.9.0",
-    "lnd-grpc": "^0.3.0",
+    "lnrpc-node-client": "^1.0.3",
     "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "node-pre-gyp": "0.12.0"
   }
 }
