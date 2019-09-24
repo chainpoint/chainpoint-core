@@ -157,6 +157,7 @@ services:
         window: 120s
     secrets:
       - ECDSA_PKPEM
+      - HOT_WALLET_PASS
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
