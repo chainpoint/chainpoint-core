@@ -57,7 +57,7 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   try {
-    lightning.setTls('127.0.0.1:10009', `${homedir}/.lnd/tls.cert`)
+    lightning.setTls('127.0.0.1:10009', `${homedir}/.lnd/chainpoint-core/tls.cert`)
     let unlocker = lightning.unlocker()
     lightning.promisifyGrpc(unlocker)
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
@@ -88,8 +88,8 @@ async function createSwarmAndSecrets(valuePairs) {
       await utils.sleepAsync(7000)
       lightning.setCredentials(
         '127.0.0.1:10009',
-        `${homedir}/.lnd/data/chain/bitcoin/${network}/admin.macaroon`,
-        `${homedir}/.lnd/tls.cert`
+        `${homedir}/.lnd/chainpoint-core/data/chain/bitcoin/${network}/admin.macaroon`,
+        `${homedir}/.lnd/chainpoint-core/tls.cert`
       )
       let client = lightning.lightning()
       lightning.promisifyGrpc(client)
@@ -118,7 +118,7 @@ async function createSwarmAndSecrets(valuePairs) {
 
   try {
     console.log('shutting down LND...')
-    await exec([`docker-compose down && rm ${homedir}/.lnd/tls.*`])
+    await exec([`docker-compose down && rm ${homedir}/.lnd/chainpoint-core/tls.*`])
     console.log('LND shut down')
   } catch (err) {
     console.log(chalk.red(`Could not bring down LND: ${err}`))
