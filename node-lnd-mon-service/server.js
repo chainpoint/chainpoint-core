@@ -21,7 +21,6 @@ const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const lndClient = require('lnrpc-node-client')
-const bluebird = require('bluebird')
 
 const LND_SOCKET = env.LND_SOCKET
 const LND_CERTPATH = `/root/.lnd/tls.cert`
@@ -78,7 +77,7 @@ async function startInvoiceMonitoring() {
 
 async function ensureLndNodeClientWalletUnlockedAsync() {
   lndClient.setTls(LND_SOCKET, LND_CERTPATH)
-  let unlocker = bluebird.promisifyAll(lndClient.unlocker())
+  let unlocker = lndClient.unlocker()
   try {
     await unlocker.unlockWalletAsync({ wallet_password: env.HOT_WALLET_PASS })
   } catch (error) {

@@ -77,14 +77,14 @@
   integrity sha512-1w52Nyx4Gq47uuu0EVcsHBxZFJgurQ+rTKS3qMHxR1GY2T8c2AJYd6vZoZ9q1rupaDjU0yT+Jc2XTyXkjeMA+Q==
 
 "@types/node@*":
-  version "12.7.5"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.7.5.tgz#e19436e7f8e9b4601005d73673b6dc4784ffcc2f"
-  integrity sha512-9fq4jZVhPNW8r+UYKnxF1e2HkDWOWKM5bC2/7c9wPV835I0aOrVbS/Hw/pWPk2uKrNXQqg9Z959Kz+IYDd5p3w==
+  version "12.7.7"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.7.7.tgz#f9bd8c00fa9e1a8129af910fc829f6139c397d6c"
+  integrity sha512-4jUncNe2tj1nmrO/34PsRpZqYVnRV1svbU78cKhuQKkMntKB/AmdLyGgswcZKjFHEHGpiY8pVD8CuVI55nP54w==
 
 "@types/node@^10.1.0":
-  version "10.14.15"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.14.15.tgz#e8f7729b631be1b02ae130ff0b61f3e018000640"
-  integrity sha512-CBR5avlLcu0YCILJiDIXeU2pTw7UK/NIxfC63m7d7CVamho1qDEzXKkOtEauQRPMy6MI8mLozth+JJkas7HY6g==
+  version "10.14.19"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.14.19.tgz#f52742c7834a815dedf66edfc8a51547e2a67342"
+  integrity sha512-j6Sqt38ssdMKutXBUuAcmWF8QtHW1Fwz/mz4Y+Wd9mzpBiVFirjpNQf363hG5itkG+yGaD+oiLyb50HxJ36l9Q==
 
 abbrev@1:
   version "1.1.1"
@@ -517,12 +517,13 @@ lcid@^1.0.0:
   dependencies:
     invert-kv "^1.0.0"
 
-lnrpc-node-client@^1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/lnrpc-node-client/-/lnrpc-node-client-1.0.3.tgz#4aa76476c54f6fa2f85669b7ed6d9db796f3f921"
-  integrity sha512-Zra8LcBIkb/3YCm1xjJ4wDs3Fw5fboXd5oV9udOmG2CCDYLw8Jv+xmzwTTfNCCNCYQBKxQEbYg3OgaSMK7kyIw==
+lnrpc-node-client@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/lnrpc-node-client/-/lnrpc-node-client-1.1.0.tgz#8e3030dab75b008afa92fc63dca0e570d98beb8e"
+  integrity sha512-7vF7FL/19LHUxESHaQbn4eDUDQxbfQZo9SFnqhEEM/giYT0CW9HeDvPmXHSLUhFQf3QIqE3OFxQPX5ut1RCtCw==
   dependencies:
     "@grpc/proto-loader" "^0.5.2"
+    bluebird "^3.5.5"
     grpc "^1.23.3"
 
 lodash.camelcase@^4.3.0:

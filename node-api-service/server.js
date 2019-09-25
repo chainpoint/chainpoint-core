@@ -33,7 +33,6 @@ const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const lndClient = require('lnrpc-node-client')
-const bluebird = require('bluebird')
 
 const LND_SOCKET = env.LND_SOCKET
 const LND_CERTPATH = `/root/.lnd/tls.cert`
@@ -202,7 +201,7 @@ async function startTransactionMonitoring() {
       // establish a connection to lnd
       try {
         lndClient.setCredentials(LND_SOCKET, LND_MACAROONPATH, LND_CERTPATH)
-        let lightning = bluebird.promisifyAll(lndClient.lightning())
+        let lightning = lndClient.lightning()
         // attempt a get info call, this will fail if wallet is still locked
         await lightning.getInfoAsync({})
         hashes.setLND(lightning)
