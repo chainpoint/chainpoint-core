@@ -59,7 +59,6 @@ async function createSwarmAndSecrets(valuePairs) {
   try {
     lightning.setTls('127.0.0.1:10009', `${homedir}/.lnd/chainpoint-core/tls.cert`)
     let unlocker = lightning.unlocker()
-    lightning.promisifyGrpc(unlocker)
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       try {
         await unlocker.initWalletAsync({
@@ -92,7 +91,6 @@ async function createSwarmAndSecrets(valuePairs) {
         `${homedir}/.lnd/chainpoint-core/tls.cert`
       )
       let client = lightning.lightning()
-      lightning.promisifyGrpc(client)
       address = await client.newAddressAsync({ type: 0 })
       console.log(address)
       console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
