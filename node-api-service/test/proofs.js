@@ -10,18 +10,18 @@ const app = require('../server.js')
 const proofs = require('../lib/endpoints/proofs.js')
 
 describe('Proofs Controller', () => {
-  let insecureServer = null
+  let apiServer = null
   beforeEach(async () => {
     app.setThrottle(() => (req, res, next) => next())
-    insecureServer = await app.startInsecureRestifyServerAsync(false)
+    apiServer = await app.startAPIServerAsync(false)
   })
   afterEach(() => {
-    insecureServer.close()
+    apiServer.close()
   })
 
   describe('GET /proofs with no hashid', () => {
     it('should return proper error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/proofs')
         .expect('Content-type', /json/)
         .expect(409)
@@ -47,7 +47,7 @@ describe('Proofs Controller', () => {
     }
     hashids = hashids.join(',')
     it('should return proper error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/proofs')
         .set({ hashids: hashids })
         .expect('Content-type', /json/)
@@ -74,7 +74,7 @@ describe('Proofs Controller', () => {
     }
     hashids = hashids.join(',')
     it('should return proper error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/proofs')
         .set({ hashids: hashids })
         .expect('Content-type', /json/)
@@ -104,7 +104,7 @@ describe('Proofs Controller', () => {
     })
     let hashids = 'dbcd35d0-6b77-11e9-9c57-0101a866898d'
     it('should return proper error', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/proofs')
         .set({ hashids: hashids })
         .expect('Content-type', /json/)
@@ -137,7 +137,7 @@ describe('Proofs Controller', () => {
     })
     let hashids = 'dbcd35d0-6b77-11e9-9c57-0101a866898d,ffcd35d0-6b77-11e9-9c57-0101a866898d'
     it('should return proper valid result', done => {
-      request(insecureServer)
+      request(apiServer)
         .get('/proofs')
         .set({ hashids: hashids })
         .expect('Content-type', /json/)

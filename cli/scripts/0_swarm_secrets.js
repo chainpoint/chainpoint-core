@@ -18,7 +18,7 @@ const exec = require('executive')
 const chalk = require('chalk')
 const resolve = require('path').resolve
 const generator = require('generate-password')
-const lightning = require('lnrpc-node-client')
+const lndClient = require('lnrpc-node-client')
 const updateOrCreateEnv = require('./2_update_env')
 const utils = require(resolve('./node-lib/lib/utils.js'))
 const home = require('os').homedir()
@@ -27,12 +27,9 @@ async function createSwarmAndSecrets(valuePairs) {
   let address = { value: { address: valuePairs.HOT_WALLET_ADDRESS } }
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
   let gid = (await exec.quiet('id -g $USER')).stdout.trim()
-  let btcRpc = valuePairs.BTC_RPC_URI_LIST
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
-  let wif = valuePairs.BITCOIN_WIF
   let network = valuePairs.NETWORK
   let peers = valuePairs.PEERS != null ? valuePairs.PEERS : ''
-  let blockCypher = valuePairs.BLOCKCYPHER_API_TOKEN != null ? valuePairs.BLOCKCYPHER_API_TOKEN : ''
   let lndWalletPass = valuePairs.HOT_WALLET_PASS
   let lndWalletSeed = valuePairs.HOT_WALLET_SEED
 
@@ -60,17 +57,17 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   try {
-    lightning.setTls('127.0.0.1:10009', `${home}/.lnd/tls.cert`)
+    lightning.setTls('127.0.0.1:10009', `${home}/.lnd/chainpoint-core/tls.cert`)
     let unlocker = lightning.unlocker()
     lightning.promisifyGrpc(unlocker)
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       try {
-          await unlocker.initWalletAsync({
-              wallet_password: lndWalletPass,
-              cipher_seed_mnemonic: lndWalletSeed.split(' ')
-          })
+        await unlocker.initWalletAsync({
+          wallet_password: lndWalletPass,
+          cipher_seed_mnemonic: lndWalletSeed.split(' ')
+        })
       } catch (err) {
-          console.log(chalk.red(`InitWallet error, likely already initialized: ${err}`))
+        console.log(chalk.red(`InitWallet error, likely already initialized: ${err}`))
       }
     } else {
       console.log('Creating a new LND wallet...')
@@ -89,13 +86,12 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(`LND wallet initialized: ${JSON.stringify(init)}`)
       console.log('Creating bitcoin address for wallet...')
       await utils.sleepAsync(7000)
-      lightning.setCredentials(
+      lndClient.setCredentials(
         '127.0.0.1:10009',
-        `${home}/.lnd/data/chain/bitcoin/${network}/admin.macaroon`,
-        `${home}/.lnd/tls.cert`
+        `${home}/.lnd/chainpoint-core/data/chain/bitcoin/${network}/admin.macaroon`,
+        `${home}/.lnd/chainpoint-core/tls.cert`
       )
-      let client = lightning.lightning()
-      lightning.promisifyGrpc(client)
+      let client = lndClient.lightning()
       address = await client.newAddressAsync({ type: 0 })
       console.log(address)
       console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
@@ -121,7 +117,7 @@ async function createSwarmAndSecrets(valuePairs) {
 
   try {
     console.log('shutting down LND...')
-    await exec([`docker-compose down && rm ${home}/.lnd/tls.*`])
+    await exec([`docker-compose down && rm ${home}/chainpoint-core/.lnd/tls.*`])
     console.log('LND shut down')
   } catch (err) {
     console.log(chalk.red(`Could not bring down LND: ${err}`))
@@ -129,8 +125,6 @@ async function createSwarmAndSecrets(valuePairs) {
 
   return updateOrCreateEnv({
     HOT_WALLET_ADDRESS: address.value.address,
-    BTC_RPC_URI_LIST: btcRpc,
-    BLOCKCYPHER_API_TOKEN: blockCypher,
     PEERS: peers,
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,

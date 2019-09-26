@@ -67,13 +67,13 @@ services:
     - RPCPASS
     - NETWORK
     - CHAIN
-    - DEBUG
+    - DEBUG=info
     - NEUTRINO
     - LND_REST_PORT
     - LND_RPC_PORT
     - TLSPATH
     volumes:
-    - ~/.lnd:/root/.lnd
+    - ~/.lnd/chainpoint-core:/root/.lnd
     networks:
     - chainpoint
 
@@ -136,12 +136,11 @@ services:
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       LND_SOCKET: ${LND_SOCKET}
-      ECDSA_PKPEM: ${ECDSA_PKPEM}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
     volumes:
-      - ~/.lnd:/root/.lnd
+      - ~/.lnd/chainpoint-core:/root/.lnd
       - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     tty: true
 
@@ -161,11 +160,11 @@ services:
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: http://test.chainpoint.org
       LND_SOCKET: ${LND_SOCKET}
-      ECDSA_PKPEM: ${ECDSA_PKPEM}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
     volumes:
-      - ~/.lnd:/root/.lnd
+      - ~/.lnd/chainpoint-core:/root/.lnd
+      - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
     tty: true
 
   # Bitcoin Transmit
@@ -188,9 +187,10 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
-      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
-      BITCOIN_WIF: ${BITCOIN_WIF}
+      HOT_WALLET_ADDRESS: ${HOT_WALLET_ADDRESS}
+      LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd/chainpoint-core:/root/.lnd
     tty: true
 
   # Bitcoin Transmit Monitor
@@ -213,8 +213,9 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
-      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
+      LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd/chainpoint-core:/root/.lnd
     tty: true
   
 
@@ -241,7 +242,7 @@ services:
       HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       LND_SOCKET: ${LND_SOCKET}
     volumes:
-      - ~/.lnd:/root/.lnd
+      - ~/.lnd/chainpoint-core:/root/.lnd
     tty: true
 
   # Proof State

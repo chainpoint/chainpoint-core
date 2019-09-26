@@ -36,7 +36,7 @@ let amqpChannel = null
 
 // The lightning connection used for all lightning communication
 // This value is set once the connection has been established
-let lnd = null
+let lightning = null
 
 /**
  * Converts an array of hash strings to a object suitable to
@@ -135,7 +135,8 @@ function generateProcessingHints(timestampDate) {
 async function getHashInvoiceV1Async(req, res, next) {
   let randomInvoiceId = crypto.randomBytes(32).toString('hex')
   try {
-    let inv = await lnd.services.Lightning.addInvoice({
+    if (!lightning) throw new Error('LND connection not available')
+    let inv = await lightning.addInvoiceAsync({
       value: 10,
       memo: `SubmitHashInvoiceId:${randomInvoiceId}`
     })
@@ -258,6 +259,6 @@ module.exports = {
     env = obj
   },
   setLND: l => {
-    lnd = l
+    lightning = l
   }
 }

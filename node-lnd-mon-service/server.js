@@ -20,10 +20,13 @@ const env = require('./lib/parse-env.js')('lnd-mon')
 const connections = require('./lib/connections.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
-const LndGrpc = require('lnd-grpc')
+const lndClient = require('lnrpc-node-client')
+
+const LND_SOCKET = env.LND_SOCKET
+const LND_CERTPATH = `/root/.lnd/tls.cert`
+const LND_MACAROONPATH = `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
 
 const LAST_KNOWN_INVOICE_INDEX_KEY = 'LastKnownInvoiceIndex'
-const INVOICE_BATCH_SIZE = 1000
 
 // This value is set once the connection has been established
 let redis = null
@@ -46,6 +49,85 @@ function openRedisConnection(redisURIs) {
       }, 5000)
     }
   )
+}
+
+async function startInvoiceMonitoring() {
+  let subscriptionEstablished = false
+  while (!subscriptionEstablished) {
+    try {
+      // establish a connection to lnd
+      try {
+        await ensureLndNodeClientWalletUnlockedAsync()
+        lndClient.setCredentials(LND_SOCKET, LND_MACAROONPATH, LND_CERTPATH)
+      } catch (error) {
+        throw new Error(`Cannot establish active LND connection : ${error.message}`)
+      }
+      // retrieve the add_index of the most recently handled invoice
+      let lastKnownInvoiceIndex = await getLastKnownInvoiceIndexAsync()
+      // starting listening for and handle new invoice activity
+      await establishInvoiceSubscriptionAsync(lastKnownInvoiceIndex)
+      subscriptionEstablished = true
+    } catch (error) {
+      // catch errors when attempting to connect and establish invoice subscription
+      logger.error(`Invoice monitoring : ${error.message} : Retrying in 5 seconds...`)
+      await utils.sleepAsync(5000)
+    }
+  }
+}
+
+async function ensureLndNodeClientWalletUnlockedAsync() {
+  lndClient.setTls(LND_SOCKET, LND_CERTPATH)
+  let unlocker = lndClient.unlocker()
+  try {
+    await unlocker.unlockWalletAsync({ wallet_password: env.HOT_WALLET_PASS })
+  } catch (error) {
+    if (error.code === 12) return // already unlocked
+  }
+  throw new Error(`Unable to unlock wallet`)
+}
+
+async function establishInvoiceSubscriptionAsync(addIndex) {
+  try {
+    let invoiceSubscription = lndClient.lightning().subscribeInvoices({ add_index: addIndex })
+    invoiceSubscription.on('data', async invoice => {
+      let invoiceAddIndex = await processInvoiceBatchAsync([invoice])
+      await updateLastKnownInvoiceIndexAsync(invoiceAddIndex)
+    })
+    invoiceSubscription.on('status', function(status) {
+      logger.warn(`LND invoice subscription status has changed (${status.code}) ${status.details}`)
+    })
+    invoiceSubscription.on('end', function() {
+      logger.error(`The LND invoice subscription has unexpectedly ended`)
+      setTimeout(startInvoiceMonitoring, 1000)
+    })
+    logger.info('LND invoice subscription has been established')
+  } catch (error) {
+    throw new Error(`Unable to establish LND invoice subscription : ${error.message}`)
+  }
+}
+
+async function getLastKnownInvoiceIndexAsync() {
+  // return the add_index value of the newest invoice processed
+  let lastKnownInvoiceIndex
+  try {
+    lastKnownInvoiceIndex = parseInt(await redis.get(LAST_KNOWN_INVOICE_INDEX_KEY))
+    if (isNaN(lastKnownInvoiceIndex)) lastKnownInvoiceIndex = 0 // no value set yet, do not retrieve past invoices
+  } catch (error) {
+    logger.warn(`Unable to retrieve last known invoice index, skipping : ${error.message}`)
+    lastKnownInvoiceIndex = 0
+  }
+  return lastKnownInvoiceIndex
+}
+
+async function updateLastKnownInvoiceIndexAsync(newInvoiceAddIndex) {
+  try {
+    // retrieve the current last known invoice index value
+    // update this value only if the new value is greater than the current value
+    let lastKnownIndex = await getLastKnownInvoiceIndexAsync()
+    if (newInvoiceAddIndex > lastKnownIndex) await redis.set(LAST_KNOWN_INVOICE_INDEX_KEY, newInvoiceAddIndex)
+  } catch (error) {
+    logger.error(`Unable to update LAST_KNOWN_INVOICE_INDEX_KEY : value = ${newInvoiceAddIndex} : ${error.message}`)
+  }
 }
 
 async function processInvoiceBatchAsync(invoices) {
@@ -78,139 +160,6 @@ async function processInvoiceBatchAsync(invoices) {
       }`
     )
     return null
-  }
-}
-
-async function connectToLndAsync() {
-  try {
-    // initialize lightning grpc object
-    let lnd = new LndGrpc({
-      host: env.LND_SOCKET,
-      cert: `/root/.lnd/tls.cert`,
-      macaroon: `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
-    })
-    try {
-      await lnd.disconnect()
-    } catch (error) {
-      console.error(`LND disconnect failed: ${error.message}`)
-    }
-    try {
-      lnd.once('active', async () => {
-        console.info('GRPC state active')
-      })
-      await lnd.connect()
-      if (lnd.state === 'locked') {
-        try {
-          await lnd.services.WalletUnlocker.unlockWallet({
-              wallet_password: env.HOT_WALLET_PASS,
-          })
-          await lnd.activateLightning()
-        } catch (error) {
-          console.error(`Can't unlock LND: ${error.message}`)
-        }
-      }
-    } catch (error) {
-      throw new Error(`Unable to connect to LND : ${error.message}`)
-    }
-    return lnd
-  } catch (error) {
-    throw new Error(`Unable to connect to LND : ${error.message}`)
-  }
-}
-
-async function getLastKnownInvoiceIndexAsync() {
-  // return the add_index value of the newest invoice processed
-  let lastKnownInvoiceIndex
-  try {
-    lastKnownInvoiceIndex = parseInt(await redis.get(LAST_KNOWN_INVOICE_INDEX_KEY))
-    if (isNaN(lastKnownInvoiceIndex)) throw new Error('LAST_KNOWN_INVOICE_INDEX_KEY does not yet have a value')
-  } catch (error) {
-    logger.warn(`Unable to retrieve last known invoice index, skipping : ${error.message}`)
-    lastKnownInvoiceIndex = null
-  }
-  return lastKnownInvoiceIndex
-}
-
-async function establishInvoiceSubscriptionAsync(lnd) {
-  try {
-    let invoiceSubscription = lnd.services.Lightning.subscribeInvoices()
-    invoiceSubscription.on('data', async invoice => {
-      let invoiceAddIndex = await processInvoiceBatchAsync([invoice])
-      await updateLastKnownInvoiceIndexAsync(invoiceAddIndex)
-    })
-    invoiceSubscription.on('error', err => {
-      logger.warn(`An invoice subscription error occurred : ${JSON.stringify(err)}`)
-    })
-    invoiceSubscription.on('end', async () => {
-      logger.error(`The invoice subscription has unexpectedly ended`)
-      try {
-        await lnd.disconnect()
-      } catch (error) {
-        logger.error(`Unable to disconnect : ${error.message}`)
-      }
-      startInvoiceMonitoring()
-    })
-    logger.info('Invoices subscription established')
-  } catch (error) {
-    throw new Error(`Unable to establish LND invoice subscription : ${error.message}`)
-  }
-}
-
-async function checkForUnprocessedPayments(lnd, lastKnownInvoiceIndex) {
-  let indexOffset = lastKnownInvoiceIndex
-  let resultLength = 0
-  let totalProcessed = 0
-  let lastInvoiceAddIndex = null
-  logger.info('Checking for unhandled invoices')
-  do {
-    let unprocessedInvoices = await lnd.services.Lightning.listInvoices({
-      num_max_invoices: INVOICE_BATCH_SIZE,
-      index_offset: indexOffset
-    })
-    if (unprocessedInvoices.invoices.length === 0) break
-    lastInvoiceAddIndex = await processInvoiceBatchAsync(unprocessedInvoices.invoices)
-    resultLength = unprocessedInvoices.invoices.length
-    indexOffset += INVOICE_BATCH_SIZE
-    totalProcessed += resultLength
-  } while (resultLength >= INVOICE_BATCH_SIZE)
-  logger.info(`${totalProcessed} invoice${totalProcessed === 1 ? '' : 's'} found and processed`)
-  // return the most recent invoice index from all invoices processed in this call
-  return lastInvoiceAddIndex
-}
-
-async function updateLastKnownInvoiceIndexAsync(newInvoiceAddIndex) {
-  try {
-    // retrieve the current last known invoice index value
-    // update this value only if the new value is greater than the current value
-    let lastKnownIndex = await getLastKnownInvoiceIndexAsync()
-    if (newInvoiceAddIndex > lastKnownIndex) await redis.set(LAST_KNOWN_INVOICE_INDEX_KEY, newInvoiceAddIndex)
-  } catch (error) {
-    logger.error(`Unable to update LAST_KNOWN_INVOICE_INDEX_KEY : value = ${newInvoiceAddIndex} : ${error.message}`)
-  }
-}
-
-async function startInvoiceMonitoring() {
-  let subscriptionEstablished = false
-  while (!subscriptionEstablished) {
-    try {
-      // establish a connection to lnd
-      let lnd = await connectToLndAsync()
-      // retrieve the add_index of the most recently handled invoice
-      let lastKnownInvoiceIndex = await getLastKnownInvoiceIndexAsync()
-      // starting listening for and handle new invoice activity
-      await establishInvoiceSubscriptionAsync(lnd)
-      // check if there are any backlogged invoices needing to be processed
-      if (lastKnownInvoiceIndex !== null) {
-        lastKnownInvoiceIndex = await checkForUnprocessedPayments(lnd, lastKnownInvoiceIndex)
-        // if any invoices processed, update the last known invoice index to the proper value
-        if (lastKnownInvoiceIndex) await updateLastKnownInvoiceIndexAsync(lastKnownInvoiceIndex)
-      }
-      subscriptionEstablished = true
-    } catch (error) {
-      // catch errors when attempting to connect and establish invoice subscription
-      logger.error(`Invoice monitoring : ${error.message} : Attempting in 5 seconds...`)
-      await utils.sleepAsync(5000)
-    }
   }
 }
 

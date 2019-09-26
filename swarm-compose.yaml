@@ -6,7 +6,7 @@ networks:
 secrets:
   HOT_WALLET_PASS:
     external: true
-  BITCOIN_WIF:
+  HOT_WALLET_ADDRESS:
     external: true
   ECDSA_PKPEM:
     external: true
@@ -28,7 +28,6 @@ services:
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       ANCHOR: 'true'
       AUDIT: 'true'
       NODE_MANAGEMENT: 'true'
@@ -71,10 +70,6 @@ services:
     image: tierion/lnd:latest
     user: ${USERID}:${GROUPID}
     ports:
-    - target: 8080
-      published: 8080
-      protocol: tcp
-      mode: host
     - target: 9735
       published: 9735
       protocol: tcp
@@ -90,13 +85,13 @@ services:
     - RPCPASS
     - NETWORK
     - CHAIN
-    - DEBUG
+    - DEBUG=info
     - NEUTRINO
     - LND_REST_PORT
     - LND_RPC_PORT
     - TLSPATH
     volumes:
-    - ~/.lnd:/root/.lnd:z
+    - ~/.lnd/chainpoint-core:/root/.lnd:z
     networks:
     - chainpoint
     logging:
@@ -169,7 +164,7 @@ services:
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
     volumes:
-      - ~/.lnd:/root/.lnd:z
+      - ~/.lnd/chainpoint-core:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -192,15 +187,14 @@ services:
       - rabbitmq
     networks:
       - chainpoint
-    secrets:
-      - BITCOIN_WIF
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
-      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
-      BITCOIN_WIF: DOCKER-SECRET->BITCOIN_WIF
+      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
+      LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd/chainpoint-core:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -227,8 +221,9 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
-      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
+      LND_SOCKET: ${LND_SOCKET}
+    volumes:
+      - ~/.lnd/chainpoint-core:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -256,12 +251,10 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
-      BTC_RPC_URI_LIST: ${BTC_RPC_URI_LIST}
-      BLOCKCYPHER_API_TOKEN: ${BLOCKCYPHER_API_TOKEN}
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
     volumes:
-      - ~/.lnd:/root/.lnd:z
+      - ~/.lnd/chainpoint-core:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'

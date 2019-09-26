@@ -38,16 +38,6 @@ let redis = null
 
 let CHECKS_IN_PROGRESS = false
 
-const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
-let providers = []
-let rpcUris = env.BTC_RPC_URI_LIST.split(',')
-for (let rpcUri of rpcUris) {
-  providers.push(new btcBridge.providers.JsonRpcProvider(btcNetwork, rpcUri))
-}
-if (env.BLOCKCYPHER_API_TOKEN)
-  providers.push(new btcBridge.providers.BlockcypherProvider(btcNetwork, env.BLOCKCYPHER_API_TOKEN))
-const fallbackProvider = new btcBridge.providers.FallbackProvider(providers, false)
-
 async function consumeBtcTxIdMessageAsync(msg) {
   if (msg !== null) {
     let btcTxIdObjJSON = msg.content.toString()
@@ -76,13 +66,29 @@ let monitorTransactionsAsync = async () => {
   let btcTxObjJSONArray = await redis.smembers(BTC_TX_IDS_KEY)
   logger.info(`Btc Tx monitoring check starting for ${btcTxObjJSONArray.length} transaction(s)`)
 
+  let lnd
+  try {
+    const btcNetwork = env.NETWORK === 'mainnet' ? btcBridge.networks.MAINNET : btcBridge.networks.TESTNET
+    lnd = new btcBridge.providers.LndProvider(
+      btcNetwork,
+      env.LND_SOCKET,
+      `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`,
+      `/root/.lnd/tls.cert`
+    )
+    await lnd.initWallet()
+  } catch (error) {
+    logger.error(`Unable to initialize LND provider : ${error.message}`)
+    CHECKS_IN_PROGRESS = false
+    return
+  }
+
   for (let btcTxObjJSON of btcTxObjJSONArray) {
     let btcTxIdObj = JSON.parse(btcTxObjJSON)
     try {
       // Get BTC Transaction Stats
       let txStats
       try {
-        txStats = await fallbackProvider.getTransactionDataAsync(btcTxIdObj.tx_id)
+        txStats = await lnd.getTransactionDataAsync(btcTxIdObj.tx_id)
       } catch (error) {
         throw new Error(`Could not get stats for transaction ${btcTxIdObj.tx_id}`)
       }
@@ -94,7 +100,7 @@ let monitorTransactionsAsync = async () => {
       // if ready, Get BTC Block Stats with Transaction Ids
       let blockStats
       try {
-        blockStats = await fallbackProvider.getBlockDataAsync(txStats.blockHash)
+        blockStats = await lnd.getBlockDataAsync(txStats.blockHash)
       } catch (error) {
         throw new Error(`Could not get stats for block ${txStats.blockHash}`)
       }
