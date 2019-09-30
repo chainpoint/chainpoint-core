@@ -129,7 +129,8 @@ async function createSwarmAndSecrets(valuePairs) {
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
     CORE_PUBLIC_IP_ADDRESS: `${ip}`,
-    CORE_DATADIR: `${home}/.chainpoint/core`
+    CORE_DATADIR: `${home}/.chainpoint/core`,
+    LND_SOCKET: `lnd:10009`
   })
 }
 module.exports = createSwarmAndSecrets

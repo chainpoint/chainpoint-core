@@ -33,6 +33,7 @@ const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const lndClient = require('lnrpc-node-client')
+const fs = require('fs')
 
 const LND_SOCKET = env.LND_SOCKET
 const LND_CERTPATH = `/root/.lnd/tls.cert`
@@ -196,6 +197,9 @@ async function openRMQConnectionAsync(connectURI) {
 
 async function startTransactionMonitoring() {
   let subscriptionEstablished = false
+  if (!fs.exists(LND_CERTPATH)){
+    throw new Error(`LND TLS Cert not yet generated, restarting...`)
+  }
   while (!subscriptionEstablished) {
     try {
       // establish a connection to lnd
