@@ -38,8 +38,7 @@ async function createSwarmAndSecrets(valuePairs) {
     await exec([
       `docker swarm init --advertise-addr=${ip} || echo "Swarm already initialized"`,
       `openssl ecparam -genkey -name secp256r1 -noout -out ${home}/.chainpoint/core/data/keys/ecdsa_key.pem`,
-      `cat ${home}/.chainpoint/core/data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`,
-      `printf ${wif} | docker secret create BITCOIN_WIF -`
+      `cat ${home}/.chainpoint/core/data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`
     ])
     console.log(chalk.yellow('Secrets saved to Docker Secrets'))
   } catch (err) {
@@ -57,9 +56,8 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   try {
-    lightning.setTls('127.0.0.1:10009', `${home}/.lnd/chainpoint-core/tls.cert`)
-    let unlocker = lightning.unlocker()
-    lightning.promisifyGrpc(unlocker)
+    lndClient.setTls('127.0.0.1:10009', `${home}/.lnd/chainpoint-core/tls.cert`)
+    let unlocker = lndClient.unlocker()
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       try {
         await unlocker.initWalletAsync({
