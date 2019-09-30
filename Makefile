@@ -109,7 +109,7 @@ dev-no-build: init-volumes
 .PHONY : down
 down:
 	@docker-compose down
-	@rm -rf ${HOMEDIR}/.lnd/chainpoint-core/tls.*
+	@rm -rf ${HOMEDIR}/.chainpoint/core/.lnd/tls.*
 
 ## ps                        : View running processes
 .PHONY : ps
@@ -133,7 +133,7 @@ clean: down
 	@rm -rf ${CORE_DATADIR}/data/redis
 	@rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
-	@rm -rf ${HOMEDIR}/.lnd/chainpoint-core
+	@rm -rf ${HOMEDIR}/.chainpoint/core/.lnd
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
 	@docker system prune --volumes -f
 
@@ -145,7 +145,7 @@ init-volumes:
 	@mkdir -p ${CORE_DATADIR}/data/traefik
 	@mkdir -p ${CORE_DATADIR}/config/node_1/data
 	@mkdir -p ${CORE_DATADIR}/data/keys
-	@mkdir -p ${HOMEDIR}/.lnd/chainpoint-core
+	@mkdir -p ${HOMEDIR}/.chainpoint/core/.lnd
 
 ## init                      : Create data folder with proper permissions
 .PHONY : init
@@ -222,7 +222,7 @@ deploy: init-volumes
 ## stop                      : stops a swarm stack
 stop:
 	@docker stack rm chainpoint-core || echo "removal in progress"
-	@rm -rf ${HOMEDIR}/.lnd/chainpoint-core/tls.*
+	@rm -rf ${HOMEDIR}/.chainpoint/core/.lnd/tls.*
 
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint: stop

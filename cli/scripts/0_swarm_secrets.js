@@ -56,7 +56,7 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   try {
-    lndClient.setTls('127.0.0.1:10009', `${home}/.lnd/chainpoint-core/tls.cert`)
+    lndClient.setTls('127.0.0.1:10009', `${home}/.chainpoint/core/.lnd/tls.cert`)
     let unlocker = lndClient.unlocker()
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       try {
@@ -86,8 +86,8 @@ async function createSwarmAndSecrets(valuePairs) {
       await utils.sleepAsync(7000)
       lndClient.setCredentials(
         '127.0.0.1:10009',
-        `${home}/.lnd/chainpoint-core/data/chain/bitcoin/${network}/admin.macaroon`,
-        `${home}/.lnd/chainpoint-core/tls.cert`
+        `${home}/.chainpoint/core/.lnd/data/chain/bitcoin/${network}/admin.macaroon`,
+        `${home}/.chainpoint/core/.lnd/tls.cert`
       )
       let client = lndClient.lightning()
       address = await client.newAddressAsync({ type: 0 })

@@ -91,7 +91,7 @@ services:
     - LND_RPC_PORT
     - TLSPATH
     volumes:
-    - ~/.lnd/chainpoint-core:/root/.lnd:z
+    - ~/.chainpoint/core/.lnd:/root/.lnd:z
     networks:
     - chainpoint
     logging:
@@ -164,7 +164,7 @@ services:
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
     volumes:
-      - ~/.lnd/chainpoint-core:/root/.lnd:z
+      - ~/.chainpoint/core/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -194,7 +194,7 @@ services:
       HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
       LND_SOCKET: ${LND_SOCKET}
     volumes:
-      - ~/.lnd/chainpoint-core:/root/.lnd:z
+      - ~/.chainpoint/core/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -223,7 +223,7 @@ services:
       NETWORK: ${NETWORK:-testnet}
       LND_SOCKET: ${LND_SOCKET}
     volumes:
-      - ~/.lnd/chainpoint-core:/root/.lnd:z
+      - ~/.chainpoint/core/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
@@ -254,7 +254,7 @@ services:
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
     volumes:
-      - ~/.lnd/chainpoint-core:/root/.lnd:z
+      - ~/.chainpoint/core/.lnd:/root/.lnd:z
     tty: true
     logging:
       driver: 'json-file'
