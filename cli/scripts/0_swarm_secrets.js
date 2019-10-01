@@ -38,8 +38,7 @@ async function createSwarmAndSecrets(valuePairs) {
     await exec([
       `docker swarm init --advertise-addr=${ip} || echo "Swarm already initialized"`,
       `openssl ecparam -genkey -name secp256r1 -noout -out ${home}/.chainpoint/core/data/keys/ecdsa_key.pem`,
-      `cat ${home}/.chainpoint/core/data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`,
-      `printf ${wif} | docker secret create BITCOIN_WIF -`
+      `cat ${home}/.chainpoint/core/data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`
     ])
     console.log(chalk.yellow('Secrets saved to Docker Secrets'))
   } catch (err) {
