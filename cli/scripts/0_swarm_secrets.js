@@ -43,7 +43,7 @@ async function createSwarmAndSecrets(valuePairs) {
     ])
     console.log(chalk.yellow('Secrets saved to Docker Secrets'))
   } catch (err) {
-    console.log(chalk.red('Setting secrets failed (is docker installed?)'))
+    console.log(chalk.red(`Setting secrets failed (is docker installed?): ${err}`))
   }
 
   // startup docker compose
