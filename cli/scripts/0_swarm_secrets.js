@@ -24,7 +24,7 @@ const utils = require(resolve('./node-lib/lib/utils.js'))
 const home = require('os').homedir()
 
 async function createSwarmAndSecrets(valuePairs) {
-  let address = { value: { address: valuePairs.HOT_WALLET_ADDRESS } }
+  let address = { address: valuePairs.HOT_WALLET_ADDRESS }
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
   let gid = (await exec.quiet('id -g $USER')).stdout.trim()
   let ip = valuePairs.CORE_PUBLIC_IP_ADDRESS
@@ -94,7 +94,7 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(address)
       console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
       console.log(chalk.yellow(`\nLND Wallet Seed: ${seed.cipher_seed_mnemonic.join(' ')}`))
-      console.log(chalk.yellow(`\nLND Wallet Address: ${address.value.address}\n`))
+      console.log(chalk.yellow(`\nLND Wallet Address: ${address.address}\n`))
     }
   } catch (err) {
     console.log(chalk.red(`LND setup error: ${err}`))
@@ -105,7 +105,7 @@ async function createSwarmAndSecrets(valuePairs) {
     try {
       await exec.quiet([
         `printf ${lndWalletPass} | docker secret create HOT_WALLET_PASS -`,
-        `printf ${address.value.address} | docker secret create HOT_WALLET_ADDRESS -`
+        `printf ${address.address} | docker secret create HOT_WALLET_ADDRESS -`
       ])
     } catch (err) {
       console.log(chalk.red(`Could not exec docker secret creation: ${err}`))
@@ -122,7 +122,7 @@ async function createSwarmAndSecrets(valuePairs) {
   }
 
   return updateOrCreateEnv({
-    HOT_WALLET_ADDRESS: address.value.address,
+    HOT_WALLET_ADDRESS: address.address,
     PEERS: peers,
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
