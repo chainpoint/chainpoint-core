@@ -115,7 +115,7 @@ async function createSwarmAndSecrets(valuePairs) {
 
   try {
     console.log('shutting down LND...')
-    await exec([`docker-compose down && rm ${home}/chainpoint-core/.lnd/tls.*`])
+    await exec([`docker-compose down && rm ${home}/.chainpoint/core/.lnd/tls.*`])
     console.log('LND shut down')
   } catch (err) {
     console.log(chalk.red(`Could not bring down LND: ${err}`))
