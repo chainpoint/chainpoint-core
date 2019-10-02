@@ -79,7 +79,7 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(JSON.stringify(seed))
       let init = await unlocker.initWalletAsync({
         wallet_password: lndWalletPass,
-        cipher_seed_mnemonic: seed.value.cipher_seed_mnemonic
+        cipher_seed_mnemonic: seed.cipher_seed_mnemonic
       })
       console.log(`LND wallet initialized: ${JSON.stringify(init)}`)
       console.log('Creating bitcoin address for wallet...')
@@ -93,7 +93,7 @@ async function createSwarmAndSecrets(valuePairs) {
       address = await client.newAddressAsync({ type: 0 })
       console.log(address)
       console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
-      console.log(chalk.yellow(`\nLND Wallet Seed: ${seed.value.cipher_seed_mnemonic.join(' ')}`))
+      console.log(chalk.yellow(`\nLND Wallet Seed: ${seed.cipher_seed_mnemonic.join(' ')}`))
       console.log(chalk.yellow(`\nLND Wallet Address: ${address.value.address}\n`))
     }
   } catch (err) {
