@@ -54,7 +54,7 @@ function openRedisConnection(redisURIs) {
 
 async function startInvoiceMonitoring() {
   let subscriptionEstablished = false
-  if (!fs.exists(LND_CERTPATH)){
+  if (!fs.existsSync(LND_CERTPATH)){
     throw new Error(`LND TLS Cert not yet generated, restarting...`)
   }
   while (!subscriptionEstablished) {
