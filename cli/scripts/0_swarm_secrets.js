@@ -18,7 +18,7 @@ const exec = require('executive')
 const chalk = require('chalk')
 const resolve = require('path').resolve
 const generator = require('generate-password')
-const lndClient = require('lnrpc-node-client')
+const lightning = require('lnrpc-node-client')
 const updateOrCreateEnv = require('./2_update_env')
 const utils = require(resolve('./node-lib/lib/utils.js'))
 const home = require('os').homedir()
@@ -85,12 +85,12 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(`LND wallet initialized: ${JSON.stringify(init)}`)
       console.log('Creating bitcoin address for wallet...')
       await utils.sleepAsync(7000)
-      lndClient.setCredentials(
+      lightning.setCredentials(
         '127.0.0.1:10009',
         `${home}/.lnd/chainpoint-core/data/chain/bitcoin/${network}/admin.macaroon`,
         `${home}/.lnd/chainpoint-core/tls.cert`
       )
-      let client = lndClient.lightning()
+      let client = lightning.lightning()
       address = await client.newAddressAsync({ type: 0 })
       console.log(address)
       console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
