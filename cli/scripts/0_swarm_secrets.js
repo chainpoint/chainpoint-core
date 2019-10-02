@@ -18,7 +18,7 @@ const exec = require('executive')
 const chalk = require('chalk')
 const resolve = require('path').resolve
 const generator = require('generate-password')
-const lndClient = require('lnrpc-node-client')
+const lightning = require('lnrpc-node-client')
 const updateOrCreateEnv = require('./2_update_env')
 const utils = require(resolve('./node-lib/lib/utils.js'))
 const home = require('os').homedir()
@@ -42,7 +42,7 @@ async function createSwarmAndSecrets(valuePairs) {
     ])
     console.log(chalk.yellow('Secrets saved to Docker Secrets'))
   } catch (err) {
-    console.log(chalk.red('Setting secrets failed (is docker installed?)'))
+    console.log(chalk.red(`Setting secrets failed (is docker installed?): ${err}`))
   }
 
   // startup docker compose
@@ -84,12 +84,12 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(`LND wallet initialized: ${JSON.stringify(init)}`)
       console.log('Creating bitcoin address for wallet...')
       await utils.sleepAsync(7000)
-      lndClient.setCredentials(
+      lightning.setCredentials(
         '127.0.0.1:10009',
         `${home}/.chainpoint/core/.lnd/data/chain/bitcoin/${network}/admin.macaroon`,
         `${home}/.chainpoint/core/.lnd/tls.cert`
       )
-      let client = lndClient.lightning()
+      let client = lightning.lightning()
       address = await client.newAddressAsync({ type: 0 })
       console.log(address)
       console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
@@ -127,7 +127,8 @@ async function createSwarmAndSecrets(valuePairs) {
     NETWORK: network,
     CHAINPOINT_CORE_BASE_URI: `http://${ip}`,
     CORE_PUBLIC_IP_ADDRESS: `${ip}`,
-    CORE_DATADIR: `${home}/.chainpoint/core`
+    CORE_DATADIR: `${home}/.chainpoint/core`,
+    LND_SOCKET: `lnd:10009`
   })
 }
 module.exports = createSwarmAndSecrets
