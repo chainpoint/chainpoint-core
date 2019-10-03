@@ -58,6 +58,11 @@ services:
         - 'traefik.backend.loadbalancer.swarm=true'
       placement:
         constraints: [node.role==manager]
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     networks:
       - chainpoint
     logging:
@@ -82,7 +87,12 @@ services:
       published: 10009
       protocol: tcp
       mode: host
-    restart: always
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     environment:
     - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
     - RPCUSER
@@ -151,9 +161,9 @@ services:
         delay: 1s
       restart_policy:
         condition: any
-        delay: 1s
-        max_attempts: 5
-        window: 120s
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     secrets:
       - ECDSA_PKPEM
       - HOT_WALLET_PASS
@@ -191,6 +201,12 @@ services:
       - rabbitmq
     networks:
       - chainpoint
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     environment:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
@@ -226,6 +242,12 @@ services:
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       LND_SOCKET: ${LND_SOCKET}
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     volumes:
       - ~/.chainpoint/core/.lnd:/root/.lnd:z
     tty: true
@@ -257,6 +279,12 @@ services:
       NETWORK: ${NETWORK:-testnet}
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       LND_SOCKET: ${LND_SOCKET}
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     volumes:
       - ~/.chainpoint/core/.lnd:/root/.lnd:z
     tty: true
@@ -278,6 +306,11 @@ services:
     user: ${USERID}:${GROUPID}
     deploy:
       replicas: 2
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     depends_on:
       - rabbitmq
       - postgres
@@ -307,6 +340,11 @@ services:
     user: ${USERID}:${GROUPID}
     deploy:
       replicas: 2
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     depends_on:
       - rabbitmq
       - postgres
@@ -343,6 +381,12 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: chainpoint
       RABBITMQ_DEFAULT_PASS: chainpoint
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     networks:
       - chainpoint
     logging:
@@ -368,6 +412,12 @@ services:
     command:
       - redis-server
       - /usr/local/etc/redis/redis.conf
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     logging:
       driver: 'json-file'
       options:
@@ -399,6 +449,12 @@ services:
       - '5433:5432'
     networks:
       - chainpoint
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     logging:
       driver: 'json-file'
       options:
@@ -433,6 +489,11 @@ services:
     deploy:
       placement:
         constraints: [node.role==manager]
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
     logging:
       driver: 'json-file'
       options:
