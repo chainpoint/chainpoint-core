@@ -102,7 +102,7 @@ services:
     - NETWORK=${NETWORK:-testnet}
     - CHAIN
     - DEBUG
-      BACKEND=neutrino
+    - BACKEND=neutrino
     - NEUTRINO=faucet.lightning.community:18333
     - LND_REST_PORT
     - LND_RPC_PORT
