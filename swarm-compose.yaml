@@ -94,6 +94,7 @@ services:
         delay: 5s
         max_attempts: 15
         window: 90s
+      endpoint_mode: dnsrr
     environment:
     - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
     - RPCUSER
