@@ -44,9 +44,10 @@ services:
 
   # Lightning node
   lnd:
-    image: tierion/lnd:latest
+    image: tierion/lnd:boltbox
     user: ${USERID}:${GROUPID}
-    container_name: lnd-core
+    restart: always
+    entrypoint: "./start-lnd.sh"
     ports:
     - target: 8080
       published: 8080
@@ -60,20 +61,21 @@ services:
       published: 10009
       protocol: tcp
       mode: host
-    restart: always
     environment:
-    - PUBLICIP
+    - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
     - RPCUSER
     - RPCPASS
-    - NETWORK
+    - NETWORK=${NETWORK:-testnet}
     - CHAIN
-    - DEBUG=info
-    - NEUTRINO
+    - DEBUG
+      BACKEND=neutrino
+    - NEUTRINO=faucet.lightning.community:18333
     - LND_REST_PORT
     - LND_RPC_PORT
     - TLSPATH
+    - TLSEXTRADOMAIN=lnd
     volumes:
-    - ~/.chainpoint/core/.lnd:/root/.lnd
+    - ~/.chainpoint/core/.lnd:/lnd-data:z
     networks:
     - chainpoint
 

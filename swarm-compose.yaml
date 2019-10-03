@@ -72,8 +72,9 @@ services:
         max-file: '5'
 
   lnd:
-    image: tierion/lnd:latest
+    image: tierion/lnd:boltbox
     user: ${USERID}:${GROUPID}
+    entrypoint: "./start-lnd.sh"
     ports:
     - target: 8080
       published: 8080
@@ -97,15 +98,17 @@ services:
     - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
     - RPCUSER
     - RPCPASS
-    - NETWORK
+    - NETWORK=${NETWORK:-testnet}
     - CHAIN
-    - DEBUG=info
-    - NEUTRINO
+    - DEBUG
+      BACKEND=neutrino
+    - NEUTRINO=faucet.lightning.community:18333
     - LND_REST_PORT
     - LND_RPC_PORT
     - TLSPATH
+    - TLSEXTRADOMAIN=lnd
     volumes:
-    - ~/.chainpoint/core/.lnd:/root/.lnd:z
+    - ~/.chainpoint/core/.lnd:/lnd-data:z
     networks:
     - chainpoint
     logging:
