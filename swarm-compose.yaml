@@ -205,6 +205,8 @@ services:
       - rabbitmq
     networks:
       - chainpoint
+    secrets:
+      - HOT_WALLET_ADDRESS
     deploy:
       restart_policy:
         condition: any
