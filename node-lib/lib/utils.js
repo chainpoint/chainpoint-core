@@ -154,5 +154,5 @@ module.exports = {
   isIP: isIP,
   getClientIP: getClientIP,
   formatAsChainpointV3Ops: formatAsChainpointV3Ops,
-  toBase64: toBase64,
+  toBase64: toBase64
 }
