@@ -158,6 +158,7 @@ module.exports = service => {
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.AGGREGATOR_WHITELIST = envalid.str({ desc: 'IP Whitelist for aggregator services' })
       break
     case 'lnd-mon':
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })

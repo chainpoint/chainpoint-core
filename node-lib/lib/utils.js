@@ -83,6 +83,36 @@ function isIP(value) {
 }
 
 /**
+ * Extracts the IP address from a Restify request object
+ *
+ * @param {req} value - The Restify request object
+ * @returns {string} - The IP address, or null if it cannot be determined
+ */
+function getClientIP(req) {
+    let xff, rcr, rsa
+    try {
+        xff = req.headers['x-forwarded-for']
+    } catch (error) {
+        xff = null
+    }
+    try {
+        rcr = req.connection.remoteAddress
+    } catch (error) {
+        rcr = null
+    }
+    try {
+        rsa = req.socket.remoteAddress
+    } catch (error) {
+        rsa = null
+    }
+
+    let result = xff || rcr || rsa
+    if (result) result = result.replace('::ffff:', '')
+
+    return result || null
+}
+
+/**
  * Converts proof path array output from the merkle-tools package
  * to a Chainpoint v3 ops array
  *
@@ -122,6 +152,7 @@ module.exports = {
   formatDateISO8601NoMs: formatDateISO8601NoMs,
   isHex: isHex,
   isIP: isIP,
+  getClientIP: getClientIP,
   formatAsChainpointV3Ops: formatAsChainpointV3Ops,
-  toBase64: toBase64
+  toBase64: toBase64,
 }
