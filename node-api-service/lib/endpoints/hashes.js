@@ -208,7 +208,7 @@ async function postHashV1Async(req, res, next) {
     }
 
     // validate invoice_id has been paid
-    let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
+    paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
     try {
       let keyPresent = await redis.get(paidInvoiceKey)
       if (!keyPresent) {
@@ -241,7 +241,7 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
-  if (typeof paidInvoiceKey !== 'undefined') {
+  if (paidInvoiceKey) {
     try {
       await redis.del(paidInvoiceKey)
     } catch (error) {
