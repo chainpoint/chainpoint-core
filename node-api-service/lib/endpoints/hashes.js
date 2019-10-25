@@ -187,9 +187,8 @@ async function postHashV1Async(req, res, next) {
   // if we aren't part of an aggregator whitelist, use lightning invoicing
   let paidInvoiceKey
   let submittingIP = utils.getClientIP(req)
-  let whiteList = env.AGGREGATOR_WHITELIST.split(',')
-  // If whitelist is empty or the submitting IP is not in the whitelist, use invoicing
-  if (whiteList.length == 0 || whiteList.IndexOf(submittingIP) < 0) {
+  // If whitelist does not contain the submitting IP, use invoicing
+  if (!env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
     // validate params has parse a 'invoice_id' key
     if (!req.params.hasOwnProperty('invoice_id')) {
       return next(new errors.InvalidArgumentError('invalid JSON body: missing invoice_id'))
