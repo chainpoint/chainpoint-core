@@ -89,27 +89,27 @@ function isIP(value) {
  * @returns {string} - The IP address, or null if it cannot be determined
  */
 function getClientIP(req) {
-    let xff, rcr, rsa
-    try {
-        xff = req.headers['x-forwarded-for']
-    } catch (error) {
-        xff = null
-    }
-    try {
-        rcr = req.connection.remoteAddress
-    } catch (error) {
-        rcr = null
-    }
-    try {
-        rsa = req.socket.remoteAddress
-    } catch (error) {
-        rsa = null
-    }
+  let xff, rcr, rsa
+  try {
+    xff = req.headers['x-forwarded-for']
+  } catch (error) {
+    xff = null
+  }
+  try {
+    rcr = req.connection.remoteAddress
+  } catch (error) {
+    rcr = null
+  }
+  try {
+    rsa = req.socket.remoteAddress
+  } catch (error) {
+    rsa = null
+  }
 
-    let result = xff || rcr || rsa
-    if (result) result = result.replace('::ffff:', '')
+  let result = xff || rcr || rsa
+  if (result) result = result.replace('::ffff:', '')
 
-    return result || null
+  return result || null
 }
 
 /**
