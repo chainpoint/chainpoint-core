@@ -33,6 +33,11 @@ const validateNetwork = envalid.makeValidator(name => {
   if (name === 'testnet') return 'testnet'
   throw new Error('The NETWORK value is invalid')
 })
+const validateAggIPWhitelist = envalid.makeValidator(list => {
+  // If no IPs supplied, return empty array
+  if (list === '') return []
+  return list.split(',')
+})
 
 let envDefinitions = {
   // The following variables are exposed by this stack's /status endpoint
@@ -158,6 +163,10 @@ module.exports = service => {
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.AGGREGATOR_WHITELIST = validateAggIPWhitelist({
+        default: '',
+        desc: 'A comma separated list of IPs that may submit hashes without invoices'
+      })
       break
     case 'lnd-mon':
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })

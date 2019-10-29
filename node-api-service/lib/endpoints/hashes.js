@@ -184,33 +184,39 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
   }
 
-  // validate params has parse a 'invoice_id' key
-  if (!req.params.hasOwnProperty('invoice_id')) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: missing invoice_id'))
-  }
-
-  // validate 'invoice_id' is a string
-  let invoiceId = req.params.invoice_id
-  if (!_.isString(invoiceId)) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
-  }
-
-  // validate invoice_id param is a valid hex string
-  let isValidInvoiceId = /^([a-fA-F0-9]{2}){32}$/.test(invoiceId)
-  if (!isValidInvoiceId) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
-  }
-
-  // validate invoice_id has been paid
-  let paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
-  try {
-    let keyPresent = await redis.get(paidInvoiceKey)
-    if (!keyPresent) {
-      return next(new errors.PaymentRequiredError(`invoice ${invoiceId} has not been paid`))
+  // if we aren't part of an aggregator whitelist, use lightning invoicing
+  let paidInvoiceKey
+  let submittingIP = utils.getClientIP(req)
+  // If whitelist does not contain the submitting IP, use invoicing
+  if (!env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
+    // validate params has parse a 'invoice_id' key
+    if (!req.params.hasOwnProperty('invoice_id')) {
+      return next(new errors.InvalidArgumentError('invalid JSON body: missing invoice_id'))
     }
-  } catch (error) {
-    logger.error(`Redis GET error : error getting item with key = ${paidInvoiceKey}`)
-    return next(new errors.InternalServerError('Could not retrieve invoice status'))
+
+    // validate 'invoice_id' is a string
+    let invoiceId = req.params.invoice_id
+    if (!_.isString(invoiceId)) {
+      return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
+    }
+
+    // validate invoice_id param is a valid hex string
+    let isValidInvoiceId = /^([a-fA-F0-9]{2}){32}$/.test(invoiceId)
+    if (!isValidInvoiceId) {
+      return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
+    }
+
+    // validate invoice_id has been paid
+    paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
+    try {
+      let keyPresent = await redis.get(paidInvoiceKey)
+      if (!keyPresent) {
+        return next(new errors.PaymentRequiredError(`invoice ${invoiceId} has not been paid`))
+      }
+    } catch (error) {
+      logger.error(`Redis GET error : error getting item with key = ${paidInvoiceKey}`)
+      return next(new errors.InternalServerError('Could not retrieve invoice status'))
+    }
   }
 
   // validate amqp channel has been established
@@ -234,10 +240,12 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
-  try {
-    await redis.del(paidInvoiceKey)
-  } catch (error) {
-    logger.error(`Redis DEL error : error deleting item with key = ${paidInvoiceKey}`)
+  if (paidInvoiceKey) {
+    try {
+      await redis.del(paidInvoiceKey)
+    } catch (error) {
+      logger.error(`Redis DEL error : error deleting item with key = ${paidInvoiceKey}`)
+    }
   }
 
   res.send(responseObj)

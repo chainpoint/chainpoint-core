@@ -134,6 +134,7 @@ services:
         protocol: tcp
         mode: host
     environment:
+      AGGREGATOR_WHITELIST: 127.0.0.1
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}

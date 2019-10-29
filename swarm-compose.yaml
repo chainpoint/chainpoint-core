@@ -172,6 +172,7 @@ services:
       - ECDSA_PKPEM
       - HOT_WALLET_PASS
     environment:
+      AGGREGATOR_WHITELIST: 127.0.0.1
       NODE_ENV: ${NODE_ENV}
       NETWORK: ${NETWORK:-testnet}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
