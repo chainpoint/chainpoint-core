@@ -39,7 +39,7 @@ const LND_SOCKET = env.LND_SOCKET
 const LND_CERTPATH = `/root/.lnd/tls.cert`
 const LND_MACAROONPATH = `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
 
-const applyMiddleware = (middlewares = []) => {
+const applyProductionMiddleware = (middlewares = []) => {
   if (process.env.NODE_ENV === 'development' || process.env.NETWORK === 'testnet') {
     return []
   } else {
@@ -96,29 +96,41 @@ function setupRestifyConfigAndRoutes(server) {
   // get hash invoice
   server.get(
     { path: '/hash/invoice', version: '1.0.0' },
-    ...applyMiddleware([throttle(5, 1)]),
+    ...applyProductionMiddleware([throttle(5, 1)]),
     hashes.getHashInvoiceV1Async
   )
   // submit hash
-  server.post({ path: '/hash', version: '1.0.0' }, ...applyMiddleware([throttle(5, 1)]), hashes.postHashV1Async)
+  server.post(
+    { path: '/hash', version: '1.0.0' },
+    ...applyProductionMiddleware([throttle(5, 1)]),
+    hashes.postHashV1Async
+  )
   // get the block objects for the calendar in the specified block range
   server.get(
     { path: '/calendar/:txid', version: '1.0.0' },
-    ...applyMiddleware([throttle(50, 10)]),
+    ...applyProductionMiddleware([throttle(50, 10)]),
     calendar.getCalTxAsync
   )
   // get the data value of a txId
   server.get(
     { path: '/calendar/:txid/data', version: '1.0.0' },
-    ...applyMiddleware([throttle(50, 10)]),
+    ...applyProductionMiddleware([throttle(50, 10)]),
     calendar.getCalTxDataAsync
   )
   // get proofs from storage
-  server.get({ path: '/proofs', version: '1.0.0' }, ...applyMiddleware([throttle(50, 10)]), proofs.getProofsByIDsAsync)
+  server.get(
+    { path: '/proofs', version: '1.0.0' },
+    ...applyProductionMiddleware([throttle(50, 10)]),
+    proofs.getProofsByIDsAsync
+  )
   // get random core peers
-  server.get({ path: '/peers', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), peers.getPeersAsync)
+  server.get({ path: '/peers', version: '1.0.0' }, ...applyProductionMiddleware([throttle(15, 3)]), peers.getPeersAsync)
   // get status
-  server.get({ path: '/status', version: '1.0.0' }, ...applyMiddleware([throttle(15, 3)]), status.getCoreStatusAsync)
+  server.get(
+    { path: '/status', version: '1.0.0' },
+    ...applyProductionMiddleware([throttle(15, 3)]),
+    status.getCoreStatusAsync
+  )
   // teapot
   server.get({ path: '/', version: '1.0.0' }, root.getV1)
 }
