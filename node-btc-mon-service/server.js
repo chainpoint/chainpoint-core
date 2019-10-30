@@ -49,7 +49,7 @@ async function consumeBtcTxIdMessageAsync(msg) {
       amqpChannel.ack(msg)
     } catch (error) {
       amqpChannel.nack(msg)
-      logger.error(`${env.RMQ_WORK_IN_AGG_QUEUE} : consume message nacked`)
+      logger.error(`${env.RMQ_WORK_IN_BTCMON_QUEUE} : consume message nacked`)
     }
   }
 }
