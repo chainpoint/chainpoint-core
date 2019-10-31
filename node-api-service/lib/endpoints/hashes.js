@@ -21,6 +21,7 @@ const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
 const logger = require('../logger.js')
 const crypto = require('crypto')
+const { boltwall } = require('../../boltwall')
 
 // The redis connection used for all redis communication
 // This value is set once the connection has been established
@@ -151,6 +152,69 @@ async function getHashInvoiceV1Async(req, res, next) {
 /**
  * POST /hash handler
  *
+ * Version 2 without interaction with database
+ *
+ * Expects a JSON body with the form:
+ *   {"hash": "11cd8a380e8d5fd3ac47c1f880390341d40b11485e8ae946d8fa3d466f23fe89"}
+ *
+ * The `hash` key must reference valid hex string representing the hash to anchor.
+ *
+ * Each hash must be:
+ * - in Hexadecimal form [a-fA-F0-9]
+ * - minimum 40 chars long (e.g. 20 byte SHA1)
+ * - maximum 128 chars long (e.g. 64 byte SHA512)
+ * - an even length string
+ */
+async function postHashV2Async(req, res, next) {
+  // validate content-type sent was 'application/json'
+  if (req.contentType() !== 'application/json') {
+    return next(new errors.InvalidArgumentError('invalid content type'))
+  }
+
+  // validate params has parse a 'hash' key
+  if (!req.params.hasOwnProperty('hash')) {
+    return next(new errors.InvalidArgumentError('invalid JSON body: missing hash'))
+  }
+
+  // validate 'hash' is a string
+  if (!_.isString(req.params.hash)) {
+    return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
+  }
+
+  // validate hash param is a valid hex string
+  let isValidHash = /^([a-fA-F0-9]{2}){20,64}$/.test(req.params.hash)
+  if (!isValidHash) {
+    return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
+  }
+
+  // validate amqp channel has been established
+  if (!amqpChannel) {
+    return next(new errors.InternalServerError('Message could not be delivered'))
+  }
+
+  let responseObj = generatePostHashResponse(req.params.hash)
+
+  let hashObj = {
+    hash_id: responseObj.hash_id,
+    hash: responseObj.hash
+  }
+
+  try {
+    await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_AGG_QUEUE, Buffer.from(JSON.stringify(hashObj)), {
+      persistent: true
+    })
+  } catch (error) {
+    logger.error(`${env.RMQ_WORK_OUT_AGG_QUEUE} : publish message nacked`)
+    return next(new errors.InternalServerError('Message could not be delivered'))
+  }
+
+  res.send(responseObj)
+  return next()
+}
+
+/**
+ * POST /hash handler
+ *
  * Expects a JSON body with the form:
  *   {"hash": "11cd8a380e8d5fd3ac47c1f880390341d40b11485e8ae946d8fa3d466f23fe89"}
  *
@@ -252,8 +316,17 @@ async function postHashV1Async(req, res, next) {
   return next()
 }
 
+const boltwallConfigs = {
+  minAmount: env.SUBMIT_HASH_PRICE_SAT
+  // getCaveat: () => {},
+  // validateCaveat: () => {}
+}
+
 module.exports = {
   postHashV1Async: postHashV1Async,
+  postHashV2Async: postHashV2Async,
+  boltwallConfigs: boltwallConfigs,
+  boltwall: boltwall(boltwallConfigs),
   getHashInvoiceV1Async: getHashInvoiceV1Async,
   generatePostHashResponse: generatePostHashResponse,
   setRedis: r => {

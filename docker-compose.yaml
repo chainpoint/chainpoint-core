@@ -154,6 +154,7 @@ services:
       - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
       - ./node-api-service/lib/endpoints:/home/node/app/lib/endpoints/
       - ./node-api-service/server.js:/home/node/app/server.js
+      - ./node-api-service/boltwall:/home/node/app/boltwall
     tty: true
 
   api-test:

@@ -90,6 +90,11 @@ function setupRestifyConfigAndRoutes(server) {
   server.use(restify.plugins.queryParser())
   server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
 
+  // boltwall paths for setting up validation using hodl invoices
+  server.post({ path: '/boltwall/hodl', version: '1.0.0' }, hashes.boltwall)
+  server.put({ path: '/boltwall/hodl', version: '1.0.0' }, hashes.boltwall)
+  server.get({ path: '/boltwall/node', version: '1.0.0' }, hashes.boltwall)
+
   // API RESOURCES
 
   // get hash invoice
