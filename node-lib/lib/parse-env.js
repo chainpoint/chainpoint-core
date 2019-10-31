@@ -167,6 +167,10 @@ module.exports = service => {
         default: '',
         desc: 'A comma separated list of IPs that may submit hashes without invoices'
       })
+      envDefinitions.SUBMIT_HASH_PRICE_SAT = envalid.num({
+        default: 10,
+        desc: 'The price, in satosh, to submit a hash for processing'
+      })
       break
     case 'lnd-mon':
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
