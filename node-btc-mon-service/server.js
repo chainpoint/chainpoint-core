@@ -85,27 +85,30 @@ let monitorTransactionsAsync = async () => {
   for (let btcTxObjJSON of btcTxObjJSONArray) {
     let btcTxIdObj = JSON.parse(btcTxObjJSON)
     try {
-      // Get BTC Transaction Stats
-      let txStats
+      let txId = btcTxIdObj.tx_id
+      let txBlockHeight = btcTxIdObj.block_height
+      // Get current BTC block height
+      let confirmCount = 0
       try {
-        txStats = await lnd.getTransactionDataAsync(btcTxIdObj.tx_id)
+        let info = await lnd.getChainInfoAsync()
+        confirmCount = info.topBlockHeight - txBlockHeight + 1
+        if (confirmCount < env.MIN_BTC_CONFIRMS) {
+          logger.info(`${txId} not ready : ${confirmCount} of ${env.MIN_BTC_CONFIRMS} confirmations`)
+          continue
+        }
       } catch (error) {
-        throw new Error(`Could not get stats for transaction ${btcTxIdObj.tx_id}`)
-      }
-      if (txStats.confirmations < env.MIN_BTC_CONFIRMS) {
-        logger.info(`${txStats.txId} not ready : ${txStats.confirmations} of ${env.MIN_BTC_CONFIRMS} confirmations`)
-        continue
+        throw new Error(`Could not retrieve node info`)
       }
 
       // if ready, Get BTC Block Stats with Transaction Ids
       let blockStats
       try {
-        blockStats = await lnd.getBlockDataAsync(txStats.blockHash)
+        blockStats = await lnd.getBlockDataAsync(txBlockHeight)
       } catch (error) {
-        throw new Error(`Could not get stats for block ${txStats.blockHash}`)
+        throw new Error(`Could not get stats for block ${txBlockHeight}`)
       }
-      let txIndex = blockStats.tx.indexOf(txStats.txId)
-      if (txIndex === -1) throw new Error(`transaction ${txStats.txId} not found in block ${blockStats.height}`)
+      let txIndex = blockStats.tx.indexOf(txId)
+      if (txIndex === -1) throw new Error(`transaction ${txId} not found in block ${txBlockHeight}`)
       // adjusting for endieness, reverse txids for further processing
       blockStats.tx = blockStats.tx.map(txId =>
         txId
@@ -114,7 +117,7 @@ let monitorTransactionsAsync = async () => {
           .join('')
       )
 
-      if (blockStats.tx.length === 0) throw new Error(`No transactions found in block ${blockStats.height}`)
+      if (blockStats.tx.length === 0) throw new Error(`No transactions found in block ${txBlockHeight}`)
 
       // build BTC merkle tree with txIds
       merkleTools.resetTree()
@@ -131,13 +134,13 @@ let monitorTransactionsAsync = async () => {
         throw new Error(
           `calculated merkle root (${rootValueHex}) does not match block merkle root (${
             blockStats.merkleRoot
-          }) for tx ${txStats.txId}`
+          }) for tx ${txId}`
         )
       // get proof path from tx to block root
       let proofPath = merkleTools.getProof(txIndex)
       // send data back to calendar
       let messageObj = {}
-      messageObj.btctx_id = txStats.txId
+      messageObj.btctx_id = txId
       messageObj.btchead_height = blockStats.height
       messageObj.btchead_root = rootValueHex
       messageObj.path = proofPath
@@ -154,7 +157,7 @@ let monitorTransactionsAsync = async () => {
 
       await redis.srem(BTC_TX_IDS_KEY, btcTxObjJSON)
 
-      logger.info(`${btcTxIdObj.tx_id} ready with ${txStats.confirmations} confirmations`)
+      logger.info(`${btcTxIdObj.tx_id} ready with ${confirmCount} confirmations`)
     } catch (error) {
       logger.error(`An unexpected error occurred while monitoring : ${error.message}`)
     }
