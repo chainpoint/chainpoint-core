@@ -78,7 +78,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		app.state.LatestBtcaHeight = app.state.Height // So no one will try to re-anchor while processing the btc tx
 
 		// wait for a BTC-A tx
-		deadline := time.Now().Add(3 * time.Minute)
+		deadline := time.Now().Add(time.Duration(app.config.AnchorTimeout) * time.Minute)
 		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && !time.Now().After(deadline) {
 			time.Sleep(10 * time.Second)
 		}

@@ -45,6 +45,7 @@ type AnchorConfig struct {
 	AnchorInterval   int
 	Logger           *log.Logger
 	FilePV           privval.FilePV
+	AnchorTimeout    int
 }
 
 //EthConfig holds contract addresses and eth node URI

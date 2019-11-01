@@ -95,6 +95,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
+	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "3"))
 	//testMode := util.GetEnv("NETWORK", "testnet")
 	tendermintRPC := types.TendermintConfig{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
@@ -140,6 +141,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		AnchorInterval:   anchorInterval,
 		Logger:           &tmLogger,
 		FilePV:           pv,
+		AnchorTimeout:    anchorTimeout,
 	}
 }
 

@@ -37,6 +37,7 @@ services:
       ANCHOR_INTERVAL: '60'
       LOG_FILTER: 'main:debug,state:info,*:error'
       LOG_LEVEL: 'info'
+      ANCHOR_TIMEOUT: '3'
     secrets:
       - ECDSA_PKPEM
     volumes:
