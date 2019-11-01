@@ -137,7 +137,7 @@ async function getHashInvoiceV1Async(req, res, next) {
   try {
     if (!lightning) throw new Error('LND connection not available')
     let inv = await lightning.addInvoiceAsync({
-      value: 10,
+      value: env.SUBMIT_HASH_PRICE_SAT,
       memo: `SubmitHashInvoiceId:${randomInvoiceId}`
     })
     res.send({ invoice: inv.payment_request })
