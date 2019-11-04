@@ -33,10 +33,10 @@ const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const lndClient = require('lnrpc-node-client')
 const fs = require('fs')
+var cookieParser = require('restify-cookies')
+const crypto = require('crypto')
 
-const LND_SOCKET = env.LND_SOCKET
-const LND_CERTPATH = `/root/.lnd/tls.cert`
-const LND_MACAROONPATH = `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
+const { LND_SOCKET, LND_TLS_CERT, LND_MACAROON } = env
 
 const applyProductionMiddleware = (middlewares = []) => {
   if (process.env.NODE_ENV === 'development' || process.env.NETWORK === 'testnet') {
@@ -90,25 +90,66 @@ function setupRestifyConfigAndRoutes(server) {
   server.use(restify.plugins.queryParser())
   server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
 
-  // boltwall paths for setting up validation using hodl invoices
-  server.post({ path: '/boltwall/hodl', version: '1.0.0' }, hashes.boltwall)
-  server.put({ path: '/boltwall/hodl', version: '1.0.0' }, hashes.boltwall)
-  server.get({ path: '/boltwall/node', version: '1.0.0' }, hashes.boltwall)
+  server.use(cookieParser.parse)
+
+  // set sessionId on req from cookies or generate new unique id if none exists
+  // this is _required_ for the state management of paid hash submissions
+  server.use((req, res, next) => {
+    let sessionId = req.cookies.sessionId
+    if (!sessionId) {
+      sessionId = crypto.randomBytes(32).toString('hex')
+      logger.info(`Creating a new session: ${sessionId}`)
+
+      res.setCookie('sessionId', sessionId, {
+        maxAge: 60 * 2, // max age set to 2 minutes so that stale requests with expired hodl invoices don't hold up hash submissions
+        httpOnly: true, // dissallow changing of cookies
+        path: '/'
+      })
+    }
+    // For the first req of the session, the new sessionId won't be available in the req cookies yet
+    // so we add it to the request object so that other middleware will have access
+    req.sessionId = sessionId
+    next()
+  })
 
   // API RESOURCES
 
-  // get hash invoice
-  server.get(
-    { path: '/hash/invoice', version: '1.0.0' },
+  // boltwall paths for setting up validation using hodl invoices
+  server.post(
+    { path: '/boltwall/hodl', version: '1.0.0' },
     ...applyProductionMiddleware([throttle(5, 1)]),
-    hashes.getHashInvoiceV1Async
+    hashes.setPaymentHashOnBody,
+    hashes.boltwall
   )
-  // submit hash
+
+  // retrieve invoice information based on an existing macaroon on the session
+  server.get(
+    { path: '/boltwall/invoice', version: '1.0.0' },
+    ...applyProductionMiddleware([throttle(5, 1)]),
+    hashes.setPaymentHashOnBody,
+    hashes.boltwall
+  )
+
+  // retrieve basic information about the node that will be receiving
+  // payments for hash submissions
+  server.get(
+    { path: '/boltwall/node', version: '1.0.0' },
+    ...applyProductionMiddleware([throttle(5, 1)]),
+    hashes.boltwall
+  )
+
+  // boltwall protected hash submission
+  // if no hodl invoice has been requested or a requested one has not been
+  // paid then this will fail
   server.post(
     { path: '/hash', version: '1.0.0' },
     ...applyProductionMiddleware([throttle(5, 1)]),
+    hashes.setPaymentHashOnBody,
+    hashes.validatePostHashRequest,
+    hashes.boltwall,
     hashes.postHashV1Async
   )
+
   // get the block objects for the calendar in the specified block range
   server.get(
     { path: '/calendar/:txid', version: '1.0.0' },
@@ -147,26 +188,6 @@ async function startAPIServerAsync() {
   // Begin listening for requests
   await connections.listenRestifyAsync(restifyServer, 8080)
   return restifyServer
-}
-
-/**
- * Opens a Redis connection
- *
- * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
- */
-function openRedisConnection(redisURIs) {
-  connections.openRedisConnection(
-    redisURIs,
-    newRedis => {
-      hashes.setRedis(newRedis)
-    },
-    () => {
-      hashes.setRedis(null)
-      setTimeout(() => {
-        openRedisConnection(redisURIs)
-      }, 5000)
-    }
-  )
 }
 
 /**
@@ -213,18 +234,20 @@ async function openRMQConnectionAsync(connectURI) {
 
 async function startTransactionMonitoring() {
   let subscriptionEstablished = false
-  if (!fs.existsSync(LND_CERTPATH)) {
-    throw new Error(`LND TLS Cert not yet generated, restarting...`)
+  if (!LND_TLS_CERT && !fs.existsSync(LND_TLS_CERT)) {
+    throw new Error(`LND TLS Cert not found or not yet generated, restarting...`)
   }
   while (!subscriptionEstablished) {
     try {
       // establish a connection to lnd
       try {
-        lndClient.setCredentials(LND_SOCKET, LND_MACAROONPATH, LND_CERTPATH)
+        lndClient.setCredentials(LND_SOCKET, LND_MACAROON, LND_TLS_CERT)
         let lightning = lndClient.lightning()
+        let invoicesClient = lndClient.invoice()
         // attempt a get info call, this will fail if wallet is still locked
         await lightning.getInfoAsync({})
         hashes.setLND(lightning)
+        hashes.setInvoiceClient(invoicesClient)
         status.setLND(lightning)
       } catch (error) {
         let message = error.message
@@ -252,6 +275,7 @@ async function establishTransactionSubscriptionAsync() {
     transactionSubscription.on('end', function() {
       logger.error(`The LND transaction subscription has unexpectedly ended`)
       hashes.setLND(null)
+      hashes.setInvoiceClient(null)
       status.setLND(null)
       setTimeout(startTransactionMonitoring, 1000)
     })
@@ -265,8 +289,6 @@ async function establishTransactionSubscriptionAsync() {
 async function start() {
   if (env.NODE_ENV === 'test') return
   try {
-    // init Redis
-    await openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
     await openPostgresConnectionAsync()
     // init Tendermint

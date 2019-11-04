@@ -21,11 +21,8 @@ const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
 const logger = require('../logger.js')
 const crypto = require('crypto')
-const { boltwall } = require('../../boltwall')
 
-// The redis connection used for all redis communication
-// This value is set once the connection has been established
-let redis = null
+const { boltwall } = require('boltwall')
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -38,6 +35,7 @@ let amqpChannel = null
 // The lightning connection used for all lightning communication
 // This value is set once the connection has been established
 let lightning = null
+let invoiceClient = null
 
 /**
  * Converts an array of hash strings to a object suitable to
@@ -127,34 +125,9 @@ function generateProcessingHints(timestampDate) {
 }
 
 /**
- * GET /hash/invoice handler
- *
- * Returns a lightning invoice with embedded unique id
- * After paying the invoice, use the unique id to access hash submission endpoint
- *
- */
-async function getHashInvoiceV1Async(req, res, next) {
-  let randomInvoiceId = crypto.randomBytes(32).toString('hex')
-  try {
-    if (!lightning) throw new Error('LND connection not available')
-    let inv = await lightning.addInvoiceAsync({
-      value: env.SUBMIT_HASH_PRICE_SAT,
-      memo: `SubmitHashInvoiceId:${randomInvoiceId}`
-    })
-    res.send({ invoice: inv.payment_request })
-    return next()
-  } catch (error) {
-    logger.error(`Unable to generate invoice : ${error.message}`)
-    return next(new errors.InternalServerError('Unable to generate invoice'))
-  }
-}
-
-/**
  * POST /hash handler
  *
- * Version 2 without interaction with database
- *
- * Expects a JSON body with the form:
+ * A validator to validate POST hash requests
  *   {"hash": "11cd8a380e8d5fd3ac47c1f880390341d40b11485e8ae946d8fa3d466f23fe89"}
  *
  * The `hash` key must reference valid hex string representing the hash to anchor.
@@ -164,8 +137,11 @@ async function getHashInvoiceV1Async(req, res, next) {
  * - minimum 40 chars long (e.g. 20 byte SHA1)
  * - maximum 128 chars long (e.g. 64 byte SHA512)
  * - an even length string
+ *
+ * This is split into its own middleware so we can reject requests with invalid hashes
+ * before even making a request to boltwall which requires extra async requests
  */
-async function postHashV2Async(req, res, next) {
+function validatePostHashRequest(req, res, next) {
   // validate content-type sent was 'application/json'
   if (req.contentType() !== 'application/json') {
     return next(new errors.InvalidArgumentError('invalid content type'))
@@ -192,8 +168,22 @@ async function postHashV2Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
-  let responseObj = generatePostHashResponse(req.params.hash)
+  return next()
+}
 
+/**
+ * POST /hash handler
+ *
+ * Expects a JSON body with the form:
+ *   {"hash": "11cd8a380e8d5fd3ac47c1f880390341d40b11485e8ae946d8fa3d466f23fe89"}
+ *
+ * The `hash` key must reference valid hex string representing the hash to anchor.
+ * Will send a response object containing the hash submission information
+ * and will also clear the session connecting it to a now "redeemed" invoice
+ */
+async function postHashV1Async(req, res, next) {
+  let responseObj = generatePostHashResponse(req.params.hash)
+  if (!invoiceClient) throw new Error('LND invoices connection not available')
   let hashObj = {
     hash_id: responseObj.hash_id,
     hash: responseObj.hash
@@ -208,130 +198,119 @@ async function postHashV2Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
-  res.send(responseObj)
-  return next()
-}
-
-/**
- * POST /hash handler
- *
- * Expects a JSON body with the form:
- *   {"hash": "11cd8a380e8d5fd3ac47c1f880390341d40b11485e8ae946d8fa3d466f23fe89"}
- *
- * The `hash` key must reference valid hex string representing the hash to anchor.
- *
- * Each hash must be:
- * - in Hexadecimal form [a-fA-F0-9]
- * - minimum 40 chars long (e.g. 20 byte SHA1)
- * - maximum 128 chars long (e.g. 64 byte SHA512)
- * - an even length string
- */
-async function postHashV1Async(req, res, next) {
-  // validate content-type sent was 'application/json'
-  if (req.contentType() !== 'application/json') {
-    return next(new errors.InvalidArgumentError('invalid content type'))
-  }
-
-  // validate params has parse a 'hash' key
-  if (!req.params.hasOwnProperty('hash')) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: missing hash'))
-  }
-
-  // validate 'hash' is a string
-  if (!_.isString(req.params.hash)) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
-  }
-
-  // validate hash param is a valid hex string
-  let isValidHash = /^([a-fA-F0-9]{2}){20,64}$/.test(req.params.hash)
-  if (!isValidHash) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
-  }
-
-  // if we aren't part of an aggregator whitelist, use lightning invoicing
-  let paidInvoiceKey
-  let submittingIP = utils.getClientIP(req)
-  // If whitelist does not contain the submitting IP, use invoicing
-  if (!env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
-    // validate params has parse a 'invoice_id' key
-    if (!req.params.hasOwnProperty('invoice_id')) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: missing invoice_id'))
-    }
-
-    // validate 'invoice_id' is a string
-    let invoiceId = req.params.invoice_id
-    if (!_.isString(invoiceId)) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
-    }
-
-    // validate invoice_id param is a valid hex string
-    let isValidInvoiceId = /^([a-fA-F0-9]{2}){32}$/.test(invoiceId)
-    if (!isValidInvoiceId) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
-    }
-
-    // validate invoice_id has been paid
-    paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
-    try {
-      let keyPresent = await redis.get(paidInvoiceKey)
-      if (!keyPresent) {
-        return next(new errors.PaymentRequiredError(`invoice ${invoiceId} has not been paid`))
-      }
-    } catch (error) {
-      logger.error(`Redis GET error : error getting item with key = ${paidInvoiceKey}`)
-      return next(new errors.InternalServerError('Could not retrieve invoice status'))
-    }
-  }
-
-  // validate amqp channel has been established
-  if (!amqpChannel) {
-    return next(new errors.InternalServerError('Message could not be delivered'))
-  }
-
-  let responseObj = generatePostHashResponse(req.params.hash)
-
-  let hashObj = {
-    proof_id: responseObj.proof_id,
-    hash: responseObj.hash
-  }
-
+  const preimage = req.sessionId
   try {
-    await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_AGG_QUEUE, Buffer.from(JSON.stringify(hashObj)), {
-      persistent: true
-    })
-  } catch (error) {
-    logger.error(`${env.RMQ_WORK_OUT_AGG_QUEUE} : publish message nacked`)
-    return next(new errors.InternalServerError('Message could not be delivered'))
+    await invoiceClient.settleInvoiceAsync({ preimage: Buffer.from(preimage, 'hex') })
+  } catch (e) {
+    logger.error('Problem setting invoice: ', e)
+    return next(
+      new errors.InternalServerError(
+        `Could not settle the hold invoice (${getHash(preimage)}) with preimage (${preimage})`
+      )
+    )
   }
 
-  if (paidInvoiceKey) {
-    try {
-      await redis.del(paidInvoiceKey)
-    } catch (error) {
-      logger.error(`Redis DEL error : error deleting item with key = ${paidInvoiceKey}`)
-    }
-  }
-
+  // clear sessionId cookie
+  res.clearCookie('sessionId')
+  req.session = null
   res.send(responseObj)
   return next()
 }
 
 const boltwallConfigs = {
-  minAmount: env.SUBMIT_HASH_PRICE_SAT
-  // getCaveat: () => {},
-  // validateCaveat: () => {}
+  minAmount: env.SUBMIT_HASH_PRICE_SAT || 10,
+  getCaveat: req => {
+    // set paymentHash (invoice Id) from req body in a macaroon
+    return `paymentHash=${req.body.paymentHash}`
+  },
+  getInvoiceDescription: req => `HODL invoice payment to submit a hash to chainpoint core from ${req.header('HOST')}`,
+  caveatVerifier: async req => {
+    if (!lightning) throw new Error('LND connection not available')
+    if (!invoiceClient) throw new Error('LND invoices connection not available')
+
+    // get secret from session ID and calculate payment hash for invoice lookup
+    const secret = req.sessionId
+
+    if (!secret) throw new Error('Missing session id to validate request with')
+
+    logger.info(`Checking payment status for session ${secret}`)
+
+    const id = getHash(secret)
+
+    // next check the status of the invoice associated with this session
+    try {
+      logger.info(`Checking status of invoice ${id}`)
+      /** TODO: can't use the lightning client until raw credentials are supported instead of path **/
+      const invoiceInfo = await lightning.lookupInvoiceAsync({ r_hash_str: id })
+      if (invoiceInfo.settled !== false || invoiceInfo.state !== 'ACCEPTED') return false
+
+      if (!invoiceInfo) throw new errors.PaymentRequiredError(`Invoice with that corresponding preimage not found`)
+      if (invoiceInfo.settled !== false || invoiceInfo.state === 'OPEN')
+        throw new errors.PaymentRequiredError(`invoice ${id} has not been paid`)
+    } catch (e) {
+      logger.error(e)
+      return false
+    }
+
+    // last check is that the invoice associated with the session matches the one in the macaroon
+    return caveat => {
+      // make sure the payment hash in the caveat matches the r_hash_string we're looking up
+      const paymentHash = caveat.substr('paymentHash='.length).trim()
+
+      // if caveat doesn't include a payment hash, we can skip
+      if (!paymentHash) return false
+      else if (paymentHash !== id) {
+        // if we are examining the correct macaroon caveat but doesn't match
+        // expected hash based on session id
+        // then we have an old macaroon or session and should clear the request
+        logger.warn(
+          `Payment hash from macaroon (${paymentHash}) does not match rhash generated from hash session (${id}). Clearing session`
+        )
+        req.cookies = null
+        return false
+      }
+
+      return true
+    }
+  }
+}
+
+async function setPaymentHashOnBody(req, res, next) {
+  if (!req.sessionId) {
+    return next(new errors.InternalServerError('Missing sessionId on request. Cannot proceed with boltwall auth.'))
+  }
+
+  // set this on the body automatically for boltwall to handle hodl invoices
+  // without requiring any requirements from client to include it
+  req.body = {
+    ...req.body,
+    paymentHash: getHash(req.sessionId)
+  }
+
+  if (!req.body.amount) {
+    req.body.amount = env.SUBMIT_HASH_PRICE_SAT
+  } else if (req.body.amount < env.SUBMIT_HASH_PRICE_SAT) {
+    res.status(402)
+    res.json({ message: `Insufficient payment amount. Minimum payment required: ${env.SUBMIT_HASH_PRICE_SAT}` })
+  }
+  next()
+}
+
+function getHash(secret) {
+  if (typeof secret !== 'string') throw new Error('Must give a string to convert to a hash')
+  return crypto
+    .createHash('sha256')
+    .update(Buffer.from(secret, 'hex'))
+    .digest('hex')
 }
 
 module.exports = {
   postHashV1Async: postHashV1Async,
-  postHashV2Async: postHashV2Async,
+  validatePostHashRequest: validatePostHashRequest,
   boltwallConfigs: boltwallConfigs,
   boltwall: boltwall(boltwallConfigs),
-  getHashInvoiceV1Async: getHashInvoiceV1Async,
+  setPaymentHashOnBody: setPaymentHashOnBody,
   generatePostHashResponse: generatePostHashResponse,
-  setRedis: r => {
-    redis = r
-  },
   // additional functions for testing purposes
   setAMQPChannel: chan => {
     amqpChannel = chan
@@ -341,5 +320,8 @@ module.exports = {
   },
   setLND: l => {
     lightning = l
+  },
+  setInvoiceClient: i => {
+    invoiceClient = i
   }
 }
