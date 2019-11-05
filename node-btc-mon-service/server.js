@@ -106,8 +106,10 @@ let monitorTransactionsAsync = async () => {
   for (let newbtcTxObjJSON of newBtcTxObjJSONArray) {
     let newBtcTxIdObj = JSON.parse(newbtcTxObjJSON)
     try {
-      // Get BTC Transaction Stats
-      let txStats
+      let txId = btcTxIdObj.tx_id
+      let txBlockHeight = btcTxIdObj.block_height
+      // Get current BTC block height
+      let confirmCount = 0
       try {
         txStats = await lnd.getTransactionDataAsync(newBtcTxIdObj.tx_id)
       } catch (error) {
@@ -121,9 +123,9 @@ let monitorTransactionsAsync = async () => {
       // if confirmed, Get BTC Block info
       let blockStats
       try {
-        blockStats = await lnd.getBlockDataAsync(txStats.blockHash)
+        blockStats = await lnd.getBlockDataAsync(txBlockHeight)
       } catch (error) {
-        throw new Error(`Could not get stats for block ${txStats.blockHash}`)
+        throw new Error(`Could not get stats for block ${txBlockHeight}`)
       }
 
       let messageObj = {}
@@ -180,6 +182,7 @@ let monitorTransactionsAsync = async () => {
       } catch (error) {
         throw new Error(`Could not get stats for block ${txBlockHeight}`)
       }
+
       let txIndex = blockStats.tx.indexOf(txId)
       if (txIndex === -1) throw new Error(`transaction ${txId} not found in block ${txBlockHeight}`)
       // adjusting for endieness, reverse txids for further processing
