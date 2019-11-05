@@ -152,6 +152,7 @@ type BtcTxMsg struct {
 	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
 	BtcTxID          string `json:"btctx_id"`
 	BtcTxBody        string `json:"btctx_body"`
+	BtcTxHeight      int64  `json:"btctx_height"`
 }
 
 // BtcTxProofState : An RMQ message object bound for proofstate service
@@ -181,7 +182,8 @@ type BtccOpsState struct {
 
 // TxID : RMQ message dispatched to initiate monitoring
 type TxID struct {
-	TxID string `json:"tx_id"`
+	TxID        string `json:"tx_id"`
+	BlockHeight int64  `json:"block_height"`
 }
 
 // CalAgg : An RMQ message representing an intermediate aggregation object to be fed into the Cal anchor tree

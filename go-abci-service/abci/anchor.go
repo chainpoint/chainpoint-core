@@ -132,7 +132,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 		return err
 	}
-	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID})
+	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
 	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "", txIDBytes)
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
