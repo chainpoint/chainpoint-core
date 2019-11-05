@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "amqplib": "^0.5.2",
-    "btc-bridge": "^0.3.0",
+    "btc-bridge": "^0.2.0",
     "envalid": "^5.0.0",
     "ioredis": "^4.9.0",
     "merkle-tools": "^1.3.2",
