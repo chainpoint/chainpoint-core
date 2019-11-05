@@ -77,9 +77,9 @@
   integrity sha512-1w52Nyx4Gq47uuu0EVcsHBxZFJgurQ+rTKS3qMHxR1GY2T8c2AJYd6vZoZ9q1rupaDjU0yT+Jc2XTyXkjeMA+Q==
 
 "@types/node@*":
-  version "12.12.4"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.12.4.tgz#8ed27dba0a83b020fca035f003ffe21f70207a9c"
-  integrity sha512-tJUH7//zNZ/539DH4cgZS3NsmW0b9ShDeRBzoCEMCEAlHn5WHUghOfHdycvpo4RCxxEPmQ3WfjDogh+DCCvuSg==
+  version "12.7.5"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.7.5.tgz#e19436e7f8e9b4601005d73673b6dc4784ffcc2f"
+  integrity sha512-9fq4jZVhPNW8r+UYKnxF1e2HkDWOWKM5bC2/7c9wPV835I0aOrVbS/Hw/pWPk2uKrNXQqg9Z959Kz+IYDd5p3w==
 
 "@types/node@10.12.18":
   version "10.12.18"
@@ -87,9 +87,9 @@
   integrity sha512-fh+pAqt4xRzPfqA6eh3Z2y6fyZavRIumvjhaCL753+TVkGKGhpPeyrJG2JftD0T9q4GF00KjefsQ+PQNDdWQaQ==
 
 "@types/node@^10.1.0":
-  version "10.17.3"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.17.3.tgz#65a8d9a6a0f6af55595a2d0020617959130d6495"
-  integrity sha512-QZ9CjUB3QoA3f2afw3utKlfRPhpmufB7jC2+oDhLWnXqoyx333fhKSQDLQu2EK7OE0a15X67eYiRAaJsHXrpMA==
+  version "10.14.18"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-10.14.18.tgz#b7d45fc950e6ffd7edc685e890d13aa7b8535dce"
+  integrity sha512-ryO3Q3++yZC/+b8j8BdKd/dn9JlzlHBPdm80656xwYUdmPkpTGTjkAdt6BByiNupGPE8w0FhBgvYy/fX9hRNGQ==
 
 abbrev@1:
   version "1.1.1"
@@ -167,13 +167,6 @@ assert-plus@1.0.0, assert-plus@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/assert-plus/-/assert-plus-1.0.0.tgz#f12e0f3c5d77b0b1cdd9146942e4e96c1e4dd525"
   integrity sha1-8S4PPF13sLHN2RRpQuTpbB5N1SU=
-
-async-retry@^1.2.3:
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/async-retry/-/async-retry-1.2.3.tgz#a6521f338358d322b1a0012b79030c6f411d1ce0"
-  integrity sha512-tfDb02Th6CE6pJUF2gjW5ZVjsgwlucVXOEQMvEX9JgSJMs9gAX+Nz3xRuJBKuUYjTSYORqvDBORdAQ3LU59g7Q==
-  dependencies:
-    retry "0.12.0"
 
 async@^2.6.1:
   version "2.6.2"
@@ -300,9 +293,9 @@ bluebird@^3.5.2:
   integrity sha512-FG+nFEZChJrbQ9tIccIfZJBz3J7mLrAhxakAbnrJWn8d7aKOC+LWifa0G+p4ZqKp4y13T7juYvdhq9NzKdsrjw==
 
 bluebird@^3.5.5:
-  version "3.7.1"
-  resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.7.1.tgz#df70e302b471d7473489acf26a93d63b53f874de"
-  integrity sha512-DdmyoGCleJnkbp3nkbxTLJ18rjDsE4yCggEwKNXkeV123sPNfOCYeDoeuOY+F2FrSjO1YXcTU+dsy96KMy+gcg==
+  version "3.5.5"
+  resolved "https://registry.yarnpkg.com/bluebird/-/bluebird-3.5.5.tgz#a8d0afd73251effbbd5fe384a77d73003c17a71f"
+  integrity sha512-5am6HnnfN+urzt4yfg7IgTbotDjIT/u8AJpEt0sIU9FtXfVeezXAPKswrG+xKUCOYAINpSdgZVDU6QFh+cuH3w==
 
 bn.js@^4.11.8, bn.js@^4.4.0:
   version "4.11.8"
@@ -338,16 +331,15 @@ bs58check@<3.0.0, bs58check@^2.0.0, bs58check@^2.1.1:
     create-hash "^1.1.0"
     safe-buffer "^5.1.2"
 
-btc-bridge@^0.3.0:
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/btc-bridge/-/btc-bridge-0.3.0.tgz#b3498f7ef827d27db309398e528363e0505d7317"
-  integrity sha512-odkjMvHzO/pF0PslKrA3/Yq/hw081F/e+GW8QK135sU6p2CU136jCujGIawfLAF5oL07j/Z5JJ5MyFG73a6Siw==
+btc-bridge@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/btc-bridge/-/btc-bridge-0.2.0.tgz#36f6874e180c0a2c9e551979750136a03de943f1"
+  integrity sha512-LEvxc3+zX/UlmdUxNwAb6oCQJeIWShsB/BPZW4RN/toroV+jnSMuTJj1mdOtj4OPFGB6jPkQhKGRzKAzS4kdzw==
   dependencies:
-    async-retry "^1.2.3"
     bignumber.js "^9.0.0"
     bitcoinjs-lib "^5.0.5"
     bluebird "^3.5.5"
-    lnrpc-node-client "^1.1.1"
+    lnrpc-node-client "^1.0.2"
     request "^2.88.0"
     request-promise-native "^1.0.7"
 
@@ -720,19 +712,7 @@ getpass@^0.1.1:
   dependencies:
     assert-plus "^1.0.0"
 
-glob@^7.0.5:
-  version "7.1.5"
-  resolved "https://registry.yarnpkg.com/glob/-/glob-7.1.5.tgz#6714c69bee20f3c3e64c4dd905553e532b40cdc0"
-  integrity sha512-J9dlskqUXK1OeTOYBEn5s8aMukWMwWfs+rPTn/jn50Ux4MNXVhubL1wu/j2t+H4NVI+cXEcCaYellqaPVGXNqQ==
-  dependencies:
-    fs.realpath "^1.0.0"
-    inflight "^1.0.4"
-    inherits "2"
-    minimatch "^3.0.4"
-    once "^1.3.0"
-    path-is-absolute "^1.0.0"
-
-glob@^7.1.3:
+glob@^7.0.5, glob@^7.1.3:
   version "7.1.4"
   resolved "https://registry.yarnpkg.com/glob/-/glob-7.1.4.tgz#aa608a2f6c577ad357e1ae5a5c26d9a8d1969255"
   integrity sha512-hkLPepehmnKk41pUGm3sYxoFs/umurYfYJCerbXEyFIWcAzvpipAgVkBqqT9RBKMGjnq6kMuyYwha6csxbiM1A==
@@ -745,9 +725,9 @@ glob@^7.1.3:
     path-is-absolute "^1.0.0"
 
 grpc@^1.23.3:
-  version "1.24.1"
-  resolved "https://registry.yarnpkg.com/grpc/-/grpc-1.24.1.tgz#0afefd6feeeb3d9ce09586f08400007ea6cb6a16"
-  integrity sha512-NFIWbt3RXZU4VlDLpiAM/Ca8Yz30QShUdPGMqOPH652PmA+2fau2vuW+tOYWQUkYMfBW2yege/T5p65e5TetVQ==
+  version "1.23.3"
+  resolved "https://registry.yarnpkg.com/grpc/-/grpc-1.23.3.tgz#30a013ca2cd7e350b0ffc0034be5380ddef3ae7f"
+  integrity sha512-7vdzxPw9s5UYch4aUn4hyM5tMaouaxUUkwkgJlwbR4AXMxiYZJOv19N2ps2eKiuUbJovo5fnGF9hg/X91gWYjw==
   dependencies:
     "@types/bytebuffer" "^5.0.40"
     lodash.camelcase "^4.3.0"
@@ -962,13 +942,12 @@ lcid@^1.0.0:
   dependencies:
     invert-kv "^1.0.0"
 
-lnrpc-node-client@^1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/lnrpc-node-client/-/lnrpc-node-client-1.1.1.tgz#693e485949d8e63cb7ca991ec35536981318e71e"
-  integrity sha512-wei9BrDDIGzZzSkfxmdSo96kyomwKSBbVG464q2tUhL6JzatKGCQoiLPFcngW9/K+QYSHycbZjhnaXTZRtiWBA==
+lnrpc-node-client@^1.0.2:
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/lnrpc-node-client/-/lnrpc-node-client-1.0.3.tgz#4aa76476c54f6fa2f85669b7ed6d9db796f3f921"
+  integrity sha512-Zra8LcBIkb/3YCm1xjJ4wDs3Fw5fboXd5oV9udOmG2CCDYLw8Jv+xmzwTTfNCCNCYQBKxQEbYg3OgaSMK7kyIw==
   dependencies:
     "@grpc/proto-loader" "^0.5.2"
-    bluebird "^3.5.5"
     grpc "^1.23.3"
 
 lodash.camelcase@^4.3.0:
@@ -1436,11 +1415,6 @@ requires-port@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/requires-port/-/requires-port-1.0.0.tgz#925d2601d39ac485e091cf0da5c6e694dc3dcaff"
   integrity sha1-kl0mAdOaxIXgkc8NpcbmlNw9yv8=
-
-retry@0.12.0:
-  version "0.12.0"
-  resolved "https://registry.yarnpkg.com/retry/-/retry-0.12.0.tgz#1b42a6266a21f07421d1b0b54b7dc167b01c013b"
-  integrity sha1-G0KmJmoh8HQh0bC1S33BZ7AcATs=
 
 rimraf@^2.6.1:
   version "2.7.1"
