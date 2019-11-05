@@ -69,6 +69,10 @@ let envDefinitions = {
     default: 'work.gen',
     desc: 'The queue name for outgoing message to the proof gen service'
   }),
+  RMQ_WORK_OUT_BTCMON_QUEUE: envalid.str({
+    default: 'work.btcmon',
+    desc: 'The queue name for outgoing message to the btc mon service'
+  }),
 
   // Redis related variables
   REDIS_CONNECT_URIS: envalid.str({
@@ -98,7 +102,7 @@ let envDefinitions = {
   }),
   RMQ_WORK_IN_BTCMON_QUEUE: envalid.str({
     default: 'work.btcmon',
-    desc: 'The queue name for message consumption originating from the calendar service'
+    desc: 'The queue name for message consumption originating from the calendar OR btc-tx service'
   }),
   MONITOR_INTERVAL_SECONDS: validateMonitorRange({
     default: 30,

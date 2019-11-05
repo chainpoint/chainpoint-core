@@ -132,8 +132,8 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 		return err
 	}
-	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID})
-	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "", txIDBytes)
+	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
+	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "confirmedtx", txIDBytes)
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 		return err
@@ -209,7 +209,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 
 func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 	switch msg.Type {
-	case "btctx":
+	case "btcmon_new":
 		time.Sleep(30 * time.Second)
 		var btcTxObj types.BtcTxMsg
 		err := json.Unmarshal(msg.Body, &btcTxObj)
@@ -226,7 +226,7 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 		}
 		msg.Ack(false)
 		break
-	case "btcmon":
+	case "btcmon_confirmed":
 		err := app.ConsumeBtcMonMsg(msg)
 		app.LogError(err)
 		break

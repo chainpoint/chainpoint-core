@@ -117,19 +117,19 @@ async function processIncomingAnchorBTCJobAsync(msg) {
         throw new Error(`Unable to publish BTC transaction: ${error.message}`)
       }
 
-      // queue return message for calendar containing the new transaction information
+      // queue message for btcmon containing the new transaction information
       // adding btc transaction id and full transaction body to original message and returning
-      messageObj.btctx_id = txResult.txId
-      messageObj.btctx_body = txResult.txHex
+      messageObj.tx_id = txResult.txId
+      messageObj.tx_body = txResult.txHex
       try {
-        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
+        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_BTCMON_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
           persistent: true,
-          type: 'btctx'
+          type: 'newtx'
         })
-        logger.info(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btctx] publish message acked : ${messageObj.btctx_id}`)
+        logger.info(`${env.RMQ_WORK_OUT_BTCMON_QUEUE} : [newtx] publish message acked : ${messageObj.tx_id}`)
       } catch (error) {
-        logger.error(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btctx] publish message nacked : ${messageObj.btctx_id}`)
-        throw new Error(`Unable to publish to RMQ_WORK_OUT_CAL_QUEUE: ${error.message}`)
+        logger.error(`${env.RMQ_WORK_OUT_BTCMON_QUEUE} : [newtx] publish message nacked : ${messageObj.tx_id}`)
+        throw new Error(`Unable to publish to RMQ_WORK_OUT_BTCMON_QUEUE: ${error.message}`)
       }
       amqpChannel.ack(msg)
     } catch (error) {
