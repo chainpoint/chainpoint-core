@@ -31,7 +31,7 @@ services:
       ANCHOR_INTERVAL: '3'
       LOG_FILTER: 'main:debug,state:info,*:error'
       LOG_LEVEL: 'info'
-      ANCHOR_TIMEOUT: '3'
+      ANCHOR_TIMEOUT: '10'
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
