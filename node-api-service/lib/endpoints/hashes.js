@@ -22,10 +22,6 @@ const _ = require('lodash')
 const logger = require('../logger.js')
 const crypto = require('crypto')
 
-// The redis connection used for all redis communication
-// This value is set once the connection has been established
-let redis = null
-
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
 const uuidv1 = require('uuid/v1')
@@ -34,8 +30,9 @@ const uuidv1 = require('uuid/v1')
 // This value is set once the connection has been established
 let amqpChannel = null
 
-// The lightning connection used for all lightning communication
+// The lightning connection used for all lightning invoices communication
 // This value is set once the connection has been established
+let invoiceClient = null
 let lightning = null
 
 /**
@@ -132,15 +129,17 @@ function generateProcessingHints(timestampDate) {
  * After paying the invoice, use the unique id to access hash submission endpoint
  *
  */
-async function getHashInvoiceV1Async(req, res, next) {
-  let randomInvoiceId = crypto.randomBytes(32).toString('hex')
+async function getPreimageV1Async(req, res, next) {
   try {
-    if (!lightning) throw new Error('LND connection not available')
-    let inv = await lightning.addInvoiceAsync({
+    if (!invoiceClient) throw new Error('LND connection not available')
+    let preimage = crypto.randomBytes(32).toString('hex')
+    let hash = getHash(preimage)
+    let { payment_request } = await invoiceClient.addHoldInvoiceAsync({
       value: env.SUBMIT_HASH_PRICE_SAT,
-      memo: `SubmitHashInvoiceId:${randomInvoiceId}`
+      memo: `SubmitHashHoldInvoice`,
+      hash: Buffer.from(hash, 'hex')
     })
-    res.send({ invoice: inv.payment_request })
+    res.send({ preimage, payment_request })
     return next()
   } catch (error) {
     logger.error(`Unable to generate invoice : ${error.message}`)
@@ -185,37 +184,51 @@ async function postHashV1Async(req, res, next) {
   }
 
   // if we aren't part of an aggregator whitelist, use lightning invoicing
-  let paidInvoiceKey
   let submittingIP = utils.getClientIP(req)
   // If whitelist does not contain the submitting IP, use invoicing
   if (!env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
     // validate params has parse a 'invoice_id' key
-    if (!req.params.hasOwnProperty('invoice_id')) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: missing invoice_id'))
+    if (!req.params.hasOwnProperty('preimage')) {
+      return next(new errors.InvalidArgumentError('invalid JSON body: missing preimage'))
     }
 
-    // validate 'invoice_id' is a string
-    let invoiceId = req.params.invoice_id
-    if (!_.isString(invoiceId)) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
+    // validate 'preimage' is a string
+    let preimage = req.params.preimage
+    if (!_.isString(preimage)) {
+      return next(new errors.InvalidArgumentError('invalid JSON body: bad preimage submitted'))
     }
 
-    // validate invoice_id param is a valid hex string
-    let isValidInvoiceId = /^([a-fA-F0-9]{2}){32}$/.test(invoiceId)
-    if (!isValidInvoiceId) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
+    // validate preimage param is a valid hex string
+    let isValidPreimage = /^([a-fA-F0-9]{2}){32}$/.test(preimage)
+    if (!isValidPreimage) {
+      return next(new errors.InvalidArgumentError('invalid JSON body: bad preimage submitted'))
     }
 
-    // validate invoice_id has been paid
-    paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
+    // validate preimage has been paid
+    if (!invoiceClient) throw new Error('LND invoices connection not available')
+    if (!lightning) throw new Error('LND connection not available')
+    let paymentHash
     try {
-      let keyPresent = await redis.get(paidInvoiceKey)
-      if (!keyPresent) {
-        return next(new errors.PaymentRequiredError(`invoice ${invoiceId} has not been paid`))
-      }
+      paymentHash = getHash(preimage)
+
+      const invoiceInfo = await lightning.lookupInvoiceAsync({ r_hash_str: paymentHash })
+      console.log('invoiceINfo:', invoiceInfo)
+      if (!invoiceInfo) next(new errors.PaymentRequiredError(`Invoice with that corresponding preimage not found`))
+      if (invoiceInfo.settled !== false || invoiceInfo.state === 'OPEN')
+        next(new errors.PaymentRequiredError(`invoice ${paymentHash} has not been paid`))
     } catch (error) {
-      logger.error(`Redis GET error : error getting item with key = ${paidInvoiceKey}`)
+      logger.error(`LND query error for ${paymentHash}: ${error.message}`)
       return next(new errors.InternalServerError('Could not retrieve invoice status'))
+    }
+
+    // if invoice status has been confirmed then we can settle it to prevent future submissions
+    try {
+      await invoiceClient.settleInvoiceAsync({ preimage: Buffer.from(preimage, 'hex') })
+    } catch (e) {
+      logger.error(`Problem settling invoice ${paymentHash}: ${e.message}`)
+      return next(
+        new errors.InternalServerError(`Could not settle the hold invoice (${paymentHash}) with preimage (${preimage})`)
+      )
     }
   }
 
@@ -240,25 +253,22 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
-  if (paidInvoiceKey) {
-    try {
-      await redis.del(paidInvoiceKey)
-    } catch (error) {
-      logger.error(`Redis DEL error : error deleting item with key = ${paidInvoiceKey}`)
-    }
-  }
-
   res.send(responseObj)
   return next()
 }
 
+function getHash(preimage) {
+  return crypto
+    .createHash('sha256')
+    .update(Buffer.from(preimage, 'hex'))
+    .digest()
+    .toString('hex')
+}
+
 module.exports = {
   postHashV1Async: postHashV1Async,
-  getHashInvoiceV1Async: getHashInvoiceV1Async,
+  getPreimageV1Async: getPreimageV1Async,
   generatePostHashResponse: generatePostHashResponse,
-  setRedis: r => {
-    redis = r
-  },
   // additional functions for testing purposes
   setAMQPChannel: chan => {
     amqpChannel = chan
@@ -268,5 +278,8 @@ module.exports = {
   },
   setLND: l => {
     lightning = l
+  },
+  setInvoice: i => {
+    invoiceClient = i
   }
 }

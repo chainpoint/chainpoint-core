@@ -95,9 +95,9 @@ function setupRestifyConfigAndRoutes(server) {
 
   // get hash invoice
   server.get(
-    { path: '/hash/invoice', version: '1.0.0' },
+    { path: '/hash/preimage', version: '1.0.0' },
     ...applyProductionMiddleware([throttle(5, 1)]),
-    hashes.getHashInvoiceV1Async
+    hashes.getPreimageV1Async
   )
   // submit hash
   server.post(
@@ -143,26 +143,6 @@ async function startAPIServerAsync() {
   // Begin listening for requests
   await connections.listenRestifyAsync(restifyServer, 8080)
   return restifyServer
-}
-
-/**
- * Opens a Redis connection
- *
- * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
- */
-function openRedisConnection(redisURIs) {
-  connections.openRedisConnection(
-    redisURIs,
-    newRedis => {
-      hashes.setRedis(newRedis)
-    },
-    () => {
-      hashes.setRedis(null)
-      setTimeout(() => {
-        openRedisConnection(redisURIs)
-      }, 5000)
-    }
-  )
 }
 
 /**
@@ -218,8 +198,10 @@ async function startTransactionMonitoring() {
       try {
         lndClient.setCredentials(LND_SOCKET, LND_MACAROONPATH, LND_CERTPATH)
         let lightning = lndClient.lightning()
+        let invoice = lndClient.invoice()
         // attempt a get info call, this will fail if wallet is still locked
         await lightning.getInfoAsync({})
+        hashes.setInvoice(invoice)
         hashes.setLND(lightning)
         status.setLND(lightning)
       } catch (error) {
@@ -247,6 +229,7 @@ async function establishTransactionSubscriptionAsync() {
     })
     transactionSubscription.on('end', function() {
       logger.error(`The LND transaction subscription has unexpectedly ended`)
+      hashes.setInvoice(null)
       hashes.setLND(null)
       status.setLND(null)
       setTimeout(startTransactionMonitoring, 1000)
@@ -261,8 +244,6 @@ async function establishTransactionSubscriptionAsync() {
 async function start() {
   if (env.NODE_ENV === 'test') return
   try {
-    // init Redis
-    await openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
     await openPostgresConnectionAsync()
     // init Tendermint

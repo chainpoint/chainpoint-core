@@ -144,9 +144,15 @@ services:
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
+      LND_MACAROON: ${LND_MACAROON}
+      LND_TLS_CERT: ${LND_TLS_CERT}
+      CAVEAT_KEY: ${CAVEAT_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
     volumes:
       - ~/.chainpoint/core/.lnd:/root/.lnd
       - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
+      - ./node-api-service/lib/endpoints:/home/node/app/lib/endpoints/
+      - ./node-api-service/server.js:/home/node/app/server.js
     tty: true
 
   api-test:
@@ -167,9 +173,15 @@ services:
       LND_SOCKET: ${LND_SOCKET}
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
+      CAVEAT_KEY: '12345'
+      LND_MACAROON: '12345'
+      LND_TLS_CERT: '12345'
     volumes:
       - ~/.chainpoint/core/.lnd:/root/.lnd
       - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
+      - ./node-api-service/lib/endpoints:/home/node/app/lib/endpoints/
+      - ./node-api-service/server.js:/home/node/app/server.js
+      - ./node-api-service/test:/home/node/app/test
     tty: true
 
   # Bitcoin Transmit
