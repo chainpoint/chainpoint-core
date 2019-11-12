@@ -197,9 +197,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 // SetOption : Method for runtime data transfer between other apps and ABCI
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
-	if req.Key == "TOKEN" {
-		go app.pgClient.TokenHashUpsert(req.Value)
-	}
 	return
 }
 

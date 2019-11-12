@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -103,7 +102,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		meta := strings.Split(tx.Meta, "|") // first part of meta is core ID that issued TX, second part is BTC TX ID
 		if len(meta) > 0 {
 			app.state.LastAnchorCoreID = meta[0]
-			tags = append(tags, common.KVPair{Key: []byte("CORERC"), Value: util.Int64ToByte(app.state.LastCoreMintedAtBlock)})
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
@@ -114,45 +112,8 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			app.aggregator.LatestNist = app.state.LatestNistRecord
 		}
 		break
-	case "NODE-MINT":
-		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
-		if err != nil {
-			app.logger.Debug("Parsing Node MINT tx failed")
-		} else {
-			app.state.PrevNodeMintedAtBlock = app.state.LastNodeMintedAtBlock
-			app.state.LastNodeMintedAtBlock = lastMintedAtBlock
-		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "CORE-MINT":
-		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
-		if err != nil {
-			app.logger.Debug("Parsing Core MINT tx failed")
-		} else {
-			app.state.PrevCoreMintedAtBlock = app.state.LastCoreMintedAtBlock
-			app.state.LastCoreMintedAtBlock = lastMintedAtBlock
-		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
 	case "JWK":
 		app.SaveJWK(tx)
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "CORE-SIGN":
-		app.CoreRewardSignatures = util.UniquifyStrings(append(app.CoreRewardSignatures, tx.Data))
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "NODE-SIGN":
-		app.NodeRewardSignatures = util.UniquifyStrings(append(app.NodeRewardSignatures, tx.Data))
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "NODE-RC":
-		tags = app.incrementTxInt(tags)
-		tags = append(tags, common.KVPair{Key: []byte("NODERC"), Value: util.Int64ToByte(app.state.LastNodeMintedAtBlock)})
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "TOKEN":
-		go app.pgClient.TokenHashUpsert(tx.Data)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	default:
