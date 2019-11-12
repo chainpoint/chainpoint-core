@@ -22,7 +22,7 @@ func (app *AnchorApplication) incrementTxInt(tags []common.KVPair) []common.KVPa
 	return append(tags, common.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
 }
 
-func (app *AnchorApplication) validateGossip(rawTx []byte) types2.ResponseCheckTx {
+func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	var tx types.Tx
 	var err error
 	if app.state.ChainSynced {

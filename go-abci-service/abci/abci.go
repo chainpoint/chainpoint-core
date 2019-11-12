@@ -89,6 +89,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	name := "anchor"
 	db := dbm.NewDB(name, dbm.DBBackendType(config.DBType), "/tendermint/data")
 	state := loadState(db)
+	if state.TxValidation == nil {
+		state.TxValidation = make(map[string]types.TxValidation)
+	}
 	state.ChainSynced = false // False until we finish syncing
 
 	// Declare postgres connection
@@ -242,7 +245,7 @@ func (app *AnchorApplication) DeliverMsg(tx []byte) types2.ResponseDeliverMsg {
 
 // CheckTx : Pre-gossip validation
 func (app *AnchorApplication) CheckTx(rawTx []byte) types2.ResponseCheckTx {
-	return app.validateGossip(rawTx)
+	return app.validateTx(rawTx)
 }
 
 // BeginBlock : Handler that runs at the beginning of every block

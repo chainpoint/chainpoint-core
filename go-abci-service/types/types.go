@@ -58,33 +58,44 @@ type EthConfig struct {
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
 type AnchorState struct {
-	TxInt            int64 `json:"tx_int"`
-	Height           int64 `json:"height"`
+	TxValidation     map[string]TxValidation `json:"tx_validation"`
+	TxInt            int64                   `json:"tx_int"`
+	Height           int64                   `json:"height"`
+	AppHash          []byte                  `json:"app_hash"`
+	BeginCalTxInt    int64                   `json:"begin_cal_int"`
+	EndCalTxInt      int64                   `json:"end_cal_int"`
+	LatestCalTxInt   int64                   `json:"latest_cal_int"`
+	LatestBtcaTx     []byte                  `json:"latest_btca"`
+	LatestBtcaTxInt  int64                   `json:"latest_btca_int"`
+	LatestBtcaHeight int64                   `json:"latest_btca_height"`
+	LatestBtcTx      string                  `json:"latest_btc"`
+	LatestBtcAggRoot string                  `json:"latest_btc_root"`
+	LatestBtccTx     []byte                  `json:"latest_btcc"`
+	LatestBtccTxInt  int64                   `json:"latest_btcc_int"`
+	LatestBtccHeight int64                   `json:"latest_btcc_height"`
+	LastAnchorCoreID string                  `json:"last_anchor_core_id"`
+	LastAuditCoreID  string                  `json:"last_audit_core_id"`
 	ChainSynced      bool
-	AppHash          []byte `json:"app_hash"`
-	BeginCalTxInt    int64  `json:"begin_cal_int"`
-	EndCalTxInt      int64  `json:"end_cal_int"`
-	LatestCalTxInt   int64  `json:"latest_cal_int"`
-	LatestBtcaTx     []byte `json:"latest_btca"`
-	LatestBtcaTxInt  int64  `json:"latest_btca_int"`
-	LatestBtcaHeight int64  `json:"latest_btca_height"`
-	LatestBtcTx      string `json:"latest_btc"`
-	LatestBtcAggRoot string `json:"latest_btc_root"`
-	LatestBtccTx     []byte `json:"latest_btcc"`
-	LatestBtccTxInt  int64  `json:"latest_btcc_int"`
-	LatestBtccHeight int64  `json:"latest_btcc_height"`
 	LatestNistRecord string
-	LastAnchorCoreID string `json:"last_anchor_core_id"`
-	LastAuditCoreID  string `json:"last_audit_core_id"`
 }
 
 // Holds state for validating Transactions
 type TxValidation struct {
-	LastJWKTx  Tx
-	LastCalTx  Tx
-	LastBtcaTx Tx
-	LastBtccTx Tx
-	LastNISTTx Tx
+	LastJWKTx      Tx
+	LastJWKTxInt   int64
+	JWKViolations  int
+	LastCalTx      Tx
+	LastCalTxInt   int64
+	CalViolations  int
+	LastBtcaTx     Tx
+	LastBtcaTxInt  int64
+	BtcaViolations int
+	LastBtccTx     Tx
+	LastBtccTxInt  int64
+	BtccViolations int
+	LastNISTTx     Tx
+	LastNISTTxInt  int64
+	NISTViolations int
 }
 
 // Tx holds custom transaction data and metadata for the Chainpoint Calendar
