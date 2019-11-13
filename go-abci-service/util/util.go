@@ -418,3 +418,13 @@ func Copy(src, dst string) error {
 	}
 	return out.Close()
 }
+
+//GetNISTTimestamp : gets Unix timestamp from record
+func GetNISTTimestamp(record string) int64 {
+	timeSplit := strings.Split(record, ":")
+	var timeRecord int64
+	if len(timeSplit) == 2 {
+		timeRecord, _ = strconv.ParseInt(timeSplit[0], 10, 64)
+	}
+	return timeRecord
+}

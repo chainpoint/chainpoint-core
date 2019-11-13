@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
 	types2 "github.com/chainpoint/tendermint/abci/types"
@@ -25,14 +27,18 @@ func (app *AnchorApplication) incrementTxInt(tags []common.KVPair) []common.KVPa
 func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	var tx types.Tx
 	var err error
+	var valid bool
 	if app.state.ChainSynced {
-		tx, err = util.DecodeVerifyTx(rawTx, app.CoreKeys)
+		tx, valid, err = validation.Validate(rawTx, &app.state)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
 	app.logger.Info(fmt.Sprintf("CheckTX: %v", tx))
 	if app.LogError(err) != nil {
 		return types2.ResponseCheckTx{Code: code.CodeTypeEncodingError, GasWanted: 1}
+	}
+	if !valid {
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
 	// this serves as a shim for CheckTx so transactions we don't want in the mempool can
 	// still be gossipped to other Cores
@@ -58,7 +64,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	var resp types2.ResponseDeliverTx
 	tags := []common.KVPair{}
 	if app.state.ChainSynced {
-		tx, err = util.DecodeVerifyTx(rawTx, app.CoreKeys)
+		tx, err = util.DecodeVerifyTx(rawTx, app.state.CoreKeys)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
@@ -114,6 +120,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		break
 	case "JWK":
 		app.SaveJWK(tx)
+		tags = app.incrementTxInt(tags)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	default:

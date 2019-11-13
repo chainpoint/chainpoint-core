@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
+
 	"github.com/chainpoint/tendermint/abci/example/code"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
@@ -80,7 +82,6 @@ type AnchorApplication struct {
 	ID                   string
 	JWK                  types.Jwk
 	JWKSent              bool
-	CoreKeys             map[string]ecdsa.PublicKey
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -90,8 +91,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	db := dbm.NewDB(name, dbm.DBBackendType(config.DBType), "/tendermint/data")
 	state := loadState(db)
 	if state.TxValidation == nil {
-		state.TxValidation = make(map[string]types.TxValidation)
+		state.TxValidation = validation.NewTxValidatorMap()
 	}
+	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
 
 	// Declare postgres connection
@@ -176,7 +178,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		pgClient:    pgClient,
 		redisClient: redisClient,
 		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
-		CoreKeys:    map[string]ecdsa.PublicKey{},
 	}
 
 	//Initialize calendar writing if enabled

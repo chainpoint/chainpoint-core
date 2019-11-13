@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/go-redis/redis"
 
@@ -139,8 +141,8 @@ func (app *AnchorApplication) LoadJWK() error {
 			Y:     y,
 		}
 		app.logger.Info(fmt.Sprintf("Setting JWK for Core %s: %s", coreID, b64Str))
-		app.CoreKeys[coreID] = pubKey
-		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = types.TxValidation{}
+		app.state.CoreKeys[coreID] = pubKey
+		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.TxValidation{}
 	}
 	return nil
 }
@@ -161,7 +163,7 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	pubKey, err := util.DecodePubKey(tx)
 	var pubKeyBytes []byte
 	if app.LogError(err) == nil {
-		app.CoreKeys[tx.CoreID] = *pubKey
+		app.state.CoreKeys[tx.CoreID] = *pubKey
 		pubKeyBytes = elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 		util.LoggerError(app.logger, app.redisClient.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
 	}
@@ -177,7 +179,7 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	if val, exists := app.state.TxValidation[pubKeyHex]; exists {
 		app.state.TxValidation[pubKeyHex] = val
 	} else {
-		app.state.TxValidation[pubKeyHex] = types.TxValidation{LastJWKTx: tx}
+		app.state.TxValidation[pubKeyHex] = validation.TxValidation{LastJWKTx: tx}
 	}
 	return nil
 }
