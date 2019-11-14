@@ -142,7 +142,7 @@ func (app *AnchorApplication) LoadJWK() error {
 		}
 		app.logger.Info(fmt.Sprintf("Setting JWK for Core %s: %s", coreID, b64Str))
 		app.state.CoreKeys[coreID] = pubKey
-		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.TxValidation{}
+		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.NewTxValidation()
 	}
 	return nil
 }
@@ -179,7 +179,8 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	if val, exists := app.state.TxValidation[pubKeyHex]; exists {
 		app.state.TxValidation[pubKeyHex] = val
 	} else {
-		app.state.TxValidation[pubKeyHex] = validation.TxValidation{LastJWKTx: tx}
+		validation := validation.NewTxValidation()
+		app.state.TxValidation[pubKeyHex] = validation
 	}
 	return nil
 }

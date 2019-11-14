@@ -6,8 +6,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
-
 	"github.com/chainpoint/tendermint/privval"
 
 	"github.com/chainpoint/tendermint/libs/log"
@@ -60,23 +58,23 @@ type EthConfig struct {
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
 type AnchorState struct {
-	TxValidation     map[string]validation.TxValidation `json:"tx_validation"`
-	TxInt            int64                              `json:"tx_int"`
-	Height           int64                              `json:"height"`
-	AppHash          []byte                             `json:"app_hash"`
-	BeginCalTxInt    int64                              `json:"begin_cal_int"`
-	EndCalTxInt      int64                              `json:"end_cal_int"`
-	LatestCalTxInt   int64                              `json:"latest_cal_int"`
-	LatestBtcaTx     []byte                             `json:"latest_btca"`
-	LatestBtcaTxInt  int64                              `json:"latest_btca_int"`
-	LatestBtcaHeight int64                              `json:"latest_btca_height"`
-	LatestBtcTx      string                             `json:"latest_btc"`
-	LatestBtcAggRoot string                             `json:"latest_btc_root"`
-	LatestBtccTx     []byte                             `json:"latest_btcc"`
-	LatestBtccTxInt  int64                              `json:"latest_btcc_int"`
-	LatestBtccHeight int64                              `json:"latest_btcc_height"`
-	LastAnchorCoreID string                             `json:"last_anchor_core_id"`
-	LastAuditCoreID  string                             `json:"last_audit_core_id"`
+	TxValidation     map[string]TxValidation `json:"tx_validation"`
+	TxInt            int64                   `json:"tx_int"`
+	Height           int64                   `json:"height"`
+	AppHash          []byte                  `json:"app_hash"`
+	BeginCalTxInt    int64                   `json:"begin_cal_int"`
+	EndCalTxInt      int64                   `json:"end_cal_int"`
+	LatestCalTxInt   int64                   `json:"latest_cal_int"`
+	LatestBtcaTx     []byte                  `json:"latest_btca"`
+	LatestBtcaTxInt  int64                   `json:"latest_btca_int"`
+	LatestBtcaHeight int64                   `json:"latest_btca_height"`
+	LatestBtcTx      string                  `json:"latest_btc"`
+	LatestBtcAggRoot string                  `json:"latest_btc_root"`
+	LatestBtccTx     []byte                  `json:"latest_btcc"`
+	LatestBtccTxInt  int64                   `json:"latest_btcc_int"`
+	LatestBtccHeight int64                   `json:"latest_btcc_height"`
+	LastAnchorCoreID string                  `json:"last_anchor_core_id"`
+	LastAuditCoreID  string                  `json:"last_audit_core_id"`
 	CoreKeys         map[string]ecdsa.PublicKey
 	ChainSynced      bool
 	LatestNistRecord string
@@ -91,6 +89,32 @@ type Tx struct {
 	CoreID  string `json:"core_id"`
 	Meta    string `json:"meta,omitempty"`
 	Sig     string `json:"sig,omitempty"`
+}
+
+// Uses simple token bucket method
+type ViolationRateLimit struct {
+	AllowedRate int64
+	PerBlocks   int64
+	LastCheck   int64
+	Bucket      float32
+}
+
+// Holds state for validating Transactions
+type TxValidation struct {
+	LastJWKTxHeight  int64
+	JWKViolationRate ViolationRateLimit
+
+	LastCalTxHeight  int64
+	CalViolationRate ViolationRateLimit
+
+	LastBtcaTxHeight  int64
+	BtcaViolationRate ViolationRateLimit
+
+	LastBtccTxHeight  int64
+	BtccViolationRate ViolationRateLimit
+
+	LastNISTTxHeight  int64
+	NISTViolationRate ViolationRateLimit
 }
 
 // EcdsaSignature : Allows for unmarshalling an ecdsa signature

@@ -64,7 +64,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	var resp types2.ResponseDeliverTx
 	tags := []common.KVPair{}
 	if app.state.ChainSynced {
-		tx, err = util.DecodeVerifyTx(rawTx, app.state.CoreKeys)
+		tx, err = util.DecodeTxAndVerifySig(rawTx, app.state.CoreKeys)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}

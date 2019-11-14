@@ -91,7 +91,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	db := dbm.NewDB(name, dbm.DBBackendType(config.DBType), "/tendermint/data")
 	state := loadState(db)
 	if state.TxValidation == nil {
-		state.TxValidation = validation.NewTxValidatorMap()
+		state.TxValidation = validation.NewTxValidationMap()
 	}
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
