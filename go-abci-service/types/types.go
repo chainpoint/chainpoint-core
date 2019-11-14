@@ -92,7 +92,7 @@ type Tx struct {
 }
 
 // Uses simple token bucket method
-type ViolationRateLimit struct {
+type RateLimit struct {
 	AllowedRate int64
 	PerBlocks   int64
 	LastCheck   int64
@@ -101,20 +101,20 @@ type ViolationRateLimit struct {
 
 // Holds state for validating Transactions
 type TxValidation struct {
-	LastJWKTxHeight  int64
-	JWKViolationRate ViolationRateLimit
+	LastJWKTxHeight int64
+	JWKAllowedRate  RateLimit
 
-	LastCalTxHeight  int64
-	CalViolationRate ViolationRateLimit
+	LastCalTxHeight int64
+	CalAllowedRate  RateLimit
 
-	LastBtcaTxHeight  int64
-	BtcaViolationRate ViolationRateLimit
+	LastBtcaTxHeight int64
+	BtcaAllowedRate  RateLimit
 
-	LastBtccTxHeight  int64
-	BtccViolationRate ViolationRateLimit
+	LastBtccTxHeight int64
+	BtccAllowedRate  RateLimit
 
-	LastNISTTxHeight  int64
-	NISTViolationRate ViolationRateLimit
+	LastNISTTxHeight int64
+	NISTAllowedRate  RateLimit
 }
 
 // EcdsaSignature : Allows for unmarshalling an ecdsa signature

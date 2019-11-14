@@ -33,7 +33,6 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
-	app.logger.Info(fmt.Sprintf("CheckTX: %v", tx))
 	if app.LogError(err) != nil {
 		return types2.ResponseCheckTx{Code: code.CodeTypeEncodingError, GasWanted: 1}
 	}
@@ -71,12 +70,12 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	app.logger.Info(fmt.Sprintf("Received Tx: %s, Gossip: %t", tx.TxType, gossip))
 	app.LogError(err)
 	switch string(tx.TxType) {
-	/*	case "VAL":
+	case "VAL":
 		tags = app.incrementTxInt(tags)
 		if isValidatorTx([]byte(tx.Data)) {
 			resp = app.execValidatorTx([]byte(tx.Data), tags)
 		}
-		break*/
+		break
 	case "CAL":
 		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt

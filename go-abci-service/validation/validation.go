@@ -16,22 +16,34 @@ func NewTxValidationMap() map[string]types.TxValidation {
 
 //NewTxValidation : initialize values for validation of tx
 func NewTxValidation() types.TxValidation {
-	permittedViolations := types.ViolationRateLimit{
-		AllowedRate: 2,
+	permittedCalRate := types.RateLimit{
+		AllowedRate: 60,
+		PerBlocks:   60,
+		LastCheck:   0,
+		Bucket:      0.0,
+	}
+	permittedJWKRate := types.RateLimit{
+		AllowedRate: 1,
+		PerBlocks:   1440,
+		LastCheck:   0,
+		Bucket:      0.0,
+	}
+	permittedBtcRate := types.RateLimit{
+		AllowedRate: 1,
 		PerBlocks:   60,
 		LastCheck:   0,
 		Bucket:      0.0,
 	}
 	return types.TxValidation{
-		JWKViolationRate:  permittedViolations,
-		CalViolationRate:  permittedViolations,
-		BtcaViolationRate: permittedViolations,
-		BtccViolationRate: permittedViolations,
-		NISTViolationRate: permittedViolations,
+		JWKAllowedRate:  permittedJWKRate,
+		CalAllowedRate:  permittedCalRate,
+		BtcaAllowedRate: permittedBtcRate,
+		BtccAllowedRate: permittedBtcRate,
+		NISTAllowedRate: permittedCalRate,
 	}
 }
 
-func ViolationRateLimitUpdate(currHeight int64, limit *types.ViolationRateLimit) {
+func RateLimitUpdate(currHeight int64, limit *types.RateLimit) {
 	delta := currHeight - limit.LastCheck
 	limit.LastCheck = currHeight
 	limit.Bucket += float32(delta) * (float32(limit.AllowedRate) / float32(limit.PerBlocks))
@@ -40,7 +52,11 @@ func ViolationRateLimitUpdate(currHeight int64, limit *types.ViolationRateLimit)
 	}
 }
 
-func NonViolationRateLimitUpdate(limit *types.ViolationRateLimit) {
+func IsHabitualViolator(limit types.RateLimit) bool {
+	return limit.Bucket < 1.0
+}
+
+func UpdateAcceptTx(limit *types.RateLimit) {
 	limit.Bucket -= 1.0
 }
 
@@ -73,33 +89,33 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 	}
 	validationRecord = state.TxValidation[pubKeyHex]
 
-	validated := false // default to invalid tx
+	validated := true
 
 	switch string(txType) {
 	case "CAL":
-		if (state.Height - validationRecord.LastCalTxHeight) < 1 {
-			ViolationRateLimitUpdate(state.Height, &validationRecord.CalViolationRate)
+		RateLimitUpdate(state.Height, &validationRecord.CalAllowedRate)
+		if IsHabitualViolator(validationRecord.CalAllowedRate) {
+			validated = false
 		} else {
-			validated = true
-			NonViolationRateLimitUpdate(&validationRecord.CalViolationRate)
+			UpdateAcceptTx(&validationRecord.CalAllowedRate)
 			validationRecord.LastCalTxHeight = state.Height
 		}
 		break
 	case "BTC-A":
-		if ((state.Height - validationRecord.LastBtcaTxHeight) < 61) || (state.Height-state.LatestBtcaHeight < 61) {
-			ViolationRateLimitUpdate(state.Height, &validationRecord.BtcaViolationRate)
+		RateLimitUpdate(state.Height, &validationRecord.BtcaAllowedRate)
+		if IsHabitualViolator(validationRecord.BtcaAllowedRate) || (state.Height-state.LatestBtcaHeight < 61) {
+			validated = false
 		} else {
-			validated = true
-			NonViolationRateLimitUpdate(&validationRecord.BtcaViolationRate)
+			UpdateAcceptTx(&validationRecord.BtcaAllowedRate)
 			validationRecord.LastBtcaTxHeight = state.Height
 		}
 		break
 	case "BTC-C":
-		if ((state.Height - validationRecord.LastBtccTxHeight) < 61) || (state.Height-state.LatestBtccHeight < 61) {
-			ViolationRateLimitUpdate(state.Height, &validationRecord.BtccViolationRate)
+		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
+		if IsHabitualViolator(validationRecord.BtccAllowedRate) || (state.Height-state.LatestBtccHeight < 61) {
+			validated = false
 		} else {
-			validated = true
-			NonViolationRateLimitUpdate(&validationRecord.BtccViolationRate)
+			UpdateAcceptTx(&validationRecord.BtccAllowedRate)
 			validationRecord.LastBtccTxHeight = state.Height
 		}
 		break
@@ -107,23 +123,23 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		timeRecord := util.GetNISTTimestamp(tx.Data)
 		lastTimeRecord := util.GetNISTTimestamp(state.LatestNistRecord)
 		timeDiff := timeRecord - lastTimeRecord
-		if timeDiff == 0 || timeDiff < 0 {
-			ViolationRateLimitUpdate(state.Height, &validationRecord.NISTViolationRate)
+		RateLimitUpdate(state.Height, &validationRecord.NISTAllowedRate)
+		if IsHabitualViolator(validationRecord.NISTAllowedRate) || timeDiff == 0 || timeDiff < 0 {
+			validated = false
 		} else {
-			validated = true
-			NonViolationRateLimitUpdate(&validationRecord.NISTViolationRate)
+			UpdateAcceptTx(&validationRecord.NISTAllowedRate)
 			validationRecord.LastNISTTxHeight = state.Height
 		}
 		break
 	case "JWT":
-		if (state.Height - validationRecord.LastJWKTxHeight) < 1440 {
-			ViolationRateLimitUpdate(state.Height, &validationRecord.JWKViolationRate)
+		RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
+		if IsHabitualViolator(validationRecord.JWKAllowedRate) {
 		} else {
-			validated = true
-			NonViolationRateLimitUpdate(&validationRecord.JWKViolationRate)
+			UpdateAcceptTx(&validationRecord.JWKAllowedRate)
 			validationRecord.LastJWKTxHeight = state.Height
 		}
 	}
+	fmt.Printf("Tx Validation: %#v\nTx:%#v\nValidated:%t", validationRecord, tx, validated)
 	state.TxValidation[pubKeyHex] = validationRecord
 	return tx, validated, nil
 }
