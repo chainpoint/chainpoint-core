@@ -4,6 +4,7 @@ import (
 	"crypto/elliptic"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -60,6 +61,12 @@ func UpdateAcceptTx(limit *types.RateLimit) {
 	limit.Bucket -= 1.0
 }
 
+func IsValidBtcc(tx types.Tx, state types.AnchorState) bool {
+	meta := strings.Split(tx.Meta, "|") // first part of meta is core ID that issued TX, second part is BTC TX ID
+	btcaTx, err := util.DecodeTx(state.LatestBtcaTx)
+	return err != nil && len(meta) > 0 && meta[0] == btcaTx.CoreID
+}
+
 func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error) {
 	tx, err := util.DecodeTxAndVerifySig(incoming, state.CoreKeys)
 	if err != nil {
@@ -112,7 +119,7 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		break
 	case "BTC-C":
 		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
-		if IsHabitualViolator(validationRecord.BtccAllowedRate) || (state.Height-state.LatestBtccHeight < 61) {
+		if IsHabitualViolator(validationRecord.BtccAllowedRate) || (state.Height-state.LatestBtccHeight < 61) || !IsValidBtcc(tx, *state) {
 			validated = false
 		} else {
 			UpdateAcceptTx(&validationRecord.BtccAllowedRate)
