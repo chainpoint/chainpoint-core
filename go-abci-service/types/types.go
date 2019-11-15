@@ -107,10 +107,11 @@ type TxValidation struct {
 	LastCalTxHeight int64
 	CalAllowedRate  RateLimit
 
-	LastBtcaTxHeight int64
+	LastBtcaTxHeight int64 // for anchoring Cores
+	ConfirmedAnchors int64
 	BtcaAllowedRate  RateLimit
 
-	LastBtccTxHeight int64
+	LastBtccTxHeight int64 // for Cores submitting confirmations, not anchoring Cores
 	BtccAllowedRate  RateLimit
 
 	LastNISTTxHeight int64

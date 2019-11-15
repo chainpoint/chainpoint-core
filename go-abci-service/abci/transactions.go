@@ -107,6 +107,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		meta := strings.Split(tx.Meta, "|") // first part of meta is core ID that issued TX, second part is BTC TX ID
 		if len(meta) > 0 {
 			app.state.LastAnchorCoreID = meta[0]
+			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, &app.state)
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break

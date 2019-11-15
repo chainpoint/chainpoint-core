@@ -44,6 +44,7 @@ func NewTxValidation() types.TxValidation {
 	}
 }
 
+// RateLimitUpdate : simple token bucket rate limiter
 func RateLimitUpdate(currHeight int64, limit *types.RateLimit) {
 	delta := currHeight - limit.LastCheck
 	limit.LastCheck = currHeight
@@ -53,18 +54,70 @@ func RateLimitUpdate(currHeight int64, limit *types.RateLimit) {
 	}
 }
 
+// IsHabitualViolator : find out if the core has been violating rat elimits
 func IsHabitualViolator(limit types.RateLimit) bool {
 	return limit.Bucket < 1.0
 }
 
+// UpdateAcceptTx : Update successful acceptance of Tx for rate limiting
 func UpdateAcceptTx(limit *types.RateLimit) {
 	limit.Bucket -= 1.0
 }
 
+// IsValidBtcc : Check if BTCC tx corresponds to a previous BTC-A
 func IsValidBtcc(tx types.Tx, state types.AnchorState) bool {
 	meta := strings.Split(tx.Meta, "|") // first part of meta is core ID that issued TX, second part is BTC TX ID
 	btcaTx, err := util.DecodeTx(state.LatestBtcaTx)
 	return err != nil && len(meta) > 0 && meta[0] == btcaTx.CoreID
+}
+
+// GetPubKeyHex : Gets the public key of a core, given the CoreID string
+func GetPubKeyHex(coreID string, state types.AnchorState) string {
+	if _, exists := state.CoreKeys[coreID]; !exists {
+		return ""
+	}
+	// Obtain pubkey in hex format from our record of cores, keyed by coreID
+	pubKey := state.CoreKeys[coreID]
+	pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+	pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
+	return pubKeyHex
+}
+
+// GetValidationRecord : Gets a validation record for a Core, given the CoreID
+func GetValidationRecord(coreID string, state types.AnchorState) (string, types.TxValidation, error) {
+	pubKeyHex := GetPubKeyHex(coreID, state)
+	if pubKeyHex == "" {
+		return "", NewTxValidation(), errors.New("no pubkey for core id")
+	}
+
+	// Find the transmitting core's validation record from the pub key
+	var validationRecord types.TxValidation
+	if _, exists := state.TxValidation[pubKeyHex]; !exists {
+		validationRecord = NewTxValidation()
+	}
+	validationRecord = state.TxValidation[pubKeyHex]
+	return pubKeyHex, validationRecord, nil
+}
+
+// SetValidationRecord : sets a validation record on the state db pointer
+func SetValidationRecord(coreID string, validationRecord types.TxValidation, state *types.AnchorState) error {
+	pubKeyHex := GetPubKeyHex(coreID, *state)
+	if pubKeyHex == "" {
+		return errors.New("no pubkey for core id")
+	}
+	state.TxValidation[pubKeyHex] = validationRecord
+	return nil
+}
+
+// IncrementSuccessAnchor : increments the successful anchor record, given a coreID string and a pointer to state db
+func IncrementSuccessAnchor(coreID string, state *types.AnchorState) error {
+	_, validationRecord, err := GetValidationRecord(coreID, *state)
+	if err != nil {
+		return err
+	}
+	validationRecord.ConfirmedAnchors++
+	err = SetValidationRecord(coreID, validationRecord, state)
+	return err
 }
 
 func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error) {
@@ -84,17 +137,7 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		}
 	}
 
-	// Obtain pubkey in hex format from our record of cores, keyed by coreID
-	pubKey := state.CoreKeys[coreID]
-	pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
-	pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
-
-	// Find the transmitting core's validation record from the pub key
-	var validationRecord types.TxValidation
-	if _, exists := state.TxValidation[pubKeyHex]; !exists {
-		validationRecord = NewTxValidation()
-	}
-	validationRecord = state.TxValidation[pubKeyHex]
+	pubKeyHex, validationRecord, err := GetValidationRecord(coreID, *state)
 
 	validated := true
 
@@ -119,7 +162,7 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		break
 	case "BTC-C":
 		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
-		if IsHabitualViolator(validationRecord.BtccAllowedRate) || (state.Height-state.LatestBtccHeight < 61) || !IsValidBtcc(tx, *state) {
+		if IsHabitualViolator(validationRecord.BtccAllowedRate) || (state.Height-state.LatestBtccHeight < 61) /*|| !IsValidBtcc(tx, *state)*/ {
 			validated = false
 		} else {
 			UpdateAcceptTx(&validationRecord.BtccAllowedRate)
@@ -148,5 +191,5 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 	}
 	fmt.Printf("Tx Validation: %#v\nTx:%#v\nValidated:%t", validationRecord, tx, validated)
 	state.TxValidation[pubKeyHex] = validationRecord
-	return tx, validated, nil
+	return tx, validated, err
 }
