@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
+
 	"github.com/chainpoint/tendermint/abci/example/code"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
@@ -80,7 +82,6 @@ type AnchorApplication struct {
 	ID                   string
 	JWK                  types.Jwk
 	JWKSent              bool
-	CoreKeys             map[string]ecdsa.PublicKey
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -89,6 +90,10 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	name := "anchor"
 	db := dbm.NewDB(name, dbm.DBBackendType(config.DBType), "/tendermint/data")
 	state := loadState(db)
+	if state.TxValidation == nil {
+		state.TxValidation = validation.NewTxValidationMap()
+	}
+	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
 
 	// Declare postgres connection
@@ -173,7 +178,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		pgClient:    pgClient,
 		redisClient: redisClient,
 		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
-		CoreKeys:    map[string]ecdsa.PublicKey{},
 	}
 
 	//Initialize calendar writing if enabled
@@ -197,9 +201,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 // SetOption : Method for runtime data transfer between other apps and ABCI
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
-	if req.Key == "TOKEN" {
-		go app.pgClient.TokenHashUpsert(req.Value)
-	}
 	return
 }
 
@@ -245,7 +246,7 @@ func (app *AnchorApplication) DeliverMsg(tx []byte) types2.ResponseDeliverMsg {
 
 // CheckTx : Pre-gossip validation
 func (app *AnchorApplication) CheckTx(rawTx []byte) types2.ResponseCheckTx {
-	return app.validateGossip(rawTx)
+	return app.validateTx(rawTx)
 }
 
 // BeginBlock : Handler that runs at the beginning of every block

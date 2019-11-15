@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
@@ -23,17 +24,20 @@ func (app *AnchorApplication) incrementTxInt(tags []common.KVPair) []common.KVPa
 	return append(tags, common.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
 }
 
-func (app *AnchorApplication) validateGossip(rawTx []byte) types2.ResponseCheckTx {
+func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	var tx types.Tx
 	var err error
+	var valid bool
 	if app.state.ChainSynced {
-		tx, err = util.DecodeVerifyTx(rawTx, app.CoreKeys)
+		tx, valid, err = validation.Validate(rawTx, &app.state)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
-	app.logger.Info(fmt.Sprintf("CheckTX: %v", tx))
 	if app.LogError(err) != nil {
 		return types2.ResponseCheckTx{Code: code.CodeTypeEncodingError, GasWanted: 1}
+	}
+	if !valid {
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
 	// this serves as a shim for CheckTx so transactions we don't want in the mempool can
 	// still be gossipped to other Cores
@@ -59,19 +63,19 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	var resp types2.ResponseDeliverTx
 	tags := []common.KVPair{}
 	if app.state.ChainSynced {
-		tx, err = util.DecodeVerifyTx(rawTx, app.CoreKeys)
+		tx, err = util.DecodeTxAndVerifySig(rawTx, app.state.CoreKeys)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
 	app.logger.Info(fmt.Sprintf("Received Tx: %s, Gossip: %t", tx.TxType, gossip))
 	app.LogError(err)
 	switch string(tx.TxType) {
-	/*	case "VAL":
+	case "VAL":
 		tags = app.incrementTxInt(tags)
 		if isValidatorTx([]byte(tx.Data)) {
 			resp = app.execValidatorTx([]byte(tx.Data), tags)
 		}
-		break*/
+		break
 	case "CAL":
 		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt
@@ -103,7 +107,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		meta := strings.Split(tx.Meta, "|") // first part of meta is core ID that issued TX, second part is BTC TX ID
 		if len(meta) > 0 {
 			app.state.LastAnchorCoreID = meta[0]
-			tags = append(tags, common.KVPair{Key: []byte("CORERC"), Value: util.Int64ToByte(app.state.LastCoreMintedAtBlock)})
+			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, &app.state)
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
@@ -114,45 +118,9 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			app.aggregator.LatestNist = app.state.LatestNistRecord
 		}
 		break
-	case "NODE-MINT":
-		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
-		if err != nil {
-			app.logger.Debug("Parsing Node MINT tx failed")
-		} else {
-			app.state.PrevNodeMintedAtBlock = app.state.LastNodeMintedAtBlock
-			app.state.LastNodeMintedAtBlock = lastMintedAtBlock
-		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "CORE-MINT":
-		lastMintedAtBlock, err := strconv.ParseInt(tx.Data, 10, 64)
-		if err != nil {
-			app.logger.Debug("Parsing Core MINT tx failed")
-		} else {
-			app.state.PrevCoreMintedAtBlock = app.state.LastCoreMintedAtBlock
-			app.state.LastCoreMintedAtBlock = lastMintedAtBlock
-		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
 	case "JWK":
 		app.SaveJWK(tx)
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "CORE-SIGN":
-		app.CoreRewardSignatures = util.UniquifyStrings(append(app.CoreRewardSignatures, tx.Data))
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "NODE-SIGN":
-		app.NodeRewardSignatures = util.UniquifyStrings(append(app.NodeRewardSignatures, tx.Data))
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "NODE-RC":
 		tags = app.incrementTxInt(tags)
-		tags = append(tags, common.KVPair{Key: []byte("NODERC"), Value: util.Int64ToByte(app.state.LastNodeMintedAtBlock)})
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
-	case "TOKEN":
-		go app.pgClient.TokenHashUpsert(tx.Data)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	default:

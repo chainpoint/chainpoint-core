@@ -120,7 +120,7 @@ func DecodePubKey(tx types.Tx) (*ecdsa.PublicKey, error) {
 	return &ecdsa.PublicKey{}, errors.New("unable to create public key from JWK")
 }
 
-// DecodeVerifyTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
+// DecodeTxAndVerifySig accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
 func DecodeTx(incoming []byte) (types.Tx, error) {
 	decoded, err := base64.StdEncoding.DecodeString(string(incoming))
 	var calendar types.Tx
@@ -132,8 +132,8 @@ func DecodeTx(incoming []byte) (types.Tx, error) {
 	return calendar, err
 }
 
-// DecodeVerifyTx accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
-func DecodeVerifyTx(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types.Tx, error) {
+// DecodeTxAndVerifySig accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
+func DecodeTxAndVerifySig(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types.Tx, error) {
 	decoded, err := base64.StdEncoding.DecodeString(string(incoming))
 	var calendar types.Tx
 	if err != nil {
@@ -417,4 +417,14 @@ func Copy(src, dst string) error {
 		return err
 	}
 	return out.Close()
+}
+
+//GetNISTTimestamp : gets Unix timestamp from record
+func GetNISTTimestamp(record string) int64 {
+	timeSplit := strings.Split(record, ":")
+	var timeRecord int64
+	if len(timeSplit) == 2 {
+		timeRecord, _ = strconv.ParseInt(timeSplit[0], 10, 64)
+	}
+	return timeRecord
 }
