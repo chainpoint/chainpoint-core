@@ -167,6 +167,7 @@ module.exports = service => {
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.HOT_WALLET_ADDRESS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
       envDefinitions.AGGREGATOR_WHITELIST = validateAggIPWhitelist({
         default: '',
         desc: 'A comma separated list of IPs that may submit hashes without invoices'
