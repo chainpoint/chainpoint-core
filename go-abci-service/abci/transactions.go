@@ -37,6 +37,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		return types2.ResponseCheckTx{Code: code.CodeTypeEncodingError, GasWanted: 1}
 	}
 	if !valid {
+		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed", tx.CoreID)))
 		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
 	}
 	// this serves as a shim for CheckTx so transactions we don't want in the mempool can
