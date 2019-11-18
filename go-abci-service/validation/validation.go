@@ -18,13 +18,13 @@ func NewTxValidationMap() map[string]types.TxValidation {
 //NewTxValidation : initialize values for validation of tx
 func NewTxValidation() types.TxValidation {
 	permittedCalRate := types.RateLimit{
-		AllowedRate: 60,
+		AllowedRate: 70,
 		PerBlocks:   60,
 		LastCheck:   0,
 		Bucket:      0.0,
 	}
 	permittedJWKRate := types.RateLimit{
-		AllowedRate: 1,
+		AllowedRate: 2,
 		PerBlocks:   1440,
 		LastCheck:   0,
 		Bucket:      0.0,

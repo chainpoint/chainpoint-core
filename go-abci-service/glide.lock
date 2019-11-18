@@ -84,7 +84,7 @@ imports:
 - name: github.com/chainpoint/go-nist-beacon
   version: 7779b0805bdd6c658bda68f750c0e3996ac57156
 - name: github.com/chainpoint/tendermint
-  version: 130bfeabd4967eb00a99c41c440742381fae09bb
+  version: e21eb71760638e4d3f225e10d866bbdbfe1180b3
   subpackages:
   - abci/client
   - abci/example/code
