@@ -43,18 +43,15 @@ let amqpChannel = null
 let redis = null
 
 function addChainpointHeader(proof, hash, hashId) {
-  proof['@context'] = 'https://w3id.org/chainpoint/v3'
+  proof['@context'] = 'https://w3id.org/chainpoint/v4'
   proof.type = 'Chainpoint'
   proof.hash = hash
 
   // the following two values are added as placeholders
   // the spec does not allow for missing or empty values here
   // these values will be replaced with proper ones by the Node instance
-  proof.hash_id_node = hashId
-  proof.hash_submitted_node_at = utils.formatDateISO8601NoMs(new Date(parseInt(uuidTime.v1(hashId))))
-
-  proof.hash_id_core = hashId
-  proof.hash_submitted_core_at = proof.hash_submitted_node_at
+  proof.proof_id = hashId
+  proof.hash_received = utils.formatDateISO8601NoMs(new Date(parseInt(uuidTime.v1(hashId))))
   return proof
 }
 
@@ -101,8 +98,8 @@ async function consumeProofReadyMessageAsync(msg) {
   switch (msg.properties.type) {
     case 'cal_batch':
       try {
-        let hashIds = messageObj.hash_ids
-        let aggStateRows = await cachedProofState.getAggStateObjectsByHashIdsAsync(hashIds)
+        let proofIds = messageObj.proof_ids
+        let aggStateRows = await cachedProofState.getAggStateObjectsByHashIdsAsync(proofIds)
         let aggIds = aggStateRows.map(item => item.agg_id)
         let calStateRows = await cachedProofState.getCalStateObjectsByAggIdsAsync(aggIds)
         // create a lookup table for calStateRows by agg_id
@@ -114,7 +111,7 @@ async function consumeProofReadyMessageAsync(msg) {
         let proofs = aggStateRows
           .map(aggStateRow => {
             let proof = {}
-            proof = addChainpointHeader(proof, aggStateRow.hash, aggStateRow.hash_id)
+            proof = addChainpointHeader(proof, aggStateRow.hash, aggStateRow.proof_id)
             proof = addCalendarBranch(
               proof,
               JSON.parse(aggStateRow.agg_state),
@@ -145,8 +142,8 @@ async function consumeProofReadyMessageAsync(msg) {
       break
     case 'btc_batch':
       try {
-        let hashIds = messageObj.hash_ids
-        let aggStateRows = await cachedProofState.getAggStateObjectsByHashIdsAsync(hashIds)
+        let proofIds = messageObj.proof_ids
+        let aggStateRows = await cachedProofState.getAggStateObjectsByHashIdsAsync(proofIds)
         let aggIds = aggStateRows.map(item => item.agg_id)
         let calStateRows = await cachedProofState.getCalStateObjectsByAggIdsAsync(aggIds)
         let calIds = calStateRows.map(item => item.cal_id)
@@ -164,7 +161,7 @@ async function consumeProofReadyMessageAsync(msg) {
           btcTxStateRow = await cachedProofState.getBTCTxStateObjectByAnchorBTCAggIdAsync(anchorBTCAggId)
           btcHeadStateRow = await cachedProofState.getBTCHeadStateObjectByBTCTxIdAsync(btcTxStateRow.btctx_id)
         } catch (error) {
-          logger.error(`Unrecoverable proof state read error for hash_ids ${hashIds} : ${error.message}`)
+          logger.error(`Unrecoverable proof state read error for hash_ids ${proofIds} : ${error.message}`)
           amqpChannel.ack(msg)
           return
         }
@@ -240,7 +237,7 @@ async function storeProofsAsync(proofs, batchType) {
   let batchStartTimestamp = Date.now()
   let batchId = crypto.randomBytes(4).toString('hex')
   // log information about the first item in the batch
-  logGenerationEvent(proofs[0].hash_submitted_node_at, batchType, batchId, 1, proofs.length)
+  logGenerationEvent(proofs[0].hash_received, batchType, batchId, 1, proofs.length)
 
   // save proof
   try {
@@ -254,7 +251,7 @@ async function storeProofsAsync(proofs, batchType) {
     let batchTotalProcessingMS = batchEndTimestamp - batchStartTimestamp
     // log information about the last item in the batch
     logGenerationEvent(
-      proofs[proofs.length - 1].hash_submitted_node_at,
+      proofs[proofs.length - 1].hash_received,
       batchType,
       batchId,
       proofs.length,
@@ -264,7 +261,7 @@ async function storeProofsAsync(proofs, batchType) {
   }
 }
 
-// use the time difference between now and the time embedded in the hash_id_node UUID
+// use the time difference between now and the time embedded in the proof_id_node UUID
 // to log a generation event and total duration
 function logGenerationEvent(submitDateString, batchType, batchId, proofIndex, batchSize, batchTotalProcessingMS) {
   let nowTimestamp = Date.now()

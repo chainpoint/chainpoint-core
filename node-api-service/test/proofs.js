@@ -97,7 +97,7 @@ describe('Proofs Controller', () => {
   describe('GET /proofs with db error', () => {
     before(() => {
       proofs.setProof({
-        getProofsByHashIdsAsync: () => {
+        getProofsByProofIdsAsync: () => {
           throw new Error()
         }
       })
@@ -127,7 +127,7 @@ describe('Proofs Controller', () => {
   describe('GET /proofs with one known and one unknown', () => {
     before(() => {
       proofs.setProof({
-        getProofsByHashIdsAsync: () => {
+        getProofsByProofIdsAsync: () => {
           return [
             { hash_id: 'dbcd35d0-6b77-11e9-9c57-0101a866898d', proof: '{"key0": "value", "key1": 27}' },
             { hash_id: 'ffcd35d0-6b77-11e9-9c57-0101a866898d', proof: null }

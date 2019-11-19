@@ -51,7 +51,7 @@ async function ConsumeAggregationMessageAsync(msg) {
 
   let stateObjects = messageObj.proofData.map(proofDataItem => {
     let stateObj = {}
-    stateObj.hash_id = proofDataItem.hash_id
+    stateObj.proof_id = proofDataItem.proof_id
     stateObj.hash = proofDataItem.hash
     stateObj.agg_id = messageObj.agg_id
     stateObj.agg_state = {}
@@ -90,10 +90,10 @@ async function ConsumeCalendarBatchMessageAsync(msg) {
   })
 
   try {
-    // Get all the hash_ids for all the agg_ids part of this calendar block
+    // Get all the proof_ids for all the agg_ids part of this calendar block
     let aggIds = stateObjs.map(item => item.agg_id)
-    let hashIdRows = await cachedProofState.getHashIdsByAggIdsAsync(aggIds)
-    let hashIds = hashIdRows.map(item => item.hash_id)
+    let proofIdRows = await cachedProofState.getHashIdsByAggIdsAsync(aggIds)
+    let proofIds = proofIdRows.map(item => item.proof_id)
 
     // Write the cal state objects to the database
     // The writes are split into batches to limit the total insert query size
@@ -101,10 +101,10 @@ async function ConsumeCalendarBatchMessageAsync(msg) {
       await cachedProofState.writeCalStateObjectsBulkAsync(stateObjs.splice(0, CAL_STATE_WRITE_BATCH_SIZE))
     }
 
-    while (hashIds.length > 0) {
+    while (proofIds.length > 0) {
       // construct a calendar 'proof ready' message for a batch of hashes
       let dataOutObj = {}
-      dataOutObj.hash_ids = hashIds.splice(0, CAL_PROOF_GEN_BATCH_SIZE)
+      dataOutObj.proof_ids = proofIds.splice(0, CAL_PROOF_GEN_BATCH_SIZE)
       try {
         await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_GEN_QUEUE, Buffer.from(JSON.stringify(dataOutObj)), {
           persistent: true,
@@ -197,16 +197,16 @@ async function ConsumeBtcMonMessageAsync(msg) {
   stateObj.btchead_state = messageObj.btchead_state
 
   try {
-    // Get all the hash_ids included in this btc_tx
-    let hashIdRows = await cachedProofState.getHashIdsByBtcTxIdAsync(stateObj.btctx_id)
-    let hashIds = hashIdRows.map(item => item.hash_id)
+    // Get all the proof_ids included in this btc_tx
+    let proofIdRows = await cachedProofState.getHashIdsByBtcTxIdAsync(stateObj.btctx_id)
+    let proofIds = proofIdRows.map(item => item.proof_id)
 
     await cachedProofState.writeBTCHeadStateObjectAsync(stateObj)
 
-    while (hashIds.length > 0) {
+    while (proofIds.length > 0) {
       // construct a btc 'proof ready' message for a batch of hashes
       let dataOutObj = {}
-      dataOutObj.hash_ids = hashIds.splice(0, BTC_PROOF_GEN_BATCH_SIZE)
+      dataOutObj.proof_ids = proofIds.splice(0, BTC_PROOF_GEN_BATCH_SIZE)
       try {
         await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_GEN_QUEUE, Buffer.from(JSON.stringify(dataOutObj)), {
           persistent: true,
