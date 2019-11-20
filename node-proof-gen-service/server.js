@@ -42,7 +42,7 @@ let amqpChannel = null
 // This value is set once the connection has been established
 let redis = null
 
-function addChainpointHeader(proof, hash, hashId) {
+function addChainpointHeader(proof, hash, proofId) {
   proof['@context'] = 'https://w3id.org/chainpoint/v4'
   proof.type = 'Chainpoint'
   proof.hash = hash
@@ -50,8 +50,8 @@ function addChainpointHeader(proof, hash, hashId) {
   // the following two values are added as placeholders
   // the spec does not allow for missing or empty values here
   // these values will be replaced with proper ones by the Node instance
-  proof.proof_id = hashId
-  proof.hash_received = utils.formatDateISO8601NoMs(new Date(parseInt(uuidTime.v1(hashId))))
+  proof.proof_id = proofId
+  proof.hash_received = utils.formatDateISO8601NoMs(new Date(parseInt(uuidTime.v1(proofId))))
   return proof
 }
 
@@ -99,7 +99,7 @@ async function consumeProofReadyMessageAsync(msg) {
     case 'cal_batch':
       try {
         let proofIds = messageObj.proof_ids
-        let aggStateRows = await cachedProofState.getAggStateObjectsByHashIdsAsync(proofIds)
+        let aggStateRows = await cachedProofState.getAggStateObjectsByProofIdsAsync(proofIds)
         let aggIds = aggStateRows.map(item => item.agg_id)
         let calStateRows = await cachedProofState.getCalStateObjectsByAggIdsAsync(aggIds)
         // create a lookup table for calStateRows by agg_id
@@ -121,7 +121,7 @@ async function consumeProofReadyMessageAsync(msg) {
             // ensure the proof is valid according to the defined Chainpoint v3 JSON schema
             let isValidSchema = chainpointProofSchema.validate(proof).valid
             if (!isValidSchema) {
-              logger.error(`Proof ${aggStateRow.hash_id} has an invalid JSON schema`)
+              logger.error(`Proof ${aggStateRow.proof_id} has an invalid JSON schema`)
               return null
             }
             return proof
@@ -143,7 +143,7 @@ async function consumeProofReadyMessageAsync(msg) {
     case 'btc_batch':
       try {
         let proofIds = messageObj.proof_ids
-        let aggStateRows = await cachedProofState.getAggStateObjectsByHashIdsAsync(proofIds)
+        let aggStateRows = await cachedProofState.getAggStateObjectsByProofIdsAsync(proofIds)
         let aggIds = aggStateRows.map(item => item.agg_id)
         let calStateRows = await cachedProofState.getCalStateObjectsByAggIdsAsync(aggIds)
         let calIds = calStateRows.map(item => item.cal_id)
@@ -152,7 +152,7 @@ async function consumeProofReadyMessageAsync(msg) {
 
         let btcTxStateRow, btcHeadStateRow
         try {
-          // if any of these calls fail, there is an unrecoverable problem with the proof state data for these hash_ids
+          // if any of these calls fail, there is an unrecoverable problem with the proof state data for these proof_ids
           // in this case, we log an error message and ack the message since it will never be able to process successfully
           //
           // all the anchorBTCAggIds should be the same, all being the event id for this btc transaction
@@ -161,7 +161,7 @@ async function consumeProofReadyMessageAsync(msg) {
           btcTxStateRow = await cachedProofState.getBTCTxStateObjectByAnchorBTCAggIdAsync(anchorBTCAggId)
           btcHeadStateRow = await cachedProofState.getBTCHeadStateObjectByBTCTxIdAsync(btcTxStateRow.btctx_id)
         } catch (error) {
-          logger.error(`Unrecoverable proof state read error for hash_ids ${proofIds} : ${error.message}`)
+          logger.error(`Unrecoverable proof state read error for proof_ids ${proofIds} : ${error.message}`)
           amqpChannel.ack(msg)
           return
         }
@@ -183,7 +183,7 @@ async function consumeProofReadyMessageAsync(msg) {
         let proofs = aggStateRows
           .map(aggStateRow => {
             let proof = {}
-            proof = addChainpointHeader(proof, aggStateRow.hash, aggStateRow.hash_id)
+            proof = addChainpointHeader(proof, aggStateRow.hash, aggStateRow.proof_id)
             proof = addCalendarBranch(
               proof,
               JSON.parse(aggStateRow.agg_state),
@@ -199,7 +199,7 @@ async function consumeProofReadyMessageAsync(msg) {
             // ensure the proof is valid according to the defined Chainpoint v3 JSON schema
             let isValidSchema = chainpointProofSchema.validate(proof).valid
             if (!isValidSchema) {
-              logger.error(`Proof ${aggStateRow.hash_id} has an invalid JSON schema`)
+              logger.error(`Proof ${aggStateRow.proof_id} has an invalid JSON schema`)
               return null
             }
             return proof

@@ -31,13 +31,13 @@ async function getProofsByIDsAsync(req, res, next) {
 
   let proofIds = []
 
-  // check if hash_id parameter was included
+  // check if proof_id parameter was included
   if (req.headers && req.headers.proofids) {
     // read from headers.hashids
     proofIds = req.headers.proofids.split(',').map(_.trim)
   }
 
-  // ensure at least one hash_id was submitted
+  // ensure at least one proof_id was submitted
   if (proofIds.length === 0) {
     return next(new errors.InvalidArgumentError('invalid request, at least one hash id required'))
   }
@@ -47,10 +47,10 @@ async function getProofsByIDsAsync(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid request, too many hash ids (250 max)'))
   }
 
-  // ensure all hash_ids are valid
+  // ensure all proof_ids are valid
   for (let proofId of proofIds) {
     if (!uuidValidate(proofId, 1)) {
-      return next(new errors.InvalidArgumentError(`invalid request, bad hash_id: ${proofId}`))
+      return next(new errors.InvalidArgumentError(`invalid request, bad proof_id: ${proofId}`))
     }
   }
 
@@ -64,7 +64,7 @@ async function getProofsByIDsAsync(req, res, next) {
 
   // create proof lookup table keyed by proofId
   let proofsReturned = queryResults.reduce((result, item) => {
-    result[item.hash_id] = item.proof
+    result[item.proof_id] = item.proof
     return result
   }, {})
 
@@ -72,12 +72,12 @@ async function getProofsByIDsAsync(req, res, next) {
   let finalResults = proofIds.map(proofId => {
     if (proofsReturned[proofId]) {
       return {
-        hash_id: proofId,
+        proof_id: proofId,
         proof: JSON.parse(proofsReturned[proofId])
       }
     } else {
       return {
-        hash_id: proofId,
+        proof_id: proofId,
         proof: null
       }
     }

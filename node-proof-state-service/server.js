@@ -92,7 +92,7 @@ async function ConsumeCalendarBatchMessageAsync(msg) {
   try {
     // Get all the proof_ids for all the agg_ids part of this calendar block
     let aggIds = stateObjs.map(item => item.agg_id)
-    let proofIdRows = await cachedProofState.getHashIdsByAggIdsAsync(aggIds)
+    let proofIdRows = await cachedProofState.getProofIdsByAggIdsAsync(aggIds)
     let proofIds = proofIdRows.map(item => item.proof_id)
 
     // Write the cal state objects to the database
@@ -198,7 +198,7 @@ async function ConsumeBtcMonMessageAsync(msg) {
 
   try {
     // Get all the proof_ids included in this btc_tx
-    let proofIdRows = await cachedProofState.getHashIdsByBtcTxIdAsync(stateObj.btctx_id)
+    let proofIdRows = await cachedProofState.getProofIdsByBtcTxIdAsync(stateObj.btctx_id)
     let proofIds = proofIdRows.map(item => item.proof_id)
 
     await cachedProofState.writeBTCHeadStateObjectAsync(stateObj)
