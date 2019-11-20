@@ -144,15 +144,15 @@ type Aggregation struct {
 
 // HashItem : An object contains the Core ID and value for a hash
 type HashItem struct {
-	HashID string `json:"proof_id"`
-	Hash   string `json:"hash"`
+	ProofID string `json:"proof_id"`
+	Hash    string `json:"hash"`
 }
 
 // ProofData : The proof data for a given hash within an aggregation
 type ProofData struct {
-	HashID string          `json:"proof_id"`
-	Hash   string          `json:"hash"`
-	Proof  []ProofLineItem `json:"proof"`
+	ProofID string          `json:"proof_id"`
+	Hash    string          `json:"hash"`
+	Proof   []ProofLineItem `json:"proof"`
 }
 
 // BtcAgg : An object containing BTC anchoring aggregation data

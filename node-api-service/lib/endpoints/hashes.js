@@ -100,7 +100,7 @@ function generatePostHashResponse(hash) {
   let result = {}
   result.proof_id = proofId
   result.hash = hash
-  result.submitted_at = utils.formatDateISO8601NoMs(timestampDate)
+  result.hash_received = utils.formatDateISO8601NoMs(timestampDate)
   result.processing_hints = generateProcessingHints(timestampDate)
 
   return result
