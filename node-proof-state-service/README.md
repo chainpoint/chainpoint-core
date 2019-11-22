@@ -44,14 +44,14 @@ The following is an example of state data published from the aggregator service:
       "proof_id": "34712680-14bb-11e7-9598-0800200c9a66",
       "hash": "a0ec06301bf1814970a70f89d1d373afdff9a36d1ba6675fc02f8a975f4efaeb",
       "proof": [
-        /* Chainpoint v3 ops list for leaf 0 ... */
+        /* Chainpoint v4 ops list for leaf 0 ... */
       ]
     },
     {
       "proof_id": "6d627180-1883-11e7-a8f9-edb8c212ef23",
       "hash": "2222d5f509d86e2627b1f498d7b44db1f8e70aae1528634580a9b68f05d57a9f",
       "proof": [
-        /* Chainpoint v3 ops list for leaf 1 ... */
+        /* Chainpoint v4 ops list for leaf 1 ... */
       ]
     },
     {

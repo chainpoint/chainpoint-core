@@ -46,10 +46,6 @@ function addChainpointHeader(proof, hash, proofId) {
   proof['@context'] = 'https://w3id.org/chainpoint/v4'
   proof.type = 'Chainpoint'
   proof.hash = hash
-
-  // the following two values are added as placeholders
-  // the spec does not allow for missing or empty values here
-  // these values will be replaced with proper ones by the Node instance
   proof.proof_id = proofId
   proof.hash_received = utils.formatDateISO8601NoMs(new Date(parseInt(uuidTime.v1(proofId))))
   return proof
