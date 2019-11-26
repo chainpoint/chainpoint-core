@@ -168,7 +168,7 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 		util.LoggerError(app.logger, app.redisClient.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
 	}
 	value, err := app.redisClient.Get(key).Result()
-	if err == redis.Nil || value != string(jsonJwk) {
+	if app.LogError(err) == redis.Nil || value != string(jsonJwk) {
 		err = app.redisClient.Set(key, value, 0).Err()
 		if app.LogError(err) != nil {
 			return err
