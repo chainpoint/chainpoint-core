@@ -169,7 +169,7 @@ func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClien
 		return err
 	}
 	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btcmon", "newtx", btcJSON)
-	if errBtcTx != nil {
+	if util.LogError(errBtcTx) != nil {
 		return errBtcTx
 	}
 	/*	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btctx", "", treeDataJSON)

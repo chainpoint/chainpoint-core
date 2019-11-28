@@ -3,6 +3,7 @@ package lightning
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
 
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/chainpoint/tendermint/libs/log"
 	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
 
 	"github.com/lightningnetwork/lnd/lnrpc"
@@ -27,6 +29,7 @@ type LnClient struct {
 	TlsPath        string
 	MacPath        string
 	Conn           *grpc.ClientConn
+	Logger         log.Logger
 }
 
 var (
@@ -114,6 +117,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+	ln.Logger.Info("Ln Connection created")
 	defer ln.Conn.Close()
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
@@ -123,13 +127,19 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 		return "", "", err
 	}
 	wallet := ln.GetWalletClient()
+	ln.Logger.Info("Ln Wallet client created")
 	estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
+	if err != nil {
+		return "", "", err
+	}
+	ln.Logger.Info(fmt.Sprintf("Ln EstimateFee: %v", estimatedFee))
 	opReturnOutput := []*signrpc.TxOut{&signrpc.TxOut{
 		Value:    0,
 		PkScript: outputScript,
 	}}
 	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: estimatedFee.SatPerKw, Outputs: opReturnOutput}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
+	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
 	if err != nil {
 		return "", "", err
 	}
