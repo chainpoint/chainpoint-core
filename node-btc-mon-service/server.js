@@ -126,18 +126,15 @@ let monitorTransactionsAsync = async () => {
         throw new Error(`Could not get stats for block ${txStats.blockHash}`)
       }
 
-      let messageObj = {}
-      messageObj.btctx_id = newBtcTxIdObj.tx_id
-      messageObj.btctx_body = newBtcTxIdObj.tx_body
-      messageObj.btctx_height = blockStats.height
+      newBtcTxIdObj.btctx_height = blockStats.height
       try {
-        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
+        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(newBtcTxIdObj)), {
           persistent: true,
           type: 'btcmon_new'
         })
-        logger.info(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message acked : ${messageObj.btctx_id}`)
+        logger.info(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message acked : ${newBtcTxIdObj.btctx_id}`)
       } catch (error) {
-        logger.error(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message nacked : ${messageObj.btctx_id}`)
+        logger.error(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message nacked : ${newBtcTxIdObj.btctx_id}`)
         throw new Error(error.message)
       }
 

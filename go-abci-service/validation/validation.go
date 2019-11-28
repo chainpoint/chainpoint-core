@@ -30,7 +30,7 @@ func NewTxValidation() types.TxValidation {
 		Bucket:      0.0,
 	}
 	permittedBtcRate := types.RateLimit{
-		AllowedRate: 1,
+		AllowedRate: 2,
 		PerBlocks:   60,
 		LastCheck:   0,
 		Bucket:      0.0,

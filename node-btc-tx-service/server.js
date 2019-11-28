@@ -119,8 +119,8 @@ async function processIncomingAnchorBTCJobAsync(msg) {
 
       // queue message for btcmon containing the new transaction information
       // adding btc transaction id and full transaction body to original message and returning
-      messageObj.tx_id = txResult.txId
-      messageObj.tx_body = txResult.txHex
+      messageObj.btctx_id = txResult.txId
+      messageObj.btctx_body = txResult.txHex
       try {
         await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_BTCMON_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
           persistent: true,

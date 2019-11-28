@@ -163,7 +163,12 @@ func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClien
 	if util.LogError(err) != nil {
 		return err
 	}
-	msgBtcMon := types.BtcMsgObj{BtcTxID: txid, BtcTxBody: rawtx}
+	msgBtcMon := types.BtcTxMsg{
+		AnchorBtcAggID:   anchorDataObj.AnchorBtcAggID,
+		AnchorBtcAggRoot: anchorDataObj.AnchorBtcAggRoot,
+		BtcTxBody:        rawtx,
+		BtcTxID:          txid,
+	}
 	btcJSON, err := json.Marshal(msgBtcMon)
 	if util.LogError(err) != nil {
 		return err

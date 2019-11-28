@@ -36,6 +36,7 @@ services:
       - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
       - ~/.chainpoint/core/data/keys/ecdsa_key.pem:/run/secrets/ECDSA_PKPEM
+      - ~/.chainpoint/core/.lnd:/root/.lnd:z
     ports:
       - '26656:26656'
       - '26657:26657'
