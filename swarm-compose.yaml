@@ -43,6 +43,7 @@ services:
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data
+      - ~/.chainpoint/core/.lnd:/root/.lnd:z
     ports:
       - target: 26656
         published: 26656

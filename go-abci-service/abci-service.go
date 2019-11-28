@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+
 	types2 "github.com/chainpoint/tendermint/types"
 
 	"github.com/chainpoint/tendermint/node"
@@ -96,6 +98,10 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
 	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "3"))
+	//lightning settings
+	tlsCertPath := util.GetEnv("LN_TLS_CERT", "/root/.lnd/tls.cert")
+	macaroonPath := util.GetEnv("MACAROON_PATH", "/root/.lnd/data/chain/bitcoin/testnet/admin.macaroon")
+	lndSocket := util.GetEnv("LND_SOCKET", "lnd:10009")
 	//testMode := util.GetEnv("NETWORK", "testnet")
 	tendermintRPC := types.TendermintConfig{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
@@ -127,6 +133,11 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		BitcoinNetwork:   bitcoinNetwork,
 		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintConfig: tendermintRPC,
+		LightningConfig: lightning.LnClient{
+			TlsPath:        tlsCertPath,
+			MacPath:        macaroonPath,
+			ServerHostPort: lndSocket,
+		},
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,
 		APIURI:           apiURI,

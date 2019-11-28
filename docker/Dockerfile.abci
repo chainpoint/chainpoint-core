@@ -1,6 +1,6 @@
 FROM golang:latest
 ENV TMHOME /tendermint
-RUN apt-get update -y && apt-get install -y wget build-essential libsnappy-dev
+RUN apt-get update -y && apt-get install -y wget build-essential libsnappy-dev go-dep
 RUN wget https://github.com/google/leveldb/archive/v1.20.tar.gz && \
   tar -zxvf v1.20.tar.gz && \
   cd leveldb-1.20/ && \
@@ -10,13 +10,14 @@ RUN wget https://github.com/google/leveldb/archive/v1.20.tar.gz && \
   cp -r leveldb /usr/local/include/ && \
   ldconfig && \
   rm -f v1.20.tar.gz
-RUN curl https://glide.sh/get | sh
 ENV GOBIN /go/bin
 ENV PKG_NAME=github.com/chainpoint/chainpoint-core/go-abci-service
 ENV PKG_PATH=$GOPATH/src/$PKG_NAME
 WORKDIR $PKG_PATH
-COPY go-abci-service/glide.yaml go-abci-service/glide.lock $PKG_PATH/
-RUN glide install
+COPY go-abci-service/Gopkg.lock go-abci-service/Gopkg.toml $PKG_PATH/
 ADD go-abci-service $PKG_PATH
+RUN dep ensure
 RUN make install
+RUN mkdir -p /root/.lnd
+RUN chmod -R 777 /root
 CMD ["/bin/bash", "-c", "$GOPATH/src/$PKG_NAME/run.sh"]

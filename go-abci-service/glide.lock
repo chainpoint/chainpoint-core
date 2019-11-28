@@ -1,13 +1,6 @@
 hash: 210a259451162302862434bdfd3c557299fc37be966c08b4336f162bb2dc9809
-updated: 2019-07-27T01:18:42.497509698-07:00
+updated: 2019-11-27T17:13:01.510119201-05:00
 imports:
-- name: git.schwanenlied.me/yawning/bsaes.git
-  version: 26d1add596b6d800bdeeb3bc3b2c7b316c056b6d
-  subpackages:
-  - ct32
-  - ct64
-  - ghash
-  - internal/modes
 - name: github.com/aead/chacha20
   version: 8b13a72661dae6e9e5dea04f344f0dc95ea29547
   subpackages:
@@ -19,7 +12,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/btcsuite/btcd
-  version: 306aecffea325e97f513b3ff0cf7895a5310651d
+  version: d0558925999c46be45898fe27ac0085a076ef15d
   subpackages:
   - addrmgr
   - blockchain
@@ -46,10 +39,9 @@ imports:
   - hdkeychain
   - txsort
 - name: github.com/btcsuite/btcwallet
-  version: 7a3a3e82cbb68c1e2c74de8d27ca32d7d27969f9
+  version: d7d2f14d61f3b9569a46243a18a6ed7ea2192d0e
   subpackages:
   - chain
-  - internal/helpers
   - internal/legacy/keystore
   - internal/legacy/rename
   - internal/prompt
@@ -57,34 +49,22 @@ imports:
   - snacl
   - waddrmgr
   - wallet
-  - wallet/internal/txsizes
   - wallet/txauthor
   - wallet/txrules
+  - wallet/txsizes
   - walletdb
-  - walletdb/bdb
   - walletdb/migration
   - wtxmgr
-- name: github.com/btcsuite/fastsha256
-  version: 637e656429416087660c84436a2a035d69d54e2e
 - name: github.com/btcsuite/go-socks
   version: 4720035b7bfd2a9bb130b1c184f8bbe41b6f0d0f
   subpackages:
   - socks
-- name: github.com/btcsuite/golangcrypto
-  version: 53f62d9b43e87a6c56975cf862af7edf33a8d0df
-  subpackages:
-  - nacl/secretbox
-  - pbkdf2
-  - poly1305
-  - salsa20/salsa
-  - scrypt
-  - ssh/terminal
 - name: github.com/btcsuite/websocket
   version: 31079b6807923eb23992c421b114992b95131b55
 - name: github.com/chainpoint/go-nist-beacon
   version: 7779b0805bdd6c658bda68f750c0e3996ac57156
 - name: github.com/chainpoint/tendermint
-  version: e21eb71760638e4d3f225e10d866bbdbfe1180b3
+  version: 130bfeabd4967eb00a99c41c440742381fae09bb
   subpackages:
   - abci/client
   - abci/example/code
@@ -140,7 +120,7 @@ imports:
   - types/time
   - version
 - name: github.com/coreos/bbolt
-  version: 0362320deb373dd1824e0f170889ad0f50be41bf
+  version: 7f8bb47fcaf8eaa817f8aad11c9c28b58215b66f
 - name: github.com/davecgh/go-spew
   version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
@@ -187,12 +167,10 @@ imports:
 - name: github.com/golang/protobuf
   version: b5d812f8a3706043e23a9cd5babf2e5423744d30
   subpackages:
+  - descriptor
   - jsonpb
   - proto
   - protoc-gen-go/descriptor
-  - protoc-gen-go/generator
-  - protoc-gen-go/generator/internal/remap
-  - protoc-gen-go/plugin
   - ptypes
   - ptypes/any
   - ptypes/duration
@@ -205,12 +183,8 @@ imports:
   version: 0cd6bf5da1e1c83f8b45653022c74f71af0538a4
 - name: github.com/gorilla/websocket
   version: 7c8e298727d149d7c329b4dec7e94e1932ac5c11
-- name: github.com/grpc-ecosystem/go-grpc-middleware
-  version: e0797f438f94f4d032395b8f71aae0e73d6efa08
-- name: github.com/grpc-ecosystem/go-grpc-prometheus
-  version: ae0d8660c5f2108ca70a3776dbe0fb53cf79f1da
 - name: github.com/grpc-ecosystem/grpc-gateway
-  version: ad529a448ba494a88058f9e5be0988713174ac86
+  version: 9087bb89f1e0b10d3aa6d5bc12641f36cc192733
   subpackages:
   - internal
   - runtime
@@ -227,16 +201,13 @@ imports:
   - json/parser
   - json/scanner
   - json/token
-- name: github.com/jackpal/gateway
-  version: cbcf4e3f3baee7952fc386c8b2534af4d267c875
-- name: github.com/jackpal/go-nat-pmp
-  version: d89d09f6f3329bc3c2479aa3cafd76a5aa93a35c
 - name: github.com/jacohend/lnd
   version: 384fe749341228d3d72f8c17ec0db81da7b16674
+  subpackages:
+  - lncfg
+  - macaroons
 - name: github.com/jasonlvhit/gocron
   version: 6771d4b492ba2d5f57919c04b4cddb3735365120
-- name: github.com/jessevdk/go-flags
-  version: c0795c8afcf41dd1d786bebce68636c199b3bb45
 - name: github.com/jmhodges/levigo
   version: 853d788c5c416eaaee5b044570784a96c7a26975
 - name: github.com/jrick/logrotate
@@ -264,9 +235,9 @@ imports:
   - oid
   - scram
 - name: github.com/lightninglabs/gozmq
-  version: cea2a031735d1346ffe367729646ff229abced34
+  version: d20a764486bf506bc045642e455bc7f0d21b232a
 - name: github.com/lightninglabs/neutrino
-  version: ddf667a8b5c4b7cef7ab12a044a0607e53ed16dc
+  version: e6008cebf1d97fc49e468d8caa8b6eb13f27cbe1
   subpackages:
   - banman
   - blockntfns
@@ -277,65 +248,40 @@ imports:
   - headerfs
   - headerlist
   - pushtx
+  - query
 - name: github.com/lightningnetwork/lightning-onion
-  version: ecc936dc56c9ed8167a560b9a1fed0f9653abfc0
+  version: 850081b08b6af55aafd933f8e2b26e457a1f0767
 - name: github.com/lightningnetwork/lnd
-  version: add905d17f7bbb11d0df2761cdf8accf2fef2b00
+  version: 949a5c5a04a1d2ab239be5732fd1c6796f51e344
   subpackages:
-  - aezeed
-  - autopilot
   - brontide
-  - buffer
   - build
   - chainntnfs
-  - chainntnfs/bitcoindnotify
-  - chainntnfs/btcdnotify
-  - chainntnfs/neutrinonotify
-  - chanbackup
   - channeldb
-  - channelnotifier
-  - contractcourt
-  - discovery
-  - htlcswitch
-  - htlcswitch/hodl
+  - channeldb/migration12
+  - channeldb/migration_01_to_11
   - input
-  - invoices
   - keychain
-  - lncfg
-  - lnpeer
   - lnrpc
-  - lnrpc/autopilotrpc
-  - lnrpc/chainrpc
-  - lnrpc/invoicesrpc
-  - lnrpc/routerrpc
   - lnrpc/signrpc
   - lnrpc/walletrpc
-  - lnrpc/watchtowerrpc
   - lntypes
   - lnwallet
-  - lnwallet/btcwallet
+  - lnwallet/chainfee
+  - lnwallet/chanvalidate
   - lnwire
   - macaroons
-  - monitoring
-  - multimutex
-  - nat
-  - netann
-  - pool
   - queue
-  - routing
-  - routing/chainview
+  - record
   - routing/route
   - shachain
-  - signal
-  - subscribe
   - sweep
   - ticker
+  - tlv
   - tor
-  - walletunlocker
   - watchtower
   - watchtower/blob
   - watchtower/lookout
-  - watchtower/wtclient
   - watchtower/wtdb
   - watchtower/wtpolicy
   - watchtower/wtserver
@@ -354,11 +300,9 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/miekg/dns
-  version: b13675009d59c97f3721247d9efa8914e1866a5b
+  version: 9b7437f11d75979ac166ebd0780edd96e62d5145
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
-- name: github.com/NebulousLabs/go-upnp
-  version: b32978b8ccbffe222d6f37a980e795074ac2ba74
 - name: github.com/pelletier/go-toml
   version: 65b27e6823c427415d156c92d7034dd57a154cf8
 - name: github.com/pkg/errors
@@ -423,27 +367,11 @@ imports:
   - leveldb/util
 - name: github.com/tendermint/go-amino
   version: dc14acf9ef15f85828bfbc561ed9dd9d2a284885
-- name: github.com/tv42/zbase32
-  version: aacc64a8f915ccbf3bf23f52b8a1236ae697c273
 - name: github.com/uber-go/zap
-  version: 27376062155ad36be76b0f12cf1572a221d3a48c
-- name: github.com/Yawning/aez
-  version: ec7426b4492636b9b39cb6e173e7423500107163
-- name: gitlab.com/NebulousLabs/fastrand
-  version: 603482d69e405db4890e654c9807b4c772e86c81
-- name: gitlab.com/NebulousLabs/go-upnp
-  version: 3a71999ed0d393fba27f9c9b54f25a0943af97af
-  subpackages:
-  - goupnp
-  - goupnp/dcps/internetgateway1
-  - goupnp/httpu
-  - goupnp/scpd
-  - goupnp/soap
-  - goupnp/ssdp
+  version: 33e58d4d0120aa28d4df84cd244838c490846c9d
 - name: golang.org/x/crypto
   version: 8dd112bcdc25174059e45e07517d9fc663123347
   subpackages:
-  - blake2b
   - chacha20poly1305
   - curve25519
   - ed25519
@@ -456,18 +384,15 @@ imports:
   - pbkdf2
   - poly1305
   - ripemd160
-  - salsa20
   - salsa20/salsa
   - scrypt
   - sha3
+  - ssh/terminal
 - name: golang.org/x/net
   version: 16b79f2e4e95ea23b2bf9903c9809ff7b013ce85
   subpackages:
   - bpf
   - context
-  - html
-  - html/atom
-  - html/charset
   - http/httpguts
   - http2
   - http2/hpack
@@ -486,33 +411,14 @@ imports:
   subpackages:
   - cpu
   - unix
+  - windows
 - name: golang.org/x/text
   version: d14c52b222ee852cdba8b07206ca0c614b389876
   subpackages:
-  - encoding
-  - encoding/charmap
-  - encoding/htmlindex
-  - encoding/internal
-  - encoding/internal/identifier
-  - encoding/japanese
-  - encoding/korean
-  - encoding/simplifiedchinese
-  - encoding/traditionalchinese
-  - encoding/unicode
-  - internal/language
-  - internal/language/compact
-  - internal/tag
-  - internal/utf8internal
-  - language
-  - runes
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
-- name: golang.org/x/time
-  version: 9d24e82272b4f38b78bc8cff74fa936d31ccd8ef
-  subpackages:
-  - rate
 - name: google.golang.org/genproto
   version: 4f5b463f9597cbe0dd13a6a2cd4f85e788d27508
   subpackages:

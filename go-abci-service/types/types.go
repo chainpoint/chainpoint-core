@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+
 	"github.com/chainpoint/tendermint/privval"
 
 	"github.com/chainpoint/tendermint/libs/log"
@@ -30,6 +32,7 @@ type AnchorConfig struct {
 	BitcoinNetwork   string
 	RabbitmqURI      string
 	TendermintConfig TendermintConfig
+	LightningConfig  lightning.LnClient
 	PostgresURI      string
 	RedisURI         string
 	APIURI           string
