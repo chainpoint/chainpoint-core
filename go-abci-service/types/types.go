@@ -180,6 +180,12 @@ type BtcTxMsg struct {
 	BtcTxHeight      int64  `json:"btctx_height"`
 }
 
+// BtcTxMsg : An RMQ message object from btc-tx to btc-mon service
+type BtcMsgObj struct {
+	BtcTxID   string `json:"tx_id"`
+	BtcTxBody string `json:"tx_body"`
+}
+
 // BtcTxProofState : An RMQ message object bound for proofstate service
 type BtcTxProofState struct {
 	AnchorBtcAggID string        `json:"anchor_btc_agg_id"`

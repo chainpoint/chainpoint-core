@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+
 	"github.com/chainpoint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -152,14 +154,27 @@ func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) 
 }
 
 // QueueBtcTxStateDataMessage
-func (calendar *Calendar) QueueBtcTxStateDataMessage(anchorDataObj types.BtcAgg) error {
-	treeDataJSON, err := json.Marshal(anchorDataObj)
+func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClient, anchorDataObj types.BtcAgg) error {
+	hexRoot, err := hex.DecodeString(anchorDataObj.AnchorBtcAggRoot)
 	if util.LogError(err) != nil {
 		return err
 	}
-	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btctx", "", treeDataJSON)
+	txid, rawtx, err := lnClient.SendOpReturn(hexRoot)
+	if util.LogError(err) != nil {
+		return err
+	}
+	msgBtcMon := types.BtcMsgObj{BtcTxID: txid, BtcTxBody: rawtx}
+	btcJSON, err := json.Marshal(msgBtcMon)
+	if util.LogError(err) != nil {
+		return err
+	}
+	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btcmon", "newtx", btcJSON)
 	if errBtcTx != nil {
 		return errBtcTx
 	}
+	/*	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btctx", "", treeDataJSON)
+		if errBtcTx != nil {
+			return errBtcTx
+		}*/
 	return nil
 }
