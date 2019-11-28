@@ -110,7 +110,10 @@ func (ln *LnClient) CreateConn() error {
 }
 
 func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
-	ln.CreateConn()
+	err := ln.CreateConn()
+	if err != nil {
+		return "", "", err
+	}
 	defer ln.Conn.Close()
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
