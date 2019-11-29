@@ -39,9 +39,9 @@ const PROOF_STATE_EXPIRE_HOURS = 6
 // How many hours any piece of proof state data is cached
 const PROOF_STATE_CACHE_EXPIRE_MINUTES = PROOF_STATE_EXPIRE_HOURS * 60
 
-async function getHashIdsByAggIdAsync(aggId) {
+async function getProofIdsByAggIdAsync(aggId) {
   let results = await AggState.findAll({
-    attributes: ['hash_id'],
+    attributes: ['proof_id'],
     where: {
       agg_id: aggId
     },
@@ -50,9 +50,9 @@ async function getHashIdsByAggIdAsync(aggId) {
   return results
 }
 
-async function getHashIdsByAggIdsAsync(aggIds) {
+async function getProofIdsByAggIdsAsync(aggIds) {
   let results = await AggState.findAll({
-    attributes: ['hash_id'],
+    attributes: ['proof_id'],
     where: {
       agg_id: { [Op.in]: aggIds }
     },
@@ -61,9 +61,9 @@ async function getHashIdsByAggIdsAsync(aggIds) {
   return results
 }
 
-async function getHashIdsByBtcTxIdAsync(btcTxId) {
+async function getProofIdsByBtcTxIdAsync(btcTxId) {
   let results = await sequelize.query(
-    `SELECT a.hash_id FROM agg_states a
+    `SELECT a.proof_id FROM agg_states a
     INNER JOIN cal_states c ON c.agg_id = a.agg_id
     INNER JOIN anchor_btc_agg_states aa ON aa.cal_id = c.cal_id
     INNER JOIN btctx_states tx ON tx.anchor_btc_agg_id = aa.anchor_btc_agg_id
@@ -73,10 +73,10 @@ async function getHashIdsByBtcTxIdAsync(btcTxId) {
   return results
 }
 
-async function getAggStateObjectsByHashIdsAsync(hashIds) {
+async function getAggStateObjectsByProofIdsAsync(proofIds) {
   let results = await AggState.findAll({
     where: {
-      hash_id: { [Op.in]: hashIds }
+      proof_id: { [Op.in]: proofIds }
     },
     raw: true
   })
@@ -291,19 +291,19 @@ async function getBTCHeadStateObjectByBTCTxIdAsync(btcTxId) {
 }
 
 async function writeAggStateObjectsBulkAsync(stateObjects) {
-  let insertCmd = 'INSERT INTO agg_states (hash_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES '
+  let insertCmd = 'INSERT INTO agg_states (proof_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES '
 
   let insertValues = stateObjects.map(stateObject => {
     // use sequelize.escape() to sanitize input values just to be safe
-    let hashId = sequelize.escape(stateObject.hash_id)
+    let proofId = sequelize.escape(stateObject.proof_id)
     let hash = sequelize.escape(stateObject.hash)
     let aggId = sequelize.escape(stateObject.agg_id)
     let aggStateData = sequelize.escape(JSON.stringify(stateObject.agg_state))
     let aggRoot = sequelize.escape(stateObject.agg_root)
-    return `(${hashId}, ${hash}, ${aggId}, ${aggStateData}, ${aggRoot}, clock_timestamp(), clock_timestamp())`
+    return `(${proofId}, ${hash}, ${aggId}, ${aggStateData}, ${aggRoot}, clock_timestamp(), clock_timestamp())`
   })
 
-  insertCmd = insertCmd + insertValues.join(', ') + ' ON CONFLICT (hash_id) DO NOTHING'
+  insertCmd = insertCmd + insertValues.join(', ') + ' ON CONFLICT (proof_id) DO NOTHING'
 
   await sequelize.query(insertCmd, { type: sequelize.QueryTypes.INSERT })
   return true
@@ -463,10 +463,10 @@ async function pruneBTCHeadStatesAsync() {
 }
 
 module.exports = {
-  getHashIdsByAggIdAsync: getHashIdsByAggIdAsync,
-  getHashIdsByAggIdsAsync: getHashIdsByAggIdsAsync,
-  getHashIdsByBtcTxIdAsync: getHashIdsByBtcTxIdAsync,
-  getAggStateObjectsByHashIdsAsync: getAggStateObjectsByHashIdsAsync,
+  getProofIdsByAggIdAsync: getProofIdsByAggIdAsync,
+  getProofIdsByAggIdsAsync: getProofIdsByAggIdsAsync,
+  getProofIdsByBtcTxIdAsync: getProofIdsByBtcTxIdAsync,
+  getAggStateObjectsByProofIdsAsync: getAggStateObjectsByProofIdsAsync,
   getAggStateInfoSinceTimestampAsync: getAggStateInfoSinceTimestampAsync,
   getCalStateObjectsByAggIdsAsync: getCalStateObjectsByAggIdsAsync,
   getAnchorBTCAggStateObjectsByCalIdsAsync: getAnchorBTCAggStateObjectsByCalIdsAsync,

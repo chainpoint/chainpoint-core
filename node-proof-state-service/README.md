@@ -41,17 +41,17 @@ The following is an example of state data published from the aggregator service:
   "agg_root": "419001851bcf08329f0c34bb89570028ff500fc85707caa53a3e5b8b2ecacf05",
   "proofData": [
     {
-      "hash_id": "34712680-14bb-11e7-9598-0800200c9a66",
+      "proof_id": "34712680-14bb-11e7-9598-0800200c9a66",
       "hash": "a0ec06301bf1814970a70f89d1d373afdff9a36d1ba6675fc02f8a975f4efaeb",
       "proof": [
-        /* Chainpoint v3 ops list for leaf 0 ... */
+        /* Chainpoint v4 ops list for leaf 0 ... */
       ]
     },
     {
-      "hash_id": "6d627180-1883-11e7-a8f9-edb8c212ef23",
+      "proof_id": "6d627180-1883-11e7-a8f9-edb8c212ef23",
       "hash": "2222d5f509d86e2627b1f498d7b44db1f8e70aae1528634580a9b68f05d57a9f",
       "proof": [
-        /* Chainpoint v3 ops list for leaf 1 ... */
+        /* Chainpoint v4 ops list for leaf 1 ... */
       ]
     },
     {
@@ -66,7 +66,7 @@ The following is an example of state data published from the aggregator service:
 | agg_id              | The UUIDv1 unique identifier for the aggregation event with embedded timestamp |
 | agg_root            | A hex string representing the merkle root for this aggregation tree            |
 | proofData           | An array of hash state data                                                    |
-| proofData.hash_id   | The UUIDv1 unique identifier for a hash object with embedded timestamp         |
+| proofData.proof_id   | The UUIDv1 unique identifier for a hash object with embedded timestamp         |
 | proofData.hash      | A hex string representing the hash to be processed                             |
 | proofData.agg_state | The state data being stored, in this case, aggregation operations              |
 
@@ -160,14 +160,14 @@ The following is an example of proof ready data published from the proof state s
 ```json
 {
   "type": "cal",
-  "hash_id": "34712680-14bb-11e7-9598-0800200c9a66"
+  "proof_id": "34712680-14bb-11e7-9598-0800200c9a66"
 }
 ```
 
 | Name    | Description                                                       |
 | :------ | :---------------------------------------------------------------- |
 | type    | The type of proof ready to be generated                           |
-| hash_id | The UUIDv1 unique identifier for the hash with embedded timestamp |
+| proof_id | The UUIDv1 unique identifier for the hash with embedded timestamp |
 
 ## Proof State Storage
 
@@ -193,14 +193,14 @@ The following is an example of a proof state object message sent to the proof st
 ```json
 {
   "type": "cal",
-  "hash_id": "34712680-14bb-11e7-9598-0800200c9a66"
+  "proof_id": "34712680-14bb-11e7-9598-0800200c9a66"
 }
 ```
 
 | Name    | Description                                                       |
 | :------ | :---------------------------------------------------------------- |
 | type    | The type of proof ready to be generated                           |
-| hash_id | The UUIDv1 unique identifier for the hash with embedded timestamp |
+| proof_id | The UUIDv1 unique identifier for the hash with embedded timestamp |
 
 In addition to publishing these proof ready messages, the proof state service also consumes them. All state data for the specified hash is read from storage and included in a proof generation message bound for the proof gen service.
 
@@ -209,7 +209,7 @@ The following is an example of a proof generation message sent to the proof gen 
 ```json
 {
   "type": "cal",
-  "hash_id": "34712680-14bb-11e7-9598-0800200c9a66",
+  "proof_id": "34712680-14bb-11e7-9598-0800200c9a66",
   "hash": "a0ec06301bf1814970a70f89d1d373afdff9a36d1ba6675fc02f8a975f4efaeb",
   "agg_state": {
     "ops": [
@@ -237,7 +237,7 @@ The following is an example of a proof generation message sent to the proof gen 
 | Name      | Description                                                              |
 | :-------- | :----------------------------------------------------------------------- |
 | type      | The type of proof ready to be generated                                  |
-| hash_id   | The UUIDv1 unique identifier for the hash with embedded timestamp        |
+| proof_id   | The UUIDv1 unique identifier for the hash with embedded timestamp        |
 | hash      | A hex string representing the hash being processed                       |
 | agg_state | The aggregation state data for this hash to be used for proof generation |
 | cal_state | The calendar state data for this hash to be used for proof generation    |

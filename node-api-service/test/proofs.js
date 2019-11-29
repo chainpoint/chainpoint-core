@@ -88,7 +88,7 @@ describe('Proofs Controller', () => {
           expect(res.body)
             .to.have.property('message')
             .and.to.be.a('string')
-            .and.to.equal(`invalid request, bad hash_id: hashid`)
+            .and.to.equal(`invalid request, bad proof_id: hashid`)
           done()
         })
     })
@@ -97,7 +97,7 @@ describe('Proofs Controller', () => {
   describe('GET /proofs with db error', () => {
     before(() => {
       proofs.setProof({
-        getProofsByHashIdsAsync: () => {
+        getProofsByProofIdsAsync: () => {
           throw new Error()
         }
       })
@@ -127,10 +127,10 @@ describe('Proofs Controller', () => {
   describe('GET /proofs with one known and one unknown', () => {
     before(() => {
       proofs.setProof({
-        getProofsByHashIdsAsync: () => {
+        getProofsByProofIdsAsync: () => {
           return [
-            { hash_id: 'dbcd35d0-6b77-11e9-9c57-0101a866898d', proof: '{"key0": "value", "key1": 27}' },
-            { hash_id: 'ffcd35d0-6b77-11e9-9c57-0101a866898d', proof: null }
+            { proof_id: 'dbcd35d0-6b77-11e9-9c57-0101a866898d', proof: '{"key0": "value", "key1": 27}' },
+            { proof_id: 'ffcd35d0-6b77-11e9-9c57-0101a866898d', proof: null }
           ]
         }
       })
@@ -146,7 +146,7 @@ describe('Proofs Controller', () => {
           expect(err).to.equal(null)
           expect(res.body).to.be.a('array')
           expect(res.body[0])
-            .to.have.property('hash_id')
+            .to.have.property('proof_id')
             .and.to.be.a('string')
             .and.to.equal('dbcd35d0-6b77-11e9-9c57-0101a866898d')
           expect(res.body[0])
@@ -161,7 +161,7 @@ describe('Proofs Controller', () => {
             .and.to.be.a('number')
             .and.to.equal(27)
           expect(res.body[1])
-            .to.have.property('hash_id')
+            .to.have.property('proof_id')
             .and.to.be.a('string')
             .and.to.equal('ffcd35d0-6b77-11e9-9c57-0101a866898d')
           expect(res.body[1])

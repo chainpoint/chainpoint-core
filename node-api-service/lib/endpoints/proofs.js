@@ -29,55 +29,55 @@ let proof = require('../models/Proof.js')
 async function getProofsByIDsAsync(req, res, next) {
   res.contentType = 'application/json'
 
-  let hashIds = []
+  let proofIds = []
 
-  // check if hash_id parameter was included
-  if (req.headers && req.headers.hashids) {
+  // check if proof_id parameter was included
+  if (req.headers && req.headers.proofids) {
     // read from headers.hashids
-    hashIds = req.headers.hashids.split(',').map(_.trim)
+    proofIds = req.headers.proofids.split(',').map(_.trim)
   }
 
-  // ensure at least one hash_id was submitted
-  if (hashIds.length === 0) {
+  // ensure at least one proof_id was submitted
+  if (proofIds.length === 0) {
     return next(new errors.InvalidArgumentError('invalid request, at least one hash id required'))
   }
 
   // ensure that the request count does not exceed the maximum setting
-  if (hashIds.length > 250) {
+  if (proofIds.length > 250) {
     return next(new errors.InvalidArgumentError('invalid request, too many hash ids (250 max)'))
   }
 
-  // ensure all hash_ids are valid
-  for (let hashId of hashIds) {
-    if (!uuidValidate(hashId, 1)) {
-      return next(new errors.InvalidArgumentError(`invalid request, bad hash_id: ${hashId}`))
+  // ensure all proof_ids are valid
+  for (let proofId of proofIds) {
+    if (!uuidValidate(proofId, 1)) {
+      return next(new errors.InvalidArgumentError(`invalid request, bad proof_id: ${proofId}`))
     }
   }
 
   // retrieve all the proofs from postgres
   let queryResults = []
   try {
-    queryResults = await proof.getProofsByHashIdsAsync(hashIds)
+    queryResults = await proof.getProofsByProofIdsAsync(proofIds)
   } catch (error) {
     return next(new errors.InternalServerError('error retrieving proofs'))
   }
 
-  // create proof lookup table keyed by hashId
+  // create proof lookup table keyed by proofId
   let proofsReturned = queryResults.reduce((result, item) => {
-    result[item.hash_id] = item.proof
+    result[item.proof_id] = item.proof
     return result
   }, {})
 
-  // construct result array for each hashId submitted
-  let finalResults = hashIds.map(hashId => {
-    if (proofsReturned[hashId]) {
+  // construct result array for each proofId submitted
+  let finalResults = proofIds.map(proofId => {
+    if (proofsReturned[proofId]) {
       return {
-        hash_id: hashId,
-        proof: JSON.parse(proofsReturned[hashId])
+        proof_id: proofId,
+        proof: JSON.parse(proofsReturned[proofId])
       }
     } else {
       return {
-        hash_id: hashId,
+        proof_id: proofId,
         proof: null
       }
     }

@@ -8,9 +8,9 @@ The following is a description of methods that must be defined in a storage adap
 
 | Name           | Description  | Returns  |
 | :------------- |:-------------|:-------------|
-| getHashIdsByAggIdAsync(aggId)     | gets all hash ids associated with an aggregation event | result array containing hash id objects |
-| getHashIdsByBtcTxIdAsync(btcTxId)     | gets all hash ids associated with a btcTxId | result array containing hash id objects |
-| getAggStateObjectByHashIdAsync(hashId)     | gets the agg state object for a given hash id | an agg state object |
+| getProofIdsByAggIdAsync(aggId)     | gets all hash ids associated with an aggregation event | result array containing hash id objects |
+| getProofIdsByBtcTxIdAsync(btcTxId)     | gets all hash ids associated with a btcTxId | result array containing hash id objects |
+| getAggStateObjectByProofIdAsync(proofId)     | gets the agg state object for a given hash id | an agg state object |
 | getCalStateObjectByAggIdAsync(aggId)     | gets the cal state object for a given agg id | a cal state object |
 | getAnchorBTCAggStateObjectByCalIdAsync(calId)     | gets the anchor agg state object for a given cal id | an anchor agg state object |
 | getBTCTxStateObjectByAnchorBTCAggIdAsync(anchorBTCAggId)     | gets the btctx state object for a given anchor agg id | a btctx state object |

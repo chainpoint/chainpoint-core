@@ -28,7 +28,7 @@ function defineFor(sqlz) {
   let AggState = sqlz.define(
     env.AGG_STATE_TABLE_NAME,
     {
-      hash_id: { type: Sequelize.UUID, primaryKey: true },
+      proof_id: { type: Sequelize.UUID, primaryKey: true },
       hash: { type: Sequelize.STRING },
       agg_id: { type: Sequelize.UUID },
       agg_state: { type: Sequelize.TEXT },

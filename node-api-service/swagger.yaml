@@ -53,19 +53,19 @@ paths:
           description: "invalid argument in request"
           schema:
             $ref: "#/definitions/ErrorResponse"
-  '/proofs/{hash_id}':
+  '/proofs/{proof_id}':
     get:
       tags:
       - "proofs"
-      summary: "Retrieves a proof by hash_id"
+      summary: "Retrieves a proof by proof_id"
       description: ""
       produces:
       - "application/json"
       parameters:
-        - name: "hash_id"
+        - name: "proof_id"
           in: "path"
           required: true
-          description: "The hash_id of the proof to retrieve"
+          description: "The proof_id of the proof to retrieve"
           type: string
       responses:
         '200':
@@ -90,7 +90,7 @@ paths:
         - name: "hashids"
           in: "header"
           required: true
-          description: "Comma separated hash_id list of the proofs to retrieve"
+          description: "Comma separated proof_id list of the proofs to retrieve"
           type: string
       responses:
         '200':
@@ -245,7 +245,7 @@ definitions:
   PostHashResponse:
     type: object
     properties:
-      hash_id:
+      proof_id:
         type: string
         example: "5a001650-2f4a-11e7-ad22-37b426116bc4"
       hash: 
@@ -275,7 +275,7 @@ definitions:
   GetProofsResponse:
     type: object
     properties:
-      hash_id:
+      proof_id:
         type: string
         example: "1957db7fe23e4be1740ddeb941ddda7ae0a6b782e536a9e00b5aa82db1e84547"
       proof:
@@ -306,14 +306,14 @@ definitions:
       hash:
         type: string
         example: "112233ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab11"
-      hash_id_node:
+      proof_id_node:
         type: string
         example: "3bce9920-4ed7-11e7-a7d0-3d6269e334e8"
       hash_submitted_node_at:
         type: string
         format: "date-time"
         example: "2017-06-11T18:53:18Z"       
-      hash_id_core:
+      proof_id_core:
         type: string
         example: "3bce9920-4ed7-11e7-a7d0-3d6269e334e8"
       hash_submitted_core_at:

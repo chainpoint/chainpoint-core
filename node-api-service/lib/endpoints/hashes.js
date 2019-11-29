@@ -43,7 +43,7 @@ let lightning = null
  * return to HTTP clients.
  *
  * @param {string} hash - A hash string to process
- * @returns {Object} An Object with 'hash_id', 'hash', 'submitted_at' and 'processing_hints' properties
+ * @returns {Object} An Object with 'proof_id', 'hash', 'submitted_at' and 'processing_hints' properties
  *
  */
 function generatePostHashResponse(hash) {
@@ -66,7 +66,7 @@ function generatePostHashResponse(hash) {
   // of the MAC address. This also prevents leakage of server
   // info.
   //
-  // This value can be checked on receipt of the hash_id UUID
+  // This value can be checked on receipt of the proof_id UUID
   // by extracting the bytes of the last segment of the UUID.
   // e.g. If the UUID is 'b609358d-7979-11e7-ae31-01ba7816bf8f'
   // the Node ID hash is the six bytes shown in '01ba7816bf8f'.
@@ -92,15 +92,15 @@ function generatePostHashResponse(hash) {
 
   h.update(Buffer.from(hashStr))
 
-  let hashId = uuidv1({
+  let proofId = uuidv1({
     msecs: timestampMS,
     node: Buffer.concat([Buffer.from([0x01]), h.digest()])
   })
 
   let result = {}
-  result.hash_id = hashId
+  result.proof_id = proofId
   result.hash = hash
-  result.submitted_at = utils.formatDateISO8601NoMs(timestampDate)
+  result.hash_received = utils.formatDateISO8601NoMs(timestampDate)
   result.processing_hints = generateProcessingHints(timestampDate)
 
   return result
@@ -227,7 +227,7 @@ async function postHashV1Async(req, res, next) {
   let responseObj = generatePostHashResponse(req.params.hash)
 
   let hashObj = {
-    hash_id: responseObj.hash_id,
+    proof_id: responseObj.proof_id,
     hash: responseObj.hash
   }
 

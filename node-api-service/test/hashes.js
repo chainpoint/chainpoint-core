@@ -319,11 +319,11 @@ describe('Hashes Controller', () => {
         .expect(200)
         .end((err, res) => {
           expect(err).to.equal(null)
-          expect(res.body).to.have.property('hash_id')
+          expect(res.body).to.have.property('proof_id')
           expect(res.body).to.have.property('submitted_at')
           // The UUID timestamp has ms level precision, ISO8601 only to the second.
           // Check that they are within 1000ms of each other.
-          expect(parseInt(uuidTime.v1(res.body.hash_id)) - Date.parse(res.body.submitted_at)).to.be.within(0, 1000)
+          expect(parseInt(uuidTime.v1(res.body.proof_id)) - Date.parse(res.body.submitted_at)).to.be.within(0, 1000)
           done()
         })
     })
@@ -351,13 +351,13 @@ describe('Hashes Controller', () => {
         .expect(200)
         .end((err, res) => {
           expect(err).to.equal(null)
-          expect(res.body).to.have.property('hash_id')
+          expect(res.body).to.have.property('proof_id')
           // Knowing the original hash, the timestamp from the UUID,
           // and the personalization bytes,
           // you should be able to calculate whether the UUID 'Node ID'
           // data segment is the 5 byte BLAKE2s hash of the timestamp
           // embedded in the UUID and the hash submitted to get this UUID.
-          let t = parseInt(uuidTime.v1(res.body.hash_id))
+          let t = parseInt(uuidTime.v1(res.body.proof_id))
 
           // 5 byte length BLAKE2s hash w/ personalization
           let h = new BLAKE2s(5, { personalization: Buffer.from('CHAINPNT') })
@@ -366,7 +366,7 @@ describe('Hashes Controller', () => {
           h.update(Buffer.from(hashStr))
           let shortHashNodeBuf = Buffer.concat([Buffer.from([0x01]), h.digest()])
           // Last segment of UUIDv1 contains BLAKE2s hash to be matched
-          expect(res.body.hash_id.split('-')[4]).to.equal(shortHashNodeBuf.toString('hex'))
+          expect(res.body.proof_id.split('-')[4]).to.equal(shortHashNodeBuf.toString('hex'))
           done()
         })
     })
@@ -395,7 +395,7 @@ describe('Hashes Controller', () => {
         .end((err, res) => {
           expect(err).to.equal(null)
           expect(res).to.have.property('body')
-          expect(res.body).to.have.property('hash_id')
+          expect(res.body).to.have.property('proof_id')
           expect(res.body)
             .to.have.property('hash')
             .and.to.equal('ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12')
@@ -417,7 +417,7 @@ describe('Functions', () => {
   describe('calling generatePostHashResponse with one hash', () => {
     it('should return proper response object', done => {
       let res = hashes.generatePostHashResponse('ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12')
-      expect(res).to.have.property('hash_id')
+      expect(res).to.have.property('proof_id')
       expect(res)
         .to.have.property('hash')
         .and.to.equal('ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12')

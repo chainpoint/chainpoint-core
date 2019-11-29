@@ -36,7 +36,7 @@ function defineFor(sqlz) {
   let Proof = sqlz.define(
     env.PROOFS_TABLE_NAME,
     {
-      hash_id: { type: Sequelize.UUID, primaryKey: true },
+      proof_id: { type: Sequelize.UUID, primaryKey: true },
       proof: { type: Sequelize.TEXT }
     },
     {
@@ -58,25 +58,25 @@ function defineFor(sqlz) {
 }
 
 async function writeProofsBulkAsync(proofs) {
-  let insertCmd = 'INSERT INTO proofs (hash_id, proof, created_at, updated_at) VALUES '
+  let insertCmd = 'INSERT INTO proofs (proof_id, proof, created_at, updated_at) VALUES '
 
   let insertValues = proofs.map(proof => {
     // use sequelize.escape() to sanitize input values just to be safe
-    let hashId = sequelize.escape(proof.hash_id_core)
+    let proofId = sequelize.escape(proof.proof_id)
     let proofString = sequelize.escape(JSON.stringify(proof))
-    return `(${hashId}, ${proofString}, clock_timestamp(), clock_timestamp())`
+    return `(${proofId}, ${proofString}, clock_timestamp(), clock_timestamp())`
   })
 
-  insertCmd = insertCmd + insertValues.join(', ') + ' ON CONFLICT (hash_id) DO UPDATE SET proof = EXCLUDED.proof'
+  insertCmd = insertCmd + insertValues.join(', ') + ' ON CONFLICT (proof_id) DO UPDATE SET proof = EXCLUDED.proof'
 
   await sequelize.query(insertCmd, { type: sequelize.QueryTypes.INSERT })
   return true
 }
 
-async function getProofsByHashIdsAsync(hashIds) {
+async function getProofsByProofIdsAsync(proofIds) {
   let results = await Proof.findAll({
     where: {
-      hash_id: { [Op.in]: hashIds }
+      proof_id: { [Op.in]: proofIds }
     },
     raw: true
   })
@@ -94,7 +94,7 @@ async function pruneExpiredProofsAsync() {
 module.exports = {
   defineFor: defineFor,
   writeProofsBulkAsync: writeProofsBulkAsync,
-  getProofsByHashIdsAsync: getProofsByHashIdsAsync,
+  getProofsByProofIdsAsync: getProofsByProofIdsAsync,
   pruneExpiredProofsAsync: pruneExpiredProofsAsync,
   setDatabase: (sqlz, op, proof) => {
     sequelize = sqlz

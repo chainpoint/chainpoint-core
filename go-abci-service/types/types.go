@@ -58,24 +58,24 @@ type EthConfig struct {
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
 type AnchorState struct {
-	TxValidation     map[string]TxValidation `json:"tx_validation"`
-	TxInt            int64                   `json:"tx_int"`
-	Height           int64                   `json:"height"`
-	AppHash          []byte                  `json:"app_hash"`
-	BeginCalTxInt    int64                   `json:"begin_cal_int"`
-	EndCalTxInt      int64                   `json:"end_cal_int"`
-	LatestCalTxInt   int64                   `json:"latest_cal_int"`
-	LatestBtcaTx     []byte                  `json:"latest_btca"`
-	LatestBtcaTxInt  int64                   `json:"latest_btca_int"`
-	LatestBtcaHeight int64                   `json:"latest_btca_height"`
-	LatestBtcTx      string                  `json:"latest_btc"`
-	LatestBtcAggRoot string                  `json:"latest_btc_root"`
-	LatestBtccTx     []byte                  `json:"latest_btcc"`
-	LatestBtccTxInt  int64                   `json:"latest_btcc_int"`
-	LatestBtccHeight int64                   `json:"latest_btcc_height"`
-	LastAnchorCoreID string                  `json:"last_anchor_core_id"`
-	LastAuditCoreID  string                  `json:"last_audit_core_id"`
-	CoreKeys         map[string]ecdsa.PublicKey
+	TxValidation     map[string]TxValidation    `json:"tx_validation"`
+	TxInt            int64                      `json:"tx_int"`
+	Height           int64                      `json:"height"`
+	AppHash          []byte                     `json:"app_hash"`
+	BeginCalTxInt    int64                      `json:"begin_cal_int"`
+	EndCalTxInt      int64                      `json:"end_cal_int"`
+	LatestCalTxInt   int64                      `json:"latest_cal_int"`
+	LatestBtcaTx     []byte                     `json:"latest_btca"`
+	LatestBtcaTxInt  int64                      `json:"latest_btca_int"`
+	LatestBtcaHeight int64                      `json:"latest_btca_height"`
+	LatestBtcTx      string                     `json:"latest_btc"`
+	LatestBtcAggRoot string                     `json:"latest_btc_root"`
+	LatestBtccTx     []byte                     `json:"latest_btcc"`
+	LatestBtccTxInt  int64                      `json:"latest_btcc_int"`
+	LatestBtccHeight int64                      `json:"latest_btcc_height"`
+	LastAnchorCoreID string                     `json:"last_anchor_core_id"`
+	LastAuditCoreID  string                     `json:"last_audit_core_id"`
+	CoreKeys         map[string]ecdsa.PublicKey `json:"-"`
 	ChainSynced      bool
 	LatestNistRecord string
 }
@@ -144,15 +144,15 @@ type Aggregation struct {
 
 // HashItem : An object contains the Core ID and value for a hash
 type HashItem struct {
-	HashID string `json:"hash_id"`
-	Hash   string `json:"hash"`
+	ProofID string `json:"proof_id"`
+	Hash    string `json:"hash"`
 }
 
 // ProofData : The proof data for a given hash within an aggregation
 type ProofData struct {
-	HashID string          `json:"hash_id"`
-	Hash   string          `json:"hash"`
-	Proof  []ProofLineItem `json:"proof"`
+	ProofID string          `json:"proof_id"`
+	Hash    string          `json:"hash"`
+	Proof   []ProofLineItem `json:"proof"`
 }
 
 // BtcAgg : An object containing BTC anchoring aggregation data
@@ -254,71 +254,12 @@ type JSProof struct {
 	Right string `json:"right,omitempty"`
 }
 
-// NodeArray : for unmarshalling reward candidate node array
-type NodeArray []Node
-
-// Node : Used to represent Node info to and from postgres
-type Node struct {
-	EthAddr     string
-	PublicIP    sql.NullString
-	BlockNumber sql.NullInt64
-}
-
 // Core : Used to represent Core info to and from postgres
 type Core struct {
 	EthAddr     string
 	CoreId      sql.NullString
 	PublicIP    sql.NullString
 	BlockNumber sql.NullInt64
-}
-
-//NodeJSON : Used to write to chain
-type NodeJSON struct {
-	EthAddr  string `json:"eth_address"`
-	PublicIP string `json:"node_ip"`
-}
-
-//RepChain : Array of repchain items
-type RepChain []RepChainItem
-
-// RepChainItem : Used to represent reputation chain items for nodes
-type RepChainItem struct {
-	ID              uint32 `json:"id"`
-	CalBlockHeight  uint32 `json:"calBlockHeight"`
-	CalBlockHash    string `json:"calBlockHash"`
-	PrevRepItemHash string `json:"prevRepItemHash"`
-	HashIDNode      string `json:"hashIdNode"`
-	RepItemHash     string `json:"repItemHash"`
-	Signature       string `json:"signature"`
-}
-
-// NodeHash : json struct for submitting hashes to nodes
-type NodeHash struct {
-	Hashes []string `json:"hashes"`
-}
-
-//NodeHashResponse : Response from node after submitting hash
-type NodeHashResponse struct {
-	Meta struct {
-		SubmittedAt     time.Time `json:"submitted_at"`
-		ProcessingHints struct {
-			Cal  time.Time `json:"cal"`
-			Btc  time.Time `json:"btc"`
-			Tcal time.Time `json:"tcal"`
-			Tbtc time.Time `json:"tbtc"`
-		} `json:"processing_hints"`
-	} `json:"meta"`
-	Hashes []struct {
-		HashIDNode string `json:"hash_id_node"`
-		Hash       string `json:"hash"`
-	} `json:"hashes"`
-}
-
-//NodeProofResponse : Proof returned by node
-type NodeProofResponse []struct {
-	HashIDNode      string   `json:"hash_id_node"`
-	Proof           string   `json:"proof"`
-	AnchorsComplete []string `json:"anchors_complete"`
 }
 
 //Jwk : holds key info for validating node requests

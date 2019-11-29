@@ -145,10 +145,9 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 		hashStructSlice = append(hashStructSlice, unPackedHashItem)
 		var buffer bytes.Buffer
 
-		//concatenate ID and hash
-		_, err := buffer.WriteString(fmt.Sprintf("core_id:%s", unPackedHashItem.HashID))
+		//concatenate hash
 		hashBytes, _ := hex.DecodeString(unPackedHashItem.Hash)
-		_, err = buffer.Write(hashBytes)
+		_, err := buffer.Write(hashBytes)
 
 		rabbitmq.LogError(err, "failed to write hashes to byte buffer")
 
@@ -181,17 +180,16 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 	proofSlice := make([]types.ProofData, 0)
 	for i, unPackedHash := range hashStructSlice {
 		var proofData types.ProofData
-		proofData.HashID = unPackedHash.HashID
+		proofData.ProofID = unPackedHash.ProofID
 		proofData.Hash = unPackedHash.Hash
 		proofs := tree.GetProof(i)
 		if nist != "" {
 			proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("nistv2:%s", nist))}}, proofs...)
 		}
-		proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("core_id:%s", unPackedHash.HashID))}}, proofs...)
 		proofData.Proof = make([]types.ProofLineItem, 0)
 		for _, p := range proofs {
 			if p.Left {
-				if strings.Contains(string(p.Value), "nistv2") || strings.Contains(string(p.Value), "core_id") {
+				if strings.Contains(string(p.Value), "nistv2") {
 					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: string(p.Value)})
 				} else {
 					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: hex.EncodeToString(p.Value)})
