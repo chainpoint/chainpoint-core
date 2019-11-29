@@ -61,7 +61,7 @@ type EthConfig struct {
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
 type AnchorState struct {
-	TxValidation     map[string]TxValidation    `json:"-"`
+	TxValidation     map[string]TxValidation    `json:"tx_validation"`
 	TxInt            int64                      `json:"tx_int"`
 	Height           int64                      `json:"height"`
 	AppHash          []byte                     `json:"app_hash"`
