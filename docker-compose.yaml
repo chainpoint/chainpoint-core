@@ -177,28 +177,28 @@ services:
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
   #
-  btc-tx:
-    restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.btc-tx
-    container_name: btc-tx-core
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - base
-      - rabbitmq
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      HOT_WALLET_ADDRESS: ${HOT_WALLET_ADDRESS}
-      LND_SOCKET: ${LND_SOCKET}
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd
-    tty: true
+#  btc-tx:
+#    restart: always
+#    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG}
+#    build:
+#      context: .
+#      dockerfile: docker/Dockerfile.btc-tx
+#    container_name: btc-tx-core
+#    user: ${USERID}:${GROUPID}
+#    depends_on:
+#      - base
+#      - rabbitmq
+#    networks:
+#      - chainpoint
+#    environment:
+#      NODE_ENV: ${NODE_ENV}
+#      NETWORK: ${NETWORK:-testnet}
+#      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+#      HOT_WALLET_ADDRESS: ${HOT_WALLET_ADDRESS}
+#      LND_SOCKET: ${LND_SOCKET}
+#    volumes:
+#      - ~/.chainpoint/core/.lnd:/root/.lnd
+#    tty: true
 
   # Bitcoin Transmit Monitor
   # Monitor and report on the state of BTC transactions.

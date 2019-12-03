@@ -199,40 +199,40 @@ services:
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
   #
-  btc-tx:
-    restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG:-latest}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.btc-tx
-    user: ${USERID}:${GROUPID}
-    container_name: btc-tx-core
-    depends_on:
-      - rabbitmq
-    networks:
-      - chainpoint
-    secrets:
-      - HOT_WALLET_ADDRESS
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
-      LND_SOCKET: ${LND_SOCKET}
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd:z
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
+#  btc-tx:
+#    restart: always
+#    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG:-latest}
+#    build:
+#      context: .
+#      dockerfile: docker/Dockerfile.btc-tx
+#    user: ${USERID}:${GROUPID}
+#    container_name: btc-tx-core
+#    depends_on:
+#      - rabbitmq
+#    networks:
+#      - chainpoint
+#    secrets:
+#      - HOT_WALLET_ADDRESS
+#    deploy:
+#      restart_policy:
+#        condition: any
+#        delay: 5s
+#        max_attempts: 15
+#        window: 90s
+#    environment:
+#      NODE_ENV: ${NODE_ENV}
+#      NETWORK: ${NETWORK:-testnet}
+#      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+#      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
+#      LND_SOCKET: ${LND_SOCKET}
+#    volumes:
+#      - ~/.chainpoint/core/.lnd:/root/.lnd:z
+#    tty: true
+#    logging:
+#      driver: 'json-file'
+#      options:
+#        max-size: '1g'
+#        max-file: '5'
 
   # Bitcoin Transmit Monitor
   # Monitor and report on the state of BTC transactions this app has submitted.
