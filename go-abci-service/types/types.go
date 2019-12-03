@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+
 	"github.com/chainpoint/tendermint/privval"
 
 	"github.com/chainpoint/tendermint/libs/log"
@@ -30,6 +32,7 @@ type AnchorConfig struct {
 	BitcoinNetwork   string
 	RabbitmqURI      string
 	TendermintConfig TendermintConfig
+	LightningConfig  lightning.LnClient
 	PostgresURI      string
 	RedisURI         string
 	APIURI           string
@@ -175,6 +178,12 @@ type BtcTxMsg struct {
 	BtcTxID          string `json:"btctx_id"`
 	BtcTxBody        string `json:"btctx_body"`
 	BtcTxHeight      int64  `json:"btctx_height"`
+}
+
+// BtcTxMsg : An RMQ message object from btc-tx to btc-mon service
+type BtcMsgObj struct {
+	BtcTxID   string `json:"tx_id"`
+	BtcTxBody string `json:"tx_body"`
 }
 
 // BtcTxProofState : An RMQ message object bound for proofstate service

@@ -68,7 +68,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
 		if iAmLeader {
-			err := app.calendar.QueueBtcTxStateDataMessage(treeData)
+			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, treeData)
 			if app.LogError(err) != nil {
 				app.resetAnchor(startTxRange)
 				return err

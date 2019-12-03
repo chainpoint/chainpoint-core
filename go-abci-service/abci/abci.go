@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
 	"github.com/chainpoint/tendermint/abci/example/code"
@@ -78,6 +80,7 @@ type AnchorApplication struct {
 	aggregator           *aggregator.Aggregator
 	pgClient             *postgres.Postgres
 	redisClient          *redis.Client
+	lnClient             *lightning.LnClient
 	rpc                  *RPC
 	ID                   string
 	JWK                  types.Jwk
@@ -177,6 +180,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		},
 		pgClient:    pgClient,
 		redisClient: redisClient,
+		lnClient:    &config.LightningConfig,
 		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
 	}
 

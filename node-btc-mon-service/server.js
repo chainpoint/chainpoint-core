@@ -109,9 +109,9 @@ let monitorTransactionsAsync = async () => {
       // Get BTC Transaction Stats
       let txStats
       try {
-        txStats = await lnd.getTransactionDataAsync(newBtcTxIdObj.tx_id)
+        txStats = await lnd.getTransactionDataAsync(newBtcTxIdObj.btctx_id)
       } catch (error) {
-        throw new Error(`Could not get stats for transaction ${newBtcTxIdObj.tx_id}`)
+        throw new Error(`Could not get stats for transaction ${newBtcTxIdObj.btctx_id}`)
       }
       if (txStats.confirmations < 1) {
         logger.info(`${txStats.txId} not yet confirmed`)
@@ -126,24 +126,21 @@ let monitorTransactionsAsync = async () => {
         throw new Error(`Could not get stats for block ${txStats.blockHash}`)
       }
 
-      let messageObj = {}
-      messageObj.btctx_id = newBtcTxIdObj.tx_id
-      messageObj.btctx_body = newBtcTxIdObj.tx_body
-      messageObj.btctx_height = blockStats.height
+      newBtcTxIdObj.btctx_height = blockStats.height
       try {
-        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
+        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(newBtcTxIdObj)), {
           persistent: true,
           type: 'btcmon_new'
         })
-        logger.info(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message acked : ${messageObj.btctx_id}`)
+        logger.info(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message acked : ${newBtcTxIdObj.btctx_id}`)
       } catch (error) {
-        logger.error(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message nacked : ${messageObj.btctx_id}`)
+        logger.error(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message nacked : ${newBtcTxIdObj.btctx_id}`)
         throw new Error(error.message)
       }
 
       await redis.srem(NEW_BTC_TX_IDS_KEY, newbtcTxObjJSON)
 
-      logger.info(`${newBtcTxIdObj.tx_id} ready with ${txStats.confirmations} confirmations`)
+      logger.info(`${newBtcTxIdObj.btctx_id} ready with ${txStats.confirmations} confirmations`)
     } catch (error) {
       logger.error(`An unexpected error occurred while monitoring : ${error.message}`)
     }
