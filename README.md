@@ -102,9 +102,7 @@ To start up a Core node without connecting to the rest of the Chainpoint Network
 
 1. Run `make init` to initialize the configuration directory
 
-2. Run `make register` to submit your Core as a candidate to join the Chainpoint Network
-
-3. Run `make deploy` to download all containers and start all services.
+2. Run `make deploy` to download all containers and start all services.
 
 If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute.
 
