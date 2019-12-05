@@ -3,6 +3,7 @@ package lightning
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -28,6 +29,10 @@ type LnClient struct {
 	ServerHostPort string
 	TlsPath        string
 	MacPath        string
+	MinConfs       int64
+	TargetConfs    int64
+	LocalSats      int64
+	PushSats       int64
 	Conn           *grpc.ClientConn
 	Logger         log.Logger
 }
@@ -54,6 +59,56 @@ func CreateClient(serverHostPort string, tlsPath string, macPath string) LnClien
 		TlsPath:        tlsPath,
 		MacPath:        macPath,
 	}
+}
+
+func (ln *LnClient) AddPeer(peer string) error {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	peerAddr := lnrpc.LightningAddress{
+		Pubkey: peerParts[0],
+		Host:   peerParts[1],
+	}
+	connectPeer := lnrpc.ConnectPeerRequest{
+		Addr: &peerAddr,
+	}
+	_, err := ln.GetClient().ConnectPeer(context.Background(), &connectPeer)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ln *LnClient) CreateChannel(peer string) (lnrpc.Lightning_OpenChannelClient, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return nil, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	pubKey, err := hex.DecodeString(peerParts[0])
+	if err != nil {
+		return nil, err
+	}
+	openSesame := lnrpc.OpenChannelRequest{
+		NodePubkey: pubKey,
+	}
+	if ln.LocalSats != 0 {
+		openSesame.LocalFundingAmount = ln.LocalSats
+	}
+	if ln.PushSats != 0 {
+		openSesame.PushSat = ln.PushSats
+	}
+	if ln.MinConfs != 0 {
+		openSesame.MinConfs = int32(ln.MinConfs)
+	}
+	if ln.TargetConfs != 0 {
+		openSesame.TargetConf = int32(ln.TargetConfs)
+	}
+	resp, err := ln.GetClient().OpenChannel(context.Background(), &openSesame)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (ln *LnClient) CreateConn() error {
@@ -113,12 +168,6 @@ func (ln *LnClient) CreateConn() error {
 }
 
 func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
-	err := ln.CreateConn()
-	if err != nil {
-		return "", "", err
-	}
-	ln.Logger.Info("Ln Connection created")
-	defer ln.Conn.Close()
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
 	b.AddData(hash)

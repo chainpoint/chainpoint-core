@@ -134,6 +134,18 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			break
 		}
 	}
+
+	//Wait for lightning connection
+	deadline = time.Now().Add(5 * time.Minute)
+	for !time.Now().After(deadline) {
+		err := config.LightningConfig.CreateConn()
+		if util.LoggerError(*config.Logger, err) != nil {
+			continue
+		} else {
+			(*config.Logger).Info("Ln Connection created")
+			break
+		}
+	}
 	if err != nil {
 		fmt.Println("Redis not ready after 1 minute")
 		panic(err)
