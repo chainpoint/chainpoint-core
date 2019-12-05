@@ -120,7 +120,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		break
 	case "JWK":
-		app.SaveJWK(tx)
+		app.SaveIdentity(tx)
 		tags = app.incrementTxInt(tags)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break

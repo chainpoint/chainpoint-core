@@ -61,7 +61,6 @@ type EthConfig struct {
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
 type AnchorState struct {
-	TxValidation     map[string]TxValidation    `json:"tx_validation"`
 	TxInt            int64                      `json:"tx_int"`
 	Height           int64                      `json:"height"`
 	AppHash          []byte                     `json:"app_hash"`
@@ -78,7 +77,9 @@ type AnchorState struct {
 	LatestBtccHeight int64                      `json:"latest_btcc_height"`
 	LastAnchorCoreID string                     `json:"last_anchor_core_id"`
 	LastAuditCoreID  string                     `json:"last_audit_core_id"`
+	TxValidation     map[string]TxValidation    `json:"tx_validation"`
 	CoreKeys         map[string]ecdsa.PublicKey `json:"-"`
+	LnUris           map[string]string          `json:"lightning_uris"`
 	ChainSynced      bool
 	LatestNistRecord string
 }

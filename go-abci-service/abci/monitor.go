@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"time"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+
+	"github.com/lestrrat-go/jwx/jwk"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
@@ -32,7 +34,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			continue
 		}
 		if app.ID == "" {
-			app.ID = string(status.NodeInfo.ID())
+			app.ID = string(status.ValidatorInfo.Address.String())
 		}
 		if status.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
@@ -50,29 +52,20 @@ func (app *AnchorApplication) KeyMonitor() {
 		if !app.state.ChainSynced {
 			continue
 		}
-		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
-		response, err := http.Get(selfStatusURL)
+		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
 		if app.LogError(err) != nil {
 			continue
 		}
-		contents, err := ioutil.ReadAll(response.Body)
+		jwkJson, err := json.MarshalIndent(jwk, "", "  ")
 		if app.LogError(err) != nil {
 			continue
 		}
-		var apiStatus types.CoreAPIStatus
-		err = json.Unmarshal(contents, &apiStatus)
-		if app.LogError(err) != nil {
+		resp, err := app.lnClient.GetInfo()
+		if app.LogError(err) != nil || len(resp.Uris) == 0 {
 			continue
 		}
-		app.JWK = apiStatus.Jwk
-		if app.JWK.Kid == "" {
-			continue
-		}
-		jwkJson, err := json.Marshal(apiStatus.Jwk)
-		if app.LogError(err) != nil {
-			continue
-		}
-		_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		uri := resp.Uris[0]
+		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, uri, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			continue
 		} else {
@@ -99,8 +92,8 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 	}
 }
 
-//LoadJWK : load public keys derived from JWTs from redis
-func (app *AnchorApplication) LoadJWK() error {
+//LoadIdentity : load public keys derived from JWTs from redis
+func (app *AnchorApplication) LoadIdentity() error {
 	var cursor uint64
 	var idKeys []string
 	for {
@@ -147,8 +140,8 @@ func (app *AnchorApplication) LoadJWK() error {
 	return nil
 }
 
-//SaveJWK : save the JWT value retrieved
-func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
+//SaveIdentity : save the JWT value retrieved
+func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	var jwkType types.Jwk
 	json.Unmarshal([]byte(tx.Data), &jwkType)
 	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
@@ -181,6 +174,9 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	} else {
 		validation := validation.NewTxValidation()
 		app.state.TxValidation[pubKeyHex] = validation
+	}
+	if lightning.IsLnUri(tx.Meta) {
+		app.state.LnUris[tx.CoreID] = tx.Meta
 	}
 	return nil
 }

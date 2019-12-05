@@ -96,6 +96,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if state.TxValidation == nil {
 		state.TxValidation = validation.NewTxValidationMap()
 	}
+	if state.LnUris == nil {
+		state.LnUris = map[string]string{}
+	}
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
 
@@ -134,6 +137,12 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			break
 		}
 	}
+	if err != nil {
+		fmt.Println("Redis not ready after 1 minute")
+		panic(err)
+	} else if redisClient != nil {
+		fmt.Println("Connection to Redis established")
+	}
 
 	//Wait for lightning connection
 	deadline = time.Now().Add(5 * time.Minute)
@@ -142,15 +151,14 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		if util.LoggerError(*config.Logger, err) != nil {
 			continue
 		} else {
-			(*config.Logger).Info("Ln Connection created")
 			break
 		}
 	}
 	if err != nil {
-		fmt.Println("Redis not ready after 1 minute")
+		fmt.Println("LND not ready after 1 minute")
 		panic(err)
 	} else if redisClient != nil {
-		fmt.Println("Connection to Redis established")
+		fmt.Println("Connection to LND established")
 	}
 
 	for _, coreIPString := range config.PrivateCoreIPs {
@@ -210,7 +218,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	go app.KeyMonitor()
 
 	// Load JWK into local mapping from redis
-	app.LoadJWK()
+	app.LoadIdentity()
 
 	return &app
 }

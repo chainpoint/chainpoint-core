@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"strings"
 
 	"github.com/btcsuite/btcutil"
@@ -59,6 +60,25 @@ func CreateClient(serverHostPort string, tlsPath string, macPath string) LnClien
 		TlsPath:        tlsPath,
 		MacPath:        macPath,
 	}
+}
+
+func IsLnUri(uri string) bool {
+	peerParts := strings.Split(uri, "@")
+	if len(peerParts) != 2 {
+		return false
+	}
+	if _, err := hex.DecodeString(peerParts[0]); err != nil {
+		return false
+	}
+	if _, _, err := net.SplitHostPort(peerParts[1]); err != nil {
+		return false
+	}
+	return true
+}
+
+func (ln *LnClient) GetInfo() (lnrpc.GetInfoResponse, error) {
+	resp, err := ln.GetClient().GetInfo(context.Background(), &lnrpc.GetInfoRequest{})
+	return *resp, err
 }
 
 func (ln *LnClient) AddPeer(peer string) error {
