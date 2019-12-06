@@ -100,6 +100,16 @@ func (ln *LnClient) AddPeer(peer string) error {
 	return nil
 }
 
+func (ln *LnClient) GetChannels() (lnrpc.ListChannelsResponse, error) {
+	channels, err := ln.GetClient().ListChannels(context.Background(), &lnrpc.ListChannelsRequest{})
+	return *channels, err
+}
+
+func (ln *LnClient) GetPendingChannels() (lnrpc.PendingChannelsResponse, error) {
+	channels, err := ln.GetClient().PendingChannels(context.Background(), &lnrpc.PendingChannelsRequest{})
+	return *channels, err
+}
+
 func (ln *LnClient) CreateChannel(peer string) (lnrpc.Lightning_OpenChannelClient, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {

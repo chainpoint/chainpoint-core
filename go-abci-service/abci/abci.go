@@ -215,10 +215,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
 
-	go app.KeyMonitor()
-
 	// Load JWK into local mapping from redis
 	app.LoadIdentity()
+
+	// Stake and transmit identity
+	go app.StakeIdentity()
 
 	return &app
 }

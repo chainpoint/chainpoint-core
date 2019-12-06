@@ -44,13 +44,31 @@ func (app *AnchorApplication) SyncMonitor() {
 	}
 }
 
-//KeyMonitor : updates active ECDSA public keys from all accessible peers
+//StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
-func (app *AnchorApplication) KeyMonitor() {
+func (app *AnchorApplication) StakeIdentity() {
 	for app.JWKSent != true {
 		time.Sleep(60 * time.Second)
+		if _, exists := app.state.CoreKeys[app.ID]; exists {
+			return
+		}
 		if !app.state.ChainSynced {
 			continue
+		}
+		validators, err := app.rpc.GetValidators(app.state.Height)
+		if app.LogError(err) != nil {
+			continue
+		}
+		for _, validator := range validators.Validators {
+			valID := validator.Address.String()
+			if lnUri, exists := app.state.LnUris[valID]; exists {
+				app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnUri))
+				if app.LogError(app.lnClient.AddPeer(lnUri)) == nil {
+					app.logger.Info(fmt.Sprintf("Adding Lightning Channel for Peer %s...", lnUri))
+					_, err := app.lnClient.CreateChannel(lnUri)
+					app.LogError(err)
+				}
+			}
 		}
 		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
 		if app.LogError(err) != nil {
