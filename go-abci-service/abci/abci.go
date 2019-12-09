@@ -97,7 +97,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		state.TxValidation = validation.NewTxValidationMap()
 	}
 	if state.LnUris == nil {
-		state.LnUris = map[string]string{}
+		state.LnUris = map[string]types.LnIdentity{}
 	}
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing

@@ -81,6 +81,25 @@ func (ln *LnClient) GetInfo() (lnrpc.GetInfoResponse, error) {
 	return *resp, err
 }
 
+func (ln *LnClient) PeerExists(peer string) (bool, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return false, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	pubKey := peerParts[0]
+	addr := peerParts[1]
+	peers, err := ln.GetClient().ListPeers(context.Background(), &lnrpc.ListPeersRequest{})
+	if err != nil {
+		return false, err
+	}
+	for _, peer := range peers.Peers {
+		if peer.PubKey == pubKey && peer.Address == addr {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (ln *LnClient) AddPeer(peer string) error {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
@@ -100,6 +119,51 @@ func (ln *LnClient) AddPeer(peer string) error {
 	return nil
 }
 
+func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return false, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	remotePubkey := peerParts[0]
+	channels, err := ln.GetChannels()
+	if err != nil {
+		return false, err
+	}
+	for _, chann := range channels.Channels {
+		if chann.RemotePubkey == remotePubkey && chann.LocalBalance >= satVal {
+			return true, nil
+		}
+	}
+	pending, err := ln.GetPendingChannels()
+	if err != nil {
+		return false, err
+	}
+	for _, chann := range pending.PendingOpenChannels {
+		if chann.Channel.RemoteNodePub == remotePubkey && chann.Channel.LocalBalance >= satVal {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (ln *LnClient) ChannelOpen(peer string, satVal int64) (bool, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return false, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	remotePubkey := peerParts[0]
+	channels, err := ln.GetChannels()
+	if err != nil {
+		return false, err
+	}
+	for _, chann := range channels.Channels {
+		if chann.RemotePubkey == remotePubkey && chann.LocalBalance >= satVal {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (ln *LnClient) GetChannels() (lnrpc.ListChannelsResponse, error) {
 	channels, err := ln.GetClient().ListChannels(context.Background(), &lnrpc.ListChannelsRequest{})
 	return *channels, err
@@ -110,7 +174,7 @@ func (ln *LnClient) GetPendingChannels() (lnrpc.PendingChannelsResponse, error) 
 	return *channels, err
 }
 
-func (ln *LnClient) CreateChannel(peer string) (lnrpc.Lightning_OpenChannelClient, error) {
+func (ln *LnClient) CreateChannel(peer string, satVal int64) (lnrpc.Lightning_OpenChannelClient, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return nil, errors.New("Malformed peer string (must be pubKey@host)")
@@ -123,7 +187,7 @@ func (ln *LnClient) CreateChannel(peer string) (lnrpc.Lightning_OpenChannelClien
 		NodePubkey: pubKey,
 	}
 	if ln.LocalSats != 0 {
-		openSesame.LocalFundingAmount = ln.LocalSats
+		openSesame.LocalFundingAmount = satVal
 	}
 	if ln.PushSats != 0 {
 		openSesame.PushSat = ln.PushSats

@@ -79,9 +79,14 @@ type AnchorState struct {
 	LastAuditCoreID  string                     `json:"last_audit_core_id"`
 	TxValidation     map[string]TxValidation    `json:"tx_validation"`
 	CoreKeys         map[string]ecdsa.PublicKey `json:"-"`
-	LnUris           map[string]string          `json:"lightning_uris"`
+	LnUris           map[string]LnIdentity      `json:"lightning_identities"`
 	ChainSynced      bool
 	LatestNistRecord string
+}
+
+type LnIdentity struct {
+	Peer            string `json:"peer"`
+	RequiredChanAmt int64  `json:"required_satoshis"`
 }
 
 // Tx holds custom transaction data and metadata for the Chainpoint Calendar

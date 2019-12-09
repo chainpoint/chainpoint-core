@@ -55,20 +55,41 @@ func (app *AnchorApplication) StakeIdentity() {
 		if !app.state.ChainSynced {
 			continue
 		}
-		validators, err := app.rpc.GetValidators(app.state.Height)
+		amValidator, err := app.AmValidator()
 		if app.LogError(err) != nil {
 			continue
 		}
-		for _, validator := range validators.Validators {
-			valID := validator.Address.String()
-			if lnUri, exists := app.state.LnUris[valID]; exists {
-				app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnUri))
-				if app.LogError(app.lnClient.AddPeer(lnUri)) == nil {
-					app.logger.Info(fmt.Sprintf("Adding Lightning Channel for Peer %s...", lnUri))
-					_, err := app.lnClient.CreateChannel(lnUri)
+		//if we're not a validator, we need to "stake" by opening a ln channel to the validators
+		if !amValidator {
+			validators, err := app.rpc.GetValidators(app.state.Height)
+			if app.LogError(err) != nil {
+				continue
+			}
+			for _, validator := range validators.Validators {
+				valID := validator.Address.String()
+				if lnID, exists := app.state.LnUris[valID]; exists {
+					app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnID.Peer))
+					peerExists, err := app.lnClient.PeerExists(lnID.Peer)
 					app.LogError(err)
+					if peerExists || app.LogError(app.lnClient.AddPeer(lnID.Peer)) == nil {
+						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, lnID.RequiredChanAmt)
+						app.LogError(err)
+						if !chanExists {
+							app.logger.Info(fmt.Sprintf("Adding Lightning Channel for Peer %s...", lnID.Peer))
+							_, err := app.lnClient.CreateChannel(lnID.Peer, lnID.RequiredChanAmt)
+							app.LogError(err)
+						} else {
+							app.logger.Info(fmt.Sprintf("Channel %s exists, skipping...", lnID.Peer))
+							continue
+						}
+					}
 				}
 			}
+		}
+		deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
+		for !time.Now().After(deadline) {
+			app.logger.Info("Sleeping to allow validator lightning channels to open")
+			time.Sleep(time.Duration(1) * time.Minute)
 		}
 		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
 		if app.LogError(err) != nil {
@@ -78,12 +99,22 @@ func (app *AnchorApplication) StakeIdentity() {
 		if app.LogError(err) != nil {
 			continue
 		}
+		//Create ln identity struct
 		resp, err := app.lnClient.GetInfo()
 		if app.LogError(err) != nil || len(resp.Uris) == 0 {
 			continue
 		}
 		uri := resp.Uris[0]
-		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, uri, &app.config.ECPrivateKey)
+		lnID := types.LnIdentity{
+			Peer:            uri,
+			RequiredChanAmt: app.lnClient.LocalSats,
+		}
+		lnIDBytes, err := json.Marshal(lnID)
+		if app.LogError(err) != nil {
+			continue
+		}
+		//Declare our identity to the network
+		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			continue
 		} else {
@@ -193,8 +224,10 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 		validation := validation.NewTxValidation()
 		app.state.TxValidation[pubKeyHex] = validation
 	}
-	if lightning.IsLnUri(tx.Meta) {
-		app.state.LnUris[tx.CoreID] = tx.Meta
+	lnID := types.LnIdentity{}
+	app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID))
+	if lightning.IsLnUri(lnID.Peer) {
+		app.state.LnUris[tx.CoreID] = lnID
 	}
 	return nil
 }

@@ -146,3 +146,21 @@ func determineLeader(numLeaders int, status core_types.ResultStatus, netInfo cor
 	}
 	return true, []string{string(currentNodeID)}
 }
+
+// AmValidator : determines if this node is a validator
+func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
+	validators, err := app.rpc.GetValidators(app.state.Height)
+	if app.LogError(err) != nil {
+		return false, err
+	}
+	status, err := app.rpc.GetStatus()
+	if app.LogError(err) != nil {
+		return false, err
+	}
+	for _, validator := range validators.Validators {
+		if validator.Address.String() == status.ValidatorInfo.Address.String() {
+			return true, nil
+		}
+	}
+	return false, nil
+}
