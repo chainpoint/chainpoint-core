@@ -122,8 +122,8 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "JWK":
 		if app.VerifyIdentity(tx) {
 			app.SaveIdentity(tx)
+			tags = app.incrementTxInt(tags)
 		}
-		tags = app.incrementTxInt(tags)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break
 	default:
