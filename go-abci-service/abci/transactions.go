@@ -34,7 +34,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		tx, err = util.DecodeTx(rawTx)
 	}
 	if app.LogError(err) != nil {
-		return types2.ResponseCheckTx{Code: code.CodeTypeEncodingError, GasWanted: 1}
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
 	if !valid {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed", tx.CoreID)))
@@ -120,7 +120,9 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		break
 	case "JWK":
-		app.SaveIdentity(tx)
+		if app.VerifyIdentity(tx) {
+			app.SaveIdentity(tx)
+		}
 		tags = app.incrementTxInt(tags)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 		break

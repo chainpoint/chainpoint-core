@@ -88,7 +88,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		}
 		deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
 		for !time.Now().After(deadline) {
-			app.logger.Info("Sleeping to allow validator lightning channels to open")
+			app.logger.Info("Sleeping to allow validator lightning channels to open...")
 			time.Sleep(time.Duration(1) * time.Minute)
 		}
 		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
@@ -187,6 +187,25 @@ func (app *AnchorApplication) LoadIdentity() error {
 		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.NewTxValidation()
 	}
 	return nil
+}
+
+//VerifyIdentity : Verify that a channel exists only if we're a validator and the chain is synced
+func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
+	if app.state.ChainSynced {
+		amVal, err := app.AmValidator()
+		if app.LogError(err) != nil && amVal {
+			lnID := types.LnIdentity{}
+			if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
+				return false
+			}
+			chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
+			if app.LogError(err) != nil && chanExists {
+				return true
+			}
+			return false
+		}
+	}
+	return true
 }
 
 //SaveIdentity : save the JWT value retrieved

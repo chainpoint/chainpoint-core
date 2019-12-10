@@ -146,7 +146,7 @@ func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
 	return false, nil
 }
 
-func (ln *LnClient) ChannelOpen(peer string, satVal int64) (bool, error) {
+func (ln *LnClient) OurChannelOpenAndFunded(peer string, satVal int64) (bool, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return false, errors.New("Malformed peer string (must be pubKey@host)")
@@ -158,6 +158,24 @@ func (ln *LnClient) ChannelOpen(peer string, satVal int64) (bool, error) {
 	}
 	for _, chann := range channels.Channels {
 		if chann.RemotePubkey == remotePubkey && chann.LocalBalance >= satVal {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (ln *LnClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return false, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	remotePubkey := peerParts[0]
+	channels, err := ln.GetChannels()
+	if err != nil {
+		return false, err
+	}
+	for _, chann := range channels.Channels {
+		if chann.RemotePubkey == remotePubkey && chann.RemoteBalance >= satVal {
 			return true, nil
 		}
 	}
