@@ -32,6 +32,9 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		tx, valid, err = validation.Validate(rawTx, &app.state)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
+		if err == nil {
+			valid = true
+		}
 	}
 	if app.LogError(err) != nil {
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
