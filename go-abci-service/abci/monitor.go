@@ -50,6 +50,7 @@ func (app *AnchorApplication) StakeIdentity() {
 	for app.JWKSent != true {
 		time.Sleep(60 * time.Second)
 		if _, exists := app.state.CoreKeys[app.ID]; exists {
+			app.logger.Info("This node is already staked")
 			return
 		}
 		if !app.state.ChainSynced {
@@ -61,6 +62,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		}
 		//if we're not a validator, we need to "stake" by opening a ln channel to the validators
 		if !amValidator {
+			app.logger.Info("This node is new to the network; beginning staking")
 			validators, err := app.rpc.GetValidators(app.state.Height)
 			if app.LogError(err) != nil {
 				continue
@@ -85,6 +87,8 @@ func (app *AnchorApplication) StakeIdentity() {
 					}
 				}
 			}
+		} else {
+			app.logger.Info("This node is a validator, skipping staking")
 		}
 		deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
 		for !time.Now().After(deadline) {
