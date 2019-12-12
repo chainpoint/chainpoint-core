@@ -87,13 +87,13 @@ func (app *AnchorApplication) StakeIdentity() {
 					}
 				}
 			}
+			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
+			for !time.Now().After(deadline) {
+				app.logger.Info("Sleeping to allow validator lightning channels to open...")
+				time.Sleep(time.Duration(1) * time.Minute)
+			}
 		} else {
 			app.logger.Info("This node is a validator, skipping staking")
-		}
-		deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
-		for !time.Now().After(deadline) {
-			app.logger.Info("Sleeping to allow validator lightning channels to open...")
-			time.Sleep(time.Duration(1) * time.Minute)
 		}
 		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
 		if app.LogError(err) != nil {
