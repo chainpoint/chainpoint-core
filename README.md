@@ -1,9 +1,9 @@
 # Chainpoint Core
 
-[![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes from Chainpoint Nodes, aggregate these hashes into a root hash, and periodically commit the root hash to the Bitcoin blockchain.
+Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes from either Chainpoint Connect Nodes or directly from clients, aggregate these hashes into a root hash, and periodically commit the root hash to the Bitcoin blockchain.
 
 ## Important Notice
 
