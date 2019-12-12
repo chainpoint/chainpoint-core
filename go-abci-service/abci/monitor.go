@@ -35,6 +35,7 @@ func (app *AnchorApplication) SyncMonitor() {
 		}
 		if app.ID == "" {
 			app.ID = string(status.ValidatorInfo.Address.String())
+			app.logger.Info("ID set ", app.ID)
 		}
 		if status.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
@@ -53,7 +54,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.logger.Info("This node is already staked")
 			return
 		}
-		if !app.state.ChainSynced {
+		if !app.state.ChainSynced || app.state.Height == 0 {
 			continue
 		}
 		amValidator, err := app.AmValidator()
@@ -131,7 +132,7 @@ func (app *AnchorApplication) StakeIdentity() {
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if leader, leaders := app.ElectValidator(1); leader && app.state.ChainSynced {
+	if leader, leaders := app.ElectValidator(1); leader && app.state.ChainSynced && app.state.Height > 2 {
 		app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 		nistRecord, err := beacon.LastRecord()
 		if app.LogError(err) != nil {
