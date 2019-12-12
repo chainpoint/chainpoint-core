@@ -32,6 +32,7 @@ services:
       LOG_FILTER: 'main:debug,state:info,*:error'
       LOG_LEVEL: 'info'
       ANCHOR_TIMEOUT: '10'
+      LN_STAKE: '10000'
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config:Z
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data:Z
