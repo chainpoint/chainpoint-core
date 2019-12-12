@@ -76,9 +76,9 @@ func IsLnUri(uri string) bool {
 	return true
 }
 
-func (ln *LnClient) GetInfo() (lnrpc.GetInfoResponse, error) {
+func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
 	resp, err := ln.GetClient().GetInfo(context.Background(), &lnrpc.GetInfoRequest{})
-	return *resp, err
+	return resp, err
 }
 
 func (ln *LnClient) PeerExists(peer string) (bool, error) {
@@ -182,14 +182,14 @@ func (ln *LnClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool,
 	return false, nil
 }
 
-func (ln *LnClient) GetChannels() (lnrpc.ListChannelsResponse, error) {
+func (ln *LnClient) GetChannels() (*lnrpc.ListChannelsResponse, error) {
 	channels, err := ln.GetClient().ListChannels(context.Background(), &lnrpc.ListChannelsRequest{})
-	return *channels, err
+	return channels, err
 }
 
-func (ln *LnClient) GetPendingChannels() (lnrpc.PendingChannelsResponse, error) {
+func (ln *LnClient) GetPendingChannels() (*lnrpc.PendingChannelsResponse, error) {
 	channels, err := ln.GetClient().PendingChannels(context.Background(), &lnrpc.PendingChannelsRequest{})
-	return *channels, err
+	return channels, err
 }
 
 func (ln *LnClient) CreateChannel(peer string, satVal int64) (lnrpc.Lightning_OpenChannelClient, error) {
