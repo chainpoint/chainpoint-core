@@ -122,11 +122,13 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		break
 	case "JWK":
 		if app.VerifyIdentity(tx) {
+			app.logger.Info("Saving Identity", "CORE ID", tx.CoreID)
 			app.SaveIdentity(tx)
+			app.logger.Info("Identity Saved")
 			tags = app.incrementTxInt(tags)
+			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+			break
 		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
 	}

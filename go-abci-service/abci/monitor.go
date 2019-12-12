@@ -35,7 +35,7 @@ func (app *AnchorApplication) SyncMonitor() {
 		}
 		if app.ID == "" {
 			app.ID = string(status.ValidatorInfo.Address.String())
-			app.logger.Info("ID set ", app.ID)
+			app.logger.Info("Core ID set ", "ID", app.ID)
 		}
 		if status.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
@@ -54,7 +54,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.logger.Info("This node is already staked")
 			return
 		}
-		if !app.state.ChainSynced || app.state.Height == 0 {
+		if !app.state.ChainSynced || app.state.Height == 0 || app.ID == "" {
 			continue
 		}
 		amValidator, err := app.AmValidator()
@@ -196,6 +196,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 
 //VerifyIdentity : Verify that a channel exists only if we're a validator and the chain is synced
 func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
+	app.logger.Info(fmt.Sprintf("Verifying Identity for %#v", tx))
 	if app.state.ChainSynced {
 		amVal, err := app.AmValidator()
 		app.LogError(err)
