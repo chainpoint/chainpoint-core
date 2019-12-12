@@ -147,10 +147,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	//Wait for lightning connection
 	deadline = time.Now().Add(5 * time.Minute)
 	for !time.Now().After(deadline) {
-		err := config.LightningConfig.CreateConn()
+		conn, err := config.LightningConfig.CreateConn()
 		if util.LoggerError(*config.Logger, err) != nil {
 			continue
 		} else {
+			conn.Close()
 			break
 		}
 	}
