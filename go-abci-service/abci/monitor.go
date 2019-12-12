@@ -193,14 +193,21 @@ func (app *AnchorApplication) LoadIdentity() error {
 func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	if app.state.ChainSynced {
 		amVal, err := app.AmValidator()
-		if app.LogError(err) == nil && amVal {
+		app.LogError(err)
+		if amVal {
 			lnID := types.LnIdentity{}
 			if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
 				return false
 			}
-			chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
-			if app.LogError(err) == nil && chanExists {
+			isVal, err := app.IsValidator(tx.CoreID)
+			app.LogError(err)
+			if isVal {
 				return true
+			} else {
+				chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
+				if app.LogError(err) == nil && chanExists {
+					return true
+				}
 			}
 			return false
 		}
