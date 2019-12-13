@@ -50,7 +50,7 @@ Provided BASH is installed, a script to install all other dependencies (make, op
 
 #### External Services
 
-Core requires a few external services to facilitate communication with the Bitcoin and Ethereum blockchains. You will need:
+Core requires a few external services to facilitate communication with the Bitcoin blockchains. You will need:
 
 - `RPC address of a Bitcore Node` - Bitcoin Node with RPC enabled
 - `Bitcoin WIF`- Bitcoin Wallet Import Format (WIF) string in Base58.
