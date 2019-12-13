@@ -71,7 +71,7 @@ The above make command will download all other dependencies and run an interacti
 
 ### Configuration
 
-You will need to set up a configuration and secrets (bitcoin and ethereum) before running. `make init` will do most of the heavy lifting for you.
+You will need to set up a configuration and secrets (bitcoin) before running. `make init` will do most of the heavy lifting for you.
 
 Chainpoint Core currently uses Docker Swarm when running in Production mode. Running `make init` will initialize a Docker Swarm node on the host machine and prompt the user for secrets to be stored in Swarm's secrets system.
 This command will also copy `.env.sample` to `.env`. The `.env` file will be used by `docker-compose` to set required environment variables.
@@ -85,8 +85,8 @@ The following are the descriptions of the configuration parameters:
 | Name                     | Type    | Location                     | Description                                                                                                                                      |
 | :----------------------- | :------ | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
 | CHAINPOINT_CORE_BASE_URI | String  | .env                         | Public URI of host machine, of the form `http://35.245.53.181`                                                                                   |
-| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin and Ethereum testnets. Default is `mainnet`.                                                                     |
-| NODE_ENV                 | String  | .env                         | Sets Core to use either ethereum/bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
+| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin testnets. Default is `mainnet`.                                                                     |
+| NODE_ENV                 | String  | .env                         | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
 | PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | ANCHOR_INTERVAL          | String  | swarm-compose.yaml           | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
