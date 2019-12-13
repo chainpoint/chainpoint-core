@@ -2,11 +2,9 @@ package abci
 
 import (
 	"crypto/ecdsa"
-	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
@@ -160,27 +158,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		panic(err)
 	} else if redisClient != nil {
 		fmt.Println("Connection to LND established")
-	}
-
-	for _, coreIPString := range config.PrivateCoreIPs {
-		coreDetails := strings.Split(coreIPString, "@")
-		if len(coreDetails) != 2 {
-			(*config.Logger).Error(fmt.Sprintf("Core list needs to be comma-delimited list of <Tendermint_ID>@<IP>"))
-			continue
-		}
-		id := coreDetails[0]
-		ip := coreDetails[1]
-		core := types.Core{
-			EthAddr:     "0",
-			CoreId:      sql.NullString{String: id, Valid: true},
-			PublicIP:    sql.NullString{String: ip, Valid: true},
-			BlockNumber: sql.NullInt64{Int64: 0, Valid: true},
-		}
-		inserted, err := pgClient.CoreUpsert(core)
-		if inserted {
-			(*config.Logger).Info(fmt.Sprintf("Inserted private core %s: %t", coreIPString, inserted))
-		}
-		util.LoggerError(*config.Logger, err)
 	}
 
 	//Construct application
