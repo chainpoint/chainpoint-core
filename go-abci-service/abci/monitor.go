@@ -28,6 +28,7 @@ import (
 func (app *AnchorApplication) SyncMonitor() {
 	for {
 		time.Sleep(30 * time.Second)
+		app.logger.Info("Syncing Chain status and validators")
 		status, err := app.rpc.GetStatus()
 		if app.LogError(err) != nil {
 			time.Sleep(5 * time.Second)

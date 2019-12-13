@@ -41,6 +41,9 @@ func determineValidatorLeader(numLeaders int, status core_types.ResultStatus, va
 	leaders := make([]types.Validator, 0)
 	validatorList := GetSortedValidatorList(validators)
 	validatorLength := len(validatorList)
+	if validatorLength == 0 {
+		return false, []string{}
+	}
 	index := util.GetSeededRandInt([]byte(seed), validatorLength)    //seed the first time
 	if err := util.RotateLeft(validatorList[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)
