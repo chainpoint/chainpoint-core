@@ -28,7 +28,10 @@ func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leader
 
 // ElectValidator : elect a slice of validators as a leader and return whether we're the leader
 func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, leaderID []string) {
-	validators, err := app.rpc.GetValidators(app.state.Height)
+	if (app.state.Height - 1) == 0 {
+		return false, []string{}
+	}
+	validators, err := app.rpc.GetValidators(app.state.Height - 1)
 	if app.LogError(err) != nil {
 		return false, []string{}
 	}
@@ -149,7 +152,10 @@ func determineLeader(numLeaders int, status core_types.ResultStatus, netInfo cor
 
 // AmValidator : determines if this node is a validator, without needing to load an ID from elsewhere
 func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
-	validators, err := app.rpc.GetValidators(app.state.Height)
+	if (app.state.Height - 1) == 0 {
+		return false, nil
+	}
+	validators, err := app.rpc.GetValidators(app.state.Height - 1)
 	if app.LogError(err) != nil {
 		return false, err
 	}
@@ -167,7 +173,10 @@ func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
 
 //IsValidator : determines if a node is a validator by checking an external ID
 func (app *AnchorApplication) IsValidator(ID string) (amValidator bool, err error) {
-	validators, err := app.rpc.GetValidators(app.state.Height)
+	if (app.state.Height - 1) == 0 {
+		return false, nil
+	}
+	validators, err := app.rpc.GetValidators(app.state.Height - 1)
 	if app.LogError(err) != nil {
 		return false, err
 	}

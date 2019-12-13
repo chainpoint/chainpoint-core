@@ -54,7 +54,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.logger.Info("This node is already staked")
 			return
 		}
-		if !app.state.ChainSynced || app.state.Height == 0 || app.ID == "" {
+		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
 			continue
 		}
 		amValidator, err := app.AmValidator()
@@ -95,6 +95,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			}
 		} else {
 			app.logger.Info("This node is a validator, skipping staking")
+			app.state.AmValidator = true
 		}
 		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
 		if app.LogError(err) != nil {
@@ -197,24 +198,22 @@ func (app *AnchorApplication) LoadIdentity() error {
 //VerifyIdentity : Verify that a channel exists only if we're a validator and the chain is synced
 func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	app.logger.Info(fmt.Sprintf("Verifying Identity for %#v", tx))
-	if app.state.ChainSynced {
-		amVal, err := app.AmValidator()
+	// Verification only matters to the chain if the chain is synced and we're a validator.
+	// If we're the first validator, we accept by default.
+	if _, alreadyExists := app.state.CoreKeys[tx.CoreID]; app.state.ChainSynced && app.state.AmValidator && !alreadyExists && app.ID != tx.CoreID {
+		lnID := types.LnIdentity{}
+		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
+			return false
+		}
+		isVal, err := app.IsValidator(tx.CoreID)
 		app.LogError(err)
-		if amVal {
-			lnID := types.LnIdentity{}
-			if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
-				return false
-			}
-			isVal, err := app.IsValidator(tx.CoreID)
-			app.LogError(err)
-			if isVal {
-				return true
-			} else {
-				chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
-				if app.LogError(err) == nil && chanExists {
-					return true
-				}
-			}
+		if isVal {
+			return true
+		}
+		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
+		if app.LogError(err) == nil && chanExists {
+			return true
+		} else {
 			return false
 		}
 	}

@@ -63,6 +63,7 @@ type EthConfig struct {
 type AnchorState struct {
 	TxInt            int64                      `json:"tx_int"`
 	Height           int64                      `json:"height"`
+	AmValidator      bool                       `json:"validator"`
 	AppHash          []byte                     `json:"app_hash"`
 	BeginCalTxInt    int64                      `json:"begin_cal_int"`
 	EndCalTxInt      int64                      `json:"end_cal_int"`

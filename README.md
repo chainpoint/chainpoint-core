@@ -48,15 +48,6 @@ At minimum, the following software is required for any installation of Core:
 
 Provided BASH is installed, a script to install all other dependencies (make, openssl, nodejs, yarn) on Ubuntu and Mac can be found [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
 
-#### External Services
-
-Core requires a few external services to facilitate communication with the Bitcoin and Ethereum blockchains. You will need:
-
-- `RPC address of a Bitcore Node` - Bitcoin Node with RPC enabled
-- `Bitcoin WIF`- Bitcoin Wallet Import Format (WIF) string in Base58.
-
-The Bitcoin WIF is the private key of your _Hot Wallet_, which is used to pay for Anchoring fees. Do not use your main Bitcoin wallet here!
-
 ### Installation
 
 Running the following commands in BASH will download and setup the Core installation:
@@ -71,7 +62,7 @@ The above make command will download all other dependencies and run an interacti
 
 ### Configuration
 
-You will need to set up a configuration and secrets (bitcoin and ethereum) before running. `make init` will do most of the heavy lifting for you.
+You will need to set up a configuration and secrets (bitcoin) before running. `make init` will do most of the heavy lifting for you.
 
 Chainpoint Core currently uses Docker Swarm when running in Production mode. Running `make init` will initialize a Docker Swarm node on the host machine and prompt the user for secrets to be stored in Swarm's secrets system.
 This command will also copy `.env.sample` to `.env`. The `.env` file will be used by `docker-compose` to set required environment variables.
@@ -85,8 +76,8 @@ The following are the descriptions of the configuration parameters:
 | Name                     | Type    | Location                     | Description                                                                                                                                      |
 | :----------------------- | :------ | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
 | CHAINPOINT_CORE_BASE_URI | String  | .env                         | Public URI of host machine, of the form `http://35.245.53.181`                                                                                   |
-| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin and Ethereum testnets. Default is `mainnet`.                                                                     |
-| NODE_ENV                 | String  | .env                         | Sets Core to use either ethereum/bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
+| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin testnet. Default is `mainnet`.                                                                     |
+| NODE_ENV                 | String  | .env                         | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
 | PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | ANCHOR_INTERVAL          | String  | swarm-compose.yaml           | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
