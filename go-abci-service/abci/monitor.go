@@ -79,6 +79,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			if app.LogError(err) != nil {
 				continue
 			}
+			waitForValidators := false
 			for _, validator := range validators.Validators {
 				valID := validator.Address.String()
 				if lnID, exists := app.state.LnUris[valID]; exists {
@@ -97,7 +98,14 @@ func (app *AnchorApplication) StakeIdentity() {
 							continue
 						}
 					}
+				} else {
+					waitForValidators = true
+					break
 				}
+			}
+			if waitForValidators {
+				app.logger.Info("Validator identities not declared yet, waiting...")
+				continue
 			}
 			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
 			for !time.Now().After(deadline) {

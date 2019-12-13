@@ -129,6 +129,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 			break
 		}
+		fallthrough
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
 	}
