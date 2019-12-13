@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	types3 "github.com/chainpoint/tendermint/types"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
@@ -68,6 +70,7 @@ var _ types2.Application = (*AnchorApplication)(nil)
 type AnchorApplication struct {
 	types2.BaseApplication
 	ValUpdates           []types2.ValidatorUpdate
+	Validators           []*types3.Validator
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string
 	Db                   dbm.DB

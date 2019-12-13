@@ -37,6 +37,16 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.ID = string(status.ValidatorInfo.Address.String())
 			app.logger.Info("Core ID set ", "ID", app.ID)
 		}
+		if app.state.Height != 0 {
+			validators, err := app.rpc.GetValidators(app.state.Height)
+			if app.LogError(err) != nil {
+				continue
+			}
+			app.Validators = validators.Validators
+		}
+		if app.LogError(err) != nil {
+			continue
+		}
 		if status.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
 		} else {
@@ -205,11 +215,13 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
 			return false
 		}
+		app.logger.Info("Checking if the incoming Identity is from a validator")
 		isVal, err := app.IsValidator(tx.CoreID)
 		app.LogError(err)
 		if isVal {
 			return true
 		}
+		app.logger.Info("Checking Channel Funding")
 		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
 		if app.LogError(err) == nil && chanExists {
 			return true

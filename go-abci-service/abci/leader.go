@@ -28,23 +28,16 @@ func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leader
 
 // ElectValidator : elect a slice of validators as a leader and return whether we're the leader
 func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, leaderID []string) {
-	if (app.state.Height - 1) == 0 {
-		return false, []string{}
-	}
-	validators, err := app.rpc.GetValidators(app.state.Height - 1)
-	if app.LogError(err) != nil {
-		return false, []string{}
-	}
 	status, err := app.rpc.GetStatus()
 	if app.LogError(err) != nil {
 		return false, []string{}
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineValidatorLeader(numLeaders, status, validators, blockHash, app.config.FilePV.GetAddress().String())
+	return determineValidatorLeader(numLeaders, status, app.Validators, blockHash, app.config.FilePV.GetAddress().String())
 }
 
-func determineValidatorLeader(numLeaders int, status core_types.ResultStatus, validators core_types.ResultValidators, seed string, address string) (isLeader bool, leaderIDs []string) {
+func determineValidatorLeader(numLeaders int, status core_types.ResultStatus, validators []*types.Validator, seed string, address string) (isLeader bool, leaderIDs []string) {
 	leaders := make([]types.Validator, 0)
 	validatorList := GetSortedValidatorList(validators)
 	validatorLength := len(validatorList)
@@ -71,9 +64,9 @@ func determineValidatorLeader(numLeaders int, status core_types.ResultStatus, va
 }
 
 // GetSortedValidatorList : collate and deterministically sort validator list
-func GetSortedValidatorList(validators core_types.ResultValidators) []types.Validator {
+func GetSortedValidatorList(validators []*types.Validator) []types.Validator {
 	validatorList := make([]types.Validator, 0)
-	for _, val := range validators.Validators {
+	for _, val := range validators {
 		validatorList = append(validatorList, *val)
 	}
 	sort.Slice(validatorList[:], func(i, j int) bool {
@@ -152,18 +145,11 @@ func determineLeader(numLeaders int, status core_types.ResultStatus, netInfo cor
 
 // AmValidator : determines if this node is a validator, without needing to load an ID from elsewhere
 func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
-	if (app.state.Height - 1) == 0 {
-		return false, nil
-	}
-	validators, err := app.rpc.GetValidators(app.state.Height - 1)
-	if app.LogError(err) != nil {
-		return false, err
-	}
 	status, err := app.rpc.GetStatus()
 	if app.LogError(err) != nil {
 		return false, err
 	}
-	for _, validator := range validators.Validators {
+	for _, validator := range app.Validators {
 		if validator.Address.String() == status.ValidatorInfo.Address.String() {
 			return true, nil
 		}
@@ -173,14 +159,7 @@ func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
 
 //IsValidator : determines if a node is a validator by checking an external ID
 func (app *AnchorApplication) IsValidator(ID string) (amValidator bool, err error) {
-	if (app.state.Height - 1) == 0 {
-		return false, nil
-	}
-	validators, err := app.rpc.GetValidators(app.state.Height - 1)
-	if app.LogError(err) != nil {
-		return false, err
-	}
-	for _, validator := range validators.Validators {
+	for _, validator := range app.Validators {
 		if validator.Address.String() == ID {
 			return true, nil
 		}
