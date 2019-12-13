@@ -5,14 +5,6 @@
 
 Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes from Chainpoint Nodes, aggregate these hashes into a root hash, and periodically commit the root hash to the Bitcoin blockchain.
 
-## Important Notice
-
-This software is intended to be run as part of Chainpoint's Core Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
-
-[https://github.com/chainpoint/chainpoint-node-src](https://github.com/chainpoint/chainpoint-node-src)
-
-[https://github.com/chainpoint/chainpoint-cli](https://github.com/chainpoint/chainpoint-cli)
-
 ## Installing Chainpoint Core
 
 ### Requirements
