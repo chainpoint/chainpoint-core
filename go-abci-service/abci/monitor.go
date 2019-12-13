@@ -143,16 +143,18 @@ func (app *AnchorApplication) StakeIdentity() {
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if leader, leaders := app.ElectValidator(1); leader && app.state.ChainSynced && app.state.Height > 2 {
-		app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
-		nistRecord, err := beacon.LastRecord()
-		if app.LogError(err) != nil {
-			app.logger.Error("Unable to obtain new NIST beacon value")
-			return
-		}
-		_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
-		if app.LogError(err) != nil {
-			app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
+	if app.state.Height > 2 && app.state.ChainSynced {
+		if leader, leaders := app.ElectValidator(1); leader {
+			app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
+			nistRecord, err := beacon.LastRecord()
+			if app.LogError(err) != nil {
+				app.logger.Error("Unable to obtain new NIST beacon value")
+				return
+			}
+			_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+			if app.LogError(err) != nil {
+				app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
+			}
 		}
 	}
 }
