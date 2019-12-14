@@ -167,7 +167,7 @@ func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
 		if chann.RemotePubkey == remotePubkey {
 			ln.Logger.Info("Channel found")
 			if chann.Capacity >= satVal {
-				ln.Logger.Info("Funding is wrong value, real capacity is ", "Capacity", chann.Capacity)
+				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
 				return true, nil
 			}
 		}
@@ -180,7 +180,7 @@ func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
 		if chann.Channel.RemoteNodePub == remotePubkey {
 			ln.Logger.Info("Pending Channel found")
 			if chann.Channel.Capacity >= satVal {
-				ln.Logger.Info("Funding is wrong value, real capacity is ", "Capacity", chann.Channel.Capacity)
+				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Channel.Capacity)
 				return true, nil
 			}
 		}
@@ -202,7 +202,7 @@ func (ln *LnClient) OurChannelOpenAndFunded(peer string, satVal int64) (bool, er
 		if chann.RemotePubkey == remotePubkey {
 			ln.Logger.Info("Channel found")
 			if chann.Capacity >= satVal {
-				ln.Logger.Info("Funding is wrong value, real capacity is ", "Capacity", chann.Capacity)
+				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
 				return true, nil
 			}
 		}
@@ -224,7 +224,7 @@ func (ln *LnClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool,
 		if chann.RemotePubkey == remotePubkey {
 			ln.Logger.Info("Channel found")
 			if chann.Capacity >= satVal {
-				ln.Logger.Info("Funding is wrong value, real capacity is ", "Capacity", chann.Capacity)
+				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
 				return true, nil
 			}
 		}
