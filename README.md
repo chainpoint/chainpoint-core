@@ -2,10 +2,10 @@
 
 # Chainpoint Core
 
-[![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes from Chainpoint Nodes, aggregate these hashes into a root hash, and periodically commit the root hash to the Bitcoin blockchain.
+Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes, aggregate these hashes into a root hash, and periodically commit the root hash to the Bitcoin blockchain.
 
 ## Important Notice
 
@@ -50,15 +50,6 @@ At minimum, the following software is required for any installation of Core:
 
 Provided BASH is installed, a script to install all other dependencies (make, openssl, nodejs, yarn) on Ubuntu and Mac can be found [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
 
-#### External Services
-
-Core requires a few external services to facilitate communication with the Bitcoin blockchains. You will need:
-
-- `RPC address of a Bitcore Node` - Bitcoin Node with RPC enabled
-- `Bitcoin WIF`- Bitcoin Wallet Import Format (WIF) string in Base58.
-
-The Bitcoin WIF is the private key of your _Hot Wallet_, which is used to pay for Anchoring fees. Do not use your main Bitcoin wallet here!
-
 ### Installation
 
 Running the following commands in BASH will download and setup the Core installation:
@@ -87,7 +78,7 @@ The following are the descriptions of the configuration parameters:
 | Name                     | Type    | Location                     | Description                                                                                                                                      |
 | :----------------------- | :------ | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
 | CHAINPOINT_CORE_BASE_URI | String  | .env                         | Public URI of host machine, of the form `http://35.245.53.181`                                                                                   |
-| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin testnets. Default is `mainnet`.                                                                     |
+| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin testnet. Default is `mainnet`.                                                                     |
 | NODE_ENV                 | String  | .env                         | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
 | PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |

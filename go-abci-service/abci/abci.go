@@ -2,12 +2,12 @@ package abci
 
 import (
 	"crypto/ecdsa"
-	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
+
+	types3 "github.com/chainpoint/tendermint/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
@@ -70,6 +70,7 @@ var _ types2.Application = (*AnchorApplication)(nil)
 type AnchorApplication struct {
 	types2.BaseApplication
 	ValUpdates           []types2.ValidatorUpdate
+	Validators           []*types3.Validator
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string
 	Db                   dbm.DB
@@ -95,6 +96,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	state := loadState(db)
 	if state.TxValidation == nil {
 		state.TxValidation = validation.NewTxValidationMap()
+	}
+	if state.LnUris == nil {
+		state.LnUris = map[string]types.LnIdentity{}
 	}
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
@@ -141,25 +145,22 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		fmt.Println("Connection to Redis established")
 	}
 
-	for _, coreIPString := range config.PrivateCoreIPs {
-		coreDetails := strings.Split(coreIPString, "@")
-		if len(coreDetails) != 2 {
-			(*config.Logger).Error(fmt.Sprintf("Core list needs to be comma-delimited list of <Tendermint_ID>@<IP>"))
+	//Wait for lightning connection
+	deadline = time.Now().Add(5 * time.Minute)
+	for !time.Now().After(deadline) {
+		conn, err := config.LightningConfig.CreateConn()
+		if util.LoggerError(*config.Logger, err) != nil {
 			continue
+		} else {
+			conn.Close()
+			break
 		}
-		id := coreDetails[0]
-		ip := coreDetails[1]
-		core := types.Core{
-			EthAddr:     "0",
-			CoreId:      sql.NullString{String: id, Valid: true},
-			PublicIP:    sql.NullString{String: ip, Valid: true},
-			BlockNumber: sql.NullInt64{Int64: 0, Valid: true},
-		}
-		inserted, err := pgClient.CoreUpsert(core)
-		if inserted {
-			(*config.Logger).Info(fmt.Sprintf("Inserted private core %s: %t", coreIPString, inserted))
-		}
-		util.LoggerError(*config.Logger, err)
+	}
+	if err != nil {
+		fmt.Println("LND not ready after 1 minute")
+		panic(err)
+	} else if redisClient != nil {
+		fmt.Println("Connection to LND established")
 	}
 
 	//Construct application
@@ -195,10 +196,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
 
-	go app.KeyMonitor()
-
 	// Load JWK into local mapping from redis
-	app.LoadJWK()
+	app.LoadIdentity()
+
+	// Stake and transmit identity
+	go app.StakeIdentity()
 
 	return &app
 }

@@ -7,10 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"time"
+
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+
+	"github.com/lestrrat-go/jwx/jwk"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
@@ -26,13 +28,25 @@ import (
 func (app *AnchorApplication) SyncMonitor() {
 	for {
 		time.Sleep(30 * time.Second)
+		app.logger.Info("Syncing Chain status and validators")
 		status, err := app.rpc.GetStatus()
 		if app.LogError(err) != nil {
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		if app.ID == "" {
-			app.ID = string(status.NodeInfo.ID())
+			app.ID = string(status.ValidatorInfo.Address.String())
+			app.logger.Info("Core ID set ", "ID", app.ID)
+		}
+		if app.state.Height != 0 {
+			validators, err := app.rpc.GetValidators(app.state.Height)
+			if app.LogError(err) != nil {
+				continue
+			}
+			app.Validators = validators.Validators
+		}
+		if app.LogError(err) != nil {
+			continue
 		}
 		if status.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
@@ -42,37 +56,90 @@ func (app *AnchorApplication) SyncMonitor() {
 	}
 }
 
-//KeyMonitor : updates active ECDSA public keys from all accessible peers
+//StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
-func (app *AnchorApplication) KeyMonitor() {
+func (app *AnchorApplication) StakeIdentity() {
 	for app.JWKSent != true {
 		time.Sleep(60 * time.Second)
-		if !app.state.ChainSynced {
+		if _, exists := app.state.CoreKeys[app.ID]; exists {
+			app.logger.Info("This node is already staked")
+			return
+		}
+		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
 			continue
 		}
-		selfStatusURL := fmt.Sprintf("%s/status", app.config.APIURI)
-		response, err := http.Get(selfStatusURL)
+		amValidator, err := app.AmValidator()
 		if app.LogError(err) != nil {
 			continue
 		}
-		contents, err := ioutil.ReadAll(response.Body)
+		//if we're not a validator, we need to "stake" by opening a ln channel to the validators
+		if !amValidator {
+			app.logger.Info("This node is new to the network; beginning staking")
+			validators, err := app.rpc.GetValidators(app.state.Height)
+			if app.LogError(err) != nil {
+				continue
+			}
+			waitForValidators := false
+			for _, validator := range validators.Validators {
+				valID := validator.Address.String()
+				if lnID, exists := app.state.LnUris[valID]; exists {
+					app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnID.Peer))
+					peerExists, err := app.lnClient.PeerExists(lnID.Peer)
+					app.LogError(err)
+					if peerExists || app.LogError(app.lnClient.AddPeer(lnID.Peer)) == nil {
+						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, lnID.RequiredChanAmt)
+						app.LogError(err)
+						if !chanExists {
+							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", lnID.RequiredChanAmt, lnID.Peer))
+							_, err := app.lnClient.CreateChannel(lnID.Peer, lnID.RequiredChanAmt)
+							app.LogError(err)
+						} else {
+							app.logger.Info(fmt.Sprintf("Channel %s exists, skipping...", lnID.Peer))
+							continue
+						}
+					}
+				} else {
+					waitForValidators = true
+					break
+				}
+			}
+			if waitForValidators {
+				app.logger.Info("Validator identities not declared yet, waiting...")
+				continue
+			}
+			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
+			for !time.Now().After(deadline) {
+				app.logger.Info("Sleeping to allow validator lightning channels to open...")
+				time.Sleep(time.Duration(1) * time.Minute)
+			}
+		} else {
+			app.logger.Info("This node is a validator, skipping staking")
+			app.state.AmValidator = true
+		}
+		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
 		if app.LogError(err) != nil {
 			continue
 		}
-		var apiStatus types.CoreAPIStatus
-		err = json.Unmarshal(contents, &apiStatus)
+		jwkJson, err := json.MarshalIndent(jwk, "", "  ")
 		if app.LogError(err) != nil {
 			continue
 		}
-		app.JWK = apiStatus.Jwk
-		if app.JWK.Kid == "" {
+		//Create ln identity struct
+		resp, err := app.lnClient.GetInfo()
+		if app.LogError(err) != nil || len(resp.Uris) == 0 {
 			continue
 		}
-		jwkJson, err := json.Marshal(apiStatus.Jwk)
+		uri := resp.Uris[0]
+		lnID := types.LnIdentity{
+			Peer:            uri,
+			RequiredChanAmt: app.lnClient.LocalSats,
+		}
+		lnIDBytes, err := json.Marshal(lnID)
 		if app.LogError(err) != nil {
 			continue
 		}
-		_, err = app.rpc.BroadcastTx("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		//Declare our identity to the network
+		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			continue
 		} else {
@@ -85,22 +152,24 @@ func (app *AnchorApplication) KeyMonitor() {
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if leader, leaders := app.ElectValidator(1); leader && app.state.ChainSynced {
-		app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
-		nistRecord, err := beacon.LastRecord()
-		if app.LogError(err) != nil {
-			app.logger.Error("Unable to obtain new NIST beacon value")
-			return
-		}
-		_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
-		if app.LogError(err) != nil {
-			app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
+	if app.state.Height > 2 && app.state.ChainSynced {
+		if leader, leaders := app.ElectValidator(1); leader {
+			app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
+			nistRecord, err := beacon.LastRecord()
+			if app.LogError(err) != nil {
+				app.logger.Error("Unable to obtain new NIST beacon value")
+				return
+			}
+			_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+			if app.LogError(err) != nil {
+				app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
+			}
 		}
 	}
 }
 
-//LoadJWK : load public keys derived from JWTs from redis
-func (app *AnchorApplication) LoadJWK() error {
+//LoadIdentity : load public keys derived from JWTs from redis
+func (app *AnchorApplication) LoadIdentity() error {
 	var cursor uint64
 	var idKeys []string
 	for {
@@ -147,8 +216,39 @@ func (app *AnchorApplication) LoadJWK() error {
 	return nil
 }
 
-//SaveJWK : save the JWT value retrieved
-func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
+//VerifyIdentity : Verify that a channel exists only if we're a validator and the chain is synced
+func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
+	app.logger.Info(fmt.Sprintf("Verifying Identity for %#v", tx))
+	// Verification only matters to the chain if the chain is synced and we're a validator.
+	// If we're the first validator, we accept by default.
+	_, alreadyExists := app.state.CoreKeys[tx.CoreID]
+	if app.state.ChainSynced && app.state.AmValidator && !alreadyExists && app.ID != tx.CoreID {
+		lnID := types.LnIdentity{}
+		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
+			return false
+		}
+		app.logger.Info("Checking if the incoming Identity is from a validator")
+		isVal, err := app.IsValidator(tx.CoreID)
+		app.LogError(err)
+		if isVal {
+			return true
+		}
+		app.logger.Info("Checking Channel Funding")
+		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
+		if app.LogError(err) == nil && chanExists {
+			app.logger.Info("Channel Open and Funded")
+			return true
+		} else {
+			app.logger.Info("Channel not open, rejecting")
+			return false
+		}
+	}
+	app.logger.Info("Identity", "alreadyExists", alreadyExists)
+	return !alreadyExists
+}
+
+//SaveIdentity : save the JWT value retrieved
+func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	var jwkType types.Jwk
 	json.Unmarshal([]byte(tx.Data), &jwkType)
 	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
@@ -181,6 +281,11 @@ func (app *AnchorApplication) SaveJWK(tx types.Tx) error {
 	} else {
 		validation := validation.NewTxValidation()
 		app.state.TxValidation[pubKeyHex] = validation
+	}
+	lnID := types.LnIdentity{}
+	app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID))
+	if lightning.IsLnUri(lnID.Peer) {
+		app.state.LnUris[tx.CoreID] = lnID
 	}
 	return nil
 }

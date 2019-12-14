@@ -32,11 +32,12 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		tx, valid, err = validation.Validate(rawTx, &app.state)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
+		valid = true
 	}
 	if app.LogError(err) != nil {
-		return types2.ResponseCheckTx{Code: code.CodeTypeEncodingError, GasWanted: 1}
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
-	if !valid {
+	if !valid && tx.CoreID != app.ID {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed", tx.CoreID)))
 		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
 	}
@@ -120,10 +121,15 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		break
 	case "JWK":
-		app.SaveJWK(tx)
-		tags = app.incrementTxInt(tags)
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
-		break
+		if app.VerifyIdentity(tx) {
+			app.logger.Info("Saving Identity", "CORE ID", tx.CoreID)
+			app.SaveIdentity(tx)
+			app.logger.Info("Identity Saved")
+			tags = app.incrementTxInt(tags)
+			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+			break
+		}
+		fallthrough
 	default:
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
 	}

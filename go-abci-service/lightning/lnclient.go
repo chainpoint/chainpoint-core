@@ -3,8 +3,10 @@ package lightning
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"strings"
 
 	"github.com/btcsuite/btcutil"
@@ -28,7 +30,10 @@ type LnClient struct {
 	ServerHostPort string
 	TlsPath        string
 	MacPath        string
-	Conn           *grpc.ClientConn
+	MinConfs       int64
+	TargetConfs    int64
+	LocalSats      int64
+	PushSats       int64
 	Logger         log.Logger
 }
 
@@ -36,16 +41,45 @@ var (
 	maxMsgRecvSize = grpc.MaxCallRecvMsgSize(1 * 1024 * 1024 * 200)
 )
 
-func (ln *LnClient) GetClient() lnrpc.LightningClient {
-	return lnrpc.NewLightningClient(ln.Conn)
+// LoggerError : Log error if it exists using a logger
+func (ln *LnClient) LoggerError(err error) error {
+	if err != nil {
+		ln.Logger.Error(fmt.Sprintf("Error: %s", err.Error()))
+	}
+	return err
 }
 
-func (ln *LnClient) GetWalletUnlockerClient() lnrpc.WalletUnlockerClient {
-	return lnrpc.NewWalletUnlockerClient(ln.Conn)
+func (ln *LnClient) GetClient() (lnrpc.LightningClient, func()) {
+	conn, err := ln.CreateConn()
+	closeIt := func() {
+		conn.Close()
+	}
+	if ln.LoggerError(err) != nil {
+		return nil, nil
+	}
+	return lnrpc.NewLightningClient(conn), closeIt
 }
 
-func (ln *LnClient) GetWalletClient() walletrpc.WalletKitClient {
-	return walletrpc.NewWalletKitClient(ln.Conn)
+func (ln *LnClient) GetWalletUnlockerClient() (lnrpc.WalletUnlockerClient, func()) {
+	conn, err := ln.CreateConn()
+	closeIt := func() {
+		conn.Close()
+	}
+	if ln.LoggerError(err) != nil {
+		return nil, nil
+	}
+	return lnrpc.NewWalletUnlockerClient(conn), closeIt
+}
+
+func (ln *LnClient) GetWalletClient() (walletrpc.WalletKitClient, func()) {
+	conn, err := ln.CreateConn()
+	closeIt := func() {
+		conn.Close()
+	}
+	if ln.LoggerError(err) != nil {
+		return nil, nil
+	}
+	return walletrpc.NewWalletKitClient(conn), closeIt
 }
 
 func CreateClient(serverHostPort string, tlsPath string, macPath string) LnClient {
@@ -56,12 +90,201 @@ func CreateClient(serverHostPort string, tlsPath string, macPath string) LnClien
 	}
 }
 
-func (ln *LnClient) CreateConn() error {
+func IsLnUri(uri string) bool {
+	peerParts := strings.Split(uri, "@")
+	if len(peerParts) != 2 {
+		return false
+	}
+	if _, err := hex.DecodeString(peerParts[0]); err != nil {
+		return false
+	}
+	if _, _, err := net.SplitHostPort(peerParts[1]); err != nil {
+		return false
+	}
+	return true
+}
+
+func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	resp, err := client.GetInfo(context.Background(), &lnrpc.GetInfoRequest{})
+	return resp, err
+}
+
+func (ln *LnClient) PeerExists(peer string) (bool, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return false, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	pubKey := peerParts[0]
+	addr := peerParts[1]
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	peers, err := client.ListPeers(context.Background(), &lnrpc.ListPeersRequest{})
+	if err != nil {
+		return false, err
+	}
+	for _, peer := range peers.Peers {
+		if peer.PubKey == pubKey && peer.Address == addr {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (ln *LnClient) AddPeer(peer string) error {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	peerAddr := lnrpc.LightningAddress{
+		Pubkey: peerParts[0],
+		Host:   peerParts[1],
+	}
+	connectPeer := lnrpc.ConnectPeerRequest{
+		Addr: &peerAddr,
+	}
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	_, err := client.ConnectPeer(context.Background(), &connectPeer)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return false, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	remotePubkey := peerParts[0]
+	channels, err := ln.GetChannels()
+	if ln.LoggerError(err) != nil {
+		return false, err
+	}
+	for _, chann := range channels.Channels {
+		if chann.RemotePubkey == remotePubkey {
+			ln.Logger.Info("Channel found")
+			if chann.Capacity >= satVal {
+				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
+				return true, nil
+			}
+		}
+	}
+	pending, err := ln.GetPendingChannels()
+	if ln.LoggerError(err) != nil {
+		return false, err
+	}
+	for _, chann := range pending.PendingOpenChannels {
+		if chann.Channel.RemoteNodePub == remotePubkey {
+			ln.Logger.Info("Pending Channel found")
+			if chann.Channel.Capacity >= satVal {
+				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Channel.Capacity)
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func (ln *LnClient) OurChannelOpenAndFunded(peer string, satVal int64) (bool, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return false, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	remotePubkey := peerParts[0]
+	channels, err := ln.GetChannels()
+	if ln.LoggerError(err) != nil {
+		return false, err
+	}
+	for _, chann := range channels.Channels {
+		if chann.RemotePubkey == remotePubkey {
+			ln.Logger.Info("Channel found")
+			if chann.Capacity >= satVal {
+				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func (ln *LnClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return false, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	remotePubkey := peerParts[0]
+	channels, err := ln.GetChannels()
+	if ln.LoggerError(err) != nil {
+		return false, err
+	}
+	for _, chann := range channels.Channels {
+		if chann.RemotePubkey == remotePubkey {
+			ln.Logger.Info("Channel found")
+			if chann.Capacity >= satVal {
+				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func (ln *LnClient) GetChannels() (*lnrpc.ListChannelsResponse, error) {
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	channels, err := client.ListChannels(context.Background(), &lnrpc.ListChannelsRequest{})
+	return channels, err
+}
+
+func (ln *LnClient) GetPendingChannels() (*lnrpc.PendingChannelsResponse, error) {
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	channels, err := client.PendingChannels(context.Background(), &lnrpc.PendingChannelsRequest{})
+	return channels, err
+}
+
+func (ln *LnClient) CreateChannel(peer string, satVal int64) (lnrpc.Lightning_OpenChannelClient, error) {
+	peerParts := strings.Split(peer, "@")
+	if len(peerParts) != 2 {
+		return nil, errors.New("Malformed peer string (must be pubKey@host)")
+	}
+	pubKey, err := hex.DecodeString(peerParts[0])
+	if ln.LoggerError(err) != nil {
+		return nil, err
+	}
+	openSesame := lnrpc.OpenChannelRequest{
+		NodePubkey: pubKey,
+	}
+	if ln.LocalSats != 0 {
+		openSesame.LocalFundingAmount = satVal
+	}
+	if ln.PushSats != 0 {
+		openSesame.PushSat = ln.PushSats
+	}
+	if ln.MinConfs != 0 {
+		openSesame.MinConfs = int32(ln.MinConfs)
+	}
+	if ln.TargetConfs != 0 {
+		openSesame.TargetConf = int32(ln.TargetConfs)
+	}
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	resp, err := client.OpenChannel(context.Background(), &openSesame)
+	if ln.LoggerError(err) != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 	// Load the specified TLS certificate and build transport credentials
 	// with it.
 	creds, err := credentials.NewClientTLSFromFile(ln.TlsPath, "")
-	if err != nil {
-		return err
+	if ln.LoggerError(err) != nil {
+		return nil, err
 	}
 
 	// Create a dial options array.
@@ -70,13 +293,13 @@ func (ln *LnClient) CreateConn() error {
 	}
 
 	macBytes, err := ioutil.ReadFile(ln.MacPath)
-	if err != nil {
-		return err
+	if ln.LoggerError(err) != nil {
+		return nil, err
 	}
 
 	mac := &macaroon.Macaroon{}
 	if err = mac.UnmarshalBinary(macBytes); err != nil {
-		return err
+		return nil, err
 	}
 
 	macConstraints := []macaroons.Constraint{
@@ -85,8 +308,8 @@ func (ln *LnClient) CreateConn() error {
 
 	// Apply constraints to the macaroon.
 	constrainedMac, err := macaroons.AddConstraints(mac, macConstraints...)
-	if err != nil {
-		return err
+	if ln.LoggerError(err) != nil {
+		return nil, err
 	}
 
 	// Now we append the macaroon credentials to the dial options.
@@ -105,28 +328,22 @@ func (ln *LnClient) CreateConn() error {
 	opts = append(opts, grpc.WithDefaultCallOptions(maxMsgRecvSize))
 
 	conn, err := grpc.Dial(ln.ServerHostPort, opts...)
-	if err != nil {
-		return err
+	if ln.LoggerError(err) != nil {
+		return nil, err
 	}
-	ln.Conn = conn
-	return nil
+	return conn, nil
 }
 
 func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
-	err := ln.CreateConn()
-	if err != nil {
-		return "", "", err
-	}
-	ln.Logger.Info("Ln Connection created")
-	defer ln.Conn.Close()
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
 	b.AddData(hash)
 	outputScript, err := b.Script()
-	if err != nil {
+	if ln.LoggerError(err) != nil {
 		return "", "", err
 	}
-	wallet := ln.GetWalletClient()
+	wallet, closeFunc := ln.GetWalletClient()
+	defer closeFunc()
 	ln.Logger.Info("Ln Wallet client created")
 	estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
 	if err != nil {
@@ -140,11 +357,11 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: estimatedFee.SatPerKw, Outputs: opReturnOutput}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
 	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
-	if err != nil {
+	if ln.LoggerError(err) != nil {
 		return "", "", err
 	}
 	tx, err := btcutil.NewTxFromBytes(resp.RawTx)
-	if err != nil {
+	if ln.LoggerError(err) != nil {
 		return "", "", err
 	}
 	return tx.Hash().String(), hex.EncodeToString(resp.RawTx), nil

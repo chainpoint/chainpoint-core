@@ -38,6 +38,7 @@ services:
       LOG_FILTER: 'main:debug,state:info,*:error'
       LOG_LEVEL: 'info'
       ANCHOR_TIMEOUT: '20'
+      LN_STAKE: '100000'
     secrets:
       - ECDSA_PKPEM
     volumes:
