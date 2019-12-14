@@ -164,8 +164,12 @@ func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
 		return false, err
 	}
 	for _, chann := range channels.Channels {
-		if chann.RemotePubkey == remotePubkey && chann.LocalBalance >= satVal {
-			return true, nil
+		if chann.RemotePubkey == remotePubkey {
+			ln.Logger.Info("Channel found")
+			if chann.Capacity >= satVal {
+				ln.Logger.Info("Funding is wrong value, real capacity is ", "Capacity", chann.Capacity)
+				return true, nil
+			}
 		}
 	}
 	pending, err := ln.GetPendingChannels()
@@ -173,8 +177,12 @@ func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
 		return false, err
 	}
 	for _, chann := range pending.PendingOpenChannels {
-		if chann.Channel.RemoteNodePub == remotePubkey && chann.Channel.LocalBalance >= satVal {
-			return true, nil
+		if chann.Channel.RemoteNodePub == remotePubkey {
+			ln.Logger.Info("Pending Channel found")
+			if chann.Channel.Capacity >= satVal {
+				ln.Logger.Info("Funding is wrong value, real capacity is ", "Capacity", chann.Channel.Capacity)
+				return true, nil
+			}
 		}
 	}
 	return false, nil
@@ -191,8 +199,12 @@ func (ln *LnClient) OurChannelOpenAndFunded(peer string, satVal int64) (bool, er
 		return false, err
 	}
 	for _, chann := range channels.Channels {
-		if chann.RemotePubkey == remotePubkey && chann.LocalBalance >= satVal {
-			return true, nil
+		if chann.RemotePubkey == remotePubkey {
+			ln.Logger.Info("Channel found")
+			if chann.Capacity >= satVal {
+				ln.Logger.Info("Funding is wrong value, real capacity is ", "Capacity", chann.Capacity)
+				return true, nil
+			}
 		}
 	}
 	return false, nil
@@ -209,8 +221,12 @@ func (ln *LnClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool,
 		return false, err
 	}
 	for _, chann := range channels.Channels {
-		if chann.RemotePubkey == remotePubkey && chann.RemoteBalance >= satVal {
-			return true, nil
+		if chann.RemotePubkey == remotePubkey {
+			ln.Logger.Info("Channel found")
+			if chann.Capacity >= satVal {
+				ln.Logger.Info("Funding is wrong value, real capacity is ", "Capacity", chann.Capacity)
+				return true, nil
+			}
 		}
 	}
 	return false, nil

@@ -141,8 +141,6 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 			ServerHostPort: lndSocket,
 			Logger:         tmLogger,
 			LocalSats:      int64(lnStake),
-			MinConfs:       3,
-			TargetConfs:    3,
 		},
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,
