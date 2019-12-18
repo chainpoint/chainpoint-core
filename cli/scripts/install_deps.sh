@@ -11,7 +11,7 @@ fi
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
     sudo apt-get -qq update -y
-    sudo apt-get -qq install -y apt-utils curl dirmngr apt-transport-https lsb-release ca-certificates
+    sudo apt-get -qq install -y apt-utils curl dirmngr apt-transport-https lsb-release ca-certificates g++
     curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
     sudo apt-get -qq install -y docker-compose git make jq nodejs openssl
     sudo apt-get -qq install -y npm || echo "NPM already installed with nodejs"
