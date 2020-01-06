@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
+
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/streadway/amqp"
@@ -70,7 +72,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if iAmLeader {
 			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, treeData)
 			if app.LogError(err) != nil {
-				app.resetAnchor(startTxRange)
+				app.resetAnchor(startTxRange, leaderIDs)
 				return err
 			}
 		}
@@ -85,11 +87,11 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 
 		// A BTC-A tx should have hit by now
 		if app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot { // If not, it'll be less than the start of the current range.
-			app.resetAnchor(startTxRange)
+			app.resetAnchor(startTxRange, leaderIDs)
 		} else {
 			err = app.calendar.QueueBtcaStateDataMessage(treeData)
 			if app.LogError(err) != nil {
-				app.resetAnchor(startTxRange)
+				app.resetAnchor(startTxRange, leaderIDs)
 				return err
 			}
 		}
@@ -269,8 +271,18 @@ func (app *AnchorApplication) ReceiveCalRMQ() error {
 }
 
 // resetAnchor ensures that anchoring will begin again in the next block
-func (app *AnchorApplication) resetAnchor(startTxRange int64) {
+func (app *AnchorApplication) resetAnchor(startTxRange int64, leaderID []string) {
 	app.logger.Debug("Anchoring failed, restarting anchor epoch")
 	app.state.BeginCalTxInt = startTxRange
 	app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
+
+	//ban failed anchoring core for 6 hours
+	for _, leader := range leaderID {
+		_, record, err := validation.GetValidationRecord(leader, app.state)
+		if app.LogError(err) != nil {
+			continue
+		}
+		record.BtcaAllowedRate.Bucket = -12.0
+		app.LogError(validation.SetValidationRecord(leader, record, &app.state))
+	}
 }
