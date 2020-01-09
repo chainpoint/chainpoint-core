@@ -112,7 +112,7 @@ services:
     - TLSPATH
     - TLSEXTRADOMAIN=lnd
     volumes:
-    - ~/.chainpoint/core/.lnd:/lnd-data:z
+    - ~/.chainpoint/core/.lnd:/root/.lnd:z
     networks:
     - chainpoint
     logging:
