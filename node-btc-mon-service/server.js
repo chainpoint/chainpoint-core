@@ -110,6 +110,7 @@ let monitorTransactionsAsync = async () => {
       let txStats
       try {
         txStats = await lnd.getTransactionDataAsync(newBtcTxIdObj.btctx_id)
+        logger.info(`blockHash obtained for btctx ${txStats.txId} : ${txStats.blockHash}`)
       } catch (error) {
         throw new Error(`Could not get stats for transaction ${newBtcTxIdObj.btctx_id}`)
       }
