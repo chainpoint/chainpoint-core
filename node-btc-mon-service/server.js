@@ -109,8 +109,11 @@ let monitorTransactionsAsync = async () => {
       // Get BTC Transaction Stats
       let txStats
       try {
-        txStats = await lnd.getTransactionDataAsync(newBtcTxIdObj.btctx_id)
-        logger.info(`txStats obtained for btctx ${txStats.txId} : ${JSON.stringify(txStats)}`)
+        let txId = newBtcTxIdObj.btctx_id
+          .match(/.{2}/g)
+          .reverse()
+          .join('') //reverse hex to account for btc-bridge's reversal
+        txStats = await lnd.getTransactionDataAsync(txId)
       } catch (error) {
         throw new Error(`Could not get stats for transaction ${newBtcTxIdObj.btctx_id}`)
       }
@@ -123,7 +126,6 @@ let monitorTransactionsAsync = async () => {
       let blockStats
       try {
         blockStats = await lnd.getBlockDataAsync(txStats.blockHash)
-        logger.info(`blockstats obtained for hash ${txStats.blockHash} : ${JSON.stringify(blockStats)}`)
       } catch (error) {
         throw new Error(`Could not get stats for block ${txStats.blockHash}`)
       }
