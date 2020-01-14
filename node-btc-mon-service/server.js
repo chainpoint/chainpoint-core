@@ -110,7 +110,7 @@ let monitorTransactionsAsync = async () => {
       let txStats
       try {
         txStats = await lnd.getTransactionDataAsync(newBtcTxIdObj.btctx_id)
-        logger.info(`blockHash obtained for btctx ${txStats.txId} : ${txStats.blockHash}`)
+        logger.info(`txStats obtained for btctx ${txStats.txId} : ${JSON.stringify(txStats)}`)
       } catch (error) {
         throw new Error(`Could not get stats for transaction ${newBtcTxIdObj.btctx_id}`)
       }
@@ -123,6 +123,7 @@ let monitorTransactionsAsync = async () => {
       let blockStats
       try {
         blockStats = await lnd.getBlockDataAsync(txStats.blockHash)
+        logger.info(`blockstats obtained for hash ${txStats.blockHash} : ${JSON.stringify(blockStats)}`)
       } catch (error) {
         throw new Error(`Could not get stats for block ${txStats.blockHash}`)
       }
@@ -141,7 +142,7 @@ let monitorTransactionsAsync = async () => {
 
       await redis.srem(NEW_BTC_TX_IDS_KEY, newbtcTxObjJSON)
 
-      logger.info(`${newBtcTxIdObj.btctx_id} ready with ${txStats.confirmations} confirmations`)
+      logger.info(`new ${newBtcTxIdObj.btctx_id} ready with ${txStats.confirmations} confirmations`)
     } catch (error) {
       logger.error(`An unexpected error occurred while monitoring : ${error.message}`)
     }
@@ -228,7 +229,7 @@ let monitorTransactionsAsync = async () => {
 
       await redis.srem(CONFIRMED_BTC_TX_IDS_KEY, confirmedBtcTxObjJSON)
 
-      logger.info(`${confirmedBtcTxIdObj.tx_id} ready with ${confirmCount} confirmations`)
+      logger.info(`confirmed ${confirmedBtcTxIdObj.tx_id} ready with ${confirmCount} confirmations`)
     } catch (error) {
       logger.error(`An unexpected error occurred while monitoring : ${error.message}`)
     }
