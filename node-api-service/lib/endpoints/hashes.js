@@ -21,7 +21,8 @@ const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
 const logger = require('../logger.js')
 const crypto = require('crypto')
-
+const { Lsat, Identifier } = require('lsat-js')
+const { MacaroonsBuilder } = require('macaroons.js')
 const { boltwall } = require('boltwall')
 
 // Generate a v1 UUID (time-based)
@@ -178,12 +179,13 @@ function validatePostHashRequest(req, res, next) {
  *   {"hash": "11cd8a380e8d5fd3ac47c1f880390341d40b11485e8ae946d8fa3d466f23fe89"}
  *
  * The `hash` key must reference valid hex string representing the hash to anchor.
- * Will send a response object containing the hash submission information
- * and will also clear the session connecting it to a now "redeemed" invoice
+ * Will send a response object containing the hash submission information.
+ * We expect only validated LSATs to be allowed to reach this middleware and so
+ * should be protected by boltwall when implemented in the server.
  */
 async function postHashV1Async(req, res, next) {
   let responseObj = generatePostHashResponse(req.params.hash)
-  if (!invoiceClient) throw new Error('LND invoices connection not available')
+
   let hashObj = {
     hash_id: responseObj.hash_id,
     hash: responseObj.hash
@@ -198,109 +200,145 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
-  const preimage = req.sessionId
-  try {
-    await invoiceClient.settleInvoiceAsync({ preimage: Buffer.from(preimage, 'hex') })
-  } catch (e) {
-    logger.error('Problem setting invoice: ', e)
-    return next(
-      new errors.InternalServerError(
-        `Could not settle the hold invoice (${getHash(preimage)}) with preimage (${preimage})`
-      )
-    )
-  }
-
-  // clear sessionId cookie
-  res.clearCookie('sessionId')
-  req.session = null
   res.send(responseObj)
   return next()
 }
 
 const boltwallConfigs = {
   minAmount: env.SUBMIT_HASH_PRICE_SAT || 10,
-  getCaveat: req => {
-    // set paymentHash (invoice Id) from req body in a macaroon
-    return `paymentHash=${req.body.paymentHash}`
-  },
   getInvoiceDescription: req => `HODL invoice payment to submit a hash to chainpoint core from ${req.header('HOST')}`,
-  caveatVerifier: async req => {
-    if (!lightning) throw new Error('LND connection not available')
-    if (!invoiceClient) throw new Error('LND invoices connection not available')
+  hodl: true
+}
 
-    // get secret from session ID and calculate payment hash for invoice lookup
-    const secret = req.sessionId
-
-    if (!secret) throw new Error('Missing session id to validate request with')
-
-    logger.info(`Checking payment status for session ${secret}`)
-
-    const id = getHash(secret)
-
-    // next check the status of the invoice associated with this session
+/**
+ * @description A middleware to parse POST /hash requests
+ * If the request has an LSAT, then we check the status of the invoice. If the invoice does not exist,
+ * return a 404. If it exists and is not paid, return a 402. If it exists and is paid but not settled,
+ * we add the preimage to the LSAT token and forward on to the next route (which should be boltwall).
+ * If it is paid and settled, then boltwall will ultimately reject it.
+ *
+ * If the request doesn't have an LSAT, then we must request a new hodl invoice and generate a new
+ * LSAT. We are doing this here instead of boltwall so that we can embed the secret into the
+ * LSAT identifier for later retrieval
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ */
+async function parsePostHashRequest(req, res, next) {
+  let token = req.header('Authorization')
+  if (!token) {
+    logger.verbose('Unauthorized request made to submit hash. Generating LSAT...')
     try {
-      logger.info(`Checking status of invoice ${id}`)
-      /** TODO: can't use the lightning client until raw credentials are supported instead of path **/
-      const invoiceInfo = await lightning.lookupInvoiceAsync({ r_hash_str: id })
-      if (invoiceInfo.settled !== false || invoiceInfo.state !== 'ACCEPTED') return false
-
-      if (!invoiceInfo) throw new errors.PaymentRequiredError(`Invoice with that corresponding preimage not found`)
-      if (invoiceInfo.settled !== false || invoiceInfo.state === 'OPEN')
-        throw new errors.PaymentRequiredError(`invoice ${id} has not been paid`)
+      token = await generateHodlLsat(req)
+      res.set('www-authenticate', token.toChallenge())
+      res.status(402)
+      return res.send({ error: { message: 'Payment Required' } })
     } catch (e) {
-      logger.error(e)
-      return false
+      logger.error('Could not generate HODL lsat:', e)
+      return next('Could not generate new LSAT')
     }
+  } else {
+    try {
+      let lsat = Lsat.fromToken(token)
+      const invoice = await lightning.lookupInvoiceAsync({
+        r_hash_str: lsat.paymentHash
+      })
 
-    // last check is that the invoice associated with the session matches the one in the macaroon
-    return caveat => {
-      // make sure the payment hash in the caveat matches the r_hash_string we're looking up
-      const paymentHash = caveat.substr('paymentHash='.length).trim()
-
-      // if caveat doesn't include a payment hash, we can skip
-      if (!paymentHash) return false
-      else if (paymentHash !== id) {
-        // if we are examining the correct macaroon caveat but doesn't match
-        // expected hash based on session id
-        // then we have an old macaroon or session and should clear the request
-        logger.warn(
-          `Payment hash from macaroon (${paymentHash}) does not match rhash generated from hash session (${id}). Clearing session`
-        )
-        req.cookies = null
-        return false
+      // no invoice found, then return a 404
+      if (!invoice) {
+        res.status(404)
+        return res.send({ error: { message: 'Unable to locate invoice for that LSAT' } })
       }
 
-      return true
+      // determine if the invoice is held. Unpaid invoices, should return a 402
+      // since they still require payment before they can be allowed through
+      const isHeld = invoice.state === 'ACCEPTED' && !invoice.settled
+      if (!isHeld) {
+        lsat.addInvoice(invoice.payment_request)
+        res.set('www-authenticate', lsat.toChallenge())
+        res.status(402)
+        return res.send({ error: { message: 'Payment Required' } })
+      }
+
+      // if the invoice exists and has been paid, then the LSAT just needs the
+      // preimage extracted from it and added to the token. If the invoice
+      // was already settled and the preimage was just missing from the LSAT, boltwall
+      // will reject the request.
+      lsat = setLsatPreimageFromId(lsat)
+      req.headers.authorization = lsat.toToken()
+      return next()
+    } catch (e) {
+      logger.error('Invalid LSAT provided in Authorization header:', e)
+      next('Unable to generate a valid LSAT from request Authorization header')
     }
   }
 }
 
-async function setPaymentHashOnBody(req, res, next) {
-  if (!req.sessionId) {
-    return next(new errors.InternalServerError('Missing sessionId on request. Cannot proceed with boltwall auth.'))
-  }
+// helper function to extract the secret from an lsat's identifier
+// and use it to satisfy the LSAT
+function setLsatPreimageFromId(lsat) {
+  if (!(lsat instanceof Lsat)) throw new Error('Must pass an LSAT object to add reimage')
 
-  // set this on the body automatically for boltwall to handle hodl invoices
-  // without requiring any requirements from client to include it
-  req.body = {
-    ...req.body,
-    paymentHash: getHash(req.sessionId)
-  }
-
-  if (!req.body.amount) {
-    req.body.amount = env.SUBMIT_HASH_PRICE_SAT
-  } else if (req.body.amount < env.SUBMIT_HASH_PRICE_SAT) {
-    res.status(402)
-    res.json({ message: `Insufficient payment amount. Minimum payment required: ${env.SUBMIT_HASH_PRICE_SAT}` })
-  }
-  next()
+  const identifier = Identifier.fromString(lsat.id)
+  // secret is saved as the tokenId in the identifier
+  const secret = identifier.tokenId.toString('hex')
+  lsat.setPreimage(secret)
+  return lsat
 }
 
-function getHash(secret) {
-  if (typeof secret !== 'string') throw new Error('Must give a string to convert to a hash')
+/**
+ * @description Generate a new HODL-based LSAT.
+ * First a preimage and hash pair are generated. The hash is used to request a new
+ * hodl invoice. Then an LSAT is created where the Identifier is generated using the secret
+ * allowing the LSAT to be settled on demand. Normally this is done in boltwall, but since we
+ * want to store the secret in the macaroon identifier, we need to build it ourselves.
+ * @param {Object} req - request object from server
+ */
+async function generateHodlLsat(req) {
+  if (!invoiceClient) throw new Error('LND invoices connection not available')
+
+  // getting values required for generating a new invoice
+  const preimage = crypto.randomBytes(32).toString('hex')
+  const hash = getHash(preimage)
+
+  // set value based on body or config's minAmount
+  let value
+  if (req.body && req.body.amount && req.body.amount > boltwallConfigs.minAmount) value = req.body.amount
+  else value = boltwallConfigs.minAmount
+
+  // Normally used in boltwall, but we can just use the function from the config
+  const memo = boltwallConfigs.getInvoiceDescription(req)
+
+  // use lnd clieng to create a new invoice
+  const { payment_request: payreq } = await invoiceClient.addHoldInvoiceAsync({
+    hash: Buffer.from(hash, 'hex'),
+    memo,
+    value
+  })
+
+  // this is where we save the preimage to later settle the hodl invoice with
+  const id = new Identifier({
+    paymentHash: Buffer.from(hash, 'hex'),
+    tokenId: Buffer.from(preimage, 'hex')
+  })
+
+  const macaroon = new MacaroonsBuilder(
+    req.header('x-forwarded-for') || req.header('HOST'),
+    env.SESSION_SECRET,
+    id.toString()
+  )
+    .getMacaroon()
+    .serialize()
+  const lsat = Lsat.fromMacaroon(macaroon)
+  lsat.invoice = payreq
+  return lsat
+}
+
+function getHash(preimage) {
+  if (typeof preimage !== 'string') throw new Error('Must give a string to convert to a hash')
   return crypto
     .createHash('sha256')
-    .update(Buffer.from(secret, 'hex'))
+    .update(Buffer.from(preimage, 'hex'))
     .digest('hex')
 }
 
@@ -308,9 +346,9 @@ module.exports = {
   postHashV1Async: postHashV1Async,
   validatePostHashRequest: validatePostHashRequest,
   boltwallConfigs: boltwallConfigs,
-  boltwall: boltwall(boltwallConfigs),
-  setPaymentHashOnBody: setPaymentHashOnBody,
+  boltwall: boltwall(boltwallConfigs, logger),
   generatePostHashResponse: generatePostHashResponse,
+  parsePostHashRequest: parsePostHashRequest,
   // additional functions for testing purposes
   setAMQPChannel: chan => {
     amqpChannel = chan

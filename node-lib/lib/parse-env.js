@@ -167,12 +167,9 @@ module.exports = service => {
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
       envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
-<<<<<<< HEAD
-      envDefinitions.HOT_WALLET_ADDRESS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
-=======
       envDefinitions.LND_TLS_CERT = envalid.str({ desc: 'Lightning GRPC TLS Cert, base64 encoded or file path' })
+      envDefinitions.SESSION_SECRET = envalid.str({ desc: 'Session secret for generating and verifying macaroons' })
       envDefinitions.LND_MACAROON = envalid.str({ desc: 'Lightning GRPC admin macaroon' })
->>>>>>> 99ae49d... update boltwall and lnrpc-node-client
       envDefinitions.AGGREGATOR_WHITELIST = validateAggIPWhitelist({
         default: '',
         desc: 'A comma separated list of IPs that may submit hashes without invoices'

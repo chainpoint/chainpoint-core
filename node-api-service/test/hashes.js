@@ -1,4 +1,4 @@
-/* global describe, it, before, beforeEach, afterEach, after, xit */
+/* global describe, it, before, beforeEach, afterEach */
 
 process.env.NODE_ENV = 'test'
 
@@ -7,12 +7,15 @@ const expect = require('chai').expect
 const request = require('supertest')
 
 const app = require('../server.js')
+const { invoice, lnServiceInvoice, challenge } = require('./sample_data/hashes_tests')
 const hashes = require('../lib/endpoints/hashes.js')
 const uuidTime = require('uuid-time')
 const BLAKE2s = require('blake2s-js')
 const crypto = require('crypto')
-const lnService = require('ln-service')
+// need to use ln-service that is used by boltwall
+const lnService = require('boltwall/node_modules/ln-service')
 const sinon = require('sinon')
+const { Lsat, Identifier } = require('lsat-js')
 
 const nodeInfo = {
   alias: 'alice',
@@ -31,47 +34,34 @@ const nodeInfo = {
 
 nodeInfo.uris = [`${nodeInfo.identity_pubkey}@127.0.0.1:19735`]
 
-function createInvoiceResponse(id) {
-  let now = new Date(Date.now())
-  return {
-    created_at: now.toISOString(),
-    description: 'test hodl',
-    id,
-    request:
-      'lnsb100n1pwurlz8pp5n6eyk4t953r0rez50hm0ysupkv7ccwumxvwnjxye2wfnd420nzuqdz8fp85gnpqd9h8vmmfvdjjqcmjv4shgetyyphkugrjv4ch2etnwssx6ctyv5sxy7fqwdjkcescqzpgjv9semtflddfy3rqssq9t7kaxfvnpasvh6p9kd4mxr92zwy3zhuqr307lhkc7gauverp00rvwplpvreul49df0gknqawf3kxcjxmntgqs80qv7',
-    tokens: 10
-  }
-}
-
-function isValidHex(str) {
-  return /^([a-fA-F0-9]{2}){20,64}$/.test(str)
-}
-
-function getSessionFromResp(res) {
-  const cookies = res.headers['set-cookie']
-  let sessionId = cookies.find(cookie => cookie.includes('sessionId='))
-  sessionId = sessionId.slice(sessionId.indexOf('=') + 1, sessionId.indexOf(';'))
-  return sessionId
-}
-
 describe.only('Hashes Controller', () => {
-  let apiServer = null
+  let apiServer = null,
+    lndGrpcStub,
+    lnd
   beforeEach(async () => {
-    app.setThrottle(() => (req, res, next) => next())
+    app.setThrottle(() => (_req, _res, next) => next())
     apiServer = await app.startAPIServerAsync()
-    hashes.setENV({ CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.100', CAVEAT_KEY: '12345' })
+    hashes.setENV({
+      CHAINPOINT_CORE_BASE_URI: 'http://65.1.1.100',
+      SESSION_SECRET: process.env.SESSION_SECRET
+    })
+    // need a reference to the authenticated lnd object for checking if other spies
+    // are called with expected args
+    lnd = {}
+    lndGrpcStub = sinon.stub(lnService, 'authenticatedLndGrpc').returns({ lnd })
   })
   afterEach(() => {
     apiServer.close()
+    lndGrpcStub.restore()
   })
 
   describe('GET /boltwall/node', () => {
     let getInfoStub
-    before(() => {
+    beforeEach(() => {
       getInfoStub = sinon.stub(lnService, 'getWalletInfo')
       getInfoStub.returns(nodeInfo)
     })
-    after(() => {
+    afterEach(() => {
       getInfoStub.restore()
     })
     it('should return information about the boltwall node', done => {
@@ -91,88 +81,34 @@ describe.only('Hashes Controller', () => {
     })
   })
 
-  describe('POST /boltwall/hodl', () => {
-    const reqPath = '/boltwall/hodl'
-    let createHodlInvoiceStub, secret
+  describe('GET /boltwall/invoice', () => {
+    let getInvoiceStub
 
     beforeEach(() => {
-      secret = crypto.randomBytes(32).toString('hex')
-      createHodlInvoiceStub = sinon.stub(lnService, 'createHodlInvoice')
+      getInvoiceStub = sinon.stub(lnService, 'getInvoice')
+      getInvoiceStub.returns({ ...invoice, request: invoice.payreq })
     })
 
     afterEach(() => {
-      if (createHodlInvoiceStub) {
-        createHodlInvoiceStub.restore()
-        createHodlInvoiceStub = null
-      }
+      getInvoiceStub.restore()
     })
 
-    it('should return with valid sessionID/preimage in a cookie when none present in request', done => {
-      createHodlInvoiceStub.returns(createInvoiceResponse(secret))
-
+    it('should return invoice information and status for invoice associated with LSAT', done => {
+      const lsat = Lsat.fromChallenge(challenge)
       request(apiServer)
-        .post(reqPath)
+        .get('/boltwall/invoice')
+        .set('Authorization', lsat.toToken())
+        .expect(200)
         .end((err, res) => {
-          expect(err).to.equal(null)
-          const sessionId = getSessionFromResp(res)
-          expect(sessionId).to.have.lengthOf(64)
-          expect(isValidHex(sessionId)).to.be.true
-          createHodlInvoiceStub.restore()
+          expect(res.body).to.eql({
+            status: invoice.is_confirmed ? 'paid' : 'unpaid',
+            payreq: invoice.payreq,
+            id: invoice.id,
+            description: invoice.description
+          })
+          expect(res.body.id).to.equal(lsat.paymentHash)
           done()
         })
-    })
-
-    it('should respond with a payment information when requested from a new session', done => {
-      const invoiceResp = createInvoiceResponse(secret)
-      createHodlInvoiceStub.returns(invoiceResp)
-      const expectedResponse = {
-        id: invoiceResp.id,
-        payreq: invoiceResp.request,
-        description: invoiceResp.description,
-        createdAt: invoiceResp['created_at'],
-        amount: invoiceResp.tokens
-      }
-      request(apiServer)
-        .post(reqPath)
-        .expect(200, expectedResponse, done)
-    })
-
-    it('should return an invoice whose id is a sha256 hash of the session id', done => {
-      // need a spy for this one
-      // createHodlInvoiceStub.restore()
-      // createHodlInvoiceStub = sinon.spy(lnService, 'createHodlInvoice')
-      const expectedPaymentHash = crypto
-        .createHash('sha256')
-        .update(Buffer.from(secret, 'hex'))
-        .digest()
-        .toString('hex')
-      let calledArgs
-      createHodlInvoiceStub.callsFake(args => {
-        calledArgs = args
-        return createInvoiceResponse(expectedPaymentHash)
-      })
-      request(apiServer)
-        .post(reqPath)
-        .set('Cookie', [`sessionId=${secret};`])
-        .end((err, res) => {
-          expect(err).to.equal(null)
-          const paymentHash = createHodlInvoiceStub.getCall(0).args[0].id
-          expect(paymentHash).to.equal(expectedPaymentHash)
-          expect(calledArgs.id).to.equal(expectedPaymentHash)
-          expect(res.body)
-            .to.have.property('id')
-            .and.to.equal(expectedPaymentHash)
-          done()
-        })
-    })
-  })
-
-  describe('GET /boltwall/invoice', () => {
-    xit('should return with valid sessionID/preimage in a cookie when none present in request', done => {
-      done()
-    })
-    xit('should return invoice information and status for invoice associated with session', done => {
-      done()
     })
   })
 
@@ -282,33 +218,93 @@ describe.only('Hashes Controller', () => {
   })
 
   describe('POST /hash', () => {
-    let hash
+    let hash, getInvoiceStub, settleInvoiceStub, randomBytesStub, lsat
     before(() => {
       app.setAMQPChannel({
         sendToQueue: function() {}
       })
+
       hash = 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
+      lsat = Lsat.fromChallenge(challenge)
     })
 
-    xit('should return with valid sessionID/preimage in a cookie when none present in request', done => {
-      done()
+    beforeEach(() => {
+      hashes.setInvoiceClient({
+        addHoldInvoiceAsync: sinon.spy(() => ({
+          payment_request: invoice.payreq
+        }))
+      })
+
+      // stub the get invoice call that is made by boltwall's ln-service
+      // return should be set in the individual tests
+      getInvoiceStub = sinon.stub(lnService, 'getInvoice')
+      settleInvoiceStub = sinon.stub(lnService, 'settleHodlInvoice')
+      getInvoiceStub.returns({ ...lnServiceInvoice, is_confirmed: false, is_held: true })
+
+      // used to generate a random secret, but we need this to be predictable
+      randomBytesStub = sinon.stub(crypto, 'randomBytes').callThrough()
+      randomBytesStub.withArgs(32).returns(Buffer.from(invoice.secret, 'hex'))
     })
 
-    xit('should return a 402 response if request not made with an existing session', done => {
-      done()
+    afterEach(() => {
+      getInvoiceStub.restore()
+      settleInvoiceStub.restore()
+      randomBytesStub.restore()
     })
 
-    xit('should return a 402 response if request is made for a session with an unpaid invoice', done => {
-      done()
+    it('should return 402 with WWW-Authenticate header if made without LSAT', done => {
+      request(apiServer)
+        .post('/hash')
+        .send({
+          hash
+        })
+        .expect(402)
+        .expect('WWW-Authenticate')
+        .end((err, res) => {
+          const challenge = res.header['www-authenticate']
+          expect(challenge, 'No challenge found in the response header').to.exist
+          const getLsat = () => Lsat.fromChallenge(challenge)
+          expect(getLsat).to.not.throw()
+          done()
+        })
     })
 
-    xit('should settle the associated invoice if request is made successfully', done => {
-      done()
+    it('should return an LSAT challenge whose Identifier is the paymentHash secret', done => {
+      request(apiServer)
+        .post('/hash')
+        .send({
+          hash
+        })
+        .expect(402)
+        .expect('WWW-Authenticate')
+        .end((err, res) => {
+          const challenge = res.header['www-authenticate']
+          expect(challenge).to.exist
+          const lsat = Lsat.fromChallenge(challenge)
+
+          const identifier = Identifier.fromString(lsat.id)
+
+          expect(identifier.tokenId.toString('hex'), 'LSAT id should be generated from the invoice secret').to.equal(
+            invoice.secret
+          )
+
+          const hash = crypto
+            .createHash('sha256')
+            .update(identifier.tokenId)
+            .digest('hex')
+
+          expect(hash, 'Hash of the LSAT id should be the invoice payment hash').to.equal(invoice.id)
+          expect(hash, "Hash of the LSAT id should be the Lsat's payment hash").to.equal(invoice.id)
+          done()
+        })
     })
 
-    xit('should return proper result with valid call', done => {
-      app.setAMQPChannel({
-        sendToQueue: function() {}
+    it('should return a 402 response if request is made for a session with an unpaid invoice', done => {
+      hashes.setLND({
+        lookupInvoiceAsync: () => ({
+          settled: false,
+          payment_request: invoice.payreq
+        })
       })
 
       request(apiServer)
@@ -316,16 +312,93 @@ describe.only('Hashes Controller', () => {
         .send({
           hash
         })
+        .set('Authorization', lsat.toToken())
+        .expect(402)
+        .end((err, res) => {
+          const getLsat = () => Lsat.fromChallenge(res.header['www-authenticate'])
+          expect(getLsat, 'Should be able to retrieve lsat from challenge for an unpaid LSAT request').to.not.throw()
+          const secondLsat = getLsat()
+          expect(secondLsat.id).to.equal(lsat.id)
+          expect(secondLsat.paymentHash).to.equal(lsat.paymentHash)
+          done()
+        })
+    })
+
+    it('should settle the associated invoice if request is made successfully', done => {
+      // return a paid but held invoice when invoice status is checked in chainpoint
+      hashes.setLND({
+        lookupInvoiceAsync: () => ({
+          settled: false,
+          state: 'ACCEPTED',
+          payment_request: invoice.payreq
+        })
+      })
+
+      // make sure it's not called before running the submission
+      expect(settleInvoiceStub.called, 'settle invoice should not have been called het').to.be.false
+
+      // hash submission with an lsat and an invoice that is paid should settle invoice
+      request(apiServer)
+        .post('/hash')
+        .send({
+          hash
+        })
+        .set('Authorization', lsat.toToken())
+        .expect(200)
+        .end(() => {
+          expect(settleInvoiceStub.called, 'boltwall should have settled invoice for satisfied lsat').to.be.true
+          expect(settleInvoiceStub.getCall(0).args[0].secret).to.equal(invoice.secret)
+          done()
+        })
+    })
+
+    it('should fail when submitted with a settled LSAT invoice', done => {
+      hashes.setLND({
+        lookupInvoiceAsync: () => ({
+          settled: false,
+          state: 'ACCEPTED',
+          payment_request: invoice.payreq
+        })
+      })
+      getInvoiceStub.returns({ ...lnServiceInvoice, is_confirmed: true, is_held: false })
+
+      request(apiServer)
+        .post('/hash')
+        .send({ hash })
+        .set('Authorization', lsat.toToken())
+        .expect(401)
+        .end((err, res) => {
+          expect(!err).to.be.true
+          expect(res.status, 'Should be unauthorized when using a settled LSAT').to.equal(401)
+          done()
+        })
+    })
+
+    it('should return proper result with valid call', done => {
+      // return a paid but held invoice when invoice status is checked in chainpoint
+      hashes.setLND({
+        lookupInvoiceAsync: () => ({
+          settled: false,
+          state: 'ACCEPTED',
+          payment_request: invoice.payreq
+        })
+      })
+
+      request(apiServer)
+        .post('/hash')
+        .send({
+          hash
+        })
+        .set('Authorization', lsat.toToken())
         .expect('Content-type', /json/)
         .expect(200)
         .end((err, res) => {
           expect(err).to.equal(null)
           expect(res).to.have.property('body')
-          expect(res.body).to.have.property('hash_id')
           expect(res.body)
             .to.have.property('hash')
             .and.to.equal(hash)
-          expect(res.body).to.have.property('submitted_at')
+          expect(res.body).to.have.property('hash_received')
           expect(res.body).to.have.property('processing_hints')
           expect(res.body.processing_hints)
             .to.have.property('cal')
@@ -333,11 +406,19 @@ describe.only('Hashes Controller', () => {
           expect(res.body.processing_hints)
             .to.have.property('btc')
             .and.to.be.a('string')
+          expect(res.body).to.have.property('proof_id')
+          expect(res.body).to.have.property('hash_received')
+          // The UUID timestamp has ms level precision, ISO8601 only to the second.
+          // Check that they are within 1000ms of each other.
+          expect(parseInt(uuidTime.v1(res.body.proof_id), 10) - Date.parse(res.body.hash_received)).to.be.within(
+            0,
+            1000
+          )
           done()
         })
     })
 
-    xit('should return a v1 UUID node embedded with a partial SHA256 over timestamp and hash', done => {
+    it('should return a v1 UUID node embedded with a partial SHA256 over timestamp and hash', done => {
       app.setAMQPChannel({
         sendToQueue: function() {}
       })
@@ -347,6 +428,7 @@ describe.only('Hashes Controller', () => {
         .send({
           hash
         })
+        .set('Authorization', lsat.toToken())
         .expect('Content-type', /json/)
         .expect(200)
         .end((err, res) => {
@@ -371,6 +453,7 @@ describe.only('Hashes Controller', () => {
         })
     })
   })
+<<<<<<< HEAD
 
   // describe('GET /hash/invoice', () => {
   //   before(() => {
@@ -553,6 +636,8 @@ describe.only('Hashes Controller', () => {
   // describe('POST /hash', () => {
 
   // })
+=======
+>>>>>>> 4870e74... cleanup and final tests
 })
 
 describe('Functions', () => {
@@ -563,7 +648,7 @@ describe('Functions', () => {
       expect(res)
         .to.have.property('hash')
         .and.to.equal('ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12')
-      expect(res).to.have.property('submitted_at')
+      expect(res).to.have.property('hash_received')
       expect(res).to.have.property('processing_hints')
       expect(res.processing_hints)
         .to.have.property('cal')

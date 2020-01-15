@@ -33,8 +33,6 @@ const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const lndClient = require('lnrpc-node-client')
 const fs = require('fs')
-var cookieParser = require('restify-cookies')
-const crypto = require('crypto')
 
 const { LND_SOCKET, LND_TLS_CERT, LND_MACAROON } = env
 
@@ -90,43 +88,12 @@ function setupRestifyConfigAndRoutes(server) {
   server.use(restify.plugins.queryParser())
   server.use(restify.plugins.bodyParser({ maxBodySize: env.MAX_BODY_SIZE, mapParams: true }))
 
-  server.use(cookieParser.parse)
-
-  // set sessionId on req from cookies or generate new unique id if none exists
-  // this is _required_ for the state management of paid hash submissions
-  server.use((req, res, next) => {
-    let sessionId = req.cookies.sessionId
-    if (!sessionId) {
-      sessionId = crypto.randomBytes(32).toString('hex')
-      logger.info(`Creating a new session: ${sessionId}`)
-
-      res.setCookie('sessionId', sessionId, {
-        maxAge: 60 * 2, // max age set to 2 minutes so that stale requests with expired hodl invoices don't hold up hash submissions
-        httpOnly: true, // dissallow changing of cookies
-        path: '/'
-      })
-    }
-    // For the first req of the session, the new sessionId won't be available in the req cookies yet
-    // so we add it to the request object so that other middleware will have access
-    req.sessionId = sessionId
-    next()
-  })
-
   // API RESOURCES
 
-  // boltwall paths for setting up validation using hodl invoices
-  server.post(
-    { path: '/boltwall/hodl', version: '1.0.0' },
-    ...applyProductionMiddleware([throttle(5, 1)]),
-    hashes.setPaymentHashOnBody,
-    hashes.boltwall
-  )
-
-  // retrieve invoice information based on an existing macaroon on the session
+  // retrieve information associated with an LSAT attached in the header
   server.get(
     { path: '/boltwall/invoice', version: '1.0.0' },
     ...applyProductionMiddleware([throttle(5, 1)]),
-    hashes.setPaymentHashOnBody,
     hashes.boltwall
   )
 
@@ -144,8 +111,8 @@ function setupRestifyConfigAndRoutes(server) {
   server.post(
     { path: '/hash', version: '1.0.0' },
     ...applyProductionMiddleware([throttle(5, 1)]),
-    hashes.setPaymentHashOnBody,
     hashes.validatePostHashRequest,
+    hashes.parsePostHashRequest,
     hashes.boltwall,
     hashes.postHashV1Async
   )
@@ -156,6 +123,7 @@ function setupRestifyConfigAndRoutes(server) {
     ...applyProductionMiddleware([throttle(50, 10)]),
     calendar.getCalTxAsync
   )
+
   // get the data value of a txId
   server.get(
     { path: '/calendar/:txid/data', version: '1.0.0' },
