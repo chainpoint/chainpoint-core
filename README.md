@@ -1,11 +1,11 @@
-# TODO: Update content to reflect new version
-
 # Chainpoint Core
 
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes, aggregate these hashes into a root hash, and periodically commit the root hash to the Bitcoin blockchain.
+Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes, aggregate these hashes into a [Merkle root](https://en.wikipedia.org/wiki/Merkle_tree), and periodically commit the root hash to the Bitcoin blockchain.
+
+By default, Cores are members of the [Lightning Network](https://lightning.network/). Users use Lightning to pay Cores for permission to anchor a hash. Additionally, Lightning is used by new Cores to stake bitcoin to the Chainpoint Network as part of an anti-sybil mechanism. 
 
 ## Important Notice
 
@@ -19,7 +19,7 @@ This software is intended to be run as part of Chainpoint's Core Network. It is 
 
 ### Requirements
 
-#### Hardware
+An Ubuntu or MacOS system with Git, Make, and BASH are required for operation. A bash script to install all other dependencies (docker, openssl, nodejs, yarn) on Ubuntu and Mac can be found [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
 
 Chainpoint Core has been tested with a couple of different hardware configurations.
 
@@ -38,17 +38,7 @@ Recommended:
 - `Public IPv4 address`
 - `High-performance (1 Gbps+) Cloud Provider Networking`
 
-It _is_ possible to run Core from home, but you must have a static IP and have publicly forwarded ports 80, 26656, and 26657 on your router.
-
-#### Software
-
-At minimum, the following software is required for any installation of Core:
-
-- `*Nix-based OS (Ubuntu Linux and MacOS have been tested)`
-- `BASH`
-- `Git`
-
-Provided BASH is installed, a script to install all other dependencies (make, openssl, nodejs, yarn) on Ubuntu and Mac can be found [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
+It _is_ possible to run Core from home, but you must have a static IP and have publicly forwarded ports 80, 443, 8080, 9000, 9735, 10009, 26656, and 26657 on your router.
 
 ### Installation
 
@@ -60,18 +50,40 @@ cd chainpoint-core
 make init
 ```
 
-The above make command will download all other dependencies and run an interactive setup wizard. The process is detailed in `Configuration` below.
+The above make command will download all other dependencies and run an interactive setup wizard. The process is further detailed in `Configuration` below.                                                                                      |
+
+### Startup
+
+To start up a Core node without connecting to the rest of the Chainpoint Network:
+
+1. Run `make init` to initialize the configuration directory.
+
+2. A `Lightning Wallet Address` will be printed in the terminal by the `make init` process. Fund this address with Bitcoin and wait for 6 confirmations.
+
+3. Run `make deploy` to download all containers and start all services. 
+
+If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute.
+
+### Joining the Chainpoint Testnet
+
+After running `make init` and funding the Lightning Wallet Address, you can join the public testnet as a Full Node:
+
+1. Specify peers by adding `PEERS="087186cd1d631c5e709c4afa15a1ce218c6a28c1@3.133.119.65:26656"` to the .env file in the root project directory
+
+2. Run `make deploy` to start Core. In order to obtain permission to submit hashes to the network, your Core will automatically stake bitcoin by opening lightning channels with the existing network validators.
+
+### Upgrade
+
+You can upgrade Core by running `make clean-tendermint` and `docker-compose pull`, then by redeploying with `make deploy`.
 
 ### Configuration
 
-You will need to set up a configuration and secrets (bitcoin) before running. `make init` will do most of the heavy lifting for you.
+You will need to set up a configuration and secrets (lightning wallet) before running. `make init` will do most of the heavy lifting for you.
 
-Chainpoint Core currently uses Docker Swarm when running in Production mode. Running `make init` will initialize a Docker Swarm node on the host machine and prompt the user for secrets to be stored in Swarm's secrets system.
-This command will also copy `.env.sample` to `.env`. The `.env` file will be used by `docker-compose` to set required environment variables.
-
+Chainpoint Core currently uses Docker Swarm when running in Production mode. Running `make init` will initialize a Docker Swarm node on the host machine and prompt the user for the the type of network (TESTNET or MAINNET) and public IP.
 There are further settings found in the `.env.sample` and `swarm-compose.yaml` file.
 These are more permanent and altering them may cause problems connecting to the public Chainpoint testnets and mainnet.
-However, they may be invaluable for setting up a private Chainpoint Network with different parameters, for example by configuring more frequent bitcoin anchoring or excluding the smart contract registration requirement.
+However, they may be invaluable for setting up a private Chainpoint Network with different parameters, for example by configuring more frequent bitcoin anchoring.
 
 The following are the descriptions of the configuration parameters:
 
@@ -87,31 +99,7 @@ The following are the descriptions of the configuration parameters:
 | AGGREGATE                | Boolean | swarm-compose.yaml           | Whether to aggregate hashes and send them to the Calendar blockchain. Defaults to true                                                           |
 | ANCHOR                   | Boolean | swarm-compose.yaml           | Whether to anchor the state of the Calendar to Bitcoin                                                                                           |
 | LOG_FILTER               | String  | swarm-compose.yaml           | Log Verbosity. Defaults to `"main:debug,state:info,*:error"`                                                                                     |
-| LOG_LEVEL                | String  | swarm-compose.yaml           | Level of detail included in Logs. Defaults to `info`                                                                                             |
-
-### Startup
-
-To start up a Core node without connecting to the rest of the Chainpoint Network:
-
-1. Run `make init` to initialize the configuration directory
-
-2. Run `make deploy` to download all containers and start all services.
-
-If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute.
-
-### Joining the Chainpoint Testnet
-
-After running `make init`, you can join the public testnet as a Full Node:
-
-1. Run `make init-chain` to download the testnet genesis and config files
-
-2. Specify peers by adding `PEERS="4350130c60da6c4e443d9fe4abb9c4129b82a651@35.245.53.181:26656,50cf252391ff609a1de6c2a146c4fdfcff80dc41@35.188.238.186:26656"` to the .env file in the root project directory
-
-3. Run `make deploy` to copy the .env file to the config directory and deploy Core.
-
-### Upgrade
-
-You can upgrade Core by running `make clean-tendermint` and `docker-compose pull`, then by redeploying with `make deploy`.
+| LOG_LEVEL                | String  | swarm-compose.yaml           | Level of detail included in Logs. Defaults to `info`       
 
 ## Development
 
@@ -133,7 +121,6 @@ READMEs for each Core micro-service are available:
 | :----------------------- | :----------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
 | go-abci-service          | Runs the Tendermint blockchain service and coordinates all Core activity                                                 | [README](https://github.com/chainpoint/chainpoint-core/blob/master/go-abci-service/README.md)          |
 | node-api-service         | Web API for interacting with Chainpoint-Nodes                                                                            | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-api-service/README.md)         |
-| node-btc-tx-service      | Transmits a Merkle Root to Bitcoin and returns the Bitcoin TX ID                                                         | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-tx-service/README.md)      |
 | node-btc-mon-service     | Monitors the above Bitcoin TX for 6 confirmations and informs go-abci-service when complete                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-mon-service/README.md)     |
 | node-lnd-mon-service     | Monitors the lnd invoices for payment status                                                                             | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-lnd-mon-service/README.md)     |
 | node-proof-gen-service   | Generates cryptographic proofs demonstrating how Chainpoint-Node data is included in the Chainpoint Calendar and Bitcoin | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-gen-service/README.md)   |
