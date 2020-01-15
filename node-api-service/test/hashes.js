@@ -13,7 +13,7 @@ const uuidTime = require('uuid-time')
 const BLAKE2s = require('blake2s-js')
 const crypto = require('crypto')
 // need to use ln-service that is used by boltwall
-const lnService = require('boltwall/node_modules/ln-service')
+const lnService = require('ln-service')
 const sinon = require('sinon')
 const { Lsat, Identifier } = require('lsat-js')
 
@@ -355,8 +355,8 @@ describe.only('Hashes Controller', () => {
     it('should fail when submitted with a settled LSAT invoice', done => {
       hashes.setLND({
         lookupInvoiceAsync: () => ({
-          settled: false,
-          state: 'ACCEPTED',
+          settled: true,
+          state: 'SETTLED',
           payment_request: invoice.payreq
         })
       })
