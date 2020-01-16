@@ -223,7 +223,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	// If we're the first validator, we accept by default.
 	_, alreadyExists := app.state.CoreKeys[tx.CoreID]
 	if app.state.ChainSynced && app.state.AmValidator && app.ID != tx.CoreID {
-\		lnID := types.LnIdentity{}
+		lnID := types.LnIdentity{}
 		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
 			return false
 		}
