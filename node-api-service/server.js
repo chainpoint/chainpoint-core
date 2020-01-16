@@ -201,11 +201,11 @@ async function openRMQConnectionAsync(connectURI) {
 }
 
 async function startTransactionMonitoring() {
-  let subscriptionEstablished = false
+  let connectionEstablished = false
   if (!LND_TLS_CERT && !fs.existsSync(LND_TLS_CERT)) {
     throw new Error(`LND TLS Cert not found or not yet generated, restarting...`)
   }
-  while (!subscriptionEstablished) {
+  while (!connectionEstablished) {
     try {
       // establish a connection to lnd
       try {
@@ -222,34 +222,12 @@ async function startTransactionMonitoring() {
         if (error.code === 12) message = 'Wallet locked'
         throw new Error(`Cannot establish active LND connection : ${message}`)
       }
-      // starting listening for and handle new invoice activity
-      await establishTransactionSubscriptionAsync()
-      subscriptionEstablished = true
+      connectionEstablished = true
     } catch (error) {
       // catch errors when attempting to connect and establish invoice subscription
       logger.error(`Transaction monitoring : ${error.message} : Retrying in 5 seconds...`)
       await utils.sleepAsync(5000)
     }
-  }
-}
-
-async function establishTransactionSubscriptionAsync() {
-  try {
-    let transactionSubscription = lndClient.lightning().subscribeTransactions({})
-    transactionSubscription.on('data', async () => {})
-    transactionSubscription.on('status', function(status) {
-      logger.warn(`LND transaction subscription status has changed (${status.code}) ${status.details}`)
-    })
-    transactionSubscription.on('end', function() {
-      logger.error(`The LND transaction subscription has unexpectedly ended`)
-      hashes.setLND(null)
-      hashes.setInvoiceClient(null)
-      status.setLND(null)
-      setTimeout(startTransactionMonitoring, 1000)
-    })
-    logger.info('LND transaction subscription has been established')
-  } catch (error) {
-    throw new Error(`Unable to establish LND transaction subscription : ${error.message}`)
   }
 }
 
