@@ -77,7 +77,8 @@ async function buildStatusObjectAsync() {
     lightning_address: env.HOT_WALLET_ADDRESS,
     uris: walletInfo.uris,
     num_active_channels: walletInfo.num_active_channels,
-    alias: walletInfo.alias
+    alias: walletInfo.alias,
+    test: 'hello world'
   }
 
   try {
