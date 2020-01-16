@@ -252,15 +252,13 @@ async function parsePostHashRequest(req, res, next) {
 
       // determine if the invoice is held. Unpaid invoices, should return a 402
       // since they still require payment before they can be allowed through
+      const isHeld = invoice.state === 'ACCEPTED' && !invoice.settled
       if (invoice.state === 'SETTLED') {
         res.status(401)
         return res.send({
           error: { message: 'Unauthorized: Invoice has already been settled. Try again with a different LSAT' }
         })
-      }
-
-      const isHeld = invoice.state === 'ACCEPTED' && !invoice.settled
-      if (!isHeld) {
+      } else if (!isHeld) {
         lsat.addInvoice(invoice.payment_request)
         res.set('www-authenticate', lsat.toChallenge())
         res.status(402)

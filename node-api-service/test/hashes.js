@@ -12,7 +12,6 @@ const hashes = require('../lib/endpoints/hashes.js')
 const uuidTime = require('uuid-time')
 const BLAKE2s = require('blake2s-js')
 const crypto = require('crypto')
-// need to use ln-service that is used by boltwall
 const lnService = require('ln-service')
 const sinon = require('sinon')
 const { Lsat, Identifier } = require('lsat-js')
@@ -99,7 +98,7 @@ describe.only('Hashes Controller', () => {
         .get('/boltwall/invoice')
         .set('Authorization', lsat.toToken())
         .expect(200)
-        .end((err, res) => {
+        .end((_err, res) => {
           expect(res.body).to.eql({
             status: invoice.is_confirmed ? 'paid' : 'unpaid',
             payreq: invoice.payreq,
@@ -314,7 +313,7 @@ describe.only('Hashes Controller', () => {
         })
         .set('Authorization', lsat.toToken())
         .expect(402)
-        .end((err, res) => {
+        .end((_err, res) => {
           const getLsat = () => Lsat.fromChallenge(res.header['www-authenticate'])
           expect(getLsat, 'Should be able to retrieve lsat from challenge for an unpaid LSAT request').to.not.throw()
           const secondLsat = getLsat()
@@ -368,7 +367,6 @@ describe.only('Hashes Controller', () => {
         .set('Authorization', lsat.toToken())
         .expect(401)
         .end((err, res) => {
-          expect(!err).to.be.true
           expect(res.status, 'Should be unauthorized when using a settled LSAT').to.equal(401)
           done()
         })
@@ -453,191 +451,6 @@ describe.only('Hashes Controller', () => {
         })
     })
   })
-<<<<<<< HEAD
-
-  // describe('GET /hash/invoice', () => {
-  //   before(() => {
-  //     hashes.setLND({
-  //       services: {
-  //         Lightning: {
-  //           addInvoice: () => {
-  //             throw new Error('err!')
-  //           }
-  //         }
-  //       }
-  //     })
-  //   })
-  //   it('should return proper error with lnd error', done => {
-  //     request(apiServer)
-  //       .get('/hash/invoice')
-  //       .expect('Content-type', /json/)
-  //       .expect(500)
-  //       .end((err, res) => {
-  //         expect(err).to.equal(null)
-  //         expect(res.body)
-  //           .to.have.property('code')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('InternalServer')
-  //         expect(res.body)
-  //           .to.have.property('message')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('Unable to generate invoice')
-  //         done()
-  //       })
-  //   })
-  // })
-
-  // describe('GET /hash/invoice', () => {
-  //   before(() => {
-  //     hashes.setLND({
-  //       services: {
-  //         Lightning: {
-  //           addInvoice: () => {
-  //             return { payment_request: 'pr' }
-  //           }
-  //         }
-  //       }
-  //     })
-  //   })
-  //   it('should return proper invoice data', done => {
-  //     request(apiServer)
-  //       .get('/hash/invoice')
-  //       .expect('Content-type', /json/)
-  //       .expect(200)
-  //       .end((err, res) => {
-  //         expect(err).to.equal(null)
-  //         expect(res.body)
-  //           .to.have.property('invoice')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('pr')
-  //         done()
-  //       })
-  //   })
-  // })
-
-  // describe('POST /hash', () => {
-  //   it('should return proper error with missing invoice_id', done => {
-  //     request(apiServer)
-  //       .post('/hash')
-  //       .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12' })
-  //       .expect('Content-type', /json/)
-  //       .expect(409)
-  //       .end((err, res) => {
-  //         expect(err).to.equal(null)
-  //         expect(res.body)
-  //           .to.have.property('code')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('InvalidArgument')
-  //         expect(res.body)
-  //           .to.have.property('message')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('invalid JSON body: missing invoice_id')
-  //         done()
-  //       })
-  //   })
-  // })
-
-  // describe('POST /hash', () => {
-  //   it('should return proper error with invoice_id not a string', done => {
-  //     request(apiServer)
-  //       .post('/hash')
-  //       .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12', invoice_id: [1] })
-  //       .expect('Content-type', /json/)
-  //       .expect(409)
-  //       .end((err, res) => {
-  //         expect(err).to.equal(null)
-  //         expect(res.body)
-  //           .to.have.property('code')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('InvalidArgument')
-  //         expect(res.body)
-  //           .to.have.property('message')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('invalid JSON body: bad invoice_id submitted')
-  //         done()
-  //       })
-  //   })
-  // })
-
-  // describe('POST /hash', () => {
-  //   it('should return proper error with invalid invoice_id', done => {
-  //     request(apiServer)
-  //       .post('/hash')
-  //       .send({ hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12', invoice_id: 'deadbeef' })
-  //       .expect('Content-type', /json/)
-  //       .expect(409)
-  //       .end((err, res) => {
-  //         expect(err).to.equal(null)
-  //         expect(res.body)
-  //           .to.have.property('code')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('InvalidArgument')
-  //         expect(res.body)
-  //           .to.have.property('message')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('invalid JSON body: bad invoice_id submitted')
-  //         done()
-  //       })
-  //   })
-  // })
-
-  // describe('POST /hash', () => {
-  //   it('should return proper error with unpaid invoice_id', done => {
-  //     let invoiceId = 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
-  //     request(apiServer)
-  //       .post('/hash')
-  //       .send({
-  //         hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-  //         invoice_id: invoiceId
-  //       })
-  //       .expect('Content-type', /json/)
-  //       .expect(402)
-  //       .end((err, res) => {
-  //         expect(err).to.equal(null)
-  //         expect(res.body)
-  //           .to.have.property('code')
-  //           .and.to.be.a('string')
-  //           .and.to.equal('PaymentRequired')
-  //         expect(res.body)
-  //           .to.have.property('message')
-  //           .and.to.be.a('string')
-  //           .and.to.equal(`invoice ${invoiceId} has not been paid`)
-  //         done()
-  //       })
-  //   })
-  // })
-
-  // describe('POST /hash', () => {
-  //   it('should return a matched set of metadata and UUID embedded timestamps', done => {
-  //     app.setAMQPChannel({
-  //       sendToQueue: function() {}
-  //     })
-
-  //     request(apiServer)
-  //       .post('/hash')
-  //       .send({
-  //         hash: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12',
-  //         invoice_id: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'
-  //       })
-  //       .expect('Content-type', /json/)
-  //       .expect(200)
-  //       .end((err, res) => {
-  //         expect(err).to.equal(null)
-  //         expect(res.body).to.have.property('hash_id')
-  //         expect(res.body).to.have.property('submitted_at')
-  //         // The UUID timestamp has ms level precision, ISO8601 only to the second.
-  //         // Check that they are within 1000ms of each other.
-  //         expect(parseInt(uuidTime.v1(res.body.hash_id)) - Date.parse(res.body.submitted_at)).to.be.within(0, 1000)
-  //         done()
-  //       })
-  //   })
-  // })
-
-  // describe('POST /hash', () => {
-
-  // })
-=======
->>>>>>> 4870e74... cleanup and final tests
 })
 
 describe('Functions', () => {
