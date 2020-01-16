@@ -68,7 +68,7 @@ async function createSwarmAndSecrets(valuePairs) {
         console.log(chalk.red(`InitWallet error, likely already initialized: ${err}`))
       }
     } else {
-      console.log('Creating a new LND wallet...')
+      console.log('Creating a new Lightning wallet...')
       lndWalletPass = generator.generate({
         length: 20,
         numbers: false
@@ -81,7 +81,7 @@ async function createSwarmAndSecrets(valuePairs) {
         wallet_password: lndWalletPass,
         cipher_seed_mnemonic: seed.cipher_seed_mnemonic
       })
-      console.log(`LND wallet initialized: ${JSON.stringify(init)}`)
+      console.log(`Lightning wallet initialized: ${JSON.stringify(init)}`)
       console.log('Creating bitcoin address for wallet...')
       await utils.sleepAsync(7000)
       lndClient.setCredentials(
@@ -91,10 +91,10 @@ async function createSwarmAndSecrets(valuePairs) {
       )
       let lightning = lndClient.lightning()
       address = await lightning.newAddressAsync({ type: 0 })
-      console.log(address)
-      console.log(chalk.yellow(`\nLND Wallet Password: ${lndWalletPass}`))
-      console.log(chalk.yellow(`\nLND Wallet Seed: ${seed.cipher_seed_mnemonic.join(' ')}`))
-      console.log(chalk.yellow(`\nLND Wallet Address: ${address.address}\n`))
+      console.log(chalk.green(`\nPlease save the following values in a safe place:\n`))
+      console.log(chalk.yellow(`\nLightning Wallet Password: ${lndWalletPass}`))
+      console.log(chalk.yellow(`\nLightning Wallet Seed: ${seed.cipher_seed_mnemonic.join(' ')}`))
+      console.log(chalk.yellow(`\nLightning Wallet Address: ${address.address}\n`))
     }
   } catch (err) {
     console.log(chalk.red(`LND setup error: ${err}`))
