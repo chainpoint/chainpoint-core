@@ -140,7 +140,7 @@ clean: down
 ## install-deps              : Install system dependencies
 install-deps:
 	cli/scripts/install_deps.sh
-	echo "Please login and logout to enable docker"
+	echo "Please logout and login to allow your user to use docker"
 
 ## init-volumes              : Create data folder with proper permissions
 .PHONY : init-volumes
