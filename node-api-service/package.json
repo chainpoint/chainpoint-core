@@ -6,7 +6,8 @@
   "license": "AGPL-3.0",
   "main": "server.js",
   "scripts": {
-    "start": "nodemon server.js",
+    "start": "node server.js",
+    "start-nodemon": "nodemon server.js",
     "test": "./node_modules/mocha/bin/mocha test/*.js",
     "test:watch": "./node_modules/mocha/bin/mocha --watch test/*.js"
   },
