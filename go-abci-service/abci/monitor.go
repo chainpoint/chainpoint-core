@@ -100,7 +100,7 @@ func (app *AnchorApplication) StakeIdentity() {
 					}
 				} else {
 					waitForValidators = true
-					break
+					continue
 				}
 			}
 			if waitForValidators {
@@ -146,7 +146,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			return
 		}
 	}
-	panic(errors.New("Cannot broadcast Core public key"))
+	app.LogError(errors.New("Cannot broadcast Core public key- already present in state of chain?"))
 }
 
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
