@@ -242,8 +242,6 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			app.logger.Info("Channel not open, rejecting")
 			return false
 		}
-	}else if !app.state.ChainSynced {
-		return true
 	}
 	app.logger.Info("Identity", "alreadyExists", alreadyExists)
 	return !alreadyExists
