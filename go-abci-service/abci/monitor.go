@@ -242,7 +242,8 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			app.logger.Info("Channel not open, rejecting")
 			return false
 		}
-	} else if (app.state.ChainSynced){
+	} else if (!app.state.ChainSynced){
+		// we're fast-syncing, so agree with the prior chainstate
 		return true
 	}
 	app.logger.Info("JWK Identity", "alreadyExists", alreadyExists)
