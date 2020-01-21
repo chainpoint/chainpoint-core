@@ -174,6 +174,7 @@ module.exports = service => {
         default: '/root/.lnd/tls.cert',
         desc: 'Lightning GRPC TLS Cert, base64 encoded or file path'
       })
+      envDefinitions.HOT_WALLET_ADDRESS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
       envDefinitions.SESSION_SECRET = envalid.str({ desc: 'Session secret for generating and verifying macaroons' })
       envDefinitions.LND_MACAROON = envalid.str({
         default: '/root/.lnd/data/chain/bitcoin/testnet/admin.macaroon',
