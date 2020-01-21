@@ -50,8 +50,8 @@ let throttle = (burst, rate, opts = { ip: true }) => {
 
 function setupRestifyConfigAndRoutes(server) {
   // LOG EVERY REQUEST
-  // server.pre(function (request, response, next) {
-  //   request.log.info({ req: [request.url, request.method, request.rawHeaders] }, 'API-REQUEST')
+  // server.pre(function(request, response, next) {
+  //   logger.info(`req: ${request.method} ${request.url}`, 'API-REQUEST')
   //   next()
   // })
 
@@ -203,13 +203,14 @@ async function openRMQConnectionAsync(connectURI) {
 async function startTransactionMonitoring() {
   let connectionEstablished = false
   if (!LND_TLS_CERT && !fs.existsSync(LND_TLS_CERT)) {
-    throw new Error(`LND TLS Cert not found or not yet generated, restarting...`)
+    logger.warn(`LND TLS Cert not found or not yet generated. Trying without...`)
   }
   while (!connectionEstablished) {
     try {
       // establish a connection to lnd
       try {
-        lndClient.setCredentials(LND_SOCKET, LND_MACAROON, LND_TLS_CERT)
+        if (!LND_TLS_CERT) lndClient.setCredentials(LND_SOCKET, LND_MACAROON)
+        else lndClient.setCredentials(LND_SOCKET, LND_MACAROON, LND_TLS_CERT)
         let lightning = lndClient.lightning()
         let invoicesClient = lndClient.invoice()
         // attempt a get info call, this will fail if wallet is still locked
