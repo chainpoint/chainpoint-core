@@ -216,20 +216,13 @@ func (app *AnchorApplication) LoadIdentity() error {
 	return nil
 }
 
-func (app *AnchorApplication) IsTestNetMigration() bool {
-	if app.config.BitcoinNetwork == "testnet" && (app.state.Height > 16000){
-		return true
-	}
-	return false
-}
-
 //VerifyIdentity : Verify that a channel exists only if we're a validator and the chain is synced
 func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	app.logger.Info(fmt.Sprintf("Verifying Identity for %#v", tx))
 	// Verification only matters to the chain if the chain is synced and we're a validator.
 	// If we're the first validator, we accept by default.
 	_, alreadyExists := app.state.CoreKeys[tx.CoreID]
-	if app.state.ChainSynced && app.state.AmValidator && (app.IsTestNetMigration() || !alreadyExists) && app.ID != tx.CoreID {
+	if app.state.ChainSynced && app.state.AmValidator && !alreadyExists && app.ID != tx.CoreID {
 		lnID := types.LnIdentity{}
 		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
 			return false
@@ -249,9 +242,11 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			app.logger.Info("Channel not open, rejecting")
 			return false
 		}
+	} else if (app.state.ChainSynced){
+		return true
 	}
-	app.logger.Info("Identity", "alreadyExists", alreadyExists)
-	return (app.IsTestNetMigration() || !alreadyExists)
+	app.logger.Info("JWK Identity", "alreadyExists", alreadyExists)
+	return !alreadyExists
 }
 
 //SaveIdentity : save the JWT value retrieved
