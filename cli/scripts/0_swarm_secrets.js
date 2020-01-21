@@ -91,10 +91,16 @@ async function createSwarmAndSecrets(valuePairs) {
       )
       let lightning = lndClient.lightning()
       address = await lightning.newAddressAsync({ type: 0 })
-      console.log(chalk.green(`\nPlease save the following values in a safe place:\n`))
+      console.log(chalk.green(`\n****************************************************`))
+      console.log(chalk.green(`Lightning initialization has completed successfully.`))
+      console.log(chalk.green(`****************************************************\n`))
       console.log(chalk.yellow(`\nLightning Wallet Password: ${lndWalletPass}`))
       console.log(chalk.yellow(`\nLightning Wallet Seed: ${seed.cipher_seed_mnemonic.join(' ')}`))
       console.log(chalk.yellow(`\nLightning Wallet Address: ${address.address}\n`))
+      console.log(chalk.magenta(`\n******************************************************`))
+      console.log(chalk.magenta(`You should back up this information in a secure place.`))
+      console.log(chalk.magenta(`******************************************************\n\n`))
+      console.log(chalk.green(`\nPlease fund the Lightning Wallet Address above with Bitcoin and wait for 6 confirmation before running 'make deploy'\n`))
     }
   } catch (err) {
     console.log(chalk.red(`LND setup error: ${err}`))

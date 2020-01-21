@@ -137,6 +137,11 @@ clean: down
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
 	@docker system prune --volumes -f
 
+## install-deps              : Install system dependencies
+install-deps:
+	cli/scripts/install_deps.sh
+	echo "Please logout and login to allow your user to use docker"
+
 ## init-volumes              : Create data folder with proper permissions
 .PHONY : init-volumes
 init-volumes:
