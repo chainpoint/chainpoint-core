@@ -209,7 +209,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 			X:     x,
 			Y:     y,
 		}
-		app.logger.Info(fmt.Sprintf("Setting JWK for Core %s: %s", coreID, b64Str))
+		app.logger.Info(fmt.Sprintf("Setting JWK Identity for Core %s: %s", coreID, b64Str))
 		app.state.CoreKeys[coreID] = pubKey
 		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.NewTxValidation()
 	}
@@ -218,7 +218,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 
 //VerifyIdentity : Verify that a channel exists only if we're a validator and the chain is synced
 func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
-	app.logger.Info(fmt.Sprintf("Verifying Identity for %#v", tx))
+	app.logger.Info(fmt.Sprintf("Verifying JWK Identity for %#v", tx))
 	// Verification only matters to the chain if the chain is synced and we're a validator.
 	// If we're the first validator, we accept by default.
 	_, alreadyExists := app.state.CoreKeys[tx.CoreID]
@@ -227,19 +227,19 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
 			return false
 		}
-		app.logger.Info("Checking if the incoming Identity is from a validator")
+		app.logger.Info("Checking if the incoming JWK Identity is from a validator")
 		isVal, err := app.IsValidator(tx.CoreID)
 		app.LogError(err)
 		if isVal {
 			return true
 		}
-		app.logger.Info("Checking Channel Funding")
+		app.logger.Info("JWK Identity: Checking Channel Funding")
 		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
 		if app.LogError(err) == nil && chanExists {
-			app.logger.Info("Channel Open and Funded")
+			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true
 		} else {
-			app.logger.Info("Channel not open, rejecting")
+			app.logger.Info("JWK Identity: Channel not open, rejecting")
 			return false
 		}
 	} else if (!app.state.ChainSynced){
