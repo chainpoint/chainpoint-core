@@ -59,7 +59,7 @@ func (app *AnchorApplication) SyncMonitor() {
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
 func (app *AnchorApplication) StakeIdentity() {
-	for app.JWKSent != true {
+	for app.state.JWKStaked != true {
 		time.Sleep(60 * time.Second)
 		if _, exists := app.state.CoreKeys[app.ID]; exists {
 			app.logger.Info("This node is already staked")
@@ -257,7 +257,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
 	if jwkType.Kid == app.JWK.Kid {
 		app.logger.Info("JWK keysync tx committed")
-		app.JWKSent = true
+		app.state.JWKStaked = true
 	}
 	jsonJwk, err := json.Marshal(jwkType)
 	if app.LogError(err) != nil {

@@ -85,7 +85,6 @@ type AnchorApplication struct {
 	rpc                  *RPC
 	ID                   string
 	JWK                  types.Jwk
-	JWKSent              bool
 }
 
 //NewAnchorApplication is ABCI app constructor
