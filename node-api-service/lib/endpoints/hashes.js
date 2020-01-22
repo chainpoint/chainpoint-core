@@ -235,7 +235,7 @@ async function parsePostHashRequest(req, res, next) {
       return res.send({ error: { message: 'Payment Required' } })
     } catch (e) {
       logger.error('Could not generate HODL lsat:', e)
-      return next('Could not generate new LSAT')
+      return next(new errors.InternalServerError('There was a problem generating your request.'))
     }
   } else {
     try {
@@ -274,7 +274,7 @@ async function parsePostHashRequest(req, res, next) {
       return next()
     } catch (e) {
       logger.error('Invalid LSAT provided in Authorization header:', e)
-      next('Unable to generate a valid LSAT from request Authorization header')
+      return next(new errors.UnauthorizedError('Invalid LSAT provided in Authorization header'))
     }
   }
 }
