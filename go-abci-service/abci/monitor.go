@@ -100,7 +100,7 @@ func (app *AnchorApplication) StakeIdentity() {
 					}
 				} else {
 					waitForValidators = true
-					break
+					continue
 				}
 			}
 			if waitForValidators {
@@ -146,7 +146,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			return
 		}
 	}
-	panic(errors.New("Cannot broadcast Core public key"))
+	app.LogError(errors.New("Cannot broadcast Core public key- already present in state of chain?"))
 }
 
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
@@ -209,49 +209,45 @@ func (app *AnchorApplication) LoadIdentity() error {
 			X:     x,
 			Y:     y,
 		}
-		app.logger.Info(fmt.Sprintf("Setting JWK for Core %s: %s", coreID, b64Str))
+		app.logger.Info(fmt.Sprintf("Setting JWK Identity for Core %s: %s", coreID, b64Str))
 		app.state.CoreKeys[coreID] = pubKey
 		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.NewTxValidation()
 	}
 	return nil
 }
 
-func (app *AnchorApplication) IsTestNetMigration() bool {
-	if app.config.BitcoinNetwork == "testnet" && (app.state.Height > 16000){
-		return true
-	}
-	return false
-}
-
 //VerifyIdentity : Verify that a channel exists only if we're a validator and the chain is synced
 func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
-	app.logger.Info(fmt.Sprintf("Verifying Identity for %#v", tx))
+	app.logger.Info(fmt.Sprintf("Verifying JWK Identity for %#v", tx))
 	// Verification only matters to the chain if the chain is synced and we're a validator.
 	// If we're the first validator, we accept by default.
 	_, alreadyExists := app.state.CoreKeys[tx.CoreID]
-	if app.state.ChainSynced && app.state.AmValidator && (app.IsTestNetMigration() || alreadyExists) && app.ID != tx.CoreID {
+	if app.state.ChainSynced && app.state.AmValidator && !alreadyExists && app.ID != tx.CoreID {
 		lnID := types.LnIdentity{}
 		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
 			return false
 		}
-		app.logger.Info("Checking if the incoming Identity is from a validator")
+		app.logger.Info("Checking if the incoming JWK Identity is from a validator")
 		isVal, err := app.IsValidator(tx.CoreID)
 		app.LogError(err)
 		if isVal {
 			return true
 		}
-		app.logger.Info("Checking Channel Funding")
+		app.logger.Info("JWK Identity: Checking Channel Funding")
 		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
 		if app.LogError(err) == nil && chanExists {
-			app.logger.Info("Channel Open and Funded")
+			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true
 		} else {
-			app.logger.Info("Channel not open, rejecting")
+			app.logger.Info("JWK Identity: Channel not open, rejecting")
 			return false
 		}
+	} else if (!app.state.ChainSynced){
+		// we're fast-syncing, so agree with the prior chainstate
+		return true
 	}
-	app.logger.Info("Identity", "alreadyExists", alreadyExists)
-	return (app.IsTestNetMigration() || !alreadyExists)
+	app.logger.Info("JWK Identity", "alreadyExists", alreadyExists)
+	return !alreadyExists
 }
 
 //SaveIdentity : save the JWT value retrieved

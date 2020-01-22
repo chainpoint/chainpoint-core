@@ -55,6 +55,9 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 			app.state.LatestBtccTx = []byte(tx.Data)
 		}
 	}
+	if tx.TxType == "JWK" && !app.VerifyIdentity(tx) {
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+	}
 	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
 }
 
@@ -121,10 +124,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		break
 	case "JWK":
-		if app.VerifyIdentity(tx) {
-			app.logger.Info("Saving Identity", "CORE ID", tx.CoreID)
-			app.SaveIdentity(tx)
-			app.logger.Info("Identity Saved")
+		if app.LogError(app.SaveIdentity(tx)) == nil {
 			tags = app.incrementTxInt(tags)
 			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
 			break
