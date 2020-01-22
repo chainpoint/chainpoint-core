@@ -16,7 +16,7 @@
     "async-retry": "^1.2.3",
     "bignumber.js": "^8.1.1",
     "blake2s-js": "^1.2.2",
-    "boltwall": "^5.0.6",
+    "boltwall": "^5.0.7",
     "chainpoint-parse": "^4.0.0",
     "envalid": "^5.0.0",
     "eslint-plugin-prettier": "^3.0.1",
