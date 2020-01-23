@@ -154,6 +154,8 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 			var nistBuffer bytes.Buffer
 			nistBuffer.WriteString(fmt.Sprintf("nistv2:%s", nist))
 			newHash = sha256.Sum256(append(nistBuffer.Bytes(), hashBytes...))
+		}else {
+			copy(newHash[:], hashBytes)
 		}
 		hashSlice = append(hashSlice, newHash[:])
 	}
