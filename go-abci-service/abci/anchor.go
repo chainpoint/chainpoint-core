@@ -126,6 +126,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 			},
 		},
 	}
+	app.logger.Info(fmt.Sprintf("BtcTx State Obj: %#v", stateObj))
 	dataJSON, err := json.Marshal(stateObj)
 	if app.LogError(err) != nil {
 		return err

@@ -170,6 +170,7 @@ func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClien
 		BtcTxID:          txid,
 	}
 	btcJSON, err := json.Marshal(msgBtcMon)
+	calendar.Logger.Info(fmt.Sprint("Sending BTC-A OP_RETURN: %#v", msgBtcMon))
 	if util.LogError(err) != nil {
 		return err
 	}
