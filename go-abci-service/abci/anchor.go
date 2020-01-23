@@ -23,13 +23,14 @@ func (app *AnchorApplication) AggregateCalendar() error {
 
 	// Get agg objects
 	aggs := app.aggregator.AggregateAndReset()
-	app.logger.Debug(fmt.Sprintf("Aggregated %d roots", len(aggs)))
+	app.logger.Debug(fmt.Sprintf("Aggregated %d roots: ", len(aggs)))
+	app.logger.Debug(fmt.Sprintf("Aggregation Tree: %#v", aggs))
 
 	// Pass the agg objects to generate a calendar tree
 	calAgg := app.calendar.GenerateCalendarTree(aggs)
 	if calAgg.CalRoot != "" {
 		app.logger.Info(fmt.Sprintf("Calendar Root: %s", calAgg.CalRoot))
-
+		app.logger.Debug(fmt.Sprintf("Calendar Tree: %#v", calAgg))
 		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			return err

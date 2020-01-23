@@ -66,7 +66,7 @@ func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.C
 		}
 		treeDataObj.ProofData[i] = proofData
 	}
-	//calendar.Logger.Info(fmt.Sprintf("AggTree Input: %#v\nCalTree Output: %#v\n", aggs, treeDataObj))
+	calendar.Logger.Info(fmt.Sprintf("AggTree Input: %#v\nCalTree Output: %#v\n", aggs, treeDataObj))
 	return treeDataObj
 }
 

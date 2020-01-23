@@ -202,6 +202,7 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 		proofSlice = append(proofSlice, proofData)
 	}
 	agg.ProofData = proofSlice
+	aggregator.Logger.Debug(fmt.Sprintf("Aggregated: %#v", agg))
 
 	//Publish to proof-state service
 	aggJSON, err := json.Marshal(agg)
