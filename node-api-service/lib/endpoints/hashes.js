@@ -249,18 +249,31 @@ async function parsePostHashRequest(req, res, next) {
 
       // determine if the invoice is held. Unpaid invoices, should return a 402
       // since they still require payment before they can be allowed through
-      const isHeld = invoice.state === 'ACCEPTED' && !invoice.settled
       if (invoice.state === 'SETTLED') {
         return next(
           new errors.UnauthorizedError(
             'Unauthorized: Invoice has already been settled. Try again with a different LSAT'
           )
         )
-      } else if (!isHeld) {
+      } else if (invoice.state === 'OPEN') {
+        logger.warn(`Request made for open LSAT: invoice: ${lsat.paymentHash}`)
         lsat.addInvoice(invoice.payment_request)
         res.set('www-authenticate', lsat.toChallenge())
         res.status(402)
         return res.send({ error: { message: 'Payment Required' } })
+      } else if (invoice.state === 'CANCELED') {
+        return next(
+          new errors.UnauthorizedError(
+            'Unauthorized: Invoice has expired or been canceled. Try again with a different LSAT'
+          )
+        )
+      } else if (invoice.state !== 'ACCEPTED') {
+        logger.error(
+          `LSAT invoice in unknown state, should be one of: OPEN, SETTLED, ACCEPTED, or CANCELED. Instead was ${
+            invoice.state
+          }`
+        )
+        return next(new errors.InternalServerError('Could not check invoice state. Contact core administrator'))
       }
 
       // if the invoice exists and has been paid, then the LSAT just needs the
