@@ -245,19 +245,17 @@ async function parsePostHashRequest(req, res, next) {
       })
 
       // no invoice found, then return a 404
-      if (!invoice) {
-        res.status(404)
-        return res.send({ error: { message: 'Unable to locate invoice for that LSAT' } })
-      }
+      if (!invoice) return next(new errors.NotFoundError({ message: 'Unable to locate invoice for that LSAT' }))
 
       // determine if the invoice is held. Unpaid invoices, should return a 402
       // since they still require payment before they can be allowed through
       const isHeld = invoice.state === 'ACCEPTED' && !invoice.settled
       if (invoice.state === 'SETTLED') {
-        res.status(401)
-        return res.send({
-          error: { message: 'Unauthorized: Invoice has already been settled. Try again with a different LSAT' }
-        })
+        return next(
+          new errors.UnauthorizedError(
+            'Unauthorized: Invoice has already been settled. Try again with a different LSAT'
+          )
+        )
       } else if (!isHeld) {
         lsat.addInvoice(invoice.payment_request)
         res.set('www-authenticate', lsat.toChallenge())
@@ -273,8 +271,12 @@ async function parsePostHashRequest(req, res, next) {
       req.headers.authorization = lsat.toToken()
       return next()
     } catch (e) {
-      logger.error('Invalid LSAT provided in Authorization header:', e)
-      return next(new errors.UnauthorizedError('Invalid LSAT provided in Authorization header'))
+      let error = ''
+      if (typeof e === 'string') error = e
+      else if (e.message) error = e.message
+      const message = `Invalid LSAT provided in Authorization header: ${error}`
+      logger.error(message)
+      return next(new errors.InvalidHeaderError(message))
     }
   }
 }
