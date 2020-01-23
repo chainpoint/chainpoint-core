@@ -167,20 +167,36 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	if len(anchoringCoreID) == 0 {
 		app.logger.Error(fmt.Sprintf("Anchor: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
 	}
-	// Broadcast the confirmation message with metadata
-	result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
-	time.Sleep(1 * time.Minute) // wait until it hits the mempool
-	if app.LogError(err) != nil {
-		app.logger.Error(fmt.Sprintf("Anchor: Another core has probably already committed a BTCC tx: %s", err.Error()))
-		txResult, err := app.rpc.GetTxByInt(app.state.LatestBtccTxInt)
-		if app.LogError(err) != nil && len(txResult.Txs) > 0 {
-			hash = txResult.Txs[0].Hash
-		} else {
-			return err
+
+	deadline := time.Now().Add(time.Duration(4) * time.Minute)
+	for !time.Now().After(deadline) {
+		// Broadcast the confirmation message with metadata
+		amLeader, _ := app.ElectValidator(1)
+		if amLeader {
+			result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
+			app.LogError(err)
+			app.logger.Info(fmt.Sprint("BTC-C Hash: %#v", result.Hash))
 		}
-	} else {
-		hash = result.Hash
+		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
+		app.logger.Error(fmt.Sprintf("Anchor: Another core has probably already committed a BTCC tx: %s", err.Error()))
+		btccQueryLine := fmt.Sprintf("BTCC='%s'", btcMonObj.BtcHeadRoot)
+		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25)
+		if app.LogError(err) == nil {
+			for _, tx := range txResult.Txs {
+				hash = tx.Hash
+				if app.LogError(err) != nil {
+					continue;
+				} else {
+					app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
+					break;
+				}
+			}
+			if len(hash) > 0 {
+				break;
+			}
+		}
 	}
+
 	var btccStateObj types.BtccStateObj
 	btccStateObj.BtcTxID = btcMonObj.BtcTxID
 	btccStateObj.BtcHeadHeight = btcMonObj.BtcHeadHeight
@@ -201,7 +217,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 		Uris:     []string{uri},
 	}
 	stateObjBytes, err := json.Marshal(btccStateObj)
-
+	app.logger.Info("Completed AnchorStateObj: %s", string(stateObjBytes))
 	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.proofstate", "btcmon", stateObjBytes)
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
