@@ -200,7 +200,7 @@ async function openRMQConnectionAsync(connectURI) {
   )
 }
 
-async function startTransactionMonitoring() {
+async function openLightningConnection() {
   let connectionEstablished = false
   if (!LND_TLS_CERT && !fs.existsSync(LND_TLS_CERT)) {
     logger.warn(`LND TLS Cert not found or not yet generated. Trying without...`)
@@ -226,7 +226,7 @@ async function startTransactionMonitoring() {
       connectionEstablished = true
     } catch (error) {
       // catch errors when attempting to connect and establish invoice subscription
-      logger.error(`Transaction monitoring : ${error.message} : Retrying in 5 seconds...`)
+      logger.error(`LND connection : ${error.message} : Retrying in 5 seconds...`)
       await utils.sleepAsync(5000)
     }
   }
@@ -245,7 +245,7 @@ async function start() {
     // Init Restify
     await startAPIServerAsync()
     // Init listening for lnd transaction update events
-    await startTransactionMonitoring()
+    await openLightningConnection()
     logger.info(`Startup completed successfully`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)
