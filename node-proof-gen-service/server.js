@@ -154,9 +154,7 @@ async function consumeProofReadyMessageAsync(msg) {
           // all the anchorBTCAggIds should be the same, all being the event id for this btc transaction
           // use the first one as the identifier to retrieve the remaining 1-to-1 state
           let anchorBTCAggId = anchorBTCAggIds[0]
-          logger.info("anchorBTCAggId: " + JSON.stringify(anchorBTCAggIds))
           btcTxStateRow = await cachedProofState.getBTCTxStateObjectByAnchorBTCAggIdAsync(anchorBTCAggId)
-          logger.info("btcTxStateRow: " + JSON.stringify(btcTxStateRow))
           btcHeadStateRow = await cachedProofState.getBTCHeadStateObjectByBTCTxIdAsync(btcTxStateRow.btctx_id)
         } catch (error) {
           logger.error(`Unrecoverable proof state read error for proof_ids ${proofIds} : ${error.message}`)
@@ -177,8 +175,6 @@ async function consumeProofReadyMessageAsync(msg) {
 
         let btcTxState = JSON.parse(btcTxStateRow.btctx_state)
         let btcHeadState = JSON.parse(btcHeadStateRow.btchead_state)
-        logger.info("btcTxState: " + JSON.stringify(btcTxState))
-        logger.info("btcHeadState: " + JSON.stringify(btcHeadState))
 
         let proofs = aggStateRows
           .map(aggStateRow => {
@@ -205,7 +201,7 @@ async function consumeProofReadyMessageAsync(msg) {
             return proof
           })
           .filter(proof => proof !== null)
-        logger.info("proofs: " + JSON.stringify(proofs))
+
         await storeProofsAsync(proofs, 'btc_batch')
 
         // Proof ready message has been consumed, ack consumption of original message
