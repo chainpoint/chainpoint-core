@@ -175,10 +175,9 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 		if amLeader {
 			result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
 			app.LogError(err)
-			app.logger.Info(fmt.Sprint("BTC-C Hash: %#v", result.Hash))
+			app.logger.Info(fmt.Sprint("BTC-C Hash: %v", result.Hash))
 		}
 		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
-		app.logger.Error(fmt.Sprintf("Anchor: Another core has probably already committed a BTCC tx: %s", err.Error()))
 		btccQueryLine := fmt.Sprintf("BTCC='%s'", btcMonObj.BtcHeadRoot)
 		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25)
 		if app.LogError(err) == nil {
