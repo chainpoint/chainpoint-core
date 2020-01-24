@@ -143,22 +143,19 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 			continue
 		}
 		hashStructSlice = append(hashStructSlice, unPackedHashItem)
-		var buffer bytes.Buffer
 
-		//concatenate hash
+		//decode hash to bytes and concatenate onto nist bytes
 		hashBytes, _ := hex.DecodeString(unPackedHashItem.Hash)
-		_, err := buffer.Write(hashBytes)
-
-		rabbitmq.LogError(err, "failed to write hashes to byte buffer")
 
 		//Create checksum
-		newHash := sha256.Sum256(buffer.Bytes())
+		var newHash [32]byte
 
 		if nist != "" {
 			var nistBuffer bytes.Buffer
 			nistBuffer.WriteString(fmt.Sprintf("nistv2:%s", nist))
-			nistBuffer.Write(newHash[:])
-			newHash = sha256.Sum256(nistBuffer.Bytes())
+			newHash = sha256.Sum256(append(nistBuffer.Bytes(), hashBytes...))
+		}else {
+			copy(newHash[:], hashBytes)
 		}
 		hashSlice = append(hashSlice, newHash[:])
 	}
@@ -202,6 +199,7 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 		proofSlice = append(proofSlice, proofData)
 	}
 	agg.ProofData = proofSlice
+	aggregator.Logger.Debug(fmt.Sprintf("Aggregated: %#v", agg))
 
 	//Publish to proof-state service
 	aggJSON, err := json.Marshal(agg)
