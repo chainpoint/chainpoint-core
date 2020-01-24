@@ -82,6 +82,7 @@ type AnchorState struct {
 	CoreKeys         map[string]ecdsa.PublicKey `json:"-"`
 	LnUris           map[string]LnIdentity      `json:"lightning_identities"`
 	ChainSynced      bool
+	JWKStaked		 bool
 	LatestNistRecord string
 }
 

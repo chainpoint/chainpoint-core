@@ -109,6 +109,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		app.state.LatestBtccHeight = app.state.Height + 1
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtccTxInt = app.state.TxInt
+		tags = append(tags, common.KVPair{Key: []byte("BTCC"), Value: []byte(tx.Data)})
 		meta := strings.Split(tx.Meta, "|") // first part of meta is core ID that issued TX, second part is BTC TX ID
 		if len(meta) > 0 {
 			app.state.LastAnchorCoreID = meta[0]

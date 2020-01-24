@@ -1,6 +1,7 @@
 package lightning
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcd/wire"
 
 	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
 
@@ -364,5 +366,13 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	if ln.LoggerError(err) != nil {
 		return "", "", err
 	}
-	return tx.Hash().String(), hex.EncodeToString(resp.RawTx), nil
+	var msgTx wire.MsgTx
+	if ln.LoggerError(msgTx.BtcDecode(bytes.NewReader(resp.RawTx), 0, wire.WitnessEncoding)); err != nil {
+		return "", "", err
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, msgTx.SerializeSizeStripped()))
+	if ln.LoggerError(msgTx.SerializeNoWitness(buf)); err != nil {
+		return "", "", err
+	}
+	return tx.Hash().String(), hex.EncodeToString(buf.Bytes()), nil
 }
