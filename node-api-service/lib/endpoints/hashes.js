@@ -235,7 +235,7 @@ async function parsePostHashRequest(req, res, next) {
       return res.send({ error: { message: 'Payment Required' } })
     } catch (e) {
       logger.error('Could not generate HODL lsat:', e)
-      return next('Could not generate new LSAT')
+      return next(new errors.InternalServerError('There was a problem generating your request.'))
     }
   } else {
     try {
@@ -245,24 +245,35 @@ async function parsePostHashRequest(req, res, next) {
       })
 
       // no invoice found, then return a 404
-      if (!invoice) {
-        res.status(404)
-        return res.send({ error: { message: 'Unable to locate invoice for that LSAT' } })
-      }
+      if (!invoice) return next(new errors.NotFoundError({ message: 'Unable to locate invoice for that LSAT' }))
 
       // determine if the invoice is held. Unpaid invoices, should return a 402
       // since they still require payment before they can be allowed through
-      const isHeld = invoice.state === 'ACCEPTED' && !invoice.settled
       if (invoice.state === 'SETTLED') {
-        res.status(401)
-        return res.send({
-          error: { message: 'Unauthorized: Invoice has already been settled. Try again with a different LSAT' }
-        })
-      } else if (!isHeld) {
+        return next(
+          new errors.UnauthorizedError(
+            'Unauthorized: Invoice has already been settled. Try again with a different LSAT'
+          )
+        )
+      } else if (invoice.state === 'OPEN') {
+        logger.warn(`Request made for open LSAT: invoice: ${lsat.paymentHash}`)
         lsat.addInvoice(invoice.payment_request)
         res.set('www-authenticate', lsat.toChallenge())
         res.status(402)
         return res.send({ error: { message: 'Payment Required' } })
+      } else if (invoice.state === 'CANCELED') {
+        return next(
+          new errors.UnauthorizedError(
+            'Unauthorized: Invoice has expired or been canceled. Try again with a different LSAT'
+          )
+        )
+      } else if (invoice.state !== 'ACCEPTED') {
+        logger.error(
+          `LSAT invoice in unknown state, should be one of: OPEN, SETTLED, ACCEPTED, or CANCELED. Instead was ${
+            invoice.state
+          }`
+        )
+        return next(new errors.InternalServerError('Could not check invoice state. Contact core administrator'))
       }
 
       // if the invoice exists and has been paid, then the LSAT just needs the
@@ -273,8 +284,12 @@ async function parsePostHashRequest(req, res, next) {
       req.headers.authorization = lsat.toToken()
       return next()
     } catch (e) {
-      logger.error('Invalid LSAT provided in Authorization header:', e)
-      next('Unable to generate a valid LSAT from request Authorization header')
+      let error = ''
+      if (typeof e === 'string') error = e
+      else if (e.message) error = e.message
+      const message = `Invalid LSAT provided in Authorization header: ${error}`
+      logger.error(message)
+      return next(new errors.InvalidHeaderError(message))
     }
   }
 }

@@ -677,10 +677,10 @@ bolt11@^1.2.7:
     safe-buffer "^5.1.1"
     secp256k1 "^3.4.0"
 
-boltwall@^5.0.6:
-  version "5.0.6"
-  resolved "https://registry.yarnpkg.com/boltwall/-/boltwall-5.0.6.tgz#d92ddf7a17c6bcef00181d8025f13cdbe5bca251"
-  integrity sha512-kzbKH+fq/7yF7LfHigJZkWsHokGYUu9eeQICqXkS3bmfNTXcX4+kHZd1pA92eATcG3lGTGjCILeWBLXuqI9KnA==
+boltwall@^5.0.7:
+  version "5.0.7"
+  resolved "https://registry.yarnpkg.com/boltwall/-/boltwall-5.0.7.tgz#c2c4a086cd5505dbf63915dffa70f2d0b8fe01da"
+  integrity sha512-FE6RlnMz8nywA8NmzZymHBVLc0Lht949aquxh8a8oCpzaBWqPZBfTPNQaH/J0H90h/rfpkgkvpnf0Cz40WqXcQ==
   dependencies:
     "@zeit/ncc" "^0.21.0"
     binet "^0.3.5"

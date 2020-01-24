@@ -302,6 +302,7 @@ describe.only('Hashes Controller', () => {
       hashes.setLND({
         lookupInvoiceAsync: () => ({
           settled: false,
+          state: 'OPEN',
           payment_request: invoice.payreq
         })
       })
