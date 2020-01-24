@@ -195,7 +195,7 @@ async function ConsumeBtcMonMessageAsync(msg) {
   stateObj.btctx_id = messageObj.btctx_id
   stateObj.btchead_height = messageObj.btchead_height
   stateObj.btchead_state = messageObj.btchead_state
-
+  logger.info("btcStateObj: " + msg.content.toString())
   try {
     // Get all the proof_ids included in this btc_tx
     let proofIdRows = await cachedProofState.getProofIdsByBtcTxIdAsync(stateObj.btctx_id)
