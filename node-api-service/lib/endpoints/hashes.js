@@ -142,7 +142,7 @@ function generateProcessingHints(timestampDate) {
  * This is split into its own middleware so we can reject requests with invalid hashes
  * before even making a request to boltwall which requires extra async requests
  */
-async function validatePostHashRequest(req, res, next) {
+function validatePostHashRequest(req, res, next) {
   // validate content-type sent was 'application/json'
   if (req.contentType() !== 'application/json') {
     return next(new errors.InvalidArgumentError('invalid content type'))
@@ -171,7 +171,7 @@ async function validatePostHashRequest(req, res, next) {
 
   let submittingIP = utils.getClientIP(req)
   if (env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
-    return await postHashV1Async(req, res, next)
+    return postHashV1Async(req, res, next)
   }
 
   return next()
