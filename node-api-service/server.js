@@ -26,12 +26,14 @@ const peers = require('./lib/endpoints/peers.js')
 const proofs = require('./lib/endpoints/proofs.js')
 const status = require('./lib/endpoints/status.js')
 const root = require('./lib/endpoints/root.js')
+const accounting = require('./lib/endpoints/accounting.js')
 const connections = require('./lib/connections.js')
 const proof = require('./lib/models/Proof.js')
 const tmRpc = require('./lib/tendermint-rpc.js')
 const logger = require('./lib/logger.js')
 const utils = require('./lib/utils.js')
 const lndClient = require('lnrpc-node-client')
+const { authenticatedLndGrpc } = require('ln-service')
 const fs = require('fs')
 
 const { LND_SOCKET, LND_TLS_CERT, LND_MACAROON } = env
@@ -144,6 +146,14 @@ function setupRestifyConfigAndRoutes(server) {
     ...applyProductionMiddleware([throttle(15, 3)]),
     status.getCoreStatusAsync
   )
+
+  // get accounting report
+  server.get(
+    { path: '/accounting', version: '1.0.0' },
+    ...applyProductionMiddleware([throttle(15, 3)]),
+    accounting.getAccountingReport
+  )
+
   // teapot
   server.get({ path: '/', version: '1.0.0' }, root.getV1)
 }
@@ -213,11 +223,17 @@ async function openLightningConnection() {
         else lndClient.setCredentials(LND_SOCKET, LND_MACAROON, LND_TLS_CERT)
         let lightning = lndClient.lightning()
         let invoicesClient = lndClient.invoice()
+        let { lnd } = authenticatedLndGrpc({
+          cert: LND_TLS_CERT,
+          macaroon: LND_MACAROON,
+          socket: LND_SOCKET
+        })
         // attempt a get info call, this will fail if wallet is still locked
         await lightning.getInfoAsync({})
         hashes.setLND(lightning)
+        accounting.setLND(lnd)
         hashes.setInvoiceClient(invoicesClient)
-        status.setLND(lightning)
+        status.setLND(lndClient)
       } catch (error) {
         let message = error.message
         if (error.code === 12) message = 'Wallet locked'

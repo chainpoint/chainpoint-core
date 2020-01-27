@@ -21,6 +21,7 @@
     "envalid": "^5.0.0",
     "eslint-plugin-prettier": "^3.0.1",
     "ip": "^1.1.5",
+    "ln-accounting": "^3.1.8",
     "lnrpc-node-client": "^1.1.2",
     "lodash": "^4.17.4",
     "lsat-js": "^1.0.6",
