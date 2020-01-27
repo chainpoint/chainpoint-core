@@ -170,7 +170,7 @@ function validatePostHashRequest(req, res, next) {
   }
 
   let submittingIP = utils.getClientIP(req)
-  if (env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
+  if (env.AGGREGATOR_WHITELIST && env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
     return postHashV1Async(req, res, next)
   }
 
