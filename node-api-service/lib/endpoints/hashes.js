@@ -142,7 +142,7 @@ function generateProcessingHints(timestampDate) {
  * This is split into its own middleware so we can reject requests with invalid hashes
  * before even making a request to boltwall which requires extra async requests
  */
-function validatePostHashRequest(req, res, next) {
+async function validatePostHashRequest(req, res, next) {
   // validate content-type sent was 'application/json'
   if (req.contentType() !== 'application/json') {
     return next(new errors.InvalidArgumentError('invalid content type'))
@@ -167,6 +167,11 @@ function validatePostHashRequest(req, res, next) {
   // validate amqp channel has been established
   if (!amqpChannel) {
     return next(new errors.InternalServerError('Message could not be delivered'))
+  }
+
+  let submittingIP = utils.getClientIP(req)
+  if (env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
+    return await postHashV1Async(req, res, next)
   }
 
   return next()
