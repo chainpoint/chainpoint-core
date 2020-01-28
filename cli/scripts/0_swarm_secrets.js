@@ -22,6 +22,7 @@ const lndClient = require('lnrpc-node-client')
 const updateOrCreateEnv = require('./2_update_env')
 const utils = require(resolve('./node-lib/lib/utils.js'))
 const home = require('os').homedir()
+const crypto = require('crypto')
 
 async function createSwarmAndSecrets(valuePairs) {
   let address = { address: valuePairs.HOT_WALLET_ADDRESS }
@@ -100,7 +101,11 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(chalk.magenta(`\n******************************************************`))
       console.log(chalk.magenta(`You should back up this information in a secure place.`))
       console.log(chalk.magenta(`******************************************************\n\n`))
-      console.log(chalk.green(`\nPlease fund the Lightning Wallet Address above with Bitcoin and wait for 6 confirmation before running 'make deploy'\n`))
+      console.log(
+        chalk.green(
+          `\nPlease fund the Lightning Wallet Address above with Bitcoin and wait for 6 confirmation before running 'make deploy'\n`
+        )
+      )
     }
   } catch (err) {
     console.log(chalk.red(`LND setup error: ${err}`))
@@ -117,6 +122,15 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(chalk.red(`Could not exec docker secret creation: ${err}`))
       return
     }
+  }
+
+  // set session secret to be used for LSAT macaroon signing
+  try {
+    const secret = crypto.randomBytes(32).toString('hex')
+    await exec.quiet([`printf ${secret} | docker secret create SESSION_SECRET -`])
+  } catch (err) {
+    console.log(chalk.red(`Could not exec docker secret creation: ${err}`))
+    return
   }
 
   try {

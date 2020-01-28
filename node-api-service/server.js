@@ -34,9 +34,7 @@ const utils = require('./lib/utils.js')
 const lndClient = require('lnrpc-node-client')
 const fs = require('fs')
 
-const LND_SOCKET = env.LND_SOCKET
-const LND_CERTPATH = `/root/.lnd/tls.cert`
-const LND_MACAROONPATH = `/root/.lnd/data/chain/bitcoin/${env.NETWORK}/admin.macaroon`
+const { LND_SOCKET, LND_TLS_CERT, LND_MACAROON } = env
 
 const applyProductionMiddleware = (middlewares = []) => {
   if (process.env.NODE_ENV === 'development' || process.env.NETWORK === 'testnet') {
@@ -52,8 +50,8 @@ let throttle = (burst, rate, opts = { ip: true }) => {
 
 function setupRestifyConfigAndRoutes(server) {
   // LOG EVERY REQUEST
-  // server.pre(function (request, response, next) {
-  //   request.log.info({ req: [request.url, request.method, request.rawHeaders] }, 'API-REQUEST')
+  // server.pre(function(request, response, next) {
+  //   logger.info(`req: ${request.method} ${request.url}`, 'API-REQUEST')
   //   next()
   // })
 
@@ -92,24 +90,40 @@ function setupRestifyConfigAndRoutes(server) {
 
   // API RESOURCES
 
-  // get hash invoice
+  // retrieve information associated with an LSAT attached in the header
   server.get(
-    { path: '/hash/invoice', version: '1.0.0' },
+    { path: '/boltwall/invoice', version: '1.0.0' },
     ...applyProductionMiddleware([throttle(5, 1)]),
-    hashes.getHashInvoiceV1Async
+    hashes.boltwall
   )
-  // submit hash
+
+  // retrieve basic information about the node that will be receiving
+  // payments for hash submissions
+  server.get(
+    { path: '/boltwall/node', version: '1.0.0' },
+    ...applyProductionMiddleware([throttle(5, 1)]),
+    hashes.boltwall
+  )
+
+  // boltwall protected hash submission
+  // if no hodl invoice has been requested or a requested one has not been
+  // paid then this will fail
   server.post(
     { path: '/hash', version: '1.0.0' },
     ...applyProductionMiddleware([throttle(5, 1)]),
+    hashes.validatePostHashRequest,
+    hashes.parsePostHashRequest,
+    hashes.boltwall,
     hashes.postHashV1Async
   )
+
   // get the block objects for the calendar in the specified block range
   server.get(
     { path: '/calendar/:txid', version: '1.0.0' },
     ...applyProductionMiddleware([throttle(50, 10)]),
     calendar.getCalTxAsync
   )
+
   // get the data value of a txId
   server.get(
     { path: '/calendar/:txid/data', version: '1.0.0' },
@@ -142,26 +156,6 @@ async function startAPIServerAsync() {
   // Begin listening for requests
   await connections.listenRestifyAsync(restifyServer, 8080)
   return restifyServer
-}
-
-/**
- * Opens a Redis connection
- *
- * @param {string} redisURI - The connection string for the Redis instance, an Redis URI
- */
-function openRedisConnection(redisURIs) {
-  connections.openRedisConnection(
-    redisURIs,
-    newRedis => {
-      hashes.setRedis(newRedis)
-    },
-    () => {
-      hashes.setRedis(null)
-      setTimeout(() => {
-        openRedisConnection(redisURIs)
-      }, 5000)
-    }
-  )
 }
 
 /**
@@ -206,53 +200,35 @@ async function openRMQConnectionAsync(connectURI) {
   )
 }
 
-async function startTransactionMonitoring() {
-  let subscriptionEstablished = false
-  if (!fs.existsSync(LND_CERTPATH)) {
-    throw new Error(`LND TLS Cert not yet generated, restarting...`)
+async function openLightningConnection() {
+  let connectionEstablished = false
+  if (!LND_TLS_CERT && !fs.existsSync(LND_TLS_CERT)) {
+    logger.warn(`LND TLS Cert not found or not yet generated. Trying without...`)
   }
-  while (!subscriptionEstablished) {
+  while (!connectionEstablished) {
     try {
       // establish a connection to lnd
       try {
-        lndClient.setCredentials(LND_SOCKET, LND_MACAROONPATH, LND_CERTPATH)
+        if (!LND_TLS_CERT) lndClient.setCredentials(LND_SOCKET, LND_MACAROON)
+        else lndClient.setCredentials(LND_SOCKET, LND_MACAROON, LND_TLS_CERT)
         let lightning = lndClient.lightning()
+        let invoicesClient = lndClient.invoice()
         // attempt a get info call, this will fail if wallet is still locked
         await lightning.getInfoAsync({})
         hashes.setLND(lightning)
+        hashes.setInvoiceClient(invoicesClient)
         status.setLND(lightning)
       } catch (error) {
         let message = error.message
         if (error.code === 12) message = 'Wallet locked'
         throw new Error(`Cannot establish active LND connection : ${message}`)
       }
-      // starting listening for and handle new invoice activity
-      await establishTransactionSubscriptionAsync()
-      subscriptionEstablished = true
+      connectionEstablished = true
     } catch (error) {
       // catch errors when attempting to connect and establish invoice subscription
-      logger.error(`Transaction monitoring : ${error.message} : Retrying in 5 seconds...`)
+      logger.error(`LND connection : ${error.message} : Retrying in 5 seconds...`)
       await utils.sleepAsync(5000)
     }
-  }
-}
-
-async function establishTransactionSubscriptionAsync() {
-  try {
-    let transactionSubscription = lndClient.lightning().subscribeTransactions({})
-    transactionSubscription.on('data', async () => {})
-    transactionSubscription.on('status', function(status) {
-      logger.warn(`LND transaction subscription status has changed (${status.code}) ${status.details}`)
-    })
-    transactionSubscription.on('end', function() {
-      logger.error(`The LND transaction subscription has unexpectedly ended`)
-      hashes.setLND(null)
-      status.setLND(null)
-      setTimeout(startTransactionMonitoring, 1000)
-    })
-    logger.info('LND transaction subscription has been established')
-  } catch (error) {
-    throw new Error(`Unable to establish LND transaction subscription : ${error.message}`)
   }
 }
 
@@ -260,8 +236,6 @@ async function establishTransactionSubscriptionAsync() {
 async function start() {
   if (env.NODE_ENV === 'test') return
   try {
-    // init Redis
-    await openRedisConnection(env.REDIS_CONNECT_URIS)
     // init DB
     await openPostgresConnectionAsync()
     // init Tendermint
@@ -271,7 +245,7 @@ async function start() {
     // Init Restify
     await startAPIServerAsync()
     // Init listening for lnd transaction update events
-    await startTransactionMonitoring()
+    await openLightningConnection()
     logger.info(`Startup completed successfully`)
   } catch (error) {
     logger.error(`An error has occurred on startup : ${error.message}`)

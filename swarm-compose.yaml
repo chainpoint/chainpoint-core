@@ -6,6 +6,8 @@ networks:
 secrets:
   HOT_WALLET_PASS:
     external: true
+  SESSION_SECRET:
+    external: true
   HOT_WALLET_ADDRESS:
     external: true
   ECDSA_PKPEM:
@@ -77,20 +79,20 @@ services:
   lnd:
     image: tierion/lnd:boltbox
     user: ${USERID}:${GROUPID}
-    entrypoint: "./start-lnd.sh"
+    entrypoint: './start-lnd.sh'
     ports:
-    - target: 8080
-      published: 8080
-      protocol: tcp
-      mode: host
-    - target: 9735
-      published: 9735
-      protocol: tcp
-      mode: host
-    - target: 10009
-      published: 10009
-      protocol: tcp
-      mode: host
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+      - target: 9735
+        published: 9735
+        protocol: tcp
+        mode: host
+      - target: 10009
+        published: 10009
+        protocol: tcp
+        mode: host
     deploy:
       restart_policy:
         condition: any
@@ -99,22 +101,22 @@ services:
         window: 90s
       endpoint_mode: dnsrr
     environment:
-    - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
-    - RPCUSER
-    - RPCPASS
-    - NETWORK=${NETWORK:-testnet}
-    - CHAIN
-    - DEBUG
-    - BACKEND=neutrino
-    - NEUTRINO=faucet.lightning.community:18333
-    - LND_REST_PORT
-    - LND_RPC_PORT
-    - TLSPATH
-    - TLSEXTRADOMAIN=lnd
+      - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
+      - RPCUSER
+      - RPCPASS
+      - NETWORK=${NETWORK:-testnet}
+      - CHAIN
+      - DEBUG
+      - BACKEND=neutrino
+      - NEUTRINO=faucet.lightning.community:18333
+      - LND_REST_PORT
+      - LND_RPC_PORT
+      - TLSPATH
+      - TLSEXTRADOMAIN=lnd
     volumes:
-    - ~/.chainpoint/core/.lnd:/root/.lnd:z
+      - ~/.chainpoint/core/.lnd:/root/.lnd:z
     networks:
-    - chainpoint
+      - chainpoint
     logging:
       driver: 'json-file'
       options:
@@ -175,6 +177,7 @@ services:
       - ECDSA_PKPEM
       - HOT_WALLET_PASS
       - HOT_WALLET_ADDRESS
+      - SESSION_SECRET
     environment:
       AGGREGATOR_WHITELIST: 127.0.0.1
       NODE_ENV: ${NODE_ENV}
@@ -184,10 +187,13 @@ services:
       LND_SOCKET: ${LND_SOCKET}
       ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
       HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
+      SESSION_SECRET: DOCKER-SECRET->SESSION_SECRET
       HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
       VIRTUAL_HOST: api.local
       TENDERMINT_URI: http://abci:26657
       UV_THREADPOOL_SIZE: 128
+      LND_MACAROON: ${LND_MACAROON}
+      LND_TLS_CERT: ${LND_TLS_CERT}
     volumes:
       - ~/.chainpoint/core/.lnd:/root/.lnd:z
     tty: true
@@ -200,40 +206,40 @@ services:
   # Bitcoin Transmit
   # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
   #
-#  btc-tx:
-#    restart: always
-#    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG:-latest}
-#    build:
-#      context: .
-#      dockerfile: docker/Dockerfile.btc-tx
-#    user: ${USERID}:${GROUPID}
-#    container_name: btc-tx-core
-#    depends_on:
-#      - rabbitmq
-#    networks:
-#      - chainpoint
-#    secrets:
-#      - HOT_WALLET_ADDRESS
-#    deploy:
-#      restart_policy:
-#        condition: any
-#        delay: 5s
-#        max_attempts: 15
-#        window: 90s
-#    environment:
-#      NODE_ENV: ${NODE_ENV}
-#      NETWORK: ${NETWORK:-testnet}
-#      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-#      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
-#      LND_SOCKET: ${LND_SOCKET}
-#    volumes:
-#      - ~/.chainpoint/core/.lnd:/root/.lnd:z
-#    tty: true
-#    logging:
-#      driver: 'json-file'
-#      options:
-#        max-size: '1g'
-#        max-file: '5'
+  #  btc-tx:
+  #    restart: always
+  #    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG:-latest}
+  #    build:
+  #      context: .
+  #      dockerfile: docker/Dockerfile.btc-tx
+  #    user: ${USERID}:${GROUPID}
+  #    container_name: btc-tx-core
+  #    depends_on:
+  #      - rabbitmq
+  #    networks:
+  #      - chainpoint
+  #    secrets:
+  #      - HOT_WALLET_ADDRESS
+  #    deploy:
+  #      restart_policy:
+  #        condition: any
+  #        delay: 5s
+  #        max_attempts: 15
+  #        window: 90s
+  #    environment:
+  #      NODE_ENV: ${NODE_ENV}
+  #      NETWORK: ${NETWORK:-testnet}
+  #      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+  #      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
+  #      LND_SOCKET: ${LND_SOCKET}
+  #    volumes:
+  #      - ~/.chainpoint/core/.lnd:/root/.lnd:z
+  #    tty: true
+  #    logging:
+  #      driver: 'json-file'
+  #      options:
+  #        max-size: '1g'
+  #        max-file: '5'
 
   # Bitcoin Transmit Monitor
   # Monitor and report on the state of BTC transactions this app has submitted.

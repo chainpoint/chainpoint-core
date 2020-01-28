@@ -166,8 +166,20 @@ module.exports = service => {
       envDefinitions.CHAINPOINT_CORE_BASE_URI = envalid.url({
         desc: 'Base URI for this Chainpoint Core stack of services'
       })
-      envDefinitions.LND_SOCKET = envalid.str({ desc: 'Lightning GRPC host and port' })
+      envDefinitions.LND_SOCKET = envalid.str({
+        default: 'lnd:10009',
+        desc: 'Lightning GRPC host and port'
+      })
+      envDefinitions.LND_TLS_CERT = envalid.str({
+        default: '/root/.lnd/tls.cert',
+        desc: 'Lightning GRPC TLS Cert, base64 encoded or file path'
+      })
       envDefinitions.HOT_WALLET_ADDRESS = envalid.str({ desc: 'The lnd wallet password used for wallet unlock' })
+      envDefinitions.SESSION_SECRET = envalid.str({ desc: 'Session secret for generating and verifying macaroons' })
+      envDefinitions.LND_MACAROON = envalid.str({
+        default: '/root/.lnd/data/chain/bitcoin/testnet/admin.macaroon',
+        desc: 'Lightning GRPC admin macaroon'
+      })
       envDefinitions.AGGREGATOR_WHITELIST = validateAggIPWhitelist({
         default: '',
         desc: 'A comma separated list of IPs that may submit hashes without invoices'

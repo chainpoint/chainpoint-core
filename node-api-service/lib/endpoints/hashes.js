@@ -21,10 +21,9 @@ const BLAKE2s = require('blake2s-js')
 const _ = require('lodash')
 const logger = require('../logger.js')
 const crypto = require('crypto')
-
-// The redis connection used for all redis communication
-// This value is set once the connection has been established
-let redis = null
+const { Lsat, Identifier } = require('lsat-js')
+const { MacaroonsBuilder } = require('macaroons.js')
+const { boltwall } = require('boltwall')
 
 // Generate a v1 UUID (time-based)
 // see: https://github.com/broofa/node-uuid
@@ -37,6 +36,7 @@ let amqpChannel = null
 // The lightning connection used for all lightning communication
 // This value is set once the connection has been established
 let lightning = null
+let invoiceClient = null
 
 /**
  * Converts an array of hash strings to a object suitable to
@@ -126,32 +126,9 @@ function generateProcessingHints(timestampDate) {
 }
 
 /**
- * GET /hash/invoice handler
- *
- * Returns a lightning invoice with embedded unique id
- * After paying the invoice, use the unique id to access hash submission endpoint
- *
- */
-async function getHashInvoiceV1Async(req, res, next) {
-  let randomInvoiceId = crypto.randomBytes(32).toString('hex')
-  try {
-    if (!lightning) throw new Error('LND connection not available')
-    let inv = await lightning.addInvoiceAsync({
-      value: env.SUBMIT_HASH_PRICE_SAT,
-      memo: `SubmitHashInvoiceId:${randomInvoiceId}`
-    })
-    res.send({ invoice: inv.payment_request })
-    return next()
-  } catch (error) {
-    logger.error(`Unable to generate invoice : ${error.message}`)
-    return next(new errors.InternalServerError('Unable to generate invoice'))
-  }
-}
-
-/**
  * POST /hash handler
  *
- * Expects a JSON body with the form:
+ * A validator to validate POST hash requests
  *   {"hash": "11cd8a380e8d5fd3ac47c1f880390341d40b11485e8ae946d8fa3d466f23fe89"}
  *
  * The `hash` key must reference valid hex string representing the hash to anchor.
@@ -161,8 +138,11 @@ async function getHashInvoiceV1Async(req, res, next) {
  * - minimum 40 chars long (e.g. 20 byte SHA1)
  * - maximum 128 chars long (e.g. 64 byte SHA512)
  * - an even length string
+ *
+ * This is split into its own middleware so we can reject requests with invalid hashes
+ * before even making a request to boltwall which requires extra async requests
  */
-async function postHashV1Async(req, res, next) {
+function validatePostHashRequest(req, res, next) {
   // validate content-type sent was 'application/json'
   if (req.contentType() !== 'application/json') {
     return next(new errors.InvalidArgumentError('invalid content type'))
@@ -184,50 +164,35 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
   }
 
-  // if we aren't part of an aggregator whitelist, use lightning invoicing
-  let paidInvoiceKey
-  let submittingIP = utils.getClientIP(req)
-  // If whitelist does not contain the submitting IP, use invoicing
-  if (!env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
-    // validate params has parse a 'invoice_id' key
-    if (!req.params.hasOwnProperty('invoice_id')) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: missing invoice_id'))
-    }
-
-    // validate 'invoice_id' is a string
-    let invoiceId = req.params.invoice_id
-    if (!_.isString(invoiceId)) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
-    }
-
-    // validate invoice_id param is a valid hex string
-    let isValidInvoiceId = /^([a-fA-F0-9]{2}){32}$/.test(invoiceId)
-    if (!isValidInvoiceId) {
-      return next(new errors.InvalidArgumentError('invalid JSON body: bad invoice_id submitted'))
-    }
-
-    // validate invoice_id has been paid
-    paidInvoiceKey = `PaidSubmitHashInvoiceId:${invoiceId}`
-    try {
-      let keyPresent = await redis.get(paidInvoiceKey)
-      if (!keyPresent) {
-        return next(new errors.PaymentRequiredError(`invoice ${invoiceId} has not been paid`))
-      }
-    } catch (error) {
-      logger.error(`Redis GET error : error getting item with key = ${paidInvoiceKey}`)
-      return next(new errors.InternalServerError('Could not retrieve invoice status'))
-    }
-  }
-
   // validate amqp channel has been established
   if (!amqpChannel) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
+  let submittingIP = utils.getClientIP(req)
+  if (env.AGGREGATOR_WHITELIST && env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
+    return postHashV1Async(req, res, next)
+  }
+
+  return next()
+}
+
+/**
+ * POST /hash handler
+ *
+ * Expects a JSON body with the form:
+ *   {"hash": "11cd8a380e8d5fd3ac47c1f880390341d40b11485e8ae946d8fa3d466f23fe89"}
+ *
+ * The `hash` key must reference valid hex string representing the hash to anchor.
+ * Will send a response object containing the hash submission information.
+ * We expect only validated LSATs to be allowed to reach this middleware and so
+ * should be protected by boltwall when implemented in the server.
+ */
+async function postHashV1Async(req, res, next) {
   let responseObj = generatePostHashResponse(req.params.hash)
 
   let hashObj = {
-    proof_id: responseObj.proof_id,
+    hash_id: responseObj.hash_id,
     hash: responseObj.hash
   }
 
@@ -240,25 +205,175 @@ async function postHashV1Async(req, res, next) {
     return next(new errors.InternalServerError('Message could not be delivered'))
   }
 
-  if (paidInvoiceKey) {
-    try {
-      await redis.del(paidInvoiceKey)
-    } catch (error) {
-      logger.error(`Redis DEL error : error deleting item with key = ${paidInvoiceKey}`)
-    }
-  }
-
   res.send(responseObj)
   return next()
 }
 
+const boltwallConfigs = {
+  minAmount: env.SUBMIT_HASH_PRICE_SAT || 10,
+  getInvoiceDescription: req => `HODL invoice payment to submit a hash to chainpoint core from ${req.header('HOST')}`,
+  hodl: true
+}
+
+/**
+ * @description A middleware to parse POST /hash requests
+ * If the request has an LSAT, then we check the status of the invoice. If the invoice does not exist,
+ * return a 404. If it exists and is not paid, return a 402. If it exists and is paid but not settled,
+ * we add the preimage to the LSAT token and forward on to the next route (which should be boltwall).
+ * If it is paid and settled, then boltwall will ultimately reject it.
+ *
+ * If the request doesn't have an LSAT, then we must request a new hodl invoice and generate a new
+ * LSAT. We are doing this here instead of boltwall so that we can embed the secret into the
+ * LSAT identifier for later retrieval
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ */
+async function parsePostHashRequest(req, res, next) {
+  let token = req.header('Authorization')
+  if (!token) {
+    logger.verbose('Unauthorized request made to submit hash. Generating LSAT...')
+    try {
+      token = await generateHodlLsat(req)
+      res.set('www-authenticate', token.toChallenge())
+      res.status(402)
+      return res.send({ error: { message: 'Payment Required' } })
+    } catch (e) {
+      logger.error('Could not generate HODL lsat:', e)
+      return next(new errors.InternalServerError('There was a problem generating your request.'))
+    }
+  } else {
+    try {
+      let lsat = Lsat.fromToken(token)
+      const invoice = await lightning.lookupInvoiceAsync({
+        r_hash_str: lsat.paymentHash
+      })
+
+      // no invoice found, then return a 404
+      if (!invoice) return next(new errors.NotFoundError({ message: 'Unable to locate invoice for that LSAT' }))
+
+      // determine if the invoice is held. Unpaid invoices, should return a 402
+      // since they still require payment before they can be allowed through
+      if (invoice.state === 'SETTLED') {
+        return next(
+          new errors.UnauthorizedError(
+            'Unauthorized: Invoice has already been settled. Try again with a different LSAT'
+          )
+        )
+      } else if (invoice.state === 'OPEN') {
+        logger.warn(`Request made for open LSAT: invoice: ${lsat.paymentHash}`)
+        lsat.addInvoice(invoice.payment_request)
+        res.set('www-authenticate', lsat.toChallenge())
+        res.status(402)
+        return res.send({ error: { message: 'Payment Required' } })
+      } else if (invoice.state === 'CANCELED') {
+        return next(
+          new errors.UnauthorizedError(
+            'Unauthorized: Invoice has expired or been canceled. Try again with a different LSAT'
+          )
+        )
+      } else if (invoice.state !== 'ACCEPTED') {
+        logger.error(
+          `LSAT invoice in unknown state, should be one of: OPEN, SETTLED, ACCEPTED, or CANCELED. Instead was ${
+            invoice.state
+          }`
+        )
+        return next(new errors.InternalServerError('Could not check invoice state. Contact core administrator'))
+      }
+
+      // if the invoice exists and has been paid, then the LSAT just needs the
+      // preimage extracted from it and added to the token. If the invoice
+      // was already settled and the preimage was just missing from the LSAT, boltwall
+      // will reject the request.
+      lsat = setLsatPreimageFromId(lsat)
+      req.headers.authorization = lsat.toToken()
+      return next()
+    } catch (e) {
+      let error = ''
+      if (typeof e === 'string') error = e
+      else if (e.message) error = e.message
+      const message = `Invalid LSAT provided in Authorization header: ${error}`
+      logger.error(message)
+      return next(new errors.InvalidHeaderError(message))
+    }
+  }
+}
+
+// helper function to extract the secret from an lsat's identifier
+// and use it to satisfy the LSAT
+function setLsatPreimageFromId(lsat) {
+  if (!(lsat instanceof Lsat)) throw new Error('Must pass an LSAT object to add reimage')
+
+  const identifier = Identifier.fromString(lsat.id)
+  // secret is saved as the tokenId in the identifier
+  const secret = identifier.tokenId.toString('hex')
+  lsat.setPreimage(secret)
+  return lsat
+}
+
+/**
+ * @description Generate a new HODL-based LSAT.
+ * First a preimage and hash pair are generated. The hash is used to request a new
+ * hodl invoice. Then an LSAT is created where the Identifier is generated using the secret
+ * allowing the LSAT to be settled on demand. Normally this is done in boltwall, but since we
+ * want to store the secret in the macaroon identifier, we need to build it ourselves.
+ * @param {Object} req - request object from server
+ */
+async function generateHodlLsat(req) {
+  if (!invoiceClient) throw new Error('LND invoices connection not available')
+
+  // getting values required for generating a new invoice
+  const preimage = crypto.randomBytes(32).toString('hex')
+  const hash = getHash(preimage)
+
+  // set value based on body or config's minAmount
+  let value
+  if (req.body && req.body.amount && req.body.amount > boltwallConfigs.minAmount) value = req.body.amount
+  else value = boltwallConfigs.minAmount
+
+  // Normally used in boltwall, but we can just use the function from the config
+  const memo = boltwallConfigs.getInvoiceDescription(req)
+
+  // use lnd clieng to create a new invoice
+  const { payment_request: payreq } = await invoiceClient.addHoldInvoiceAsync({
+    hash: Buffer.from(hash, 'hex'),
+    memo,
+    value
+  })
+
+  // this is where we save the preimage to later settle the hodl invoice with
+  const id = new Identifier({
+    paymentHash: Buffer.from(hash, 'hex'),
+    tokenId: Buffer.from(preimage, 'hex')
+  })
+
+  const macaroon = new MacaroonsBuilder(
+    req.header('x-forwarded-for') || req.header('HOST'),
+    env.SESSION_SECRET,
+    id.toString()
+  )
+    .getMacaroon()
+    .serialize()
+  const lsat = Lsat.fromMacaroon(macaroon)
+  lsat.invoice = payreq
+  return lsat
+}
+
+function getHash(preimage) {
+  if (typeof preimage !== 'string') throw new Error('Must give a string to convert to a hash')
+  return crypto
+    .createHash('sha256')
+    .update(Buffer.from(preimage, 'hex'))
+    .digest('hex')
+}
+
 module.exports = {
   postHashV1Async: postHashV1Async,
-  getHashInvoiceV1Async: getHashInvoiceV1Async,
+  validatePostHashRequest: validatePostHashRequest,
+  boltwallConfigs: boltwallConfigs,
+  boltwall: boltwall(boltwallConfigs, logger),
   generatePostHashResponse: generatePostHashResponse,
-  setRedis: r => {
-    redis = r
-  },
+  parsePostHashRequest: parsePostHashRequest,
   // additional functions for testing purposes
   setAMQPChannel: chan => {
     amqpChannel = chan
@@ -268,5 +383,8 @@ module.exports = {
   },
   setLND: l => {
     lightning = l
+  },
+  setInvoiceClient: i => {
+    invoiceClient = i
   }
 }
