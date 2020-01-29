@@ -266,6 +266,22 @@ services:
       - ~/.chainpoint/core/.lnd:/root/.lnd
     tty: true
 
+  # ln-accounting
+  # Returns accounting reports in harmony format for lnd node
+  ln-accounting:
+    image: tierion/ln-accounting
+    ports:
+      - '9000'
+    environment:
+      NETWORK: ${NETWORK}
+      LND_DIR: /root/.lnd
+      LND_SOCKET: ${LND_SOCKET}
+      ACCOUNTING_PORT: ${ACCOUNTING_PORT:-9000}
+    volumes:
+      - ~/.chainpoint/core/.lnd:/root/.lnd:ro
+    networks:
+      - chainpoint
+
   # Proof State
   # Encapsulates all persistent data storage for partial proof data.
   #
