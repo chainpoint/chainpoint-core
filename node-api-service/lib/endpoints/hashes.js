@@ -192,7 +192,7 @@ async function postHashV1Async(req, res, next) {
   let responseObj = generatePostHashResponse(req.params.hash)
 
   let hashObj = {
-    hash_id: responseObj.hash_id,
+    proof_id: responseObj.proof_id,
     hash: responseObj.hash
   }
 
