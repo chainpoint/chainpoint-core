@@ -44,6 +44,9 @@ func (app *AnchorApplication) SyncMonitor() {
 				continue
 			}
 			app.Validators = validators.Validators
+			app.lnClient.LocalSats = calculateStakeAmount(len(validators.Validators))
+			app.state.LnStakePrice = app.lnClient.LocalSats
+			app.logger.Info(fmt.Sprint("Total stake amount is %d satoshis", app.lnClient.LocalSats))
 		}
 		if app.LogError(err) != nil {
 			continue
@@ -54,6 +57,13 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.state.ChainSynced = true
 		}
 	}
+}
+
+func calculateStakeAmount(validators int) int64 {
+	stakePerValidator := .01
+	satsInTenthBitcoin := 1000000
+	floatRound := .05
+	return int64((stakePerValidator * float64(validators) * float64(satsInTenthBitcoin)) + floatRound)
 }
 
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
@@ -72,21 +82,12 @@ func (app *AnchorApplication) StakeIdentity() {
 		if app.LogError(err) != nil {
 			continue
 		}
-		validators, err := app.rpc.GetValidators(app.state.Height)
-		if app.LogError(err) != nil {
-			continue
-		}
-		stakePerValidator := .01
-		satsInTenthBitcoin := 1000000
-		floatRound := .05
-		app.lnClient.LocalSats = int64((stakePerValidator * float64(len(validators.Validators)) * float64(satsInTenthBitcoin)) + floatRound)
-		app.logger.Info(fmt.Sprint("Total stake amount is %d satoshis", app.lnClient.LocalSats))
 
 		//if we're not a validator, we need to "stake" by opening a ln channel to the validators
 		if !amValidator {
 			app.logger.Info("This node is new to the network; beginning staking")
 			waitForValidators := false
-			for _, validator := range validators.Validators {
+			for _, validator := range app.Validators {
 				valID := validator.Address.String()
 				if lnID, exists := app.state.LnUris[valID]; exists {
 					app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnID.Peer))
@@ -110,7 +111,7 @@ func (app *AnchorApplication) StakeIdentity() {
 				}
 			}
 			if waitForValidators {
-				app.logger.Info("Validator identities not declared yet, waiting...")
+				app.logger.Info("Validator identities not all declared yet, waiting...")
 				continue
 			}
 			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)

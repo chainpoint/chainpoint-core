@@ -77,7 +77,8 @@ async function buildStatusObjectAsync() {
     lightning_address: env.HOT_WALLET_ADDRESS,
     uris: walletInfo.uris,
     num_active_channels: walletInfo.num_active_channels,
-    alias: walletInfo.alias
+    alias: walletInfo.alias,
+    hash_price_satoshis: env.SUBMIT_HASH_PRICE_SAT
   }
 
   try {
