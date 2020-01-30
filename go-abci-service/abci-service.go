@@ -156,6 +156,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		Logger:           &tmLogger,
 		FilePV:           pv,
 		AnchorTimeout:    anchorTimeout,
+		StakePerVal:      1000000,
 	}
 }
 

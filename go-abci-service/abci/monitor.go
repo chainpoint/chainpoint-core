@@ -44,8 +44,9 @@ func (app *AnchorApplication) SyncMonitor() {
 				continue
 			}
 			app.Validators = validators.Validators
-			app.lnClient.LocalSats = calculateStakeAmount(len(validators.Validators))
-			app.state.LnStakePrice = app.lnClient.LocalSats
+			app.lnClient.LocalSats = app.config.StakePerVal
+			app.state.LnStakePerVal = app.config.StakePerVal
+			app.state.LnStakePrice = app.lnClient.LocalSats * int64(len(app.Validators))
 			app.logger.Info(fmt.Sprint("Total stake amount is %d satoshis", app.lnClient.LocalSats))
 		}
 		if app.LogError(err) != nil {
@@ -57,13 +58,6 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.state.ChainSynced = true
 		}
 	}
-}
-
-func calculateStakeAmount(validators int) int64 {
-	stakePerValidator := .01
-	satsInTenthBitcoin := 1000000
-	floatRound := .05
-	return int64((stakePerValidator * float64(validators) * float64(satsInTenthBitcoin)) + floatRound)
 }
 
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
@@ -94,11 +88,11 @@ func (app *AnchorApplication) StakeIdentity() {
 					peerExists, err := app.lnClient.PeerExists(lnID.Peer)
 					app.LogError(err)
 					if peerExists || app.LogError(app.lnClient.AddPeer(lnID.Peer)) == nil {
-						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, lnID.RequiredChanAmt)
+						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, app.config.StakePerVal)
 						app.LogError(err)
 						if !chanExists {
 							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", lnID.RequiredChanAmt, lnID.Peer))
-							_, err := app.lnClient.CreateChannel(lnID.Peer, lnID.RequiredChanAmt)
+							_, err := app.lnClient.CreateChannel(lnID.Peer, app.config.StakePerVal)
 							app.LogError(err)
 						} else {
 							app.logger.Info(fmt.Sprintf("Channel %s exists, skipping...", lnID.Peer))
@@ -241,7 +235,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return true
 		}
 		app.logger.Info("JWK Identity: Checking Channel Funding")
-		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
+		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, app.config.StakePerVal)
 		if app.LogError(err) == nil && chanExists {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true
