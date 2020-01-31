@@ -66,6 +66,7 @@ func (app *AnchorApplication) StakeIdentity() {
 	for app.state.JWKStaked != true {
 		time.Sleep(60 * time.Second)
 		if _, exists := app.state.CoreKeys[app.ID]; exists {
+			app.state.JWKStaked = true // in case a migration occurred on an instance where this state var is new
 			app.logger.Info("This node is already staked")
 			return
 		}

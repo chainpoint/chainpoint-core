@@ -60,6 +60,7 @@ async function buildStatusObjectAsync() {
         return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
     }
   }
+
   try {
     if (!lightning) throw new Error('LND connection not available')
     walletInfo = await lightning.getInfoAsync({})
@@ -79,6 +80,15 @@ async function buildStatusObjectAsync() {
     num_active_channels: walletInfo.num_active_channels,
     alias: walletInfo.alias,
     hash_price_satoshis: env.SUBMIT_HASH_PRICE_SAT
+  }
+
+  try{
+    let abciResponse = await tmRpc.getAbciInfo()
+    let abciInfo = JSON.parse(abciResponse.response.data)
+    coreInfo.total_stake_price = abciInfo.total_stake_price
+    coreInfo.validator_stake_price = abciInfo.validator_stake_price
+  } catch (error) {
+    logger.error(`Cannot parse abci Response`)
   }
 
   try {
