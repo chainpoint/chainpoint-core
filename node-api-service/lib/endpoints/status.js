@@ -84,11 +84,11 @@ async function buildStatusObjectAsync() {
 
   try{
     let abciResponse = await tmRpc.getAbciInfo()
-    let abciInfo = JSON.parse(abciResponse.response.data)
+    let abciInfo = JSON.parse(abciResponse.result.response.data)
     coreInfo.total_stake_price = abciInfo.total_stake_price
     coreInfo.validator_stake_price = abciInfo.validator_stake_price
   } catch (error) {
-    logger.error(`Cannot parse abci Response`)
+    logger.error(`Cannot parse abci Response: ${error.message}`)
   }
 
   try {
