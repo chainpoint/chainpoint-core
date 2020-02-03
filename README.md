@@ -1,7 +1,7 @@
 # Chainpoint Core
 
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes, aggregate these hashes into a [Merkle root](https://en.wikipedia.org/wiki/Merkle_tree), and periodically commit the root hash to the Bitcoin blockchain.
 
@@ -128,4 +128,4 @@ READMEs for each Core micro-service are available:
 
 ## License
 
-[GNU Affero General Public License v3.0](http://www.gnu.org/licenses/agpl-3.0.txt)
+[Apache License Version 2.0](https://opensource.org/licenses/Apache-2.0)
