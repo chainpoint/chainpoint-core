@@ -44,6 +44,10 @@ func (app *AnchorApplication) SyncMonitor() {
 				continue
 			}
 			app.Validators = validators.Validators
+			app.lnClient.LocalSats = app.config.StakePerVal
+			app.state.LnStakePerVal = app.config.StakePerVal
+			app.state.LnStakePrice = app.lnClient.LocalSats * int64(len(app.Validators))
+			app.logger.Info(fmt.Sprint("Total stake amount is %d satoshis", app.lnClient.LocalSats))
 		}
 		if app.LogError(err) != nil {
 			continue
@@ -62,6 +66,7 @@ func (app *AnchorApplication) StakeIdentity() {
 	for app.state.JWKStaked != true {
 		time.Sleep(60 * time.Second)
 		if _, exists := app.state.CoreKeys[app.ID]; exists {
+			app.state.JWKStaked = true // in case a migration occurred on an instance where this state var is new
 			app.logger.Info("This node is already staked")
 			return
 		}
@@ -72,26 +77,23 @@ func (app *AnchorApplication) StakeIdentity() {
 		if app.LogError(err) != nil {
 			continue
 		}
+
 		//if we're not a validator, we need to "stake" by opening a ln channel to the validators
 		if !amValidator {
 			app.logger.Info("This node is new to the network; beginning staking")
-			validators, err := app.rpc.GetValidators(app.state.Height)
-			if app.LogError(err) != nil {
-				continue
-			}
 			waitForValidators := false
-			for _, validator := range validators.Validators {
+			for _, validator := range app.Validators {
 				valID := validator.Address.String()
 				if lnID, exists := app.state.LnUris[valID]; exists {
 					app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnID.Peer))
 					peerExists, err := app.lnClient.PeerExists(lnID.Peer)
 					app.LogError(err)
 					if peerExists || app.LogError(app.lnClient.AddPeer(lnID.Peer)) == nil {
-						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, lnID.RequiredChanAmt)
+						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, app.config.StakePerVal)
 						app.LogError(err)
 						if !chanExists {
 							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", lnID.RequiredChanAmt, lnID.Peer))
-							_, err := app.lnClient.CreateChannel(lnID.Peer, lnID.RequiredChanAmt)
+							_, err := app.lnClient.CreateChannel(lnID.Peer, app.config.StakePerVal)
 							app.LogError(err)
 						} else {
 							app.logger.Info(fmt.Sprintf("Channel %s exists, skipping...", lnID.Peer))
@@ -104,7 +106,7 @@ func (app *AnchorApplication) StakeIdentity() {
 				}
 			}
 			if waitForValidators {
-				app.logger.Info("Validator identities not declared yet, waiting...")
+				app.logger.Info("Validator identities not all declared yet, waiting...")
 				continue
 			}
 			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
@@ -234,7 +236,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return true
 		}
 		app.logger.Info("JWK Identity: Checking Channel Funding")
-		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, lnID.RequiredChanAmt)
+		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, app.config.StakePerVal)
 		if app.LogError(err) == nil && chanExists {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true

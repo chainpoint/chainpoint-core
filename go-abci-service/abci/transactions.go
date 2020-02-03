@@ -55,6 +55,14 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 			app.state.LatestBtccTx = []byte(tx.Data)
 		}
 	}
+	if tx.TxType == "VAL" {
+		isVal, err := app.IsValidator(tx.CoreID)
+		app.logger.Info("VAL tx is from a validator? ", "isVal", isVal)
+		app.LogError(err)
+		if !isVal {
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		}
+	}
 	if tx.TxType == "JWK" && !app.VerifyIdentity(tx) {
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
@@ -75,12 +83,12 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	app.logger.Info(fmt.Sprintf("Received Tx: %s, Gossip: %t", tx.TxType, gossip))
 	app.LogError(err)
 	switch string(tx.TxType) {
-	/*	case "VAL":
+	case "VAL":
 		tags = app.incrementTxInt(tags)
 		if isValidatorTx([]byte(tx.Data)) {
 			resp = app.execValidatorTx([]byte(tx.Data), tags)
 		}
-		break*/
+		break
 	case "CAL":
 		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt

@@ -40,6 +40,7 @@
     "lnrpc-node-client": "^1.1.0",
     "ora": "^3.4.0",
     "ramda": "^0.26.1",
-    "validator": "^10.11.0"
+    "validator": "^10.11.0",
+    "async-request": "^1.2.0"
   }
 }

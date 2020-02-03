@@ -49,6 +49,7 @@ type AnchorConfig struct {
 	Logger           *log.Logger
 	FilePV           privval.FilePV
 	AnchorTimeout    int
+	StakePerVal      int64
 }
 
 //EthConfig holds contract addresses and eth node URI
@@ -83,6 +84,8 @@ type AnchorState struct {
 	LnUris           map[string]LnIdentity      `json:"lightning_identities"`
 	ChainSynced      bool
 	JWKStaked		 bool
+	LnStakePrice     int64						`json:"total_stake_price"`
+	LnStakePerVal	 int64						`json:"validator_stake_price"`
 	LatestNistRecord string
 }
 

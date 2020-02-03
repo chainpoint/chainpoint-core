@@ -102,7 +102,6 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	tlsCertPath := util.GetEnv("LN_TLS_CERT", "/root/.lnd/tls.cert")
 	macaroonPath := util.GetEnv("MACAROON_PATH", "/root/.lnd/data/chain/bitcoin/testnet/admin.macaroon")
 	lndSocket := util.GetEnv("LND_SOCKET", "lnd:10009")
-	lnStake, _ := strconv.Atoi(util.GetEnv("LN_STAKE", "300000"))
 
 	//testMode := util.GetEnv("NETWORK", "testnet")
 	tendermintRPC := types.TendermintConfig{
@@ -140,7 +139,6 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 			MacPath:        macaroonPath,
 			ServerHostPort: lndSocket,
 			Logger:         tmLogger,
-			LocalSats:      int64(lnStake),
 			MinConfs:       3,
 		},
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
@@ -158,6 +156,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		Logger:           &tmLogger,
 		FilePV:           pv,
 		AnchorTimeout:    anchorTimeout,
+		StakePerVal:      1000000,
 	}
 }
 
