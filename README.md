@@ -5,7 +5,7 @@
 
 Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes, aggregate these hashes into a [Merkle root](https://en.wikipedia.org/wiki/Merkle_tree), and periodically commit the root hash to the Bitcoin blockchain.
 
-By default, Cores are members of the [Lightning Network](https://lightning.network/). Users use Lightning to pay Cores for permission to anchor a hash. Additionally, Lightning is used by new Cores to stake bitcoin to the Chainpoint Network as part of an anti-sybil mechanism. 
+By default, Cores are members of the [Lightning Network](https://lightning.network/). Users use Lightning via [LSATs](https://github.com/Tierion/lsat-js) to pay Cores for permission to anchor a hash. Additionally, Lightning is used by new Cores to stake bitcoin to the Chainpoint Network as part of an anti-sybil mechanism. 
 
 ## Important Notice
 
@@ -56,13 +56,46 @@ The above make command will download all other dependencies and run an interacti
 
 To start up a Core node without connecting to the rest of the Chainpoint Network:
 
-1. Run `make init` to initialize the configuration directory.
+```$bash
+$ sudo apt-get install make git
+$ git clone https://github.com/chainpoint/chainpoint-core.git
+$ cd chainpoint-core
+$ make install-deps
 
-2. A `Lightning Wallet Address` will be printed in the terminal by the `make init` process. Fund this address with Bitcoin and wait for 6 confirmations.
+Please logout and login to allow your user to use docker
 
-3. Run `make deploy` to download all containers and start all services. 
+$ make init
 
-If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute.
+ ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  ██████╗ ██╗███╗   ██╗████████╗     ██████╗ ██████╗ ██████╗ ███████╗
+██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔═══██╗██║████╗  ██║╚══██╔══╝    ██╔════╝██╔═══██╗██╔══██╗██╔════╝
+██║     ███████║███████║██║██╔██╗ ██║██████╔╝██║   ██║██║██╔██╗ ██║   ██║       ██║     ██║   ██║██████╔╝█████╗  
+██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔═══╝ ██║   ██║██║██║╚██╗██║   ██║       ██║     ██║   ██║██╔══██╗██╔══╝  
+╚██████╗██║  ██║██║  ██║██║██║ ╚████║██║     ╚██████╔╝██║██║ ╚████║   ██║       ╚██████╗╚██████╔╝██║  ██║███████╗
+ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝ ╚═╝╚═╝  ╚═══╝   ╚═╝        ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
+
+
+? Will this Core use Bitcoin mainnet or testnet? Testnet
+? Enter your Instance's Public IP Address: 3.17.78.45
+
+Initializing Lightning wallet...
+Create new address for wallet...
+Creating Docker secrets...
+****************************************************
+Lightning initialization has completed successfully.
+****************************************************
+LND Wallet Password: rjcOgYehDmthuurduuriAMsr
+LND Wallet Seed: absorb behind drop safe like herp derp celery galaxy wait orient sign suit castle awake gadget pass pipe sudden ethics hill choose six orphan
+LND Wallet Address: tb1qfvjr20txm464fxcr0n9d4j2gkr5w4xpl55kl6u
+******************************************************
+You should back up this information in a secure place.
+******************************************************
+
+Please fund the Lightning Wallet Address above with Bitcoin and wait for 6 confirmation before running 'make deploy'
+
+$ make deploy
+```
+
+If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute after the docker containers download.
 
 ### Joining the Chainpoint Testnet
 
@@ -90,16 +123,18 @@ The following are the descriptions of the configuration parameters:
 | Name                     | Type    | Location                     | Description                                                                                                                                      |
 | :----------------------- | :------ | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
 | CHAINPOINT_CORE_BASE_URI | String  | .env                         | Public URI of host machine, of the form `http://35.245.53.181`                                                                                   |
-| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin testnet. Default is `mainnet`.                                                                     |
-| NODE_ENV                 | String  | .env                         | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                           |
+| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin testnet. Default is `mainnet`.                                                                                   |
+| SUBMIT_HASH_PRICE_SAT    | String  | .env                         | Price required to submit hashes to the API in satoshis                                                                                           |
+| NODE_ENV                 | String  | .env                         | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                                    |
 | PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | ANCHOR_INTERVAL          | String  | swarm-compose.yaml           | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
+| AGGREGATOR_WHITELIST     | String  | swarm-compose.yaml           | Comma-delimited list of IPs that are permitted to use Core's API without following the LSAT auth flow                                            |
 | HASHES_PER_MERKLE_TREE   | String  | swarm-compose.yaml           | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000                                        |
 | AGGREGATE                | Boolean | swarm-compose.yaml           | Whether to aggregate hashes and send them to the Calendar blockchain. Defaults to true                                                           |
 | ANCHOR                   | Boolean | swarm-compose.yaml           | Whether to anchor the state of the Calendar to Bitcoin                                                                                           |
 | LOG_FILTER               | String  | swarm-compose.yaml           | Log Verbosity. Defaults to `"main:debug,state:info,*:error"`                                                                                     |
-| LOG_LEVEL                | String  | swarm-compose.yaml           | Level of detail included in Logs. Defaults to `info`       
+| LOG_LEVEL                | String  | swarm-compose.yaml           | Level of detail included in Logs. Defaults to `info`                                                                                             |
 
 ## Development
 
