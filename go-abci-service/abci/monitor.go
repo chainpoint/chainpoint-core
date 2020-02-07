@@ -47,7 +47,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.lnClient.LocalSats = app.config.StakePerVal
 			app.state.LnStakePerVal = app.config.StakePerVal
 			app.state.LnStakePrice = app.lnClient.LocalSats * int64(len(app.Validators))
-			app.logger.Info(fmt.Sprint("Total stake amount is %d satoshis", app.lnClient.LocalSats))
+			app.logger.Info(fmt.Sprintf("Total stake amount is %d satoshis", app.lnClient.LocalSats))
 		}
 		if app.LogError(err) != nil {
 			continue
