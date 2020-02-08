@@ -29,8 +29,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	cfg "github.com/chainpoint/tendermint/config"
 	tmflags "github.com/chainpoint/tendermint/libs/cli/flags"
-	cmn "github.com/chainpoint/tendermint/libs/common"
 	tmtime "github.com/chainpoint/tendermint/types/time"
+	tmos "github.com/chainpoint/tendermint/libs/os"
 )
 
 func main() {
@@ -64,7 +64,7 @@ func main() {
 	}
 
 	// Wait forever, shutdown gracefully upon
-	cmn.TrapSignal(*config.Logger, func() {
+	tmos.TrapSignal(*config.Logger, func() {
 		if n.IsRunning() {
 			logger.Info("Shutting down Core...")
 			n.Stop()
@@ -191,7 +191,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
 	defaultConfig.P2P.MaxNumInboundPeers = 300
 	defaultConfig.P2P.MaxNumOutboundPeers = 75
-	defaultConfig.TxIndex.IndexAllTags = true
+	defaultConfig.TxIndex.IndexAllKeys = true
 	peers := []string{}
 	if tendermintPeers := util.GetEnv("PEERS", ""); tendermintPeers != "" {
 		peers = strings.Split(tendermintPeers, ",")
@@ -276,11 +276,11 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 
 	// initialize genesis file
 	genFile := defaultConfig.GenesisFile()
-	if cmn.FileExists(genFile) || peerGenesis {
+	if tmos.FileExists(genFile) || peerGenesis {
 		logger.Info("Found genesis file", "path", genFile)
 	} else {
 		genDoc := types2.GenesisDoc{
-			ChainID:         fmt.Sprintf(util.GetEnv("NETWORK", "testnet")+"-chain-%v", cmn.RandStr(6)),
+			ChainID:         fmt.Sprintf(util.GetEnv("NETWORK", "testnet")+"-chain-%d", time.Now().Second()),
 			GenesisTime:     tmtime.Now(),
 			ConsensusParams: types2.DefaultConsensusParams(),
 		}

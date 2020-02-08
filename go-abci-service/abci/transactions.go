@@ -14,14 +14,14 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/chainpoint/tendermint/abci/example/code"
-	"github.com/chainpoint/tendermint/libs/common"
+	"github.com/chainpoint/tendermint/libs/kv"
 	core_types "github.com/chainpoint/tendermint/rpc/core/types"
 )
 
 // incrementTxInt: Helper method to increment transaction integer
-func (app *AnchorApplication) incrementTxInt(tags []common.KVPair) []common.KVPair {
+func (app *AnchorApplication) incrementTxInt(tags []kv.Pair) []kv.Pair {
 	app.state.TxInt++ // no pre-increment :(
-	return append(tags, common.KVPair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
+	return append(tags, kv.Pair{Key: []byte("TxInt"), Value: util.Int64ToByte(app.state.TxInt)})
 }
 
 func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
@@ -40,12 +40,6 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	if !valid && tx.CoreID != app.ID {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed", tx.CoreID)))
 		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
-	}
-	// this serves as a shim for CheckTx so transactions we don't want in the mempool can
-	// still be gossipped to other Cores
-	if util.Contains(GossipTxs, tx.TxType) {
-		go app.rpc.BroadcastMsg(tx)
-		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
 	if tx.TxType == "BTC-C" {
 		if tx.Data == string(app.state.LatestBtccTx) {
@@ -74,7 +68,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	var tx types.Tx
 	var err error
 	var resp types2.ResponseDeliverTx
-	tags := []common.KVPair{}
+	tags := []kv.Pair{}
 	if app.state.ChainSynced {
 		tx, err = util.DecodeTxAndVerifySig(rawTx, app.state.CoreKeys)
 	} else {
@@ -86,13 +80,13 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "VAL":
 		tags = app.incrementTxInt(tags)
 		if isValidatorTx([]byte(tx.Data)) {
-			resp = app.execValidatorTx([]byte(tx.Data), tags)
+			resp = app.execValidatorTx([]byte(tx.Data))
 		}
 		break
 	case "CAL":
 		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "BTC-A":
 		var btca types.BtcTxMsg
@@ -109,25 +103,25 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
 		app.state.BeginCalTxInt = app.state.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
-		tags = append(tags, common.KVPair{Key: []byte("BTCTX"), Value: []byte(btca.BtcTxID)})
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		tags = append(tags, kv.Pair{Key: []byte("BTCTX"), Value: []byte(btca.BtcTxID)})
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "BTC-C":
 		app.state.LatestBtccTx = []byte(tx.Data)
 		app.state.LatestBtccHeight = app.state.Height + 1
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtccTxInt = app.state.TxInt
-		tags = append(tags, common.KVPair{Key: []byte("BTCC"), Value: []byte(tx.Data)})
+		tags = append(tags, kv.Pair{Key: []byte("BTCC"), Value: []byte(tx.Data)})
 		meta := strings.Split(tx.Meta, "|") // first part of meta is core ID that issued TX, second part is BTC TX ID
 		if len(meta) > 0 {
 			app.state.LastAnchorCoreID = meta[0]
 			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, &app.state)
 		}
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "NIST":
 		app.state.LatestNistRecord = tx.Data
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		if app.config.DoCal {
 			app.aggregator.LatestNist = app.state.LatestNistRecord
 		}
@@ -135,13 +129,20 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "JWK":
 		if app.LogError(app.SaveIdentity(tx)) == nil {
 			tags = app.incrementTxInt(tags)
-			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 			break
 		}
 		fallthrough
 	default:
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized, Tags: tags}
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized}
 	}
+	events := []types2.Event{
+		{
+			Type: tx.TxType,
+			Attributes: tags,
+		},
+	}
+	resp.Events = events
 	return resp
 }
 

@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"github.com/chainpoint/tendermint/crypto/ed25519"
 	"strconv"
 	"strings"
 
 	"github.com/chainpoint/tendermint/abci/example/code"
 	"github.com/chainpoint/tendermint/abci/types"
-	cmn "github.com/chainpoint/tendermint/libs/common"
 )
 
 // constant prefix for a validator transaction
@@ -26,14 +26,17 @@ func isValidatorTx(tx []byte) bool {
 	return strings.HasPrefix(string(tx), ValidatorSetChangePrefix)
 }
 
-func (app *AnchorApplication) execValidatorTx(tx []byte, tags []cmn.KVPair) types.ResponseDeliverTx {
+// format is "val:pubkey!power"
+// pubkey is a base64-encoded 32-byte ed25519 key
+func (app *AnchorApplication) execValidatorTx(tx []byte) types.ResponseDeliverTx {
 	tx = tx[len(ValidatorSetChangePrefix):]
+
 	//get the pubkey and power
-	pubKeyAndPower := strings.Split(string(tx), "/")
+	pubKeyAndPower := strings.Split(string(tx), "!")
 	if len(pubKeyAndPower) != 2 {
 		return types.ResponseDeliverTx{
 			Code: code.CodeTypeEncodingError,
-			Log:  fmt.Sprintf("Expected 'pubkey/power'. Got %v", pubKeyAndPower)}
+			Log:  fmt.Sprintf("Expected 'pubkey!power'. Got %v", pubKeyAndPower)}
 	}
 	pubkeyS, powerS := pubKeyAndPower[0], pubKeyAndPower[1]
 
@@ -42,7 +45,7 @@ func (app *AnchorApplication) execValidatorTx(tx []byte, tags []cmn.KVPair) type
 	if err != nil {
 		return types.ResponseDeliverTx{
 			Code: code.CodeTypeEncodingError,
-			Log:  fmt.Sprintf("Pubkey (%s) is invalid hex", pubkeyS)}
+			Log:  fmt.Sprintf("Pubkey (%s) is invalid base64", pubkeyS)}
 	}
 
 	// decode the power
@@ -54,20 +57,30 @@ func (app *AnchorApplication) execValidatorTx(tx []byte, tags []cmn.KVPair) type
 	}
 
 	// update
-	return app.updateValidator(types.Ed25519ValidatorUpdate(pubkey, int64(power)), tags)
+	return app.updateValidator(types.Ed25519ValidatorUpdate(pubkey, power))
 }
 
 // add, update, or remove a validator
-func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate, tags []cmn.KVPair) types.ResponseDeliverTx {
+func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate) types.ResponseDeliverTx {
 	key := []byte("val:" + string(v.PubKey.Data))
+
+	pubkey := ed25519.PubKeyEd25519{}
+	copy(pubkey[:], v.PubKey.Data)
+
 	if v.Power == 0 {
 		// remove validator
-		if !app.Db.Has(key) {
+		hasKey, err := app.Db.Has(key)
+		if err != nil {
+			panic(err)
+		}
+		if !hasKey {
+			pubStr := base64.StdEncoding.EncodeToString(v.PubKey.Data)
 			return types.ResponseDeliverTx{
 				Code: code.CodeTypeUnauthorized,
-				Log:  fmt.Sprintf("Cannot remove non-existent validator %X", key)}
+				Log:  fmt.Sprintf("Cannot remove non-existent validator %s", pubStr)}
 		}
 		app.Db.Delete(key)
+		delete(app.valAddrToPubKeyMap, string(pubkey.Address()))
 	} else {
 		// add or update validator
 		value := bytes.NewBuffer(make([]byte, 0))
@@ -77,10 +90,11 @@ func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate, tags []cm
 				Log:  fmt.Sprintf("Error encoding validator: %v", err)}
 		}
 		app.Db.Set(key, value.Bytes())
+		app.valAddrToPubKeyMap[string(pubkey.Address())] = v.PubKey
 	}
 
 	// we only update the changes array if we successfully updated the tree
 	app.ValUpdates = append(app.ValUpdates, v)
 
-	return types.ResponseDeliverTx{Code: code.CodeTypeOK, Tags: tags}
+	return types.ResponseDeliverTx{Code: code.CodeTypeOK}
 }

@@ -13,8 +13,6 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
-	"github.com/chainpoint/tendermint/abci/example/code"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/go-redis/redis"
@@ -26,8 +24,7 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	types2 "github.com/chainpoint/tendermint/abci/types"
-	cmn "github.com/chainpoint/tendermint/libs/common"
-	dbm "github.com/chainpoint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 	"github.com/chainpoint/tendermint/version"
 )
 
@@ -42,7 +39,10 @@ const MINT_EPOCH = 6400
 
 // loadState loads the AnchorState struct from a database instance
 func loadState(db dbm.DB) types.AnchorState {
-	stateBytes := db.Get(stateKey)
+	stateBytes, err := db.Get(stateKey)
+	if util.LogError(err) != nil {
+		panic(err)
+	}
 	var state types.AnchorState
 	if len(stateBytes) != 0 {
 		err := json.Unmarshal(stateBytes, &state)
@@ -69,7 +69,9 @@ var _ types2.Application = (*AnchorApplication)(nil)
 // AnchorApplication : AnchorState and config variables for the abci app
 type AnchorApplication struct {
 	types2.BaseApplication
-	ValUpdates           []types2.ValidatorUpdate
+	// validator set
+	ValUpdates []types2.ValidatorUpdate
+	valAddrToPubKeyMap map[string]types2.PubKey
 	Validators           []*types3.Validator
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string
@@ -91,7 +93,7 @@ type AnchorApplication struct {
 func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
-	db := dbm.NewDB(name, dbm.DBBackendType(config.DBType), "/tendermint/data")
+	db := dbm.NewDB(name, dbm.CLevelDBBackend, "/tendermint/data")
 	state := loadState(db)
 	if state.TxValidation == nil {
 		state.TxValidation = validation.NewTxValidationMap()
@@ -212,7 +214,7 @@ func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2
 // InitChain : Save the validators in the merkle tree
 func (app *AnchorApplication) InitChain(req types2.RequestInitChain) types2.ResponseInitChain {
 	for _, v := range req.Validators {
-		r := app.updateValidator(v, []cmn.KVPair{})
+		r := app.updateValidator(v)
 		if r.IsErr() {
 			app.logger.Error("Init Chain failed", r)
 		}
@@ -237,26 +239,30 @@ func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.Respo
 }
 
 // DeliverTx : tx is url encoded json
-func (app *AnchorApplication) DeliverTx(tx []byte) types2.ResponseDeliverTx {
-	return app.updateStateFromTx(tx, false)
-}
-
-func (app *AnchorApplication) DeliverMsg(tx []byte) types2.ResponseDeliverMsg {
-	code := code.CodeTypeUnknownError
-	if app.state.ChainSynced {
-		code = app.updateStateFromTx(tx, true).Code
-	}
-	return types2.ResponseDeliverMsg{Code: code}
+func (app *AnchorApplication) DeliverTx(tx types2.RequestDeliverTx) types2.ResponseDeliverTx {
+	return app.updateStateFromTx(tx.Tx, false)
 }
 
 // CheckTx : Pre-gossip validation
-func (app *AnchorApplication) CheckTx(rawTx []byte) types2.ResponseCheckTx {
-	return app.validateTx(rawTx)
+func (app *AnchorApplication) CheckTx(rawTx types2.RequestCheckTx) types2.ResponseCheckTx {
+	return app.validateTx(rawTx.Tx)
 }
 
 // BeginBlock : Handler that runs at the beginning of every block
 func (app *AnchorApplication) BeginBlock(req types2.RequestBeginBlock) types2.ResponseBeginBlock {
 	app.ValUpdates = make([]types2.ValidatorUpdate, 0)
+	for _, ev := range req.ByzantineValidators {
+		if ev.Type == types3.ABCIEvidenceTypeDuplicateVote {
+			// decrease voting power by 1
+			if ev.TotalVotingPower == 0 {
+				continue
+			}
+			app.updateValidator(types2.ValidatorUpdate{
+				PubKey: app.valAddrToPubKeyMap[string(ev.Validator.Address)],
+				Power:  ev.TotalVotingPower - 1,
+			})
+		}
+	}
 	return types2.ResponseBeginBlock{}
 }
 
