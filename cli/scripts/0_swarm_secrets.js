@@ -25,7 +25,6 @@ const home = require('os').homedir()
 const crypto = require('crypto')
 const request = require('async-request')
 
-
 async function createSwarmAndSecrets(valuePairs) {
   let address = { address: valuePairs.HOT_WALLET_ADDRESS }
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
@@ -36,11 +35,11 @@ async function createSwarmAndSecrets(valuePairs) {
   let lndWalletPass = valuePairs.HOT_WALLET_PASS
   let lndWalletSeed = valuePairs.HOT_WALLET_SEED
 
-  if (valuePairs.PEERS != null){
+  if (valuePairs.PEERS != null) {
     peers = valuePairs.PEERS
-  } else if (network == 'testnet'){
-    peers = "087186cd1d631c5e709c4afa15a1ce218c6a28c1@3.133.119.65:26656"
-  } else if (network == 'mainnet'){
+  } else if (network == 'testnet') {
+    peers = '087186cd1d631c5e709c4afa15a1ce218c6a28c1@3.133.119.65:26656'
+  } else if (network == 'mainnet') {
     peers = ''
   }
 
@@ -112,17 +111,21 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(chalk.magenta(`You should back up this information in a secure place.`))
       console.log(chalk.magenta(`******************************************************\n\n`))
       try {
-        let arr = peers.split(",")
+        let arr = peers.split(',')
         let first = arr[0]
-        let uriArr = first.split("@")
-        let hostportArr = uriArr[1].split(":")
+        let uriArr = first.split('@')
+        let hostportArr = uriArr[1].split(':')
         let host = hostportArr[0]
-        let response = await request("http://" + host + ":26657/abci_info")
+        let response = await request('http://' + host + ':26657/abci_info')
         let result = JSON.parse(response.body)
-        let total_stake_price = JSON.parse(result.result.response.data).total_stake_price
-        console.log(chalk.green(`\nPlease fund your lightning address with at least ${total_stake_price} Satoshis and wait for 6 confirmations`))
-      } catch(error){
-        console.log(chalk.red(`Could not query peers for total stake amount needed: ${err}`))
+        let totalStakePrice = JSON.parse(result.result.response.data).total_stake_price
+        console.log(
+          chalk.green(
+            `\nPlease fund your lightning address with at least ${totalStakePrice} Satoshis and wait for 6 confirmations`
+          )
+        )
+      } catch (error) {
+        console.log(chalk.red(`Could not query peers for total stake amount needed: ${error}`))
       }
     }
   } catch (err) {
