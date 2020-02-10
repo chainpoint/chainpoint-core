@@ -74,6 +74,10 @@
   branch = "new"
 
 [[override]]
+  name = "github.com/tendermint/tm-db"
+  revision = "70c30a7d63dbd00e0fe92b7c626beb29ad83248e"
+
+[[override]]
   name = "github.com/golang/protobuf"
   version = "1.3.3"
 

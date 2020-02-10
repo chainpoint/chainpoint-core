@@ -122,38 +122,88 @@
   revision = "31079b6807923eb23992c421b114992b95131b55"
 
 [[projects]]
-  digest = "1:7a7c82947d50d09e5c56984d642fb054e961ad7c033bdc46533ae06c1dece989"
+  branch = "master"
+  digest = "1:121b27d331d311f97334a91975a69c8da6d88f06b868624b2d1a76a5f3f285d9"
   name = "github.com/chainpoint/go-nist-beacon"
   packages = ["."]
   pruneopts = ""
-  revision = "03e4cc3f69a883259938b5d9618fa468a6472990"
-  version = "v1.1"
+  revision = "7779b0805bdd6c658bda68f750c0e3996ac57156"
 
 [[projects]]
-  digest = "1:d2d266008e5eace1340e63cfb4ecdfc4033839a47c8dea720c4d9f2b938671cd"
+  branch = "new"
+  digest = "1:51d674f8ef85ba1371b61184b9bdb5acc6d6eef83e004580a4a899256a728ed5"
   name = "github.com/chainpoint/tendermint"
   packages = [
+    "abci/client",
     "abci/example/code",
+    "abci/example/counter",
+    "abci/example/kvstore",
     "abci/types",
+    "behaviour",
+    "blockchain/v0",
+    "blockchain/v1",
     "config",
+    "consensus",
+    "consensus/types",
+    "crypto",
     "crypto/ed25519",
+    "crypto/encoding/amino",
+    "crypto/merkle",
+    "crypto/multisig",
+    "crypto/multisig/bitarray",
+    "crypto/secp256k1",
+    "crypto/secp256k1/internal/secp256k1",
+    "crypto/sr25519",
+    "crypto/tmhash",
+    "evidence",
+    "libs/async",
+    "libs/autofile",
+    "libs/bits",
+    "libs/bytes",
     "libs/cli/flags",
+    "libs/clist",
+    "libs/cmap",
+    "libs/events",
+    "libs/fail",
+    "libs/flowrate",
     "libs/kv",
     "libs/log",
+    "libs/math",
+    "libs/net",
     "libs/os",
+    "libs/pubsub",
+    "libs/pubsub/query",
+    "libs/rand",
+    "libs/service",
+    "libs/strings",
+    "libs/tempfile",
+    "libs/timer",
+    "mempool",
+    "mock",
     "node",
     "p2p",
+    "p2p/conn",
+    "p2p/pex",
     "privval",
     "proxy",
     "rpc/client",
+    "rpc/core",
     "rpc/core/types",
+    "rpc/grpc",
+    "rpc/lib/client",
+    "rpc/lib/server",
+    "rpc/lib/types",
+    "state",
+    "state/txindex",
+    "state/txindex/kv",
+    "state/txindex/null",
+    "store",
     "types",
     "types/time",
     "version",
   ]
   pruneopts = ""
-  revision = "af992361055b5541c1bd388994e386652e4d7254"
-  version = "v0.33.0"
+  revision = "b4b7b806e6bf5e1c1d33b45777c6a625b166367c"
 
 [[projects]]
   digest = "1:a434b4f8c58b32c879170ef48dd400c3cc9c7b6c56a2d2118b93a4575e889319"
@@ -207,7 +257,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:44ec1082ba97d89ce860abcc6ee3f0cf24e658d3efb8531b0f0a52f0781e4243"
+  digest = "1:183b1cb81b770d8033281c5629a4847a2ed7614068bb33c5a9a159d1226b23f0"
   name = "github.com/go-kit/kit"
   packages = [
     "log",
@@ -219,8 +269,8 @@
     "metrics/prometheus",
   ]
   pruneopts = ""
-  revision = "4dc7be5d2d12881735283bcab7352178e190fc71"
-  version = "v0.6.0"
+  revision = "150a65a7ec6156b4b640c1fd55f26fd3d475d656"
+  version = "v0.9.0"
 
 [[projects]]
   digest = "1:aa9a6ccd5fd7d29804a27cb0666bc4ac5eb4b73439b7edd54f4b377e5ef8bb47"
@@ -247,46 +297,15 @@
   version = "v6.15.7"
 
 [[projects]]
-  digest = "1:a01080d20c45c031c13f3828c56e58f4f51d926a482ad10cc0316225097eb7ea"
-  name = "github.com/go-stack/stack"
-  packages = ["."]
-  pruneopts = ""
-  revision = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a"
-  version = "v1.8.0"
-
-[[projects]]
   digest = "1:d69d2ba23955582a64e367ff2b0808cdbd048458c178cea48f11ab8c40bd7aea"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
     "jsonpb",
-    "plugin/compare",
-    "plugin/defaultcheck",
-    "plugin/description",
-    "plugin/embedcheck",
-    "plugin/enumstringer",
-    "plugin/equal",
-    "plugin/face",
-    "plugin/gostring",
-    "plugin/marshalto",
-    "plugin/oneofcheck",
-    "plugin/populate",
-    "plugin/size",
-    "plugin/stringer",
-    "plugin/testgen",
-    "plugin/union",
-    "plugin/unmarshal",
     "proto",
-    "protoc-gen-gogo",
     "protoc-gen-gogo/descriptor",
-    "protoc-gen-gogo/generator",
-    "protoc-gen-gogo/generator/internal/remap",
-    "protoc-gen-gogo/grpc",
-    "protoc-gen-gogo/plugin",
     "sortkeys",
     "types",
-    "vanity",
-    "vanity/command",
   ]
   pruneopts = ""
   revision = "5628607bb4c51c3157aacc3a50f0ab707582b805"
@@ -613,12 +632,12 @@
   version = "v1.6.0"
 
 [[projects]]
-  digest = "1:1d7e1867c49a6dd9856598ef7c3123604ea3daabf5b83f303ff457bcbc410b1d"
+  digest = "1:c45802472e0c06928cd997661f2af610accd85217023b1d5f6331bebce0671d3"
   name = "github.com/pkg/errors"
   packages = ["."]
   pruneopts = ""
-  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
-  version = "v0.8.1"
+  revision = "614d223910a179a466c1767a985424175c39b465"
+  version = "v0.9.1"
 
 [[projects]]
   digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
@@ -629,7 +648,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:c826496cad27bd9a7644a01230a79d472b4093dd33587236e8f8369bb1d8534e"
+  digest = "1:6bea0cda3fc62855d5312163e7d259fb97e31692d93c08cfffbeb2d00df0f13c"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
@@ -637,8 +656,8 @@
     "prometheus/promhttp",
   ]
   pruneopts = ""
-  revision = "2641b987480bca71fb39738eb8c8b0d577cb1d76"
-  version = "v0.9.4"
+  revision = "170205fb58decfd011f1550d4cfb737230d7ae4f"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:ade2df4d865299d2b042955eb4fdd9d60698b26cf3da10f1138a9bfefe9cd2c6"
@@ -793,98 +812,23 @@
   version = "v1.0"
 
 [[projects]]
-  digest = "1:ae41c0d9bd222a15ed08e854dbcf7c1ef8a511b937b7fb661762b3e91ff86b49"
+  digest = "1:981793303da9973e64e55a8cbb175ce3e0f50f9399c5af4f4bd0ab66ec703f07"
   name = "github.com/tendermint/go-amino"
   packages = ["."]
   pruneopts = ""
-  revision = "dc14acf9ef15f85828bfbc561ed9dd9d2a284885"
-  version = "v0.14.1"
+  revision = "af639981f2806e306c94403f45df50097d0168a8"
+  version = "v0.15.1"
 
 [[projects]]
-  digest = "1:d2d266008e5eace1340e63cfb4ecdfc4033839a47c8dea720c4d9f2b938671cd"
-  name = "github.com/tendermint/tendermint"
-  packages = [
-    "abci/client",
-    "abci/example/code",
-    "abci/example/counter",
-    "abci/example/kvstore",
-    "abci/types",
-    "behaviour",
-    "blockchain/v0",
-    "blockchain/v1",
-    "config",
-    "consensus",
-    "consensus/types",
-    "crypto",
-    "crypto/ed25519",
-    "crypto/encoding/amino",
-    "crypto/merkle",
-    "crypto/multisig",
-    "crypto/multisig/bitarray",
-    "crypto/secp256k1",
-    "crypto/secp256k1/internal/secp256k1",
-    "crypto/sr25519",
-    "crypto/tmhash",
-    "evidence",
-    "libs/async",
-    "libs/autofile",
-    "libs/bits",
-    "libs/bytes",
-    "libs/clist",
-    "libs/cmap",
-    "libs/events",
-    "libs/fail",
-    "libs/flowrate",
-    "libs/kv",
-    "libs/log",
-    "libs/math",
-    "libs/net",
-    "libs/os",
-    "libs/pubsub",
-    "libs/pubsub/query",
-    "libs/rand",
-    "libs/service",
-    "libs/strings",
-    "libs/tempfile",
-    "libs/timer",
-    "mempool",
-    "mock",
-    "node",
-    "p2p",
-    "p2p/conn",
-    "p2p/pex",
-    "privval",
-    "proxy",
-    "rpc/core",
-    "rpc/core/types",
-    "rpc/grpc",
-    "rpc/lib/client",
-    "rpc/lib/server",
-    "rpc/lib/types",
-    "state",
-    "state/txindex",
-    "state/txindex/kv",
-    "state/txindex/null",
-    "store",
-    "types",
-    "types/time",
-    "version",
-  ]
-  pruneopts = ""
-  revision = "af992361055b5541c1bd388994e386652e4d7254"
-  version = "v0.33.0"
-
-[[projects]]
-  digest = "1:27c65d36fc7834d3746cdf080e701a4d9175c693bbebede74bed91381494a8f4"
+  digest = "1:940f602d4ad7cf5c67f53fabe0e4e720b50c43767311397f17539282a9d948ee"
   name = "github.com/tendermint/tm-db"
   packages = ["."]
   pruneopts = ""
-  revision = "e308ac90e23d877e646495f52000647991384fad"
-  version = "v0.4.0"
+  revision = "70c30a7d63dbd00e0fe92b7c626beb29ad83248e"
 
 [[projects]]
   branch = "master"
-  digest = "1:81bf36bbc3e58b6b0e6afd215ccb8f057b52db5877c8c68f19c51c8a182ed7f7"
+  digest = "1:25f91815028080d7bf24c51388e38c55fba9d0cbb282d85447883d632def97d8"
   name = "golang.org/x/crypto"
   packages = [
     "blake2b",
@@ -906,10 +850,11 @@
     "ssh/terminal",
   ]
   pruneopts = ""
-  revision = "a0c6ece9d31a0ebfbd3ddf2d290cfb1265ba47c7"
+  revision = "86ce3cb696783b739e41e834e2eead3e1b4aa3fb"
 
 [[projects]]
-  digest = "1:dfab7264a3c6473112bc0cc6fdf46f991b5fa2e3bf0107cad156271076a1451d"
+  branch = "master"
+  digest = "1:a6b4c0203496549bdd9eb7a34a9c34aa428851951f3bdea48fc3332b3633d8fe"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -929,7 +874,7 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "292b43bbf7cb8d35ddf40f8d5100ef3837cced3f"
+  revision = "16171245cfb220d5317888b716d69c1fb4e7992b"
 
 [[projects]]
   branch = "master"
@@ -970,7 +915,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6182df2941fc0508911bf6368dc5f7e4a2e0d0853d6f7dd338781012ecc10aa4"
+  digest = "1:c1bcb5a0b68fe328b11382cac50714a0d5ec0107453b335693e270977a15c7f5"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -982,11 +927,11 @@
     "internal/packagesinternal",
   ]
   pruneopts = ""
-  revision = "7cfd24942e79e05685521b99b8f6c711489f9cb6"
+  revision = "b0390335f4a1d5d66207ac0d9a1bf258ba3a9bef"
 
 [[projects]]
   branch = "master"
-  digest = "1:285bdb7cd30f059f9b92e7f2b27d5626015c20c7968f3cf819e21c48456fc1bc"
+  digest = "1:aa13d0bf5cc0668e0b387f33e52f913e88acaf329a732c645e0050eb3c9131ec"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
@@ -995,7 +940,7 @@
     "protobuf/field_mask",
   ]
   pruneopts = ""
-  revision = "a86caf926a677e543dd621436dc3ebf2ef9877d4"
+  revision = "acff78025515167f36fd75dba2c230a16c989bb3"
 
 [[projects]]
   digest = "1:52e042987a82bfe51831ac0de4d2fcaaf08e9042a6be0c39f8c8753320d529b3"
@@ -1113,7 +1058,6 @@
     "github.com/chainpoint/tendermint/version",
     "github.com/ethereum/go-ethereum/common",
     "github.com/go-redis/redis",
-    "github.com/gogo/protobuf/protoc-gen-gogo",
     "github.com/google/uuid",
     "github.com/jacohend/lnd/lncfg",
     "github.com/jacohend/lnd/macaroons",
