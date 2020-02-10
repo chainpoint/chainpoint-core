@@ -108,7 +108,7 @@ services:
       - CHAIN
       - DEBUG
       - BACKEND=neutrino
-      - NEUTRINO=faucet.lightning.community:18333
+      - NEUTRINO
       - LND_REST_PORT
       - LND_RPC_PORT
       - TLSPATH

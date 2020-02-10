@@ -58,7 +58,9 @@ async function createSwarmAndSecrets(valuePairs) {
   // startup docker compose
   try {
     console.log('initializing LND...')
-    await exec([`export USERID=${uid} && export GROUPID=${gid} && docker-compose run -d --service-ports lnd`])
+    await exec([
+      `export NETWORK=${network} && export USERID=${uid} && export GROUPID=${gid} && docker-compose run -d --service-ports lnd`
+    ])
     await utils.sleepAsync(30000)
     console.log('LND initialized')
   } catch (err) {
