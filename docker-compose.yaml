@@ -3,8 +3,6 @@ version: '3.4'
 networks:
   chainpoint:
     driver: bridge
-  boltbox-simnet:
-    external: true
 
 services:
   # Tendermint and ABCI app in go. Coordinates the calendar
@@ -128,7 +126,6 @@ services:
     user: ${USERID}:${GROUPID}
     networks:
       - chainpoint
-      - boltbox-simnet
     ports:
       - target: 8080
         published: 80
