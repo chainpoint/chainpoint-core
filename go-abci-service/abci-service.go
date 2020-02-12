@@ -100,7 +100,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "3"))
 	//lightning settings
 	tlsCertPath := util.GetEnv("LN_TLS_CERT", "/root/.lnd/tls.cert")
-	macaroonPath := util.GetEnv("MACAROON_PATH", "/root/.lnd/data/chain/bitcoin/testnet/admin.macaroon")
+	macaroonPath := util.GetEnv("MACAROON_PATH", fmt.Sprintf("/root/.lnd/data/chain/bitcoin/%s/admin.macaroon", strings.ToLower(bitcoinNetwork)))
 	lndSocket := util.GetEnv("LND_SOCKET", "lnd:10009")
 
 	//testMode := util.GetEnv("NETWORK", "testnet")
