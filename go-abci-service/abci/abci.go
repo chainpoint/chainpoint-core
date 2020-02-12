@@ -70,8 +70,8 @@ var _ types2.Application = (*AnchorApplication)(nil)
 type AnchorApplication struct {
 	types2.BaseApplication
 	// validator set
-	ValUpdates []types2.ValidatorUpdate
-	valAddrToPubKeyMap map[string]types2.PubKey
+	ValUpdates           []types2.ValidatorUpdate
+	valAddrToPubKeyMap   map[string]types2.PubKey
 	Validators           []*types3.Validator
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string
@@ -166,6 +166,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	//Construct application
 	app := AnchorApplication{
+		valAddrToPubKeyMap:   map[string]types2.PubKey{},
 		Db:                   db,
 		state:                state,
 		config:               config,
