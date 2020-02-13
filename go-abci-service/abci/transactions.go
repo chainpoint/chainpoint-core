@@ -41,14 +41,6 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed", tx.CoreID)))
 		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
 	}
-	if tx.TxType == "BTC-C" {
-		if tx.Data == string(app.state.LatestBtccTx) {
-			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C tx: %s", tx.Data))
-			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-		} else {
-			app.state.LatestBtccTx = []byte(tx.Data)
-		}
-	}
 	if tx.TxType == "VAL" {
 		isVal, err := app.IsValidator(tx.CoreID)
 		app.logger.Info("VAL tx is from a validator? ", "isVal", isVal)
@@ -107,6 +99,11 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "BTC-C":
+		if tx.Data == string(app.state.LatestBtccTx) {
+			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C tx: %s", tx.Data))
+			resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized}
+			break
+		}
 		app.state.LatestBtccTx = []byte(tx.Data)
 		app.state.LatestBtccHeight = app.state.Height + 1
 		tags = app.incrementTxInt(tags)
