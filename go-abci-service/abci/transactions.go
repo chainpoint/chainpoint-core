@@ -153,7 +153,7 @@ func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]c
 	}
 	Txs := []core_types.ResultTx{}
 	for i := minTxInt; i <= maxTxInt; i++ {
-		txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("TxInt=%d", i), false, 1, 1)
+		txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", i), false, 1, 1)
 		if err != nil {
 			return nil, err
 		} else if txResult.TotalCount > 0 {

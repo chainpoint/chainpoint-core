@@ -152,7 +152,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	var btcMonObj types.BtcMonMsg
 	app.LogError(json.Unmarshal(msg.Body, &btcMonObj))
 	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
-	queryLine := fmt.Sprintf("BTCTX='%s'", btcMonObj.BtcTxID)
+	queryLine := fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID)
 	app.logger.Info("Anchor confirmation query: " + queryLine)
 	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25)
 	if app.LogError(err) == nil {
@@ -178,7 +178,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 			app.logger.Info(fmt.Sprint("BTC-C Hash: %v", result.Hash))
 		}
 		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
-		btccQueryLine := fmt.Sprintf("BTCC='%s'", btcMonObj.BtcHeadRoot)
+		btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
 		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25)
 		if app.LogError(err) == nil {
 			for _, tx := range txResult.Txs {

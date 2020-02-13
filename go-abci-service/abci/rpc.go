@@ -93,7 +93,7 @@ func (rpc *RPC) GetNetInfo() (core_types.ResultNetInfo, error) {
 
 //GetTxByInt : Retrieves a tx by its unique integer ID (txInt)
 func (rpc *RPC) GetTxByInt(txInt int64) (core_types.ResultTxSearch, error) {
-	txResult, err := rpc.client.TxSearch(fmt.Sprintf("TxInt=%d", txInt), false, 1, 1)
+	txResult, err := rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", txInt), false, 1, 1)
 	if rpc.LogError(err) != nil {
 		return core_types.ResultTxSearch{}, err
 	}
