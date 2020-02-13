@@ -35,11 +35,17 @@ func NewTxValidation() types.TxValidation {
 		LastCheck:   0,
 		Bucket:      0.0,
 	}
+	permittedBtccRate := types.RateLimit{
+		AllowedRate: 10,
+		PerBlocks:   60,
+		LastCheck:   0,
+		Bucket:      0.0,
+	}
 	return types.TxValidation{
 		JWKAllowedRate:  permittedJWKRate,
 		CalAllowedRate:  permittedCalRate,
 		BtcaAllowedRate: permittedBtcRate,
-		BtccAllowedRate: permittedBtcRate,
+		BtccAllowedRate: permittedBtccRate,
 		NISTAllowedRate: permittedCalRate,
 	}
 }
@@ -160,7 +166,7 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		break
 	case "BTC-C":
 		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
-		if !(IsHabitualViolator(validationRecord.BtccAllowedRate) || (state.Height-state.LatestBtccHeight < 61) /*|| !IsValidBtcc(tx, *state)*/) {
+		if !(IsHabitualViolator(validationRecord.BtccAllowedRate) /*|| !IsValidBtcc(tx, *state)*/) {
 			validated = true
 			UpdateAcceptTx(&validationRecord.BtccAllowedRate)
 			validationRecord.LastBtccTxHeight = state.Height

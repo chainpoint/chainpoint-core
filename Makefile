@@ -128,12 +128,11 @@ logs:
 
 ## clean                     : Shutdown and destroy all local application data
 .PHONY : clean
-clean: down
+clean: stop
 	@rm -rf ${CORE_DATADIR}/data/postgresql
 	@rm -rf ${CORE_DATADIR}/data/redis
 	@rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
-	@rm -rf ${HOMEDIR}/.chainpoint/core/.lnd
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
 	@docker system prune --volumes -f
 
@@ -193,6 +192,7 @@ prune-node-modules:
 ## burn                      : Burn it all down and destroy the data. Start it again yourself!
 .PHONY : burn
 burn: clean
+	@rm -rf ${HOMEDIR}/.chainpoint/core/.lnd
 	cli/scripts/remove_secrets.sh
 	@docker swarm leave -f
 	@echo ""
