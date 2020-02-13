@@ -185,6 +185,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 		return TMConfig, err
 	}
 	defaultConfig.SetRoot(homeDir)
+	defaultConfig.DBBackend = "cleveldb"
 	defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
 	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(65 * time.Second) // allows us to wait for tx to commit + 5 sec latency margin
 	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
