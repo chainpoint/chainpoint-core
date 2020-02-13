@@ -22,8 +22,9 @@ type RPC struct {
 
 // NewRPCClient : Creates a new client connected to a tendermint instance at web socket "tendermintRPC"
 func NewRPCClient(tendermintRPC types.TendermintConfig, logger log.Logger) (rpc *RPC) {
+	c, _ := client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket")
 	return &RPC{
-		client: client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket"),
+		client: c,
 		logger: logger,
 	}
 }
@@ -52,14 +53,6 @@ func (rpc *RPC) BroadcastTxWithMeta(txType string, data string, version int64, t
 	result, err := rpc.client.BroadcastTxSync([]byte(util.EncodeTxWithKey(tx, privateKey)))
 	if rpc.LogError(err) != nil {
 		return core_types.ResultBroadcastTx{}, err
-	}
-	return *result, nil
-}
-
-func (rpc *RPC) BroadcastMsg(tx types.Tx) (core_types.ResultBroadcastMsg, error) {
-	result, err := rpc.client.BroadcastMsgAsync([]byte(util.EncodeTx(tx)))
-	if rpc.LogError(err) != nil {
-		return core_types.ResultBroadcastMsg{}, err
 	}
 	return *result, nil
 }
@@ -120,7 +113,7 @@ func (rpc *RPC) GetAbciInfo() (types.AnchorState, error) {
 
 //GetValidators : retrieves list of validators at a particular block height
 func (rpc *RPC) GetValidators(height int64) (core_types.ResultValidators, error) {
-	resp, err := rpc.client.Validators(&height)
+	resp, err := rpc.client.Validators(&height, 1, 300)
 	if err != nil {
 		return core_types.ResultValidators{}, err
 	}

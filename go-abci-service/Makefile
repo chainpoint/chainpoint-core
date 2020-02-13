@@ -21,4 +21,4 @@ update_vendor_deps:
 	@dep ensure -v -update
 
 install:
-	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) gcc" abci-service.go
+	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc" abci-service.go
