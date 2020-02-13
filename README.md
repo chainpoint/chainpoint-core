@@ -5,13 +5,13 @@
 
 Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes, aggregate these hashes into a [Merkle root](https://en.wikipedia.org/wiki/Merkle_tree), and periodically commit the root hash to the Bitcoin blockchain.
 
-By default, Cores are members of the [Lightning Network](https://lightning.network/). Users use Lightning via [LSATs](https://github.com/Tierion/lsat-js) to pay Cores for permission to anchor a hash. Additionally, Lightning is used by new Cores to stake bitcoin to the Chainpoint Network as part of an anti-sybil mechanism. 
+By default, Cores are members of the [Lightning Network](https://lightning.network/). Users use Lightning via [LSATs](https://github.com/Tierion/lsat-js) to pay Cores for permission to anchor a hash. Additionally, Lightning is used by new Cores to stake bitcoin to the Chainpoint Network as part of an anti-sybil mechanism.
 
 ## Important Notice
 
 This software is intended to be run as part of Chainpoint's Core Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
 
-[https://github.com/chainpoint/chainpoint-node-src](https://github.com/chainpoint/chainpoint-node-src)
+[https://github.com/chainpoint/chainpoint-gateway](https://github.com/chainpoint/chainpoint-gateway)
 
 [https://github.com/chainpoint/chainpoint-cli](https://github.com/chainpoint/chainpoint-cli)
 
@@ -50,7 +50,7 @@ cd chainpoint-core
 make init
 ```
 
-The above make command will download all other dependencies and run an interactive setup wizard. The process is further detailed in `Configuration` below.                                                                                      |
+The above make command will download all other dependencies and run an interactive setup wizard. The process is further detailed in `Configuration` below. |
 
 ### Startup
 
@@ -68,8 +68,8 @@ $ make init
 
  ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  ██████╗ ██╗███╗   ██╗████████╗     ██████╗ ██████╗ ██████╗ ███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔═══██╗██║████╗  ██║╚══██╔══╝    ██╔════╝██╔═══██╗██╔══██╗██╔════╝
-██║     ███████║███████║██║██╔██╗ ██║██████╔╝██║   ██║██║██╔██╗ ██║   ██║       ██║     ██║   ██║██████╔╝█████╗  
-██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔═══╝ ██║   ██║██║██║╚██╗██║   ██║       ██║     ██║   ██║██╔══██╗██╔══╝  
+██║     ███████║███████║██║██╔██╗ ██║██████╔╝██║   ██║██║██╔██╗ ██║   ██║       ██║     ██║   ██║██████╔╝█████╗
+██║     ██╔══██║██╔══██║██║██║╚██╗██║██╔═══╝ ██║   ██║██║██║╚██╗██║   ██║       ██║     ██║   ██║██╔══██╗██╔══╝
 ╚██████╗██║  ██║██║  ██║██║██║ ╚████║██║     ╚██████╔╝██║██║ ╚████║   ██║       ╚██████╗╚██████╔╝██║  ██║███████╗
  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝ ╚═╝╚═╝  ╚═══╝   ╚═╝        ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
 
@@ -107,7 +107,15 @@ After running `make init` and funding the Lightning Wallet Address, you can join
 
 ### Upgrade
 
-You can upgrade Core by running `make clean-tendermint` and `docker-compose pull`, then by redeploying with `make deploy`.
+Core can be upgraded by running `make clean-tendermint` and `docker-compose pull`, then by redeploying with `make deploy`.
+
+### Troubleshooting
+
+If `make init` fails and the Lightning wallet hasn't yet been generated and funded, run `make burn`, then run `make init` again.
+
+To reset the core chain state if the Lightning wallet has already been generated and funded, run `make clean-tendermint`, then `make init` again.
+
+For further help, [submit an issue](https://github.com/chainpoint/chainpoint-core/issues) to the Chainpoint Core repo.
 
 ### Configuration
 
@@ -120,21 +128,21 @@ However, they may be invaluable for setting up a private Chainpoint Network with
 
 The following are the descriptions of the configuration parameters:
 
-| Name                     | Type    | Location                     | Description                                                                                                                                      |
-| :----------------------- | :------ | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
-| CHAINPOINT_CORE_BASE_URI | String  | .env                         | Public URI of host machine, of the form `http://35.245.53.181`                                                                                   |
-| NETWORK                  | String  | .env                         | Set to `testnet` to use Bitcoin testnet. Default is `mainnet`.                                                                                   |
-| SUBMIT_HASH_PRICE_SAT    | String  | .env                         | Price required to submit hashes to the API in satoshis                                                                                           |
-| NODE_ENV                 | String  | .env                         | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                                    |
-| PEERS                    | String  | .env                         | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
-| SEEDS                    | String  | .env                         | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
-| ANCHOR_INTERVAL          | String  | swarm-compose.yaml           | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
-| AGGREGATOR_WHITELIST     | String  | swarm-compose.yaml           | Comma-delimited list of IPs that are permitted to use Core's API without following the LSAT auth flow                                            |
-| HASHES_PER_MERKLE_TREE   | String  | swarm-compose.yaml           | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000                                        |
-| AGGREGATE                | Boolean | swarm-compose.yaml           | Whether to aggregate hashes and send them to the Calendar blockchain. Defaults to true                                                           |
-| ANCHOR                   | Boolean | swarm-compose.yaml           | Whether to anchor the state of the Calendar to Bitcoin                                                                                           |
-| LOG_FILTER               | String  | swarm-compose.yaml           | Log Verbosity. Defaults to `"main:debug,state:info,*:error"`                                                                                     |
-| LOG_LEVEL                | String  | swarm-compose.yaml           | Level of detail included in Logs. Defaults to `info`                                                                                             |
+| Name                     | Type    | Location           | Description                                                                                                                                      |
+| :----------------------- | :------ | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| CHAINPOINT_CORE_BASE_URI | String  | .env               | Public URI of host machine, of the form `http://35.245.53.181`                                                                                   |
+| NETWORK                  | String  | .env               | Set to `testnet` to use Bitcoin testnet. Default is `mainnet`.                                                                                   |
+| SUBMIT_HASH_PRICE_SAT    | String  | .env               | Price required to submit hashes to the API in satoshis                                                                                           |
+| NODE_ENV                 | String  | .env               | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                                    |
+| PEERS                    | String  | .env               | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
+| SEEDS                    | String  | .env               | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
+| ANCHOR_INTERVAL          | String  | swarm-compose.yaml | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
+| AGGREGATOR_WHITELIST     | String  | swarm-compose.yaml | Comma-delimited list of IPs that are permitted to use Core's API without following the LSAT auth flow                                            |
+| HASHES_PER_MERKLE_TREE   | String  | swarm-compose.yaml | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000                                        |
+| AGGREGATE                | Boolean | swarm-compose.yaml | Whether to aggregate hashes and send them to the Calendar blockchain. Defaults to true                                                           |
+| ANCHOR                   | Boolean | swarm-compose.yaml | Whether to anchor the state of the Calendar to Bitcoin                                                                                           |
+| LOG_FILTER               | String  | swarm-compose.yaml | Log Verbosity. Defaults to `"main:debug,state:info,*:error"`                                                                                     |
+| LOG_LEVEL                | String  | swarm-compose.yaml | Level of detail included in Logs. Defaults to `info`                                                                                             |
 
 ## Development
 
