@@ -41,6 +41,7 @@ services:
       LOG_LEVEL: 'info'
       ANCHOR_TIMEOUT: '20'
       LN_STAKE: '100000'
+      ANCHOR_REWARD: '0'
     secrets:
       - ECDSA_PKPEM
     volumes:

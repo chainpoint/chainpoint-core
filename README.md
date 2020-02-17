@@ -19,7 +19,19 @@ This software is intended to be run as part of Chainpoint's Core Network. It is 
 
 ### Requirements
 
+#### Software
+
 An Ubuntu or MacOS system with Git, Make, and BASH are required for operation. A bash script to install all other dependencies (docker, openssl, nodejs, yarn) on Ubuntu and Mac can be found [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
+
+The following tcp ports need to be open:
+
+- Web: 80, 443
+- Lightning: 8080, 9735, 10009
+- Tendermint: 26656, 26657
+
+It _is_ possible to run Core from home, but you must have a static IP and have publicly forwarded the ports above.
+
+#### Hardware
 
 Chainpoint Core has been tested with a couple of different hardware configurations.
 
@@ -37,8 +49,6 @@ Recommended:
 - `>= 500 GB SSD`
 - `Public IPv4 address`
 - `High-performance (1 Gbps+) Cloud Provider Networking`
-
-It _is_ possible to run Core from home, but you must have a static IP and have publicly forwarded ports 80, 443, 8080, 9000, 9735, 10009, 26656, and 26657 on your router.
 
 ### Installation
 
