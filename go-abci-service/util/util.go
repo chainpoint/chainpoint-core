@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net"
+	"net/http"
 	"os"
 	"reflect"
 	"strconv"
@@ -69,6 +70,25 @@ func GetEnv(key string, def string) string {
 		return def
 	}
 	return value
+}
+
+// GetAPIStatus : get metadata from a core, given its IP
+func GetAPIStatus (ip string) types.CoreAPIStatus {
+	selfStatusURL := fmt.Sprintf("http://%s/status", ip)
+	response, err := http.Get(selfStatusURL)
+	if LogError(err) != nil {
+		return types.CoreAPIStatus{}
+	}
+	contents, err := ioutil.ReadAll(response.Body)
+	if LogError(err) != nil {
+		return types.CoreAPIStatus{}
+	}
+	var apiStatus types.CoreAPIStatus
+	err = json.Unmarshal(contents, &apiStatus)
+	if LogError(err) != nil {
+		return types.CoreAPIStatus{}
+	}
+	return apiStatus
 }
 
 // GetSeededRandInt : Given a seed and a maximum size, generates a random int between 0 and upperBound

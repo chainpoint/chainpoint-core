@@ -98,6 +98,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
 	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "3"))
+	anchorReward, _ := strconv.Atoi(util.GetEnv("ANCHOR_REWARD", "0"))
 	//lightning settings
 	tlsCertPath := util.GetEnv("LN_TLS_CERT", "/root/.lnd/tls.cert")
 	macaroonPath := util.GetEnv("MACAROON_PATH", fmt.Sprintf("/root/.lnd/data/chain/bitcoin/%s/admin.macaroon", strings.ToLower(bitcoinNetwork)))
@@ -156,6 +157,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 		Logger:           &tmLogger,
 		FilePV:           pv,
 		AnchorTimeout:    anchorTimeout,
+		AnchorReward:     anchorReward,
 		StakePerVal:      1000000,
 	}
 }
