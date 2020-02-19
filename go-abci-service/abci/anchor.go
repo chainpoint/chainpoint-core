@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 	"strconv"
 	"strings"
 	"time"
@@ -99,6 +100,30 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		return nil
 	}
 	return errors.New("no transactions to aggregate")
+}
+
+// AnchorReward : Send sats to last anchoring core
+func (app *AnchorApplication) AnchorReward(CoreID string) error {
+	if val, exists := app.state.LnUris[CoreID]; exists && app.config.AnchorReward > 0 {
+		if !app.state.ChainSynced {
+			return errors.New("Reward not sent; Chain not yet synced")
+		}
+		ip := lightning.GetIpFromUri(val.Peer)
+		if len(ip) == 0 {
+			return errors.New("Reward not sent; Can't obtain IP for peer")
+		}
+		status := util.GetAPIStatus(ip)
+		if len(status.LightningAddress) == 0 {
+			return errors.New("Reward not sent; Can't obtain status for peer")
+		}
+		resp, err := app.lnClient.SendCoins(status.LightningAddress, int64(app.config.AnchorReward), int32(app.lnClient.MinConfs))
+		if app.LogError(err) != nil {
+			return err
+		}
+		app.logger.Info(fmt.Sprintf("Reward Sent to %s with txid %s", CoreID, resp.Txid))
+	}
+	app.logger.Info(fmt.Sprintf("Reward of %d not sent to CoreID %s", app.config.AnchorReward, CoreID))
+	return errors.New(fmt.Sprintf("Reward not sent; LnURI of CoreID %s not found in local database", CoreID))
 }
 
 // ConsumeBtcTxMsg : Consumes a btctx RMQ message to initiate monitoring on all nodes

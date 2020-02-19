@@ -49,6 +49,7 @@ type AnchorConfig struct {
 	Logger           *log.Logger
 	FilePV           privval.FilePV
 	AnchorTimeout    int
+	AnchorReward     int
 	StakePerVal      int64
 }
 
@@ -298,9 +299,14 @@ type CoreAPIStatus struct {
 	BaseURI             string    `json:"base_uri"`
 	Jwk                 Jwk       `json:"jwk"`
 	Network             string    `json:"network"`
+	IdentityPubkey      string    `json:"identity_pubkey"`
+	LightningAddress    string    `json:"lightning_address"`
 	PublicKey           string    `json:"public_key"`
 	Uris                []string  `json:"uris"`
 	Alias               string    `json:"alias"`
+	HashPriceSatoshis   int       `json:"hash_price_satoshis"`
+	TotalStakePrice     int       `json:"total_stake_price"`
+	ValidatorStakePrice int       `json:"validator_stake_price"`
 	ActiveChannelsCount int       `json:"active_channels_count"`
 	NodeInfo            struct {
 		ProtocolVersion struct {

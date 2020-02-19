@@ -106,6 +106,19 @@ func IsLnUri(uri string) bool {
 	return true
 }
 
+func GetIpFromUri(uri string) string {
+	peerParts := strings.Split(uri, "@")
+	if len(peerParts) != 2 {
+		return ""
+	}
+	addrPort := peerParts[1]
+	ipArr := strings.Split(addrPort, ":")
+	if len(ipArr) != 2 {
+		return ""
+	}
+	return ipArr[0]
+}
+
 func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
 	client, closeFunc := ln.GetClient()
 	defer closeFunc()
@@ -375,4 +388,24 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 		return "", "", err
 	}
 	return tx.Hash().String(), hex.EncodeToString(buf.Bytes()), nil
+}
+
+func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCoinsResponse, error){
+	wallet, closeWalletFunc := ln.GetWalletClient()
+	defer closeWalletFunc()
+	estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
+	if err != nil {
+		return lnrpc.SendCoinsResponse{}, err
+	}
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	sendCoinsReq := lnrpc.SendCoinsRequest{
+		Addr:                 addr,
+		Amount:               amt,
+		TargetConf:           confs,
+		SatPerByte:           estimatedFee.SatPerKw,
+	}
+	resp, err := client.SendCoins(context.Background(), &sendCoinsReq)
+	ln.LoggerError(err)
+	return *resp, err
 }

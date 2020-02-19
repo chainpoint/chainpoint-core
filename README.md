@@ -19,7 +19,19 @@ This software is intended to be run as part of Chainpoint's Core Network. It is 
 
 ### Requirements
 
+#### Software
+
 An Ubuntu or MacOS system with Git, Make, and BASH are required for operation. A bash script to install all other dependencies (docker, openssl, nodejs, yarn) on Ubuntu and Mac can be found [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
+
+The following tcp ports need to be open:
+
+- Web: 80, 443
+- Lightning: 8080, 9735, 10009
+- Tendermint: 26656, 26657
+
+It _is_ possible to run Core from home, but you must have a static IP and have publicly forwarded the ports above.
+
+#### Hardware
 
 Chainpoint Core has been tested with a couple of different hardware configurations.
 
@@ -38,21 +50,7 @@ Recommended:
 - `Public IPv4 address`
 - `High-performance (1 Gbps+) Cloud Provider Networking`
 
-It _is_ possible to run Core from home, but you must have a static IP and have publicly forwarded ports 80, 443, 8080, 9000, 9735, 10009, 26656, and 26657 on your router.
-
-### Installation
-
-Running the following commands in BASH will download and setup the Core installation:
-
-```
-git clone https://github.com/chainpoint/chainpoint-core.git
-cd chainpoint-core
-make init
-```
-
-The above make command will download all other dependencies and run an interactive setup wizard. The process is further detailed in `Configuration` below. |
-
-### Startup
+### Quick Start
 
 To start up a Core node without connecting to the rest of the Chainpoint Network:
 
@@ -95,7 +93,7 @@ Please fund the Lightning Wallet Address above with Bitcoin and wait for 6 confi
 $ make deploy
 ```
 
-If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute after the docker containers download.
+If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute after the docker containers download, and going to `<your ip>/status` in a browser will show the Core status in JSON format.
 
 ### Joining the Chainpoint Testnet
 
