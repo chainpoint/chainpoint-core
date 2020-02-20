@@ -62,6 +62,9 @@ $ make install-deps
 
 Please logout and login to allow your user to use docker
 
+$ exit #Logout of your server
+
+$ ssh user@<your_ip> #Log back into your server
 $ make init
 
  ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  ██████╗ ██╗███╗   ██╗████████╗     ██████╗ ██████╗ ██████╗ ███████╗
