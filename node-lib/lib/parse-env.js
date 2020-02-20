@@ -185,7 +185,7 @@ module.exports = service => {
         desc: 'A comma separated list of IPs that may submit hashes without invoices'
       })
       envDefinitions.SUBMIT_HASH_PRICE_SAT = envalid.num({
-        default: 10,
+        default: 2,
         desc: 'The price, in satosh, to submit a hash for processing'
       })
       break
