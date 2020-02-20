@@ -45,7 +45,7 @@ async function createSwarmAndSecrets(valuePairs) {
 
   //init swarm and save bitcoin wif
   try {
-    await exec([
+    await exec.quiet([
       `docker swarm init --advertise-addr=${ip} || echo "Swarm already initialized"`,
       `openssl ecparam -genkey -name secp256r1 -noout -out ${home}/.chainpoint/core/data/keys/ecdsa_key.pem`,
       `cat ${home}/.chainpoint/core/data/keys/ecdsa_key.pem | docker secret create ECDSA_PKPEM -`
@@ -58,7 +58,7 @@ async function createSwarmAndSecrets(valuePairs) {
   // startup docker compose
   try {
     console.log('initializing LND...')
-    await exec([
+    await exec.quiet([
       `export NETWORK=${network} && export USERID=${uid} && export GROUPID=${gid} && docker-compose run -d --service-ports lnd`
     ])
     await utils.sleepAsync(30000)
@@ -158,7 +158,7 @@ async function createSwarmAndSecrets(valuePairs) {
 
   try {
     console.log('shutting down LND...')
-    await exec([`docker-compose down && rm ${home}/.chainpoint/core/.lnd/tls.*`])
+    await exec.quiet([`docker-compose down && rm ${home}/.chainpoint/core/.lnd/tls.*`])
     console.log('LND shut down')
   } catch (err) {
     console.log(chalk.red(`Could not bring down LND: ${err}`))

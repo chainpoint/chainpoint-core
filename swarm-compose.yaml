@@ -16,9 +16,6 @@ secrets:
 services:
   abci:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG:-latest}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.abci
     depends_on:
       - rabbitmq
       - api
@@ -144,11 +141,7 @@ services:
   # PORTS : 8080
   #
   api:
-    restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG:-latest}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.api
     user: ${USERID}:${GROUPID}
     depends_on:
       - redis
@@ -246,12 +239,7 @@ services:
   # Monitor and report on the state of BTC transactions this app has submitted.
   #
   btc-mon:
-    restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-mon-service:${DOCKER_TAG:-latest}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.btc-mon
-    container_name: btc-mon-core
     user: ${USERID}:${GROUPID}
     depends_on:
       - rabbitmq
@@ -281,12 +269,7 @@ services:
   # Monitor and report on the state of LND invoices.
   #
   lnd-mon:
-    restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG:-latest}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.lnd-mon
-    container_name: lnd-mon-core
     user: ${USERID}:${GROUPID}
     depends_on:
       - redis
@@ -334,11 +317,7 @@ services:
   # Encapsulates all persistent data storage for partial proof data.
   #
   proof-state:
-    restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG:-latest}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.proof-state
     user: ${USERID}:${GROUPID}
     deploy:
       replicas: 2
@@ -368,11 +347,7 @@ services:
   # for Calendar, Bitcoin, and Ethereum attestation levels.
   #
   proof-gen:
-    restart: always
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG:-latest}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.proof-gen
     user: ${USERID}:${GROUPID}
     deploy:
       replicas: 2
@@ -406,9 +381,7 @@ services:
   # http : 15673 (+1 over default)
   #
   rabbitmq:
-    restart: always
     image: rabbitmq:3.6.11-management-alpine
-    container_name: rabbitmq-core
     hostname: rabbitmq
     user: ${USERID}:${GROUPID}
     ports:
@@ -434,9 +407,7 @@ services:
   # Redis
   #
   redis:
-    restart: always
     image: redis:4.0.9
-    container_name: redis-core
     user: ${USERID}:${GROUPID}
     ports:
       - '6379'
@@ -472,9 +443,7 @@ services:
   #   psql -h 127.0.0.1 -U chainpoint
   #
   postgres:
-    restart: always
     image: postgres:11.2
-    container_name: postgres-core
     user: ${USERID}:${GROUPID}
     volumes:
       - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data
