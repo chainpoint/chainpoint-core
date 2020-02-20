@@ -95,11 +95,11 @@ $ make deploy
 
 If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute after the docker containers download, and going to `<your ip>/status` in a browser will show the Core status in JSON format.
 
-### Joining the Chainpoint Testnet
+### Joining a Network
 
-After running `make init` and funding the Lightning Wallet Address, you can join the public testnet as a Full Node:
+By default, the init process will join either the Chainpoint Testnet or Mainnet, depending on user choice. However, peering with custom networks is also possible:
 
-1. Specify peers by adding `PEERS="087186cd1d631c5e709c4afa15a1ce218c6a28c1@3.133.119.65:26656"` to the .env file in the root project directory
+1. Specify peers by adding a comma-delimited list of Tendermint URIs, such as `PEERS="087186cd1d631c5e709c4afa15a1ce218c6a28c1@3.133.119.65:26656"` to the .env file in the root project directory
 
 2. Run `make deploy` to start Core. In order to obtain permission to submit hashes to the network, your Core will automatically stake bitcoin by opening lightning channels with the existing network validators.
 
