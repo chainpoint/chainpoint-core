@@ -117,7 +117,7 @@ For further help, [submit an issue](https://github.com/chainpoint/chainpoint-cor
 
 ### Configuration
 
-You will need to set up a configuration and secrets (lightning wallet) before running. `make init` will do most of the heavy lifting for you.
+`make init` will perform the configuration process for you. However, you may wish to setup a custom Core or Network. To do this, you will need to set up a configuration and secrets (lightning wallet) before running.
 
 Chainpoint Core currently uses Docker Swarm when running in Production mode. Running `make init` will initialize a Docker Swarm node on the host machine and prompt the user for the the type of network (TESTNET or MAINNET) and public IP.
 There are further settings found in the `.env.sample` and `swarm-compose.yaml` file.
