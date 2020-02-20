@@ -9,7 +9,7 @@ By default, Cores are members of the [Lightning Network](https://lightning.netwo
 
 ## Important Notice
 
-This software is intended to be run as part of Chainpoint's Core Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Node, or installing a copy of our command line interface please instead visit:
+This software is intended to be run as part of Chainpoint's Core Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Gateway, or installing a copy of our command line interface please instead visit:
 
 [https://github.com/chainpoint/chainpoint-gateway](https://github.com/chainpoint/chainpoint-gateway)
 
