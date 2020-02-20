@@ -143,7 +143,6 @@ async function createSwarmAndSecrets(valuePairs) {
       ])
     } catch (err) {
       console.log(chalk.red(`Could not exec docker secret creation: ${err}`))
-      return
     }
   }
 
@@ -153,7 +152,6 @@ async function createSwarmAndSecrets(valuePairs) {
     await exec.quiet([`printf ${secret} | docker secret create SESSION_SECRET -`])
   } catch (err) {
     console.log(chalk.red(`Could not exec docker secret creation: ${err}`))
-    return
   }
 
   try {
