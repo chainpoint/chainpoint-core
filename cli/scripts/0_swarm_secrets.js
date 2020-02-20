@@ -120,10 +120,10 @@ async function createSwarmAndSecrets(valuePairs) {
         let host = hostportArr[0]
         let response = await request('http://' + host + ':26657/abci_info')
         let result = JSON.parse(response.body)
-        let totalStakePrice = JSON.parse(result.result.response.data).total_stake_price
+        let totalStakePrice = JSON.parse(result.result.response.data).total_stake_price + 1000000
         console.log(
           chalk.green(
-            `\nPlease fund your lightning address with at least ${totalStakePrice} Satoshis and wait for 6 confirmations`
+            `\nPlease fund your lightning address with at least ${totalStakePrice} Satoshis and wait for 6 confirmations, then run 'make deploy'`
           )
         )
       } catch (error) {
