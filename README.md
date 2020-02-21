@@ -21,7 +21,7 @@ This software is intended to be run as part of Chainpoint's Core Network. It is 
 
 #### Software
 
-An Ubuntu or MacOS system with Git, Make, and BASH are required for operation. A bash script to install all other dependencies (docker, openssl, nodejs, yarn) on Ubuntu and Mac can be found [here](https://github.com/chainpoint/chainpoint-core/blob/master/cli/scripts/install_deps.sh).
+An Ubuntu or MacOS system with Git, Make, and BASH are required for operation. A bash script to install all other dependencies (docker, openssl, nodejs, yarn) can be run from `make install-deps`.
 
 The following tcp ports need to be open:
 
@@ -65,6 +65,7 @@ Please logout and login to allow your user to use docker
 $ exit #Logout of your server
 
 $ ssh user@<your_ip> #Log back into your server
+$ cd chainpoint-core
 $ make init
 
  ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  ██████╗ ██╗███╗   ██╗████████╗     ██████╗ ██████╗ ██████╗ ███████╗
