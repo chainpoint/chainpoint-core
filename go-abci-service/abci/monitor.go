@@ -91,7 +91,7 @@ func (app *AnchorApplication) StakeIdentity() {
 							_, err := app.lnClient.CreateChannel(lnID.Peer, app.config.StakePerVal)
 							app.LogError(err)
 						} else {
-							app.logger.Info(fmt.Sprintf("Channel %s exists, skipping...", lnID.Peer))
+							app.logger.Info(fmt.Sprintf("Lightning Channel %s exists, skipping...", lnID.Peer))
 							continue
 						}
 					}
@@ -101,16 +101,16 @@ func (app *AnchorApplication) StakeIdentity() {
 				}
 			}
 			if waitForValidators {
-				app.logger.Info("Validator identities not all declared yet, waiting...")
+				app.logger.Info("Validator Lightning identities not all declared yet, waiting...")
 				continue
 			}
 			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
 			for !time.Now().After(deadline) {
-				app.logger.Info("Sleeping to allow validator lightning channels to open...")
+				app.logger.Info("Sleeping to allow validator Lightning channels to open...")
 				time.Sleep(time.Duration(1) * time.Minute)
 			}
 		} else {
-			app.logger.Info("This node is a validator, skipping staking")
+			app.logger.Info("This node is a validator, skipping Lightning staking")
 			app.state.AmValidator = true
 		}
 		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
@@ -143,7 +143,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			return
 		}
 	}
-	app.LogError(errors.New("Cannot broadcast Core public key- already present in state of chain?"))
+	app.LogError(errors.New("Lightning Staking: Cannot broadcast Core public key- already present in state of chain?"))
 }
 
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
