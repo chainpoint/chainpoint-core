@@ -14,7 +14,7 @@ Each Core has an integrated Lightning Node running [LND](https://github.com/ligh
 
 When joining the network, new Cores automatically open Lightning channels with 2/3rds of the existing Cores. Each channel must have a minimum capacity of 1,000,000 satoshis. This provides a measure of Sybil resistance and helps ensure Cores have sufficient liquidity to receive Lightning payments from Gateways. 
 
-Once per hour, a Core is elected to anchor data to Bitcoin. As more Cores join the network, each Core anchors less frequently, thus reducing each Core’s cost of paying Bitcoin transaction fees. The anchoring Core receives a reward of XXXXX satoshis. The rewards fund will distribute XX BTC over X years.
+Once per hour, a Core is elected to anchor data to Bitcoin. As more Cores join the network, each Core anchors less frequently, thus reducing each Core’s cost of paying Bitcoin transaction fees. 
 
 You do not need to run Chainpoint Core to use the Chainpoint protocol. Chainpoint Core is for operators that want to participate in running the anchoring service, and earn fees from Gateways.
 
