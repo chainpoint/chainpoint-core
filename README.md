@@ -3,17 +3,20 @@
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Chainpoint is a protocol for anchoring data the Bitcoin blockchain. The Chainpoint Core software runs as a node on a distributed network. Cores receive hashes, aggregate these hashes into a [Merkle root](https://en.wikipedia.org/wiki/Merkle_tree), and periodically commit the root hash to the Bitcoin blockchain.
+See [Chainpoint Start] (https://github.com/chainpoint/chainpoint-start) for an overview of the Chainpoint Network.
 
-By default, Cores are members of the [Lightning Network](https://lightning.network/). Users use Lightning via [LSATs](https://github.com/Tierion/lsat-js) to pay Cores for permission to anchor a hash. Additionally, Lightning is used by new Cores to stake bitcoin to the Chainpoint Network as part of an anti-sybil mechanism.
+![Draft Chainpoint Architecture Diagram](https://github.com/chainpoint/chainpoint-start/blob/master/imgs/Chainpoint-Network-Overview-Diagram.png)
 
-## Important Notice
 
-This software is intended to be run as part of Chainpoint's Core Network. It is for operators wanting to help run the anchoring service. If you are interested in running a Chainpoint Gateway, or installing a copy of our command line interface please instead visit:
+Chainpoint Core runs as a node on a distributed network. Cores aggregate hashes received from Gateways, maintain the Chainpoint Calendar, and periodically anchor data to the Bitcoin blockchain. 
 
-[https://github.com/chainpoint/chainpoint-gateway](https://github.com/chainpoint/chainpoint-gateway)
+Each Core has an integrated Lightning Node running [LND](https://github.com/lightningnetwork/lnd). Cores receive `anchor fee` payments from Gateways via Lightning. The default `anchor fee` is 2 [satoshis](https://en.bitcoin.it/wiki/Satoshi_(unit)). Core operators can set their anchor fee to adapt to changing market conditions and compete to earn fees from Gateways.
 
-[https://github.com/chainpoint/chainpoint-cli](https://github.com/chainpoint/chainpoint-cli)
+When joining the network, new Cores automatically open Lightning channels with 2/3rds of the existing Cores. Each channel must have a minimum capacity of 1,000,000 satoshis. This provides a measure of Sybil resistance and helps ensure Cores have sufficient liquidity to receive Lightning payments from Gateways. 
+
+Once per hour, a Core is elected to anchor data to Bitcoin. As more Cores join the network, each Core anchors less frequently, thus reducing each Core’s cost of paying Bitcoin transaction fees. The anchoring Core receives a reward of XXXXX satoshis. The rewards fund will distribute XX BTC over X years.
+
+You do not need to run Chainpoint Core to use the Chainpoint protocol. Chainpoint Core is for operators that want to participate in running the anchoring service, and earn fees from Gateways.
 
 ## Installing Chainpoint Core
 
