@@ -25,6 +25,23 @@ const home = require('os').homedir()
 const crypto = require('crypto')
 const request = require('async-request')
 
+async function numCores(peers) {
+  try {
+    let arr = peers.split(',')
+    let first = arr[0]
+    let uriArr = first.split('@')
+    let hostportArr = uriArr[1].split(':')
+    let host = hostportArr[0]
+    let response = await request('http://' + host + ':26657/abci_info')
+    let result = JSON.parse(response.body)
+    let totalStakePrice = JSON.parse(result.result.response.data).total_stake_price + 1000000
+    return totalStakePrice
+  } catch (error) {
+    console.log(chalk.red(`Could not query peers for total stake amount needed: ${error}`))
+  }
+  return 0
+}
+
 async function createSwarmAndSecrets(valuePairs) {
   let address = { address: valuePairs.HOT_WALLET_ADDRESS }
   let uid = (await exec.quiet('id -u $USER')).stdout.trim()
@@ -41,6 +58,16 @@ async function createSwarmAndSecrets(valuePairs) {
     peers = '087186cd1d631c5e709c4afa15a1ce218c6a28c1@3.133.119.65:26656'
   } else if (network == 'mainnet') {
     peers = ''
+  }
+
+  let totalStakePrice = await numCores(peers)
+  if (totalStakePrice != 0) {
+    console.log(
+      chalk.green(
+        `\nNote: You will need at least ${totalStakePrice} Satoshis (${totalStakePrice /
+          100000000} BTC) to join the Chainpoint Network!\n`
+      )
+    )
   }
 
   //init swarm and save bitcoin wif
@@ -112,22 +139,13 @@ async function createSwarmAndSecrets(valuePairs) {
       console.log(chalk.magenta(`\n******************************************************`))
       console.log(chalk.magenta(`You should back up this information in a secure place.`))
       console.log(chalk.magenta(`******************************************************\n\n`))
-      try {
-        let arr = peers.split(',')
-        let first = arr[0]
-        let uriArr = first.split('@')
-        let hostportArr = uriArr[1].split(':')
-        let host = hostportArr[0]
-        let response = await request('http://' + host + ':26657/abci_info')
-        let result = JSON.parse(response.body)
-        let totalStakePrice = JSON.parse(result.result.response.data).total_stake_price + 1000000
+      if (totalStakePrice != 0) {
         console.log(
           chalk.green(
-            `\nPlease fund your lightning address with at least ${totalStakePrice} Satoshis and wait for 6 confirmations, then run 'make deploy'`
+            `\nYou will need to fund your Lightning Address with at least ${totalStakePrice} Satoshis (${totalStakePrice /
+              100000000} BTC) and wait for 6 confirmations, then run 'make deploy'`
           )
         )
-      } catch (error) {
-        console.log(chalk.red(`Could not query peers for total stake amount needed: ${error}`))
       }
     }
   } catch (err) {
