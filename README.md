@@ -7,14 +7,13 @@ See [Chainpoint Start](https://github.com/chainpoint/chainpoint-start) for an ov
 
 ![Draft Chainpoint Architecture Diagram](https://github.com/chainpoint/chainpoint-start/blob/master/imgs/Chainpoint-Network-Overview-Diagram.png)
 
+Chainpoint Core runs as a node on a distributed network. Cores aggregate hashes received from Gateways, maintain the Chainpoint Calendar, and periodically anchor data to the Bitcoin blockchain.
 
-Chainpoint Core runs as a node on a distributed network. Cores aggregate hashes received from Gateways, maintain the Chainpoint Calendar, and periodically anchor data to the Bitcoin blockchain. 
+Each Core has an integrated Lightning Node running [LND](https://github.com/lightningnetwork/lnd). Cores receive `anchor fee` payments from Gateways via Lightning. The default `anchor fee` is 2 [satoshis](<https://en.bitcoin.it/wiki/Satoshi_(unit)>). Core operators can set their anchor fee to adapt to changing market conditions and compete to earn fees from Gateways.
 
-Each Core has an integrated Lightning Node running [LND](https://github.com/lightningnetwork/lnd). Cores receive `anchor fee` payments from Gateways via Lightning. The default `anchor fee` is 2 [satoshis](https://en.bitcoin.it/wiki/Satoshi_(unit)). Core operators can set their anchor fee to adapt to changing market conditions and compete to earn fees from Gateways.
+When joining the network, new Cores automatically open Lightning channels with 2/3rds of the existing Cores. Each channel must have a minimum capacity of 1,000,000 satoshis. This provides a measure of Sybil resistance and helps ensure Cores have sufficient liquidity to receive Lightning payments from Gateways.
 
-When joining the network, new Cores automatically open Lightning channels with 2/3rds of the existing Cores. Each channel must have a minimum capacity of 1,000,000 satoshis. This provides a measure of Sybil resistance and helps ensure Cores have sufficient liquidity to receive Lightning payments from Gateways. 
-
-Once per hour, a Core is elected to anchor data to Bitcoin. As more Cores join the network, each Core anchors less frequently, thus reducing each Core’s cost of paying Bitcoin transaction fees. 
+Once per hour, a Core is elected to anchor data to Bitcoin. As more Cores join the network, each Core anchors less frequently, thus reducing each Core’s cost of paying Bitcoin transaction fees.
 
 You do not need to run Chainpoint Core to use the Chainpoint protocol. Chainpoint Core is for operators that want to participate in running the anchoring service, and earn fees from Gateways.
 
@@ -95,7 +94,9 @@ LND Wallet Address: tb1qfvjr20txm464fxcr0n9d4j2gkr5w4xpl55kl6u
 You should back up this information in a secure place.
 ******************************************************
 
-Please fund the Lightning Wallet Address above with Bitcoin and wait for 6 confirmation before running 'make deploy'
+Please fund your lightning address with at least 3000000 Satoshis and wait for 6 confirmations, then run `make deploy`
+
+shutting down LND...
 
 $ make deploy
 ```
