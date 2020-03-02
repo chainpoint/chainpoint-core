@@ -56,6 +56,8 @@ Recommended:
 
 To start up a Core node without connecting to the rest of the Chainpoint Network:
 
+#### Installing Dependencies
+
 ```$bash
 $ sudo apt-get install make git
 $ git clone https://github.com/chainpoint/chainpoint-core.git
@@ -63,9 +65,12 @@ $ cd chainpoint-core
 $ make install-deps
 
 Please logout and login to allow your user to use docker
-
 $ exit #Logout of your server
+```
 
+#### Configure Core
+
+```
 $ ssh user@<your_ip> #Log back into your server
 $ cd chainpoint-core
 $ make init
@@ -80,7 +85,11 @@ $ make init
 
 ? Will this Core use Bitcoin mainnet or testnet? Testnet
 ? Enter your Instance's Public IP Address: 3.17.78.45
+```
 
+#### Auto-Initialize Lightning
+
+```
 Initializing Lightning wallet...
 Create new address for wallet...
 Creating Docker secrets...
