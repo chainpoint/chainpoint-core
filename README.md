@@ -56,7 +56,7 @@ Recommended:
 
 To start up a Core node without connecting to the rest of the Chainpoint Network:
 
-#### Installing Dependencies
+#### Install Dependencies
 
 ```$bash
 $ sudo apt-get install make git
