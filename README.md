@@ -90,6 +90,8 @@ $ make init
 #### Auto-Initialize Lightning
 
 ```
+You will need at least 3000000 Satoshis (0.03 BTC) to join the Chainpoint Network!
+
 Initializing Lightning wallet...
 Create new address for wallet...
 Creating Docker secrets...
@@ -103,7 +105,7 @@ LND Wallet Address: tb1qfvjr20txm464fxcr0n9d4j2gkr5w4xpl55kl6u
 You should back up this information in a secure place.
 ******************************************************
 
-Please fund your Lightning address with at least 3000000 Satoshis and wait for 6 confirmations, then run `make deploy`
+Please fund your lightning address with at least 3000000 Satoshis (0.03 BTC) and wait for 6 confirmations, then run `make deploy`
 
 shutting down LND...
 
