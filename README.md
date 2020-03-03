@@ -64,7 +64,7 @@ $ git clone https://github.com/chainpoint/chainpoint-core.git
 $ cd chainpoint-core
 $ make install-deps
 
-Please logout and login to allow your user to use docker
+You must logout and login to allow your user to use Docker
 $ exit #Logout of your server
 ```
 
@@ -83,8 +83,8 @@ $ make init
  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝ ╚═╝╚═╝  ╚═══╝   ╚═╝        ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
 
 
-? Will this Core use Bitcoin mainnet or testnet? Testnet
-? Enter your Instance's Public IP Address: 3.17.78.45
+? Will this Core use Bitcoin mainnet or testnet? testnet
+? Enter your Core's Public IP Address: 3.17.78.45
 ```
 
 #### Auto-Initialize Lightning
@@ -103,7 +103,7 @@ LND Wallet Address: tb1qfvjr20txm464fxcr0n9d4j2gkr5w4xpl55kl6u
 You should back up this information in a secure place.
 ******************************************************
 
-Please fund your lightning address with at least 3000000 Satoshis and wait for 6 confirmations, then run `make deploy`
+Please fund your Lightning address with at least 3000000 Satoshis and wait for 6 confirmations, then run `make deploy`
 
 shutting down LND...
 
