@@ -112,7 +112,7 @@ shutting down LND...
 $ make deploy
 ```
 
-If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute after the docker containers download, and going to `<your ip>/status` in a browser will show the Core status in JSON format.
+After `make deploy`, it will take about 5 minutes to deploy Core. If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute after the docker containers download, and going to `<your ip>/status` in a browser will show the Core status in JSON format.
 
 ### Joining a Network
 
