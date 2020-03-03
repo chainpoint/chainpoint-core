@@ -82,6 +82,8 @@ $ make init
 ? Will this Core use Bitcoin mainnet or testnet? Testnet
 ? Enter your Instance's Public IP Address: 3.17.78.45
 
+You will need at least 4000000 Satoshis (0.04 BTC) to join the Chainpoint Network!
+
 Initializing Lightning wallet...
 Create new address for wallet...
 Creating Docker secrets...
@@ -95,7 +97,7 @@ LND Wallet Address: tb1qfvjr20txm464fxcr0n9d4j2gkr5w4xpl55kl6u
 You should back up this information in a secure place.
 ******************************************************
 
-Please fund the Lightning Wallet Address above with Bitcoin and wait for 6 confirmation before running 'make deploy'
+Please fund your Lightning Wallet Address with at least 4000000 Satoshis (0.04 BTC) and wait for 6 confirmation before running 'make deploy'
 
 $ make deploy
 ```
