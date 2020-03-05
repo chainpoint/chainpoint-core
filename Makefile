@@ -133,6 +133,7 @@ clean: stop
 	@rm -rf ${CORE_DATADIR}/data/redis
 	@rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
+	@rm -f ${CORE_DATADIR}/config/node_1/genesis.json
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
 	@docker system prune --volumes -f
 
