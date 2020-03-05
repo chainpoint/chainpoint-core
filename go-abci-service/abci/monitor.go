@@ -139,11 +139,8 @@ func (app *AnchorApplication) StakeIdentity() {
 		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			continue
-		} else {
-			return
 		}
 	}
-	app.LogError(errors.New("Lightning Staking: Cannot broadcast Core public key- already present in state of chain?"))
 }
 
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
