@@ -190,7 +190,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		JWK: 		 jwkType,
 	}
 
-	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked)
+	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked, "JWK Kid", app.JWK.Kid)
 
 	//Initialize calendar writing if enabled
 	if config.DoCal {

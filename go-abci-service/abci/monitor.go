@@ -131,7 +131,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		if app.LogError(err) != nil {
 			continue
 		}
-		app.logger.Info("Sending JWK...")
+		app.logger.Info("Sending JWK...", "JWK", string(jwkJson))
 		//Declare our identity to the network
 		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
@@ -247,7 +247,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	json.Unmarshal([]byte(tx.Data), &jwkType)
 	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
 	app.logger.Info("JWK kid", "JWK Tx kid", jwkType.Kid, "app JWK kid", app.JWK.Kid)
-	if jwkType.Kid == app.JWK.Kid {
+	if jwkType.Kid != "" && app.JWK.Kid != "" && jwkType.Kid == app.JWK.Kid {
 		app.logger.Info("JWK keysync tx committed")
 		app.state.JWKStaked = true
 	}
