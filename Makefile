@@ -233,7 +233,7 @@ stop:
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint: stop
 	@sleep 20 && rm -rf ${CORE_DATADIR}/config/node_1/data/*
-	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
+	@mv ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -af
 
 ## optimize-network          : increases number of sockets host can use
