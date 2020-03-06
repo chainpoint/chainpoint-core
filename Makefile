@@ -27,7 +27,7 @@ build-config:
 ## build                     : Build all
 .PHONY : build
 build:
-	docker container prune -f
+	docker container prune -a
 	docker-compose build
 
 ## pull                      : Pull Docker images
@@ -135,7 +135,7 @@ clean: stop
 	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
 	@rm -f ${CORE_DATADIR}/config/node_1/genesis.json
 	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
-	@docker system prune --volumes -f
+	@docker system prune --volumes
 
 ## install-deps              : Install system dependencies
 install-deps:
@@ -180,10 +180,10 @@ init-config:
 ## prune                     : Shutdown and destroy all docker assets
 .PHONY : prune
 prune: down
-	docker container prune -f
-	docker image prune -f -a
-	docker volume prune -f
-	docker network prune -f
+	docker container prune -a
+	docker image prune -a
+	docker volume prune
+	docker network prune
 
 ## prune-node-modules        : Remove the node_modules sub-directory for each service
 .PHONY : prune-node-modules
@@ -234,7 +234,7 @@ stop:
 clean-tendermint: stop
 	@sleep 20 && rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@mv ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
-	docker system prune -af
+	docker system prune -a
 
 ## optimize-network          : increases number of sockets host can use
 optimize-network:
