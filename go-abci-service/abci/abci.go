@@ -187,6 +187,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
 	}
 
+	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked)
+
 	//Initialize calendar writing if enabled
 	if config.DoCal {
 		go app.aggregator.StartAggregation()

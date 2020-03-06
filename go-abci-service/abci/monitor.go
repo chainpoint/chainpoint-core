@@ -55,6 +55,7 @@ func (app *AnchorApplication) SyncMonitor() {
 		if status.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
 		} else {
+			app.logger.Info("Chain Sync State Change", "ChainSynced", app.state.ChainSynced)
 			app.state.ChainSynced = true
 		}
 	}
@@ -63,7 +64,8 @@ func (app *AnchorApplication) SyncMonitor() {
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
 func (app *AnchorApplication) StakeIdentity() {
-	for app.state.JWKStaked != true {
+	for !app.state.JWKStaked {
+		app.logger.Info("Beginning Lightning staking loop")
 		time.Sleep(60 * time.Second)
 		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
 			continue
@@ -135,6 +137,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		if app.LogError(err) != nil {
 			continue
 		}
+		app.logger.Info("Sending JWK...")
 		//Declare our identity to the network
 		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
