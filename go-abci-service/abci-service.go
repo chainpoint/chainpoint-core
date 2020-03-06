@@ -42,7 +42,7 @@ func main() {
 	logger := tmConfig.Logger
 
 	//Instantiate ABCI application
-	config := initABCIConfig(tmConfig.FilePV)
+	config := initABCIConfig(tmConfig.FilePV, tmConfig.NodeKey)
 	app := abci.NewAnchorApplication(config)
 
 	//declare connection to abci app
@@ -84,7 +84,7 @@ func main() {
 }
 
 // initABCIConfig: receives ENV variables and initializes app config struct
-func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
+func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig {
 	// Perform env type conversions
 	bitcoinNetwork := util.GetEnv("NETWORK", "testnet")
 	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
@@ -108,6 +108,7 @@ func initABCIConfig(pv privval.FilePV) types.AnchorConfig {
 	tendermintRPC := types.TendermintConfig{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
+		NodeKey: nodeKey,
 	}
 	postgresUser := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
 	postgresPw := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")

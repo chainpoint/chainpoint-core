@@ -164,7 +164,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		fmt.Println("Connection to LND established")
 	}
 
-	jwk, jwkJson, jwkType := util.GenerateKey(&config.ECPrivateKey)
+	jwkType := util.GenerateKey(&config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
 
 	//Construct application
 	app := AnchorApplication{
@@ -190,7 +190,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		JWK: 		 jwkType,
 	}
 
-	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked, "JWK JSON", jwkJson, "JWK Kid (non marshalled)", jwk.KeyID(), "JWK Kid", jwkType.Kid)
+	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked, "JWK Kid", jwkType.Kid)
 
 	//Initialize calendar writing if enabled
 	if config.DoCal {
