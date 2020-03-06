@@ -164,6 +164,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		fmt.Println("Connection to LND established")
 	}
 
+	jwkType := util.GenerateKey(&config.ECPrivateKey)
+
 	//Construct application
 	app := AnchorApplication{
 		valAddrToPubKeyMap:   map[string]types2.PubKey{},
@@ -185,6 +187,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		redisClient: redisClient,
 		lnClient:    &config.LightningConfig,
 		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
+		JWK: 		 jwkType,
 	}
 
 	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked)

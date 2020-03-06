@@ -212,6 +212,23 @@ func EncodeTxWithKey(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
 	return base64.StdEncoding.EncodeToString(txJSON)
 }
 
+func GenerateKey(privateKey *ecdsa.PrivateKey) types.Jwk {
+	jwk, err := jwk.New(privateKey.Public())
+	if err != nil {
+		panic (err)
+	}
+	jwkJson, err := json.MarshalIndent(jwk, "", "  ")
+	if err != nil {
+		panic (err)
+	}
+	var jwkType types.Jwk
+	err = json.Unmarshal([]byte(jwkJson), &jwkType)
+	if err != nil {
+		panic (err)
+	}
+	return jwkType
+}
+
 //EncodeTx : encode a tx to base64
 func EncodeTx(outgoing types.Tx) string {
 	txJSON, _ := json.Marshal(outgoing)

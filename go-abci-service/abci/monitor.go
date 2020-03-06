@@ -12,8 +12,6 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
-	"github.com/lestrrat-go/jwx/jwk"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -115,11 +113,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.logger.Info("This node is a validator, skipping Lightning staking")
 			app.state.AmValidator = true
 		}
-		jwk, err := jwk.New(app.config.ECPrivateKey.Public())
-		if app.LogError(err) != nil {
-			continue
-		}
-		jwkJson, err := json.MarshalIndent(jwk, "", "  ")
+		jwkJson, err := json.Marshal(app.JWK)
 		if app.LogError(err) != nil {
 			continue
 		}
@@ -252,6 +246,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	var jwkType types.Jwk
 	json.Unmarshal([]byte(tx.Data), &jwkType)
 	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
+	app.logger.Info("JWK kid", "JWK Tx kid", jwkType.Kid, "app JWK kid", app.JWK.Kid)
 	if jwkType.Kid == app.JWK.Kid {
 		app.logger.Info("JWK keysync tx committed")
 		app.state.JWKStaked = true
