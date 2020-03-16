@@ -57,7 +57,7 @@ async function createSwarmAndSecrets(valuePairs) {
   } else if (network == 'testnet') {
     peers = '087186cd1d631c5e709c4afa15a1ce218c6a28c1@3.133.119.65:26656'
   } else if (network == 'mainnet') {
-    peers = ''
+    peers = '24ba3a2556ebae073b42d94815836b29594a2456@18.220.31.138:26656'
   }
 
   let totalStakePrice = await numCores(peers)
