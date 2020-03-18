@@ -74,7 +74,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	switch string(tx.TxType) {
 	case "VAL":
 		tags = app.incrementTxInt(tags)
-		if isValidatorTx([]byte(tx.Data)) {
+		if isValidatorTx([]byte(tx.Data)) && app.PendingValidator == tx.Data {
 			resp = app.execValidatorTx([]byte(tx.Data))
 		}
 		break

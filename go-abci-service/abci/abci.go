@@ -73,6 +73,7 @@ type AnchorApplication struct {
 	ValUpdates           []types2.ValidatorUpdate
 	valAddrToPubKeyMap   map[string]types2.PubKey
 	Validators           []*types3.Validator
+	PendingValidator     string
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string
 	Db                   dbm.DB
@@ -214,6 +215,12 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 // SetOption : Method for runtime data transfer between other apps and ABCI
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
+	if req.Key == "VAL" {
+		go app.rpc.BroadcastTx("VAL", req.Value, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+	}
+	if req.Key == "VOTE" {
+		app.PendingValidator = req.Value
+	}
 	return
 }
 
