@@ -193,9 +193,9 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(65 * time.Second) // allows us to wait for tx to commit + 5 sec latency margin
 	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
-	listenAddr := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "0.0.0.0:26656")
+	listenAddr := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0:26656")
 	if strings.Contains(listenAddr, "//") {
-		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/"):]
+		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/")+1:]
 	}
 	if strings.Contains(listenAddr, ":") {
 		listenAddr = listenAddr[:strings.LastIndex(listenAddr, ":")]
