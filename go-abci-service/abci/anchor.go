@@ -194,7 +194,8 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	}
 
 	deadline := time.Now().Add(time.Duration(4) * time.Minute)
-	for !time.Now().After(deadline) {
+	conf_found := false
+	for !time.Now().After(deadline) && !conf_found {
 		// Broadcast the confirmation message with metadata
 		amLeader, _ := app.ElectValidator(1)
 		if amLeader {
@@ -212,6 +213,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 					continue;
 				} else {
 					app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
+					conf_found = true
 					break;
 				}
 			}
