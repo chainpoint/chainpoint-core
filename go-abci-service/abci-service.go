@@ -194,8 +194,11 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
 	listenAddr := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "0.0.0.0:26656")
-	if strings.Contains(listenAddr, "//") && strings.Contains(listenAddr, ":") {
-		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/"):strings.LastIndex(listenAddr, ":")]
+	if strings.Contains(listenAddr, "//") {
+		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/"):]
+	}
+	if strings.Contains(listenAddr, ":") {
+		listenAddr = listenAddr[:strings.LastIndex(listenAddr, ":")]
 	}
 	defaultConfig.P2P.ExternalAddress = listenAddr + ":26656"
 	defaultConfig.P2P.MaxNumInboundPeers = 300
