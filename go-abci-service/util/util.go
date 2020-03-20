@@ -152,6 +152,37 @@ func DecodeTx(incoming []byte) (types.Tx, error) {
 	return calendar, err
 }
 
+// VerifySig : verifies an ecdsa signature
+func VerifySig(data string, originalSig string,  key ecdsa.PublicKey) bool {
+	der, err := base64.StdEncoding.DecodeString(originalSig)
+	if LogError(err) != nil {
+		return false
+	}
+	sig := &types.EcdsaSignature{}
+	_, err = asn1.Unmarshal(der, sig)
+	if LogError(err) != nil {
+		return false
+	}
+	hash := sha256.Sum256([]byte(data))
+	var pubKey *ecdsa.PublicKey
+	pubKey = &key
+	if !ecdsa.Verify(pubKey, hash[:], sig.R, sig.S) {
+		LogError(errors.New("Can't validate signature of Tx"))
+		return false
+	}
+	return true
+}
+
+// CreateSig : create signature from data in base64
+func CreateSig(data string, key ecdsa.PrivateKey) string {
+	hash := sha256.Sum256([]byte(data))
+	sig, err := key.Sign(random.Reader, hash[:], nil)
+	if LogError(err) != nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(sig)
+}
+
 // DecodeTxAndVerifySig accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
 func DecodeTxAndVerifySig(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) (types.Tx, error) {
 	decoded, err := base64.StdEncoding.DecodeString(string(incoming))

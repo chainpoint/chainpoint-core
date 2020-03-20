@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	types3 "github.com/chainpoint/tendermint/types"
@@ -215,6 +216,18 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 // SetOption : Method for runtime data transfer between other apps and ABCI
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
+	//req.Value must be <base64ValidatorPubKey>!<VotingPower>!<Sig>
+	sig := ""
+	data := ""
+	components := strings.Split(req.Value, "!")
+	if len(components) == 3 {
+		sig = components[2]
+		data = components[0] + "!" + components[1]
+	}
+	if !util.VerifySig(data, sig, app.config.ECPrivateKey.PublicKey) {
+		app.logger.Info("Signature verification failed for SetOption")
+		return
+	}
 	if req.Key == "VAL" {
 		go app.rpc.BroadcastTx("VAL", req.Value, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 	}
