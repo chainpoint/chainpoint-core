@@ -21,6 +21,8 @@ services:
       - api
     user: ${USERID}:${GROUPID}
     environment:
+      SET_OPTION_KEY: ''
+      SET_OPTION_VAL: ''
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
