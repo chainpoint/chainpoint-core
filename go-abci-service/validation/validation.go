@@ -30,13 +30,13 @@ func NewTxValidation() types.TxValidation {
 		Bucket:      0.0,
 	}
 	permittedBtcRate := types.RateLimit{
-		AllowedRate: 2,
+		AllowedRate: 1,
 		PerBlocks:   60,
 		LastCheck:   0,
 		Bucket:      0.0,
 	}
 	permittedBtccRate := types.RateLimit{
-		AllowedRate: 10,
+		AllowedRate: 1,
 		PerBlocks:   60,
 		LastCheck:   0,
 		Bucket:      0.0,
@@ -87,6 +87,17 @@ func GetPubKeyHex(coreID string, state types.AnchorState) string {
 	pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 	pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
 	return pubKeyHex
+}
+
+// GetLastNistSubmitters : Given a past block range, get map of Cores that have submitted NIST tx
+func GetLastNistSubmitters(n int64, state types.AnchorState) (map[string]int64) {
+	coreList := map[string]int64{}
+	for k, v := range state.TxValidation {
+		if v.LastNISTTxHeight < n {
+			coreList[k] = v.LastNISTTxHeight
+		}
+	}
+	return coreList
 }
 
 // GetValidationRecord : Gets a validation record for a Core, given the CoreID
@@ -177,7 +188,7 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		lastTimeRecord := util.GetNISTTimestamp(state.LatestNistRecord)
 		timeDiff := timeRecord - lastTimeRecord
 		RateLimitUpdate(state.Height, &validationRecord.NISTAllowedRate)
-		if !(IsHabitualViolator(validationRecord.NISTAllowedRate) || timeDiff == 0 || timeDiff < 0) {
+		if !(IsHabitualViolator(validationRecord.NISTAllowedRate) || timeDiff < 0) {
 			validated = true
 			UpdateAcceptTx(&validationRecord.NISTAllowedRate)
 			validationRecord.LastNISTTxHeight = state.Height
