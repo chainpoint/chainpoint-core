@@ -50,7 +50,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		}
 		goodCandidateForValidator := false
 		if _, record, err := validation.GetValidationRecord(addr, app.state); err != nil {
-			goodCandidateForValidator = record.ConfirmedAnchors > SUCCESSFUL_ANCHOR_CRITERIA
+			goodCandidateForValidator = (record.ConfirmedAnchors > SUCCESSFUL_ANCHOR_CRITERIA || app.config.BitcoinNetwork == "testnet")
 		}
 		app.logger.Info("VAL tx is from a validator? ", "isVal", isVal)
 		app.LogError(err)
