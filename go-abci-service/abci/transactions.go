@@ -43,9 +43,18 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	}
 	if tx.TxType == "VAL" {
 		isVal, err := app.IsValidator(tx.CoreID)
+		addr := ""
+		components := strings.Split(tx.Data, "!")
+		if len(components) == 3 {
+			addr = components[2]
+		}
+		goodCandidateForValidator := false
+		if _, record, err := validation.GetValidationRecord(addr, app.state); err != nil {
+			goodCandidateForValidator = record.ConfirmedAnchors > SUCCESSFUL_ANCHOR_CRITERIA
+		}
 		app.logger.Info("VAL tx is from a validator? ", "isVal", isVal)
 		app.LogError(err)
-		if !isVal {
+		if !isVal && !goodCandidateForValidator {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
 	}
@@ -73,8 +82,10 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	app.LogError(err)
 	switch string(tx.TxType) {
 	case "VAL":
+		components := strings.Split(tx.Data, "!")
+		data := components[0] + "!" + components[1]
 		tags = app.incrementTxInt(tags)
-		if isValidatorTx([]byte(tx.Data)) && app.PendingValidator == tx.Data {
+		if isValidatorTx([]byte(data)) && app.PendingValidator == tx.Data {
 			resp = app.execValidatorTx([]byte(tx.Data))
 		}
 		break

@@ -36,7 +36,7 @@ var (
 	GossipTxs                        = []string{"NIST"}
 )
 
-const MINT_EPOCH = 6400
+const SUCCESSFUL_ANCHOR_CRITERIA = 64
 
 // loadState loads the AnchorState struct from a database instance
 func loadState(db dbm.DB) types.AnchorState {
@@ -219,15 +219,9 @@ func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2
 	//req.Value must be <base64ValidatorPubKey>!<VotingPower>!<Sig>
 	go func() {
 		time.Sleep(1 * time.Minute)
-		sig := ""
-		data := ""
 		components := strings.Split(req.Value, "!")
-		if len(components) == 3 {
-			sig = components[2]
-			data = components[0] + "!" + components[1]
-		}
-		if !util.VerifySig(data, sig, app.config.ECPrivateKey.PublicKey) {
-			app.logger.Info("Signature verification failed for SetOption")
+		if len(components) != 3 {
+			app.logger.Error("VAL or VOTE data is malformed")
 			return
 		}
 		if req.Key == "VAL" {
