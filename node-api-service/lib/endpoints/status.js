@@ -48,6 +48,7 @@ async function getCoreStatusAsync(req, res, next) {
 
 async function buildStatusObjectAsync() {
   let walletInfo
+  let walletBalance = ''
   let statusResponse = await tmRpc.getStatusAsync()
   if (statusResponse.error) {
     switch (statusResponse.error.responseCode) {
@@ -69,6 +70,14 @@ async function buildStatusObjectAsync() {
     return { status: null, errorCode: 500, errorMessage: 'Could not query for status' }
   }
 
+  try {
+    if (!lightning) throw new Error('LND connection not available')
+    walletBalance = await lightning.walletBalanceAsync({})
+  } catch (error) {
+    logger.error(`GRPC error communicating with LND : ${error.message}`)
+    return { status: null, errorCode: 500, errorMessage: 'Could not query for balance' }
+  }
+
   let coreInfo = {
     version: version,
     time: new Date().toISOString(),
@@ -76,13 +85,14 @@ async function buildStatusObjectAsync() {
     network: env.NETWORK,
     identity_pubkey: walletInfo.identity_pubkey,
     lightning_address: env.HOT_WALLET_ADDRESS,
+    lightning_balance: walletBalance,
     uris: walletInfo.uris,
     num_active_channels: walletInfo.num_active_channels,
     alias: walletInfo.alias,
     hash_price_satoshis: env.SUBMIT_HASH_PRICE_SAT
   }
 
-  try{
+  try {
     let abciResponse = await tmRpc.getAbciInfo()
     let abciInfo = JSON.parse(abciResponse.result.response.data)
     coreInfo.total_stake_price = abciInfo.total_stake_price
