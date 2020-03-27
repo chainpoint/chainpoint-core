@@ -90,16 +90,13 @@ func GetPubKeyHex(coreID string, state types.AnchorState) string {
 }
 
 // GetLastNistSubmitters : Given a past block range, get map of Cores that have submitted NIST tx
-// TODO: Optimize with better mapping to allow us to look up IDs from Validation records without loops
 func GetLastNistSubmitters(n int64, state types.AnchorState) (map[string]int64) {
 	coreList := map[string]int64{}
-	for k, v := range state.TxValidation {
-		if v.LastNISTTxHeight < n {
-			for id,_ := range state.CoreKeys {
-				if GetPubKeyHex(id, state) == k {
-					coreList[id] = v.LastNISTTxHeight
-					break;
-				}
+	for id,_ := range state.CoreKeys {
+		pubKeyHex := GetPubKeyHex(id, state)
+		if validationRecord, exists := state.TxValidation[pubKeyHex]; exists {
+			if validationRecord.LastNISTTxHeight > (state.Height - n) {
+				coreList[id] = validationRecord.LastNISTTxHeight
 			}
 		}
 	}

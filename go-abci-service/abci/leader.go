@@ -82,6 +82,10 @@ func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int) (isL
 	}
 	sort.Strings(keys)
 	coreListLength := len(keys)
+	if coreListLength == 0 {
+		app.logger.Error("coreListLength is 0")
+		return false, []string{}
+	}
 	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
 	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)
