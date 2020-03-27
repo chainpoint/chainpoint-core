@@ -144,7 +144,7 @@ func (app *AnchorApplication) StakeIdentity() {
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 && app.state.ChainSynced {
-		if leader, leaders := app.ElectValidatorAsLeader(1); leader {
+		if leader, leaders := app.ElectChainContributorAsLeaderNaive(1); leader {
 			app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 			nistRecord, err := beacon.LastRecord()
 			chainpointFormat := ""
