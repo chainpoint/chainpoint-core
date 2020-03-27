@@ -17,7 +17,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/go-redis/redis"
 
-	beacon "github.com/chainpoint/go-nist-beacon"
+	beacon "github.com/chainpoint/chainpoint-core/go-abci-service/beacon"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
@@ -144,12 +144,17 @@ func (app *AnchorApplication) StakeIdentity() {
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 && app.state.ChainSynced {
-		if leader, leaders := app.ElectValidator(1); leader {
+		if leader, leaders := app.ElectChainContributorAsLeaderNaive(1); leader {
 			app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 			nistRecord, err := beacon.LastRecord()
+			chainpointFormat := ""
 			if app.LogError(err) != nil {
-				app.logger.Error("Unable to obtain new NIST beacon value")
-				return
+				if !strings.Contains(err.Error(), "stale") {
+					chainpointFormat = app.state.LatestNistRecord // use the last "good" entropy beacon value known to this Core
+				}
+			}
+			if chainpointFormat == "" {
+				chainpointFormat = nistRecord.ChainpointFormat()
 			}
 			_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if app.LogError(err) != nil {

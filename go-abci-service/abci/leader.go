@@ -2,6 +2,7 @@ package abci
 
 import (
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 	"sort"
 
 	"github.com/chainpoint/tendermint/types"
@@ -11,8 +12,8 @@ import (
 	core_types "github.com/chainpoint/tendermint/rpc/core/types"
 )
 
-// ElectLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
-func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leaderID []string) {
+// ElectPeerAsLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
+func (app *AnchorApplication) ElectPeerAsLeader(numLeaders int) (isLeader bool, leaderID []string) {
 	status, err := app.rpc.GetStatus()
 	if app.LogError(err) != nil {
 		return false, []string{}
@@ -26,8 +27,8 @@ func (app *AnchorApplication) ElectLeader(numLeaders int) (isLeader bool, leader
 	return determineLeader(numLeaders, status, netInfo, blockHash)
 }
 
-// ElectValidator : elect a slice of validators as a leader and return whether we're the leader
-func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, leaderID []string) {
+// ElectValidatorAsLeader : elect a slice of validators as a leader and return whether we're the leader
+func (app *AnchorApplication) ElectValidatorAsLeader(numLeaders int) (isLeader bool, leaderID []string) {
 	status, err := app.rpc.GetStatus()
 	if app.LogError(err) != nil {
 		return false, []string{}
@@ -35,6 +36,69 @@ func (app *AnchorApplication) ElectValidator(numLeaders int) (isLeader bool, lea
 	blockHash := status.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
 	return determineValidatorLeader(numLeaders, status, app.Validators, blockHash, app.config.FilePV.GetAddress().String())
+}
+
+// ElectChainContributedAsLeaderNaive : elects a node that's contributed to the chain without checking if its been active recently
+func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int) (isLeader bool, leaderID []string) {
+	status, err := app.rpc.GetStatus()
+	if app.LogError(err) != nil {
+		return false, []string{}
+	}
+	keys := make([]string, 0, len(app.state.CoreKeys))
+	for k := range app.state.CoreKeys {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	coreListLength := len(keys)
+	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
+	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
+		util.LogError(err)
+		return false, []string{}
+	}
+	if numLeaders <= coreListLength {
+		keys = keys[0:numLeaders]
+	} else {
+		keys = keys[0:1]
+	}
+	iAmLeader := false
+	for _, leader := range keys {
+		if leader == app.ID && !status.SyncInfo.CatchingUp {
+			iAmLeader = true
+		}
+	}
+	return iAmLeader, keys
+}
+
+// ElectChainContributedAsLeader : elects a node that's contributed to the chain while checking if it's submitted a NIST value recently
+func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int) (isLeader bool, leaderID []string) {
+	status, err := app.rpc.GetStatus()
+	if app.LogError(err) != nil {
+		return false, []string{}
+	}
+	keys := make([]string, 0, len(app.state.CoreKeys))
+	cores := validation.GetLastNistSubmitters(128, app.state)
+	for k := range cores {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	coreListLength := len(keys)
+	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
+	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
+		util.LogError(err)
+		return false, []string{}
+	}
+	if numLeaders <= coreListLength {
+		keys = keys[0:numLeaders]
+	} else {
+		keys = keys[0:1]
+	}
+	iAmLeader := false
+	for _, leader := range keys {
+		if leader == app.ID && !status.SyncInfo.CatchingUp {
+			iAmLeader = true
+		}
+	}
+	return iAmLeader, keys
 }
 
 func determineValidatorLeader(numLeaders int, status core_types.ResultStatus, validators []*types.Validator, seed string, address string) (isLeader bool, leaderIDs []string) {

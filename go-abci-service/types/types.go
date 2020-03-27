@@ -116,20 +116,20 @@ type RateLimit struct {
 
 // Holds state for validating Transactions
 type TxValidation struct {
-	LastJWKTxHeight int64
-	JWKAllowedRate  RateLimit
+	LastJWKTxHeight 		 int64
+	JWKAllowedRate  		 RateLimit
 
-	LastCalTxHeight int64
-	CalAllowedRate  RateLimit
+	LastCalTxHeight 		 int64
+	CalAllowedRate  		 RateLimit
 
-	LastBtcaTxHeight int64 // for anchoring Cores
-	ConfirmedAnchors int64
-	BtcaAllowedRate  RateLimit
+	LastBtcaTxHeight 	 	 int64 // for anchoring Cores
+	ConfirmedAnchors 		 int64
+	BtcaAllowedRate  		 RateLimit
 
-	LastBtccTxHeight int64 // for Cores submitting confirmations, not anchoring Cores
-	BtccAllowedRate  RateLimit
+	LastBtccTxHeight 		 int64 // for Cores submitting confirmations, not anchoring Cores
+	BtccAllowedRate  		 RateLimit
 
-	LastNISTTxHeight int64
+	LastNISTTxHeight int64 // last "good", non-stale nist record
 	NISTAllowedRate  RateLimit
 }
 
