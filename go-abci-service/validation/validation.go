@@ -89,6 +89,21 @@ func GetPubKeyHex(coreID string, state types.AnchorState) string {
 	return pubKeyHex
 }
 
+// GetLastNistSubmitters : Given a past block range, get map of Cores that have submitted NIST tx
+func GetLastNistSubmitters(n int64, state types.AnchorState) (map[string]int64) {
+	coreList := map[string]int64{}
+	for k, v := range state.TxValidation {
+		if v.LastNISTTxHeight < n {
+			for id,_ := range state.CoreKeys {
+				if GetPubKeyHex(id, state) == k {
+					coreList[id] = v.LastNISTTxHeight
+				}
+			}
+		}
+	}
+	return coreList
+}
+
 // GetValidationRecord : Gets a validation record for a Core, given the CoreID
 func GetValidationRecord(coreID string, state types.AnchorState) (string, types.TxValidation, error) {
 	pubKeyHex := GetPubKeyHex(coreID, state)
