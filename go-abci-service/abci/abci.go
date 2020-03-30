@@ -103,7 +103,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if state.LnUris == nil {
 		state.LnUris = map[string]types.LnIdentity{}
 	}
-	if state.Migrations != nil {
+	if state.Migrations == nil {
 		state.Migrations = make(map[int]string)
 	}
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
