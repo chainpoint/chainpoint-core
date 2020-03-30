@@ -51,6 +51,7 @@ func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int)
 	sort.Strings(keys)
 	coreListLength := len(keys)
 	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
+	app.logger.Info(fmt.Sprintf("Leader is %d th out of %v", index, keys))
 	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)
 		return false, []string{}
@@ -87,6 +88,7 @@ func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int) (isL
 		return false, []string{}
 	}
 	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
+	app.logger.Info(fmt.Sprintf("Leader is %d th out of %v", index, keys))
 	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)
 		return false, []string{}
