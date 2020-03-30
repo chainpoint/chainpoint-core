@@ -219,6 +219,10 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		app.state.BeginCalTxInt = 3096
 		app.state.Migrations[1] = "BeginCalTxInt=3096"
 	}
+	if _, exists := app.state.Migrations[2]; !exists && config.ChainId == "mainnet-chain-32" {
+		app.state.LatestBtcaHeight = 17399
+		app.state.Migrations[2] = "LatestBtcaHeight=17399"
+	}
 
 	return &app
 }
