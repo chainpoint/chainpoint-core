@@ -94,6 +94,9 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		app.state.LatestCalTxInt = app.state.TxInt
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
+	case "BTC-E":
+		app.state.LatestErrRoot = tx.Data
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 	case "BTC-A":
 		var btca types.BtcTxMsg
 		if util.LoggerError(app.logger, json.Unmarshal([]byte(tx.Data), &btca)) != nil {

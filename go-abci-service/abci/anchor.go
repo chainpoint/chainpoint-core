@@ -74,8 +74,10 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if iAmLeader {
 			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, treeData)
 			if app.LogError(err) != nil {
-				app.resetAnchor(startTxRange, leaderIDs)
-				return err
+				_, err := app.rpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+				if app.LogError(err) != nil {
+					panic(err)
+				}
 			}
 		}
 		app.state.EndCalTxInt = endTxRange            // Ensure we update our range of CAL txs for next anchor period
@@ -83,7 +85,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 
 		// wait for a BTC-A tx
 		deadline := time.Now().Add(time.Duration(app.config.AnchorTimeout) * time.Minute)
-		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && !time.Now().After(deadline) {
+		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && app.state.LatestErrRoot != treeData.AnchorBtcAggRoot && !time.Now().After(deadline) {
 			time.Sleep(10 * time.Second)
 		}
 

@@ -170,6 +170,11 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			validationRecord.LastCalTxHeight = state.Height
 		}
 		break
+	case "BTC-E":
+		if !IsHabitualViolator(validationRecord.BtcaAllowedRate) {
+			validated = true
+		}
+		break
 	case "BTC-A":
 		RateLimitUpdate(state.Height, &validationRecord.BtcaAllowedRate)
 		if !IsHabitualViolator(validationRecord.BtcaAllowedRate) {
