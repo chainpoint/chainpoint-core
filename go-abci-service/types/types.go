@@ -28,6 +28,7 @@ type TendermintConfig struct {
 
 //AnchorConfig represents values to configure all connections within the ABCI anchor app
 type AnchorConfig struct {
+	ChainId          string
 	DBType           string
 	BitcoinNetwork   string
 	RabbitmqURI      string
@@ -78,17 +79,18 @@ type AnchorState struct {
 	LatestBtccTx     []byte                     `json:"latest_btcc"`
 	LatestBtccTxInt  int64                      `json:"latest_btcc_int"`
 	LatestBtccHeight int64                      `json:"latest_btcc_height"`
-	LatestErrRoot	 string                     `json:"latest_btce"`
+	LatestErrRoot    string                     `json:"latest_btce"`
 	LastAnchorCoreID string                     `json:"last_anchor_core_id"`
 	LastAuditCoreID  string                     `json:"last_audit_core_id"`
 	TxValidation     map[string]TxValidation    `json:"tx_validation"`
 	CoreKeys         map[string]ecdsa.PublicKey `json:"-"`
 	LnUris           map[string]LnIdentity      `json:"lightning_identities"`
 	ChainSynced      bool
-	JWKStaked		 bool
-	LnStakePrice     int64						`json:"total_stake_price"`
-	LnStakePerVal	 int64						`json:"validator_stake_price"`
+	JWKStaked        bool
+	LnStakePrice     int64 `json:"total_stake_price"`
+	LnStakePerVal    int64 `json:"validator_stake_price"`
 	LatestNistRecord string
+	Migrations       map[int]string `json:"migrations"`
 }
 
 type LnIdentity struct {
@@ -117,18 +119,18 @@ type RateLimit struct {
 
 // Holds state for validating Transactions
 type TxValidation struct {
-	LastJWKTxHeight 		 int64
-	JWKAllowedRate  		 RateLimit
+	LastJWKTxHeight int64
+	JWKAllowedRate  RateLimit
 
-	LastCalTxHeight 		 int64
-	CalAllowedRate  		 RateLimit
+	LastCalTxHeight int64
+	CalAllowedRate  RateLimit
 
-	LastBtcaTxHeight 	 	 int64 // for anchoring Cores
-	ConfirmedAnchors 		 int64
-	BtcaAllowedRate  		 RateLimit
+	LastBtcaTxHeight int64 // for anchoring Cores
+	ConfirmedAnchors int64
+	BtcaAllowedRate  RateLimit
 
-	LastBtccTxHeight 		 int64 // for Cores submitting confirmations, not anchoring Cores
-	BtccAllowedRate  		 RateLimit
+	LastBtccTxHeight int64 // for Cores submitting confirmations, not anchoring Cores
+	BtccAllowedRate  RateLimit
 
 	LastNISTTxHeight int64 // last "good", non-stale nist record
 	NISTAllowedRate  RateLimit

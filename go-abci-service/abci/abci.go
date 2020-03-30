@@ -103,6 +103,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if state.LnUris == nil {
 		state.LnUris = map[string]types.LnIdentity{}
 	}
+	if state.Migrations != nil {
+		state.Migrations = make(map[int]string)
+	}
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
 
@@ -210,6 +213,12 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	// Stake and transmit identity
 	go app.StakeIdentity()
+
+	//Migrations
+	if _, exists := app.state.Migrations[1]; !exists && config.ChainId == "mainnet-chain-32" {
+		app.state.BeginCalTxInt = 3096
+		app.state.Migrations[1] = "BeginCalTxInt=3096"
+	}
 
 	return &app
 }

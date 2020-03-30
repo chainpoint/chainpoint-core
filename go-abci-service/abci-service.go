@@ -44,6 +44,9 @@ func main() {
 
 	//Instantiate ABCI application
 	config := initABCIConfig(tmConfig.FilePV, tmConfig.NodeKey)
+	if config.BitcoinNetwork == "mainnet" {
+		config.ChainId = "mainnet-chain-32"
+	}
 	app := abci.NewAnchorApplication(config)
 
 	//declare connection to abci app
