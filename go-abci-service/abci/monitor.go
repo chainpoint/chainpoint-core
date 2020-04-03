@@ -45,7 +45,6 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.lnClient.LocalSats = app.config.StakePerVal
 			app.state.LnStakePerVal = app.config.StakePerVal
 			app.state.LnStakePrice = app.lnClient.LocalSats * int64(len(app.Validators))
-			app.logger.Info(fmt.Sprintf("Total stake amount is %d satoshis", app.lnClient.LocalSats))
 		}
 		if app.LogError(err) != nil {
 			continue
@@ -53,7 +52,6 @@ func (app *AnchorApplication) SyncMonitor() {
 		if status.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
 		} else {
-			app.logger.Info("Chain Sync State Change", "ChainSynced", app.state.ChainSynced)
 			app.state.ChainSynced = true
 		}
 	}

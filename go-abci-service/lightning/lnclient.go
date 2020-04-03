@@ -402,7 +402,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 			PkScript: sendToScript,
 		},
 	}
-
+	ln.Logger.Info(fmt.Sprintf("Sending Outputs: %v", outputs))
 	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: estimatedFee.SatPerKw, Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
 	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
