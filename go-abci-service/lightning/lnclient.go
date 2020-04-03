@@ -364,17 +364,17 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	}
 	wallet, closeFunc := ln.GetWalletClient()
 	defer closeFunc()
-	client, closeFuncClient := ln.GetClient()
+/*	client, closeFuncClient := ln.GetClient()
 	defer closeFuncClient()
 	walletBalance, err := client.WalletBalance(context.Background(), &lnrpc.WalletBalanceRequest{})
-	inputAmount := btcutil.Amount(walletBalance.ConfirmedBalance)
+	inputAmount := btcutil.Amount(walletBalance.ConfirmedBalance)*/
 	ln.Logger.Info("Ln Wallet client created")
 	estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
 	if err != nil {
 		return "", "", err
 	}
 	ln.Logger.Info(fmt.Sprintf("Ln EstimateFee: %v", estimatedFee))
-	var sendToAddress btcutil.Address
+	/*var sendToAddress btcutil.Address
 	err = errors.New("")
 	if ln.Testnet {
 		sendToAddress, err = btcutil.DecodeAddress(ln.WalletAddress, &chaincfg.TestNet3Params)
@@ -391,16 +391,16 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	sendToScript, err := txscript.PayToAddrScript(sendToAddress)
 	if err != nil {
 		panic(err)
-	}
+	}*/
 	outputs := []*signrpc.TxOut{
 		&signrpc.TxOut{
 			Value:    0,
 			PkScript: outputScript,
 		},
-		&signrpc.TxOut{
+/*		&signrpc.TxOut{
 			Value:    int64(inputAmount - maxRequiredFee),
 			PkScript: sendToScript,
-		},
+		},*/
 	}
 	ln.Logger.Info(fmt.Sprintf("Sending Outputs: %v", outputs))
 	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: estimatedFee.SatPerKw, Outputs: outputs}
