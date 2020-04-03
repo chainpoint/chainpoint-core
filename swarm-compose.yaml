@@ -26,6 +26,7 @@ services:
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
@@ -43,6 +44,7 @@ services:
       ANCHOR_REWARD: '0'
     secrets:
       - ECDSA_PKPEM
+      - HOT_WALLET_ADDRESS
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data

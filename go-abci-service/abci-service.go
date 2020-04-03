@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	types3 "github.com/chainpoint/tendermint/abci/types"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -117,6 +118,16 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
 	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "3"))
 	anchorReward, _ := strconv.Atoi(util.GetEnv("ANCHOR_REWARD", "0"))
+
+	walletAddress := util.GetEnv("HOT_WALLET_ADDRESS", "")
+	if walletAddress == "" {
+		content, err := ioutil.ReadFile("/run/secrets/HOT_WALLET_ADDRESS")
+		if err != nil {
+			panic(err)
+		}
+		walletAddress = string(content)
+	}
+
 	//lightning settings
 	tlsCertPath := util.GetEnv("LN_TLS_CERT", "/root/.lnd/tls.cert")
 	macaroonPath := util.GetEnv("MACAROON_PATH", fmt.Sprintf("/root/.lnd/data/chain/bitcoin/%s/admin.macaroon", strings.ToLower(bitcoinNetwork)))
@@ -160,6 +171,8 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 			ServerHostPort: lndSocket,
 			Logger:         tmLogger,
 			MinConfs:       3,
+			Testnet:        bitcoinNetwork == "testnet",
+			WalletAddress:  walletAddress,
 		},
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,

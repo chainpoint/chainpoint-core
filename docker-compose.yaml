@@ -65,6 +65,7 @@ services:
         mode: host
     environment:
       - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
+      - HOT_WALLET_ADDRESS=${HOT_WALLET_ADDRESS}
       - RPCUSER
       - RPCPASS
       - NETWORK=${NETWORK:-testnet}

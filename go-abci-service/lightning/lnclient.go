@@ -6,6 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcwallet/wallet/txrules"
+	"github.com/btcsuite/btcwallet/wallet/txsizes"
 	"io/ioutil"
 	"net"
 	"strings"
@@ -21,8 +24,8 @@ import (
 
 	"github.com/lightningnetwork/lnd/lnrpc"
 
-	"github.com/jacohend/lnd/lncfg"
-	"github.com/jacohend/lnd/macaroons"
+	"github.com/lightningnetwork/lnd/lncfg"
+	"github.com/lightningnetwork/lnd/macaroons"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	macaroon "gopkg.in/macaroon.v2"
@@ -37,6 +40,8 @@ type LnClient struct {
 	LocalSats      int64
 	PushSats       int64
 	Logger         log.Logger
+	Testnet		   bool
+	WalletAddress  string
 }
 
 var (
@@ -339,7 +344,7 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 		defaultRPCPort = hostPortArr[1]
 	}
 	genericDialer := lncfg.ClientAddressDialer(defaultRPCPort)
-	opts = append(opts, grpc.WithDialer(genericDialer))
+	opts = append(opts, grpc.WithContextDialer(genericDialer))
 	opts = append(opts, grpc.WithDefaultCallOptions(maxMsgRecvSize))
 
 	conn, err := grpc.Dial(ln.ServerHostPort, opts...)
@@ -359,17 +364,46 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	}
 	wallet, closeFunc := ln.GetWalletClient()
 	defer closeFunc()
+	client, closeFuncClient := ln.GetClient()
+	defer closeFuncClient()
+	walletBalance, err := client.WalletBalance(context.Background(), &lnrpc.WalletBalanceRequest{})
+	inputAmount := btcutil.Amount(walletBalance.ConfirmedBalance)
 	ln.Logger.Info("Ln Wallet client created")
 	estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
 	if err != nil {
 		return "", "", err
 	}
 	ln.Logger.Info(fmt.Sprintf("Ln EstimateFee: %v", estimatedFee))
-	opReturnOutput := []*signrpc.TxOut{&signrpc.TxOut{
-		Value:    0,
-		PkScript: outputScript,
-	}}
-	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: estimatedFee.SatPerKw, Outputs: opReturnOutput}
+	var sendToAddress btcutil.Address
+	err = errors.New("")
+	if ln.Testnet {
+		sendToAddress, err = btcutil.DecodeAddress(ln.WalletAddress, &chaincfg.TestNet3Params)
+
+	}else {
+		sendToAddress, err = btcutil.DecodeAddress(ln.WalletAddress, &chaincfg.MainNetParams)
+	}
+	if err != nil {
+		panic(err)
+	}
+	maxSignedSize := txsizes.EstimateVirtualSize(0, 1,
+		0, []*wire.TxOut{&wire.TxOut{Value:0,PkScript:outputScript}}, true)
+	maxRequiredFee := txrules.FeeForSerializeSize(btcutil.Amount(estimatedFee.SatPerKw), maxSignedSize)
+	sendToScript, err := txscript.PayToAddrScript(sendToAddress)
+	if err != nil {
+		panic(err)
+	}
+	outputs := []*signrpc.TxOut{
+		&signrpc.TxOut{
+			Value:    0,
+			PkScript: outputScript,
+		},
+		&signrpc.TxOut{
+			Value:    int64(inputAmount - maxRequiredFee),
+			PkScript: sendToScript,
+		},
+	}
+
+	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: estimatedFee.SatPerKw, Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
 	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
 	if ln.LoggerError(err) != nil {
