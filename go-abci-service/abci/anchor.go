@@ -87,8 +87,8 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		app.state.LatestBtcaHeight = app.state.Height // So no one will try to re-anchor while processing the btc tx
 
 		// wait for a BTC-A tx
-		deadline := time.Now().Add(time.Duration(app.config.AnchorTimeout) * time.Minute)
-		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && app.state.LatestErrRoot != treeData.AnchorBtcAggRoot && !time.Now().After(deadline) {
+		deadline := int64(app.config.AnchorTimeout) + app.state.Height
+		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && app.state.LatestErrRoot != treeData.AnchorBtcAggRoot && app.state.Height < deadline {
 			time.Sleep(10 * time.Second)
 		}
 
@@ -208,7 +208,10 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 			app.LogError(err)
 			app.logger.Info(fmt.Sprint("BTC-C Hash: %v", result.Hash))
 		}
-		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
+		deadline := app.state.Height + 2
+		for app.state.Height < deadline {
+			time.Sleep(10 * time.Second) // wait until next block to query for btc-c
+		}
 		btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
 		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25)
 		if app.LogError(err) == nil {
