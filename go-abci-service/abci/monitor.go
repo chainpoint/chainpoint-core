@@ -25,7 +25,7 @@ import (
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
 	for {
-		time.Sleep(30 * time.Second)
+		time.Sleep(30 * time.Second) // allow chain time to initialize
 		app.logger.Info("Syncing Chain status and validators")
 		status, err := app.rpc.GetStatus()
 		if app.LogError(err) != nil {
@@ -62,7 +62,7 @@ func (app *AnchorApplication) SyncMonitor() {
 func (app *AnchorApplication) StakeIdentity() {
 	for !app.state.JWKStaked {
 		app.logger.Info("Beginning Lightning staking loop")
-		time.Sleep(60 * time.Second)
+		time.Sleep(60 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
 		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
 			continue
 		}
@@ -102,7 +102,7 @@ func (app *AnchorApplication) StakeIdentity() {
 				app.logger.Info("Validator Lightning identities not all declared yet, waiting...")
 				continue
 			}
-			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute)
+			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute) // allow btc channel to open
 			for !time.Now().After(deadline) {
 				app.logger.Info("Sleeping to allow validator Lightning channels to open...")
 				time.Sleep(time.Duration(1) * time.Minute)
