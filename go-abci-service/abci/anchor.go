@@ -19,7 +19,7 @@ import (
 )
 
 // AggregateCalendar : Aggregate submitted hashes into a calendar transaction
-func (app *AnchorApplication) AggregateCalendar() error {
+func (app *AnchorApplication) AggregateCalendar(height int64) error {
 	app.logger.Debug("starting scheduled aggregation")
 
 	// Get agg objects
@@ -35,6 +35,10 @@ func (app *AnchorApplication) AggregateCalendar() error {
 		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			return err
+		}
+		deadline := height + 2
+		for app.state.Height < deadline {
+			time.Sleep(10 * time.Second)
 		}
 		app.logger.Debug(fmt.Sprintf("CAL result: %v", result))
 		if result.Code == 0 {

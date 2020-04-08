@@ -314,7 +314,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	if app.state.ChainSynced {
 		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
 		if app.config.DoCal {
-			go app.AggregateCalendar()
+			go app.AggregateCalendar(app.state.Height)
 		}
 	}
 
