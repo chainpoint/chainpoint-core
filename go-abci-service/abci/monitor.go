@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -44,7 +43,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			}
 			cores := validation.GetLastNistSubmitters(128, app.state) //get Active cores on network
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
-			stakeAmt := totalStake / int64(math.Round(0.66 * float64(len(validators.Validators)))) //total stake divided by 2/3 of validators
+			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by 2/3 of validators
 			app.Validators = validators.Validators
 			app.lnClient.LocalSats = stakeAmt
 			app.state.LnStakePerVal = stakeAmt
