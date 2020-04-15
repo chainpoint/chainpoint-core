@@ -190,7 +190,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		FilePV:           pv,
 		AnchorTimeout:    anchorTimeout,
 		AnchorReward:     anchorReward,
-		StakePerVal:      1000000,
+		StakePerCore:     1000000,
 	}
 }
 

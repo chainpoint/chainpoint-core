@@ -36,15 +36,19 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.ID = string(status.ValidatorInfo.Address.String())
 			app.logger.Info("Core ID set ", "ID", app.ID)
 		}
-		if app.state.Height != 0 {
+		if app.state.Height != 0 && app.state.ChainSynced {
 			validators, err := app.rpc.GetValidators(app.state.Height)
 			if app.LogError(err) != nil {
 				continue
 			}
+			cores := validation.GetLastNistSubmitters(128, app.state) //get Active cores on network
+			totalStake := (int64(len(cores)) * app.config.StakePerCore)
+			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by 2/3 of validators
 			app.Validators = validators.Validators
-			app.lnClient.LocalSats = app.config.StakePerVal
-			app.state.LnStakePerVal = app.config.StakePerVal
-			app.state.LnStakePrice = app.lnClient.LocalSats * int64(len(app.Validators))
+			app.lnClient.LocalSats = stakeAmt
+			app.state.LnStakePerVal = stakeAmt
+			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators))  //Total Stake Price includes the other 1/3 just in case
+			app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
 		}
 		if app.LogError(err) != nil {
 			continue
@@ -82,11 +86,11 @@ func (app *AnchorApplication) StakeIdentity() {
 					peerExists, err := app.lnClient.PeerExists(lnID.Peer)
 					app.LogError(err)
 					if peerExists || app.LogError(app.lnClient.AddPeer(lnID.Peer)) == nil {
-						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, app.config.StakePerVal)
+						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, app.lnClient.LocalSats)
 						app.LogError(err)
 						if !chanExists {
 							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", lnID.RequiredChanAmt, lnID.Peer))
-							_, err := app.lnClient.CreateChannel(lnID.Peer, app.config.StakePerVal)
+							_, err := app.lnClient.CreateChannel(lnID.Peer, app.lnClient.LocalSats)
 							app.LogError(err)
 						} else {
 							app.logger.Info(fmt.Sprintf("Lightning Channel %s exists, skipping...", lnID.Peer))
@@ -228,7 +232,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return true
 		}
 		app.logger.Info("JWK Identity: Checking Channel Funding")
-		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, app.config.StakePerVal)
+		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, app.lnClient.LocalSats)
 		if app.LogError(err) == nil && chanExists {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true

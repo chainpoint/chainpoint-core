@@ -51,7 +51,7 @@ type AnchorConfig struct {
 	FilePV           privval.FilePV
 	AnchorTimeout    int
 	AnchorReward     int
-	StakePerVal      int64
+	StakePerCore     int64
 }
 
 //EthConfig holds contract addresses and eth node URI
