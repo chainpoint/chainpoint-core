@@ -223,7 +223,7 @@ redis:
 ## deploy                    : deploys a swarm stack
 deploy: init-volumes
 	@rsync .env ${CORE_DATADIR}/.env
-	@set -a && source ${CORE_DATADIR}/.env && export USERID=${UID} && export GROUPID=${GID} && export ALLOWED_IP=$([ "$NETWORK" == mainnet ] && echo 3.92.247.27 || echo 54.165.123.91) && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
+	@set -a && source ${CORE_DATADIR}/.env && export USERID=${UID} && export GROUPID=${GID} && set +a && docker stack deploy -c swarm-compose.yaml chainpoint-core
 
 ## stop                      : stops a swarm stack
 stop:
