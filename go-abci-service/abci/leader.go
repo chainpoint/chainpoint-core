@@ -13,7 +13,7 @@ import (
 )
 
 // ElectPeerAsLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
-func (app *AnchorApplication) ElectPeerAsLeader(numLeaders int) (isLeader bool, leaderID []string) {
+func (app *AnchorApplication) ElectPeerAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
 	status, err := app.rpc.GetStatus()
 	if app.LogError(err) != nil {
 		return false, []string{}
@@ -24,29 +24,37 @@ func (app *AnchorApplication) ElectPeerAsLeader(numLeaders int) (isLeader bool, 
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineLeader(numLeaders, status, netInfo, blockHash)
+	return determineLeader(numLeaders, blacklistedIDs, status, netInfo, blockHash)
 }
 
 // ElectValidatorAsLeader : elect a slice of validators as a leader and return whether we're the leader
-func (app *AnchorApplication) ElectValidatorAsLeader(numLeaders int) (isLeader bool, leaderID []string) {
+func (app *AnchorApplication) ElectValidatorAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
 	status, err := app.rpc.GetStatus()
 	if app.LogError(err) != nil {
 		return false, []string{}
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineValidatorLeader(numLeaders, status, app.Validators, blockHash, app.config.FilePV.GetAddress().String())
+	return determineValidatorLeader(numLeaders, blacklistedIDs, status, app.Validators, blockHash, app.config.FilePV.GetAddress().String())
 }
 
 // ElectChainContributedAsLeaderNaive : elects a node that's contributed to the chain without checking if its been active recently
-func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int) (isLeader bool, leaderID []string) {
+func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
 	status, err := app.rpc.GetStatus()
 	if app.LogError(err) != nil {
 		return false, []string{}
 	}
 	keys := make([]string, 0, len(app.state.CoreKeys))
 	for k := range app.state.CoreKeys {
-		keys = append(keys, k)
+		filtered := false
+		for _, id := range blacklistedIDs {
+			if k == id {
+				filtered = true
+			}
+		}
+		if !filtered {
+			keys = append(keys, k)
+		}
 	}
 	sort.Strings(keys)
 	coreListLength := len(keys)
@@ -71,7 +79,7 @@ func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int)
 }
 
 // ElectChainContributedAsLeader : elects a node that's contributed to the chain while checking if it's submitted a NIST value recently
-func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int) (isLeader bool, leaderID []string) {
+func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
 	status, err := app.rpc.GetStatus()
 	if app.LogError(err) != nil {
 		return false, []string{}
@@ -79,7 +87,15 @@ func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int) (isL
 	keys := make([]string, 0, len(app.state.CoreKeys))
 	cores := validation.GetLastNistSubmitters(128, app.state)
 	for k := range cores {
-		keys = append(keys, k)
+		filtered := false
+		for _, id := range blacklistedIDs {
+			if k == id {
+				filtered = true
+			}
+		}
+		if !filtered {
+			keys = append(keys, k)
+		}
 	}
 	sort.Strings(keys)
 	coreListLength := len(keys)
@@ -107,22 +123,34 @@ func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int) (isL
 	return iAmLeader, keys
 }
 
-func determineValidatorLeader(numLeaders int, status core_types.ResultStatus, validators []*types.Validator, seed string, address string) (isLeader bool, leaderIDs []string) {
+func determineValidatorLeader(numLeaders int, blacklistedIDs []string, status core_types.ResultStatus, validators []*types.Validator, seed string, address string) (isLeader bool, leaderIDs []string) {
 	leaders := make([]types.Validator, 0)
 	validatorList := GetSortedValidatorList(validators)
-	validatorLength := len(validatorList)
+	filteredArray := make([]types.Validator, 0)
+	validatorLength := len(filteredArray)
 	if validatorLength == 0 {
 		return false, []string{}
 	}
+	for _, val := range validatorList {
+		filtered := false
+		for _, id := range blacklistedIDs {
+			if val.Address.String() == id {
+				filtered = true
+			}
+		}
+		if !filtered {
+			filteredArray = append(filteredArray, val)
+		}
+	}
 	index := util.GetSeededRandInt([]byte(seed), validatorLength)    //seed the first time
-	if err := util.RotateLeft(validatorList[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
+	if err := util.RotateLeft(filteredArray[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)
 		return false, []string{}
 	}
 	if numLeaders <= validatorLength {
-		leaders = validatorList[0:numLeaders]
+		leaders = filteredArray[0:numLeaders]
 	} else {
-		leaders = validatorList[0:1]
+		leaders = filteredArray[0:1]
 	}
 	leaderStrings := make([]string, 0)
 	iAmLeader := false
@@ -188,20 +216,32 @@ func GetSortedPeerList(status core_types.ResultStatus, netInfo core_types.Result
 }
 
 // determineLeader accepts current node status and a peer array, then finds a leader based on the latest blockhash
-func determineLeader(numLeaders int, status core_types.ResultStatus, netInfo core_types.ResultNetInfo, seed string) (isLeader bool, leaderIDs []string) {
+func determineLeader(numLeaders int, blacklistedIDs []string, status core_types.ResultStatus, netInfo core_types.ResultNetInfo, seed string) (isLeader bool, leaderIDs []string) {
 	currentNodeID := status.NodeInfo.ID()
 	if len(netInfo.Peers) > 0 {
 		nodeArray := GetSortedPeerList(status, netInfo)
-		index := util.GetSeededRandInt([]byte(seed), len(nodeArray)) //seed the first time
-		if err := util.RotateLeft(nodeArray[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
+		filteredArray := make([]core_types.Peer, 0)
+		for _, peer := range nodeArray {
+			filtered := false
+			for _, id := range blacklistedIDs {
+				if string(peer.NodeInfo.ID()) == id {
+					filtered = true
+				}
+			}
+			if !filtered {
+				filteredArray = append(filteredArray, peer)
+			}
+		}
+		index := util.GetSeededRandInt([]byte(seed), len(filteredArray)) //seed the first time
+		if err := util.RotateLeft(filteredArray[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 			util.LogError(err)
 			return false, []string{}
 		}
 		leaders := make([]core_types.Peer, 0)
-		if numLeaders <= len(nodeArray) {
-			leaders = nodeArray[0:numLeaders]
+		if numLeaders <= len(filteredArray) {
+			leaders = filteredArray[0:numLeaders]
 		} else {
-			leaders = nodeArray[0:1]
+			leaders = filteredArray[0:1]
 		}
 		leaderStrings := make([]string, 0)
 		iAmLeader := false
