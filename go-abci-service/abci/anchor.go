@@ -57,7 +57,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	app.logger.Debug(fmt.Sprintf("starting scheduled anchor period for tx ranges %d to %d", startTxRange, endTxRange))
 
 	// elect leader to do the actual anchoring
-	iAmLeader, leaderIDs := app.ElectChainContributorAsLeader(1)
+	iAmLeader, leaderIDs := app.ElectChainContributorAsLeader(1, []string{})
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
@@ -206,7 +206,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	conf_found := false
 	for !time.Now().After(deadline) && !conf_found {
 		// Broadcast the confirmation message with metadata
-		amLeader, _ := app.ElectValidatorAsLeader(1)
+		amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
 		if amLeader {
 			result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
 			app.LogError(err)

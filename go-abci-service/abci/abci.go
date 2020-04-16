@@ -36,7 +36,7 @@ var (
 	GossipTxs                        = []string{"NIST"}
 )
 
-const SUCCESSFUL_ANCHOR_CRITERIA = 64
+const SUCCESSFUL_ANCHOR_CRITERIA = 100
 
 // loadState loads the AnchorState struct from a database instance
 func loadState(db dbm.DB) types.AnchorState {
