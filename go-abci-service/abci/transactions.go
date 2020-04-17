@@ -145,7 +145,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "JWK":
 		if app.LogError(app.SaveIdentity(tx)) == nil {
 			tags = app.incrementTxInt(tags)
-			tags = append(tags, kv.Pair{Key: []byte("core"), Value: []byte("new")})
+			tags = append(tags, kv.Pair{Key: []byte("CORE"), Value: []byte("NEW")})
 			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 			break
 		}
