@@ -11,7 +11,7 @@ Chainpoint Core runs as a node on a distributed network. Cores aggregate hashes 
 
 Each Core has an integrated Lightning Node running [LND](https://github.com/lightningnetwork/lnd). Cores receive `anchor fee` payments from Gateways via Lightning. The default `anchor fee` is 2 [satoshis](<https://en.bitcoin.it/wiki/Satoshi_(unit)>). Core operators can set their anchor fee to adapt to changing market conditions and compete to earn fees from Gateways.
 
-When joining the network, new Cores automatically open Lightning channels with 2/3rds of the existing Cores. Each channel must have a minimum capacity of 1,000,000 satoshis. This provides a measure of Sybil resistance and helps ensure Cores have sufficient liquidity to receive Lightning payments from Gateways.
+When joining the network, new Cores automatically open Lightning channels with the existing Cores. Each channel must have a minimum capacity of 1,000,000 satoshis. This provides a measure of Sybil resistance and helps ensure Cores have sufficient liquidity to receive Lightning payments from Gateways.
 
 Once per hour, a Core is elected to anchor data to Bitcoin. As more Cores join the network, each Core anchors less frequently, thus reducing each Core’s cost of paying Bitcoin transaction fees.
 
@@ -54,7 +54,7 @@ Recommended:
 
 ### Quick Start
 
-To start up a Core node without connecting to the rest of the Chainpoint Network:
+To start up a Core node and connect to the Chainpoint Network:
 
 #### Install Dependencies
 
