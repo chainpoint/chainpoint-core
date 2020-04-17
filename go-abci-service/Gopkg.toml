@@ -40,9 +40,6 @@
   name = "github.com/google/uuid"
 
 [[constraint]]
-  name = "github.com/jacohend/lnd"
-
-[[constraint]]
   name = "github.com/knq/pemutil"
 
 [[constraint]]
@@ -51,8 +48,10 @@
 [[constraint]]
   name = "github.com/lib/pq"
 
-[[constraint]]
+[[override]]
   name = "github.com/lightningnetwork/lnd"
+  source = "github.com/tierion/lnd"
+  branch = "latest"
 
 [[constraint]]
   name = "github.com/spf13/viper"
