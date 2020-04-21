@@ -291,3 +291,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	}
 	return nil
 }
+
+func (app *AnchorApplication) MonitorConfirmedTx () {
+
+}
