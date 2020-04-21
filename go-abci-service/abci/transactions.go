@@ -45,8 +45,8 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		isVal, err := app.IsValidator(tx.CoreID)
 		addr := ""
 		components := strings.Split(tx.Data, "!")
-		if len(components) == 3 {
-			addr = components[2]
+		if len(components) == 2 {
+			addr = components[0]
 		}
 		goodCandidateForValidator := false
 		if _, record, err := validation.GetValidationRecord(addr, app.state); err != nil {
@@ -84,10 +84,12 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	switch string(tx.TxType) {
 	case "VAL":
 		components := strings.Split(tx.Data, "!")
-		data := components[0] + "!" + components[1]
-		tags = app.incrementTxInt(tags)
-		if isValidatorTx([]byte(data)) && app.PendingValidator == tx.Data {
-			resp = app.execValidatorTx([]byte(tx.Data))
+		if len(components) == 2 {
+			data := components[0] + "!" + components[1]
+			tags = app.incrementTxInt(tags)
+			if isValidatorTx([]byte(data)) && app.PendingValidator == tx.Data {
+				resp = app.execValidatorTx([]byte(tx.Data))
+			}
 		}
 		break
 	case "CAL":

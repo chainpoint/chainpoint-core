@@ -229,11 +229,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 // SetOption : Method for runtime data transfer between other apps and ABCI
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
-	//req.Value must be <base64ValidatorPubKey>!<VotingPower>!<Sig>
+	//req.Value must be <base64ValidatorPubKey>!<VotingPower>
 	go func() {
 		time.Sleep(1 * time.Minute)
 		components := strings.Split(req.Value, "!")
-		if len(components) != 3 {
+		if len(components) != 2 {
 			app.logger.Error("VAL or VOTE data is malformed")
 			return
 		}
