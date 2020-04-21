@@ -229,13 +229,13 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if key == "VOTE" || key == "VAL" {
 		go func() {
 			time.Sleep(1 * time.Minute)
-			components := strings.Split(req.Value, "!")
+			components := strings.Split(val, "!")
 			if len(components) != 2 {
 				app.logger.Error("VAL or VOTE data is malformed")
 				return
 			}
 			if key == "VAL" {
-				app.PendingValidator = req.Value
+				app.PendingValidator = val
 				app.rpc.BroadcastTx("VAL", val, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 			}
 			if key == "VOTE" {
