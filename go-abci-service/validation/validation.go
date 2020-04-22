@@ -185,12 +185,13 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		}
 		break
 	case "BTC-C":
-		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
-		if !(IsHabitualViolator(validationRecord.BtccAllowedRate) /*|| !IsValidBtcc(tx, *state)*/) {
+		validated = true
+/*		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
+		if !(IsHabitualViolator(validationRecord.BtccAllowedRate) ) {
 			validated = true
 			UpdateAcceptTx(&validationRecord.BtccAllowedRate)
 			validationRecord.LastBtccTxHeight = state.Height
-		}
+		}*/
 		break
 	case "NIST":
 		timeRecord := util.GetNISTTimestamp(tx.Data)

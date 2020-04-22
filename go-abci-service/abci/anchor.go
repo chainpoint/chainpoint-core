@@ -199,18 +199,17 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 		}
 	}
 	if len(anchoringCoreID) == 0 {
-		app.logger.Error(fmt.Sprintf("Anchor: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
+		app.logger.Error(fmt.Sprintf( "Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
 	}
 
 	deadline := time.Now().Add(time.Duration(4) * time.Minute)
-	conf_found := false
-	for !time.Now().After(deadline) && !conf_found {
+	for !time.Now().After(deadline) {
 		// Broadcast the confirmation message with metadata
-		amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
+		amLeader, _ := app.ElectValidatorAsLeader(1, []string{})
 		if amLeader {
 			result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
 			app.LogError(err)
-			app.logger.Info(fmt.Sprint("BTC-C Hash: %v", result.Hash))
+			app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
 		}
 		deadline := app.state.Height + 2
 		for app.state.Height < deadline {
@@ -221,17 +220,11 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 		if app.LogError(err) == nil {
 			for _, tx := range txResult.Txs {
 				hash = tx.Hash
-				if app.LogError(err) != nil {
-					continue;
-				} else {
-					app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
-					conf_found = true
-					break;
-				}
+				app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
 			}
-			if len(hash) > 0 {
-				break;
-			}
+		}
+		if len(hash) > 0 {
+			break;
 		}
 	}
 
