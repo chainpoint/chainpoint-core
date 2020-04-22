@@ -204,7 +204,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 		app.logger.Info(fmt.Sprintf("Retrieved confirmation query for core %s", anchoringCoreID))
 	}
 
-	deadline := time.Now().Add(time.Duration(4) * time.Minute)
+	deadline := time.Now().Add(time.Duration(5) * time.Minute)
 	for !time.Now().After(deadline) {
 		// Broadcast the confirmation message with metadata
 		amLeader, _ := app.ElectValidatorAsLeader(1, []string{})
@@ -213,10 +213,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 			app.LogError(err)
 			app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
 		}
-		deadline := app.state.Height + 2
-		for app.state.Height < deadline {
-			time.Sleep(10 * time.Second) // wait until next block to query for btc-c
-		}
+		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
 		btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
 		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25)
 		if app.LogError(err) == nil {
@@ -228,6 +225,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 		if len(hash) > 0 {
 			break;
 		}
+		app.logger.Info("Restarting confirmation process")
 	}
 
 	var btccStateObj types.BtccStateObj
