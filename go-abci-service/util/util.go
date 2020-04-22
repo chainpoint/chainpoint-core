@@ -55,7 +55,7 @@ func LoggerError(logger log.Logger, err error) error {
 
 func ReverseTxHex (str string) string {
 	re := regexp.MustCompile(`(\S{2})`)
-	x := re.FindAllString("8f55f9c867b99951f6dbdd671fe2165859a991e6e40bb0c306310b673c266f97", -1)
+	x := re.FindAllString(str, -1)
 	reverseAny(x)
 	return strings.Join(x, "")
 }
