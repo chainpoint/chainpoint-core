@@ -53,10 +53,12 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 					goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
 				}
 				if !(goodCandidate && app.PendingValidator == tx.Data) {
+					app.logger.Info("Validator failed to validate VAL tx")
 					return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 				}
 			}
 		} else {
+			app.logger.Info("Validator failed to validate VAL tx structure")
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
 	}
@@ -90,7 +92,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			tags = app.incrementTxInt(tags)
 			if isValidatorTx([]byte(data)) {
 				app.logger.Info("Executing VAL tx")
-				resp = app.execValidatorTx([]byte(tx.Data))
+				resp = app.execValidatorTx([]byte(data))
 			}
 		}
 		break
