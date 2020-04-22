@@ -230,7 +230,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		go func() {
 			time.Sleep(1 * time.Minute)
 			components := strings.Split(val, "!")
-			if len(components) != 2 {
+			if len(components) != 3 {
 				app.logger.Error("VAL or VOTE data is malformed")
 				return
 			}

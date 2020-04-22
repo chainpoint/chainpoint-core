@@ -41,24 +41,6 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed", tx.CoreID)))
 		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
 	}
-	if tx.TxType == "VAL" {
-		isVal, err := app.IsValidator(tx.CoreID)
-		addr := ""
-		components := strings.Split(tx.Data, "!")
-		if len(components) == 2 {
-			addr = components[0]
-		}
-		goodCandidateForValidator := false
-		if _, record, err := validation.GetValidationRecord(addr, app.state); err != nil {
-			numValidators := len(app.Validators)
-			goodCandidateForValidator = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA + 10 * numValidators) || app.config.BitcoinNetwork == "testnet"
-		}
-		app.logger.Info("VAL tx is from a validator? ", "isVal", isVal)
-		app.LogError(err)
-		if !isVal && !goodCandidateForValidator {
-			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-		}
-	}
 	if tx.TxType == "JWK" && !app.VerifyIdentity(tx) {
 		app.logger.Info("Unable to validate JWK Identity", "CoreID", tx.CoreID)
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
@@ -84,10 +66,22 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	switch string(tx.TxType) {
 	case "VAL":
 		components := strings.Split(tx.Data, "!")
-		if len(components) == 2 {
-			data := components[0] + "!" + components[1]
+		if len(components) == 3 {
+			amVal, _ := app.IsValidator(app.ID)
+			id := components[0]
+			if amVal  {
+				goodCandidate := false
+				if _, record, err := validation.GetValidationRecord(id, app.state); err != nil {
+					numValidators := len(app.Validators)
+					goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA + 10 * numValidators) || app.config.BitcoinNetwork == "testnet"
+				}
+				if !(goodCandidate && app.PendingValidator == tx.Data) {
+					break
+				}
+			}
+			data := components[1] + "!" + components[2]
 			tags = app.incrementTxInt(tags)
-			if isValidatorTx([]byte(data)) && app.PendingValidator == tx.Data {
+			if isValidatorTx([]byte(data)) {
 				app.logger.Info("Executing VAL tx")
 				resp = app.execValidatorTx([]byte(tx.Data))
 			}

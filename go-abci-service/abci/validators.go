@@ -88,7 +88,7 @@ func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate) types.Res
 	} else {
 		// add or update validator
 		value := bytes.NewBuffer(make([]byte, 0))
-		if err := types.WriteMessage(&v, value); err != nil{
+		if err := types.WriteMessage(&v, value); err != nil {
 			app.logger.Info(fmt.Sprintf("Error encoding validator: %v", err))
 			return types.ResponseDeliverTx{
 				Code: code.CodeTypeEncodingError,
