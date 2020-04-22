@@ -162,6 +162,9 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 	validated := false
 
 	switch string(txType) {
+	case "VAL":
+		validated = true
+		break
 	case "CAL":
 		RateLimitUpdate(state.Height, &validationRecord.CalAllowedRate)
 		if !IsHabitualViolator(validationRecord.CalAllowedRate) {
