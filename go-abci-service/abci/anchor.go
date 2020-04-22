@@ -200,6 +200,8 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	}
 	if len(anchoringCoreID) == 0 {
 		app.logger.Error(fmt.Sprintf( "Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
+	}else {
+		app.logger.Info(fmt.Sprintf("Retrieved confirmation query for core %s", anchoringCoreID))
 	}
 
 	deadline := time.Now().Add(time.Duration(4) * time.Minute)
