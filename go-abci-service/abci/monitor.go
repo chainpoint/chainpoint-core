@@ -1,12 +1,15 @@
 package abci
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"strings"
 	"time"
 
@@ -292,6 +295,57 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	return nil
 }
 
-func (app *AnchorApplication) MonitorConfirmedTx () {
+func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
+	block, err := app.lnClient.GetBlock(btcmsg.BtcTxHeight)
+	if app.LogError(err) != nil {
+		return false
+	}
+	for _, t := range block.Transactions {
+		if t == btcmsg.BtcTxID {
+			return true
+		}
+	}
+	return false
+}
 
+func (app *AnchorApplication) GetBlockTree (btcmsg types.BtcTxMsg) (merkletools.MerkleTree, error) {
+	block, err := app.lnClient.GetBlock(btcmsg.BtcTxHeight)
+	if app.LogError(err) != nil {
+		return merkletools.MerkleTree{}, err
+	}
+	var tree merkletools.MerkleTree
+	for _, t := range block.Transactions {
+		tx := util.ReverseTxHex(t)
+		hexTx, _ := hex.DecodeString(tx)
+		tree.AddLeaf(hexTx)
+	}
+	tree.MakeBTCTree()
+	root := tree.GetMerkleRoot()
+	reversedRoot := util.ReverseTxHex(hex.EncodeToString(root))
+	reversedRootBytes, _ := hex.DecodeString(reversedRoot)
+	if ! bytes.Equal(reversedRootBytes, block.MerkleRoot) {
+		return merkletools.MerkleTree{}, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
+	}
+	return tree, nil
+}
+
+func (app *AnchorApplication) MonitorConfirmedTx () {
+	results := app.redisClient.SMembers("BTC_Mon:ConfirmedBTCTxIds")
+	if app.LogError(results.Err()) != nil {
+		return
+	}
+	for _, s := range results.Val() {
+		var tx types.TxID
+		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
+			return
+		}
+		info, err := app.lnClient.GetInfo()
+		if app.LogError(err) != nil {
+			return
+		}
+		confirmCount := info.BlockHeight - uint32(tx.BlockHeight) + 1
+		if confirmCount > 6 {
+			continue
+		}
+	}
 }

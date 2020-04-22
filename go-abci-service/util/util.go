@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,6 +51,21 @@ func LoggerError(logger log.Logger, err error) error {
 		logger.Error(fmt.Sprintf("Error: %s", err.Error()))
 	}
 	return err
+}
+
+func ReverseTxHex (str string) string {
+	re := regexp.MustCompile(`(\S{2})`)
+	x := re.FindAllString("8f55f9c867b99951f6dbdd671fe2165859a991e6e40bb0c306310b673c266f97", -1)
+	reverseAny(x)
+	return strings.Join(x, "")
+}
+
+func reverseAny(s interface{}) {
+	n := reflect.ValueOf(s).Len()
+	swap := reflect.Swapper(s)
+	for i, j := 0, n-1; i < j; i, j = i+1, j-1 {
+		swap(i, j)
+	}
 }
 
 // Int64ToByte : Convert an int64 to a byte for use in the Tendermint tagging system

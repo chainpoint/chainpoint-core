@@ -90,6 +90,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		if len(components) == 3 {
 			data := components[1] + "!" + components[2]
 			tags = app.incrementTxInt(tags)
+			app.logger.Info(fmt.Sprintf("Val tx: %s", data))
 			if isValidatorTx([]byte(data)) {
 				app.logger.Info("Executing VAL tx")
 				resp = app.execValidatorTx([]byte(data))
