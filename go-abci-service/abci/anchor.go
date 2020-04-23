@@ -171,9 +171,8 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
-	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "confirmedtx", txIDBytes) //MonitorConfirmedTx
-	if err != nil {
-		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+	result := app.redisClient.SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	if app.LogError(result.Err()) != nil {
 		return err
 	}
 	return nil

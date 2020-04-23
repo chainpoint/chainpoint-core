@@ -26,6 +26,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
 
+const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
+
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
 	for {
@@ -339,7 +341,7 @@ func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetail
 }
 
 func (app *AnchorApplication) MonitorConfirmedTx () {
-	results := app.redisClient.SMembers("BTC_Mon:ConfirmedBTCTxIds")
+	results := app.redisClient.SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
 	}
@@ -378,7 +380,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 		err = app.ConsumeBtcMonMsg(btcmsg)
 		app.logger.Info(fmt.Sprintf("btc tx %s confirmed", s))
 		if app.LogError(err) == nil {
-			delRes := app.redisClient.SRem("BTC_Mon:ConfirmedBTCTxIds", s)
+			delRes := app.redisClient.SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 			if app.LogError(delRes.Err()) != nil {
 				return
 			}
