@@ -125,7 +125,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		break
 	case "BTC-C":
 		if tx.Data == string(app.state.LatestBtccTx) {
-			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C tx: %s", tx.Data))
+			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C confirmation tx: %s", tx.Data))
 			resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized}
 			break
 		}
