@@ -17,7 +17,6 @@
 // load all environment variables into env object
 const env = require('./lib/parse-env.js')('btc-mon')
 
-const MerkleTools = require('merkle-tools')
 const btcBridge = require('btc-bridge')
 const amqp = require('amqplib')
 const connections = require('./lib/connections.js')
@@ -25,11 +24,6 @@ const logger = require('./lib/logger.js')
 
 // Key for the Redis set of all Bitcoin transaction id objects needing to be monitored for first confirmation
 const NEW_BTC_TX_IDS_KEY = 'BTC_Mon:NewBTCTxIds'
-// Key for the Redis set of all Bitcoin transaction id objects needing to be monitored for final confirmation
-const CONFIRMED_BTC_TX_IDS_KEY = 'BTC_Mon:ConfirmedBTCTxIds'
-
-// The merkle tools object for building trees and generating proof paths
-const merkleTools = new MerkleTools()
 
 // The channel used for all amqp communication
 // This value is set once the connection has been established
@@ -56,18 +50,6 @@ async function consumeBtcMonMessageAsync(msg) {
           logger.error(`${env.RMQ_WORK_IN_BTCMON_QUEUE} : consume message nacked`)
         }
         break
-      case 'confirmedtx':
-        try {
-          // add the transaction id to the redis set
-          // Redis is the sole storage mechanism for this data
-          let confirmedBtcTxIdObjJSON = msg.content.toString()
-          await redis.sadd(CONFIRMED_BTC_TX_IDS_KEY, confirmedBtcTxIdObjJSON)
-          amqpChannel.ack(msg)
-        } catch (error) {
-          amqpChannel.nack(msg)
-          logger.error(`${env.RMQ_WORK_IN_BTCMON_QUEUE} : consume message nacked`)
-        }
-        break
       default:
         console.error('consumeBtcMonMessageAsync : unknown message type', msg.properties.type)
         // cannot handle unknown type messages, ack message and do nothing
@@ -82,7 +64,6 @@ let monitorTransactionsAsync = async () => {
 
   CHECKS_IN_PROGRESS = true
   let newBtcTxObjJSONArray = await redis.smembers(NEW_BTC_TX_IDS_KEY)
-  let confirmedBtcTxObjJSONArray = await redis.smembers(CONFIRMED_BTC_TX_IDS_KEY)
 
   let lnd
   try {
@@ -150,93 +131,6 @@ let monitorTransactionsAsync = async () => {
     }
   }
   logger.info(`New Btc Tx monitoring checks complete`)
-
-  // Iterate through all confirmed BTCTXIDS objects, checking the confirmation count for each transaction
-  // If MIN_BTC_CONFIRMS is reached for a given transaction, retrieve the state data needed
-  // to build the proof path from the transaction to the block header merkle root value and
-  // return that information to calendar service, ack message.
-  logger.info(`Confirmed Btc Tx monitoring check starting for ${confirmedBtcTxObjJSONArray.length} transaction(s)`)
-  for (let confirmedBtcTxObjJSON of confirmedBtcTxObjJSONArray) {
-    let confirmedBtcTxIdObj = JSON.parse(confirmedBtcTxObjJSON)
-    try {
-      let txId = confirmedBtcTxIdObj.tx_id
-      let txBlockHeight = confirmedBtcTxIdObj.block_height
-      // Get current BTC block height
-      let confirmCount = 0
-      try {
-        let info = await lnd.getChainInfoAsync()
-        confirmCount = info.topBlockHeight - txBlockHeight + 1
-        if (confirmCount < env.MIN_BTC_CONFIRMS) {
-          logger.info(`${txId} not ready : ${confirmCount} of ${env.MIN_BTC_CONFIRMS} confirmations`)
-          continue
-        }
-      } catch (error) {
-        throw new Error(`Could not retrieve node info`)
-      }
-
-      // if ready, Get BTC Block Stats with Transaction Ids
-      let blockStats
-      try {
-        blockStats = await lnd.getBlockDataAsync(txBlockHeight)
-      } catch (error) {
-        throw new Error(`Could not get stats for block ${txBlockHeight}`)
-      }
-      let txIndex = blockStats.tx.indexOf(txId)
-      if (txIndex === -1) throw new Error(`transaction ${txId} not found in block ${txBlockHeight}`)
-      // adjusting for endieness, reverse txids for further processing
-      blockStats.tx = blockStats.tx.map(txId =>
-        txId
-          .match(/.{2}/g)
-          .reverse()
-          .join('')
-      )
-
-      if (blockStats.tx.length === 0) throw new Error(`No transactions found in block ${txBlockHeight}`)
-
-      // build BTC merkle tree with txIds
-      merkleTools.resetTree()
-      merkleTools.addLeaves(blockStats.tx)
-      merkleTools.makeBTCTree(true)
-      let rootValueBuffer = merkleTools.getMerkleRoot()
-      // re-adjust for endieness, reverse and convert back to hex
-      let rootValueHex = rootValueBuffer
-        .toString('hex')
-        .match(/.{2}/g)
-        .reverse()
-        .join('')
-      if (rootValueHex !== blockStats.merkleRoot)
-        throw new Error(
-          `calculated merkle root (${rootValueHex}) does not match block merkle root (${
-            blockStats.merkleRoot
-          }) for tx ${txId}`
-        )
-      // get proof path from tx to block root
-      let proofPath = merkleTools.getProof(txIndex)
-      // send data back to calendar
-      let messageObj = {}
-      messageObj.btctx_id = txId
-      messageObj.btchead_height = blockStats.height
-      messageObj.btchead_root = rootValueHex
-      messageObj.path = proofPath
-      try {
-        await amqpChannel.sendToQueue(env.RMQ_WORK_OUT_CAL_QUEUE, Buffer.from(JSON.stringify(messageObj)), {
-          persistent: true,
-          type: 'btcmon_confirmed'
-        })
-        logger.info(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message acked : ${messageObj.btctx_id}`)
-      } catch (error) {
-        logger.error(`${env.RMQ_WORK_OUT_CAL_QUEUE} : [btcmon] publish message nacked : ${messageObj.btctx_id}`)
-        throw new Error(error.message)
-      }
-
-      await redis.srem(CONFIRMED_BTC_TX_IDS_KEY, confirmedBtcTxObjJSON)
-
-      logger.info(`confirmed ${confirmedBtcTxIdObj.tx_id} ready with ${confirmCount} confirmations`)
-    } catch (error) {
-      logger.error(`An unexpected error occurred while monitoring : ${error.message}`)
-    }
-  }
-  logger.info(`Confirmed Btc Tx monitoring checks complete`)
 
   CHECKS_IN_PROGRESS = false
 }

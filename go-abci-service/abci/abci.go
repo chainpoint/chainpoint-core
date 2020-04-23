@@ -333,6 +333,11 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		}
 	}
 
+	// monitor confirmed tx
+	if app.state.ChainSynced && app.config.DoAnchor {
+		go app.MonitorConfirmedTx()
+	}
+
 	// Finalize new block by calculating appHash and incrementing height
 	appHash := make([]byte, 8)
 	binary.PutVarint(appHash, app.state.Height)

@@ -171,7 +171,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
-	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "confirmedtx", txIDBytes)
+	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "confirmedtx", txIDBytes) //MonitorConfirmedTx
 	if err != nil {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 		return err
@@ -180,11 +180,9 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 }
 
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
-func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
+func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
 	var anchoringCoreID string
 	var hash []byte
-	var btcMonObj types.BtcMonMsg
-	app.LogError(json.Unmarshal(msg.Body, &btcMonObj))
 	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
 	queryLine := fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID)
 	app.logger.Info("Anchor confirmation query: " + queryLine)
@@ -207,7 +205,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	deadline := time.Now().Add(time.Duration(5) * time.Minute)
 	for !time.Now().After(deadline) {
 		// Broadcast the confirmation message with metadata
-		amLeader, _ := app.ElectValidatorAsLeader(1, []string{})
+		amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
 		if amLeader {
 			result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
 			app.LogError(err)
@@ -277,10 +275,10 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 		}
 		msg.Ack(false)
 		break
-	case "btcmon_confirmed":
+/*	case "btcmon_confirmed":
 		err := app.ConsumeBtcMonMsg(msg)
 		app.LogError(err)
-		break
+		break*/
 	case "reward":
 		break
 	default:
