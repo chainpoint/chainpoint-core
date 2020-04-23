@@ -251,7 +251,6 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 		return err
 	}
-	msg.Ack(false)
 	return nil
 }
 
