@@ -334,7 +334,8 @@ func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetail
 	root := tree.GetMerkleRoot()
 	reversedRoot := util.ReverseTxHex(hex.EncodeToString(root))
 	reversedRootBytes, _ := hex.DecodeString(reversedRoot)
-	if ! bytes.Equal(reversedRootBytes, block.MerkleRoot) {
+	reversedMerkleBytes, _ := hex.DecodeString(util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot)))
+	if ! bytes.Equal(reversedRootBytes, reversedMerkleBytes) {
 		return block, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
 	}
 	return block, tree, txIndex, nil
@@ -357,7 +358,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 		}
 		confirmCount := info.BlockHeight - uint32(tx.BlockHeight) + 1
 		if confirmCount < 6 {
-			fmt.Sprintf(fmt.Sprintf("btc tx %s at %d confirmations", s, confirmCount))
+			app.logger.Info(fmt.Sprintf("btc tx %s at %d confirmations", s, confirmCount))
 			continue
 		}
 		block, tree, txIndex, err := app.GetBlockTree(tx)

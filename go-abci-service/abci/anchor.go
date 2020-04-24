@@ -203,6 +203,9 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 
 	deadline := time.Now().Add(time.Duration(5) * time.Minute)
 	for !time.Now().After(deadline) {
+		if btcMonObj.BtcHeadRoot == string(app.state.LatestBtccTx) {
+			return errors.New(fmt.Sprintf("Already seen BTC-C confirmation for root %s", btcMonObj.BtcHeadRoot))
+		}
 		// Broadcast the confirmation message with metadata
 		amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
 		if amLeader {
