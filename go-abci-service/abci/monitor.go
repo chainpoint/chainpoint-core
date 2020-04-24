@@ -368,7 +368,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 		var btcmsg types.BtcMonMsg
 		btcmsg.BtcTxID = tx.TxID
 		btcmsg.BtcHeadHeight = tx.BlockHeight
-		btcmsg.BtcHeadRoot = hex.EncodeToString(block.MerkleRoot)
+		btcmsg.BtcHeadRoot = util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot))
 		proofs := tree.GetProof(txIndex)
 		jsproofs := make([]types.JSProof, len(proofs))
 		for i, proof := range proofs {
