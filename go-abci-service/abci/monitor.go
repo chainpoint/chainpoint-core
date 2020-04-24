@@ -357,7 +357,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 			return
 		}
 		confirmCount := info.BlockHeight - uint32(tx.BlockHeight) + 1
-		if confirmCount < 1 {
+		if confirmCount < 6 {
 			app.logger.Info(fmt.Sprintf("btc tx %s at %d confirmations", s, confirmCount))
 			continue
 		}
