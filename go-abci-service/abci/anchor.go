@@ -171,17 +171,19 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
-	result := app.redisClient.SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
-	if app.LogError(result.Err()) != nil {
-		return err
+	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "confirmedtx", txIDBytes) //MonitorConfirmedTx		result := app.redisClient.SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	if app.LogError(err) != nil {
+		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 	}
 	return nil
 }
 
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
-func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
+func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 	var anchoringCoreID string
 	var hash []byte
+	var btcMonObj types.BtcMonMsg
+	app.LogError(json.Unmarshal(msg.Body, &btcMonObj))
 	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
 	queryLine := fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID)
 	app.logger.Info("Anchor confirmation query: " + queryLine)
@@ -276,10 +278,11 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 		}
 		msg.Ack(false)
 		break
-/*	case "btcmon_confirmed":
+	case "btcmon_confirmed":
 		err := app.ConsumeBtcMonMsg(msg)
 		app.LogError(err)
-		break*/
+		msg.Ack(false)
+		break
 	case "reward":
 		break
 	default:

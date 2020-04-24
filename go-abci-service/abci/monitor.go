@@ -312,7 +312,7 @@ func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
 	return false
 }
 
-func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
+/*func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
 	block, err := app.lnClient.GetBlock(btcTx.BlockHeight)
 	if app.LogError(err) != nil {
 		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
@@ -384,4 +384,4 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 			return
 		}
 	}
-}
+}*/
