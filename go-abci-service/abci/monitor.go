@@ -378,13 +378,11 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 				jsproofs[i] = types.JSProof{Right: hex.EncodeToString(proof.Value)}
 			}
 		}
-		err = app.ConsumeBtcMonMsg(btcmsg)
+		go app.ConsumeBtcMonMsg(btcmsg)
 		app.logger.Info(fmt.Sprintf("btc tx %s confirmed", s))
-		if app.LogError(err) == nil {
-			delRes := app.redisClient.SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
-			if app.LogError(delRes.Err()) != nil {
-				return
-			}
+		delRes := app.redisClient.SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
+		if app.LogError(delRes.Err()) != nil {
+			return
 		}
 	}
 }
