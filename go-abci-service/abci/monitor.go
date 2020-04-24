@@ -334,8 +334,7 @@ func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetail
 	root := tree.GetMerkleRoot()
 	reversedRoot := util.ReverseTxHex(hex.EncodeToString(root))
 	reversedRootBytes, _ := hex.DecodeString(reversedRoot)
-	reversedMerkleBytes, _ := hex.DecodeString(util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot)))
-	if ! bytes.Equal(reversedRootBytes, reversedMerkleBytes) {
+	if ! bytes.Equal(reversedRootBytes, block.MerkleRoot) {
 		return block, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
 	}
 	return block, tree, txIndex, nil
@@ -357,7 +356,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 			return
 		}
 		confirmCount := info.BlockHeight - uint32(tx.BlockHeight) + 1
-		if confirmCount < 6 {
+		if confirmCount < 1 {
 			app.logger.Info(fmt.Sprintf("btc tx %s at %d confirmations", s, confirmCount))
 			continue
 		}
@@ -368,7 +367,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 		var btcmsg types.BtcMonMsg
 		btcmsg.BtcTxID = tx.TxID
 		btcmsg.BtcHeadHeight = tx.BlockHeight
-		btcmsg.BtcHeadRoot = util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot))
+		btcmsg.BtcHeadRoot = hex.EncodeToString(block.MerkleRoot)
 		proofs := tree.GetProof(txIndex)
 		jsproofs := make([]types.JSProof, len(proofs))
 		for i, proof := range proofs {
@@ -379,7 +378,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 			}
 		}
 		go app.ConsumeBtcMonMsg(btcmsg)
-		app.logger.Info(fmt.Sprintf("btc tx %s confirmed", s))
+		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
 		delRes := app.redisClient.SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			return
