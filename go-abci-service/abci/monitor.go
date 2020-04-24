@@ -1,16 +1,16 @@
 package abci
 
 import (
-	"bytes"
+	//"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/base64"
-	"encoding/hex"
+	//"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
-	"github.com/lightningnetwork/lnd/lnrpc"
+	//"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
+	//"github.com/lightningnetwork/lnd/lnrpc"
 	"strings"
 	"time"
 
