@@ -1,12 +1,16 @@
 package abci
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
+	"github.com/lightningnetwork/lnd/lnrpc"
 	"strings"
 	"time"
 
@@ -21,6 +25,8 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
+
+const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -290,4 +296,94 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 		app.state.LnUris[tx.CoreID] = lnID
 	}
 	return nil
+}
+
+func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
+	block, err := app.lnClient.GetBlock(btcmsg.BtcTxHeight)
+	if app.LogError(err) != nil {
+		return false
+	}
+	for _, t := range block.Transactions {
+		if t == btcmsg.BtcTxID {
+			app.logger.Info("BTC-A %s confirmed", t)
+			return true
+		}
+	}
+	return false
+}
+
+func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
+	block, err := app.lnClient.GetBlock(btcTx.BlockHeight)
+	if app.LogError(err) != nil {
+		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
+	}
+	var tree merkletools.MerkleTree
+	txIndex := -1
+	for i, t := range block.Transactions {
+		if t == btcTx.TxID {
+			txIndex = i
+		}
+		tx := util.ReverseTxHex(t)
+		hexTx, _ := hex.DecodeString(tx)
+		tree.AddLeaf(hexTx)
+	}
+	if txIndex == -1 {
+		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, errors.New("Transaction not found in block")
+	}
+	tree.MakeBTCTree()
+	root := tree.GetMerkleRoot()
+	reversedRoot := util.ReverseTxHex(hex.EncodeToString(root))
+	reversedRootBytes, _ := hex.DecodeString(reversedRoot)
+	reversedMerkleRoot, _ := hex.DecodeString(util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot)))
+	if ! bytes.Equal(reversedRootBytes, reversedMerkleRoot) {
+		return block, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
+	}
+	return block, tree, txIndex, nil
+}
+
+func (app *AnchorApplication) MonitorConfirmedTx () {
+	results := app.redisClient.SMembers(CONFIRMED_BTC_TX_IDS_KEY)
+	if app.LogError(results.Err()) != nil {
+		return
+	}
+	for _, s := range results.Val() {
+		app.logger.Info(fmt.Sprintf("Checking btc tx %s", s))
+		var tx types.TxID
+		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
+			return
+		}
+		info, err := app.lnClient.GetInfo()
+		if app.LogError(err) != nil {
+			return
+		}
+		confirmCount := info.BlockHeight - uint32(tx.BlockHeight) + 1
+		if confirmCount < 6 {
+			app.logger.Info(fmt.Sprintf("btc tx %s at %d confirmations", s, confirmCount))
+			continue
+		}
+		block, tree, txIndex, err := app.GetBlockTree(tx)
+		if app.LogError(err) != nil {
+			return
+		}
+		var btcmsg types.BtcMonMsg
+		btcmsg.BtcTxID = tx.TxID
+		btcmsg.BtcHeadHeight = tx.BlockHeight
+		btcmsg.BtcHeadRoot = util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot))
+		proofs := tree.GetProof(txIndex)
+		jsproofs := make([]types.JSProof, len(proofs))
+		for i, proof := range proofs {
+			if proof.Left {
+				jsproofs[i] = types.JSProof{Left: hex.EncodeToString(proof.Value)}
+			}else {
+				jsproofs[i] = types.JSProof{Right: hex.EncodeToString(proof.Value)}
+			}
+		}
+		btcmsg.Path = jsproofs
+		go app.ConsumeBtcMonMsg(btcmsg)
+		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
+		delRes := app.redisClient.SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
+		if app.LogError(delRes.Err()) != nil {
+			return
+		}
+	}
 }

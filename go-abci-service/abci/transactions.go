@@ -42,20 +42,23 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
 	}
 	if tx.TxType == "VAL" {
-		isVal, err := app.IsValidator(tx.CoreID)
-		addr := ""
 		components := strings.Split(tx.Data, "!")
-		if len(components) == 2 {
-			addr = components[0]
-		}
-		goodCandidateForValidator := false
-		if _, record, err := validation.GetValidationRecord(addr, app.state); err != nil {
-			numValidators := len(app.Validators)
-			goodCandidateForValidator = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA + 10 * numValidators) || app.config.BitcoinNetwork == "testnet"
-		}
-		app.logger.Info("VAL tx is from a validator? ", "isVal", isVal)
-		app.LogError(err)
-		if !isVal && !goodCandidateForValidator {
+		if len(components) == 3 {
+			amVal, _ := app.IsValidator(app.ID)
+			id := components[0]
+			if amVal {
+				goodCandidate := false
+				if _, record, err := validation.GetValidationRecord(id, app.state); err != nil {
+					numValidators := len(app.Validators)
+					goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
+				}
+				if !(goodCandidate && app.PendingValidator == tx.Data) {
+					app.logger.Info("Validator failed to validate VAL tx")
+					return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+				}
+			}
+		} else {
+			app.logger.Info("Validator failed to validate VAL tx structure")
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
 	}
@@ -84,11 +87,13 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	switch string(tx.TxType) {
 	case "VAL":
 		components := strings.Split(tx.Data, "!")
-		if len(components) == 2 {
-			data := components[0] + "!" + components[1]
+		if len(components) == 3 {
+			data := components[1] + "!" + components[2]
 			tags = app.incrementTxInt(tags)
-			if isValidatorTx([]byte(data)) && app.PendingValidator == tx.Data {
-				resp = app.execValidatorTx([]byte(tx.Data))
+			app.logger.Info(fmt.Sprintf("Val tx: %s", data))
+			if isValidatorTx([]byte(data)) {
+				app.logger.Info("Executing VAL tx")
+				resp = app.execValidatorTx([]byte(data))
 			}
 		}
 		break
@@ -106,7 +111,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			break
 		}
 		//Begin monitoring using the data contained in this transaction
-		if app.state.ChainSynced {
+		if app.state.ChainSynced && app.CheckAnchor(btca) {
 			go app.ConsumeBtcTxMsg([]byte(tx.Data))
 			app.logger.Info(fmt.Sprintf("BTC-A Anchor Data: %s", tx.Data))
 		}
@@ -120,7 +125,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		break
 	case "BTC-C":
 		if tx.Data == string(app.state.LatestBtccTx) {
-			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C tx: %s", tx.Data))
+			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C confirmation tx: %s", tx.Data))
 			resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized}
 			break
 		}

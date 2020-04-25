@@ -131,6 +131,28 @@ func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
 	return resp, err
 }
 
+func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) {
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	txResponse, err := client.GetTransactions(context.Background(), &lnrpc.GetTransactionsRequest{
+		Txid:                 id,
+	})
+	if ln.LoggerError(err) != nil {
+		return lnrpc.TransactionDetails{}, err
+	}
+	return *txResponse, nil
+}
+
+func (ln *LnClient) GetBlock(height int64) (lnrpc.BlockDetails, error){
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHeight: uint32(height)})
+	if ln.LoggerError(err) != nil {
+		return lnrpc.BlockDetails{}, err
+	}
+	return *block, nil
+}
+
 func (ln *LnClient) PeerExists(peer string) (bool, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {

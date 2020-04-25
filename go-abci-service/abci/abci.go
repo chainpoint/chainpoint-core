@@ -224,27 +224,33 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		app.state.Migrations[2] = "LatestBtcaHeight=17399"
 	}
 
+	key := util.GetEnv("SET_OPTION_KEY", "")
+	val := util.GetEnv("SET_OPTION_VAL", "")
+	if key == "VOTE" || key == "VAL" {
+		go func() {
+			time.Sleep(1 * time.Minute)
+			components := strings.Split(val, "!")
+			if len(components) != 3 {
+				app.logger.Error("VAL or VOTE data is malformed")
+				return
+			}
+			if key == "VAL" {
+				app.PendingValidator = val
+				app.rpc.BroadcastTx("VAL", val, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+			}
+			if key == "VOTE" {
+				app.PendingValidator = val
+			}
+		}()
+	}
+
 	return &app
 }
 
 // SetOption : Method for runtime data transfer between other apps and ABCI
 func (app *AnchorApplication) SetOption(req types2.RequestSetOption) (res types2.ResponseSetOption) {
 	//req.Value must be <base64ValidatorPubKey>!<VotingPower>
-	go func() {
-		time.Sleep(1 * time.Minute)
-		components := strings.Split(req.Value, "!")
-		if len(components) != 2 {
-			app.logger.Error("VAL or VOTE data is malformed")
-			return
-		}
-		if req.Key == "VAL" {
-			app.PendingValidator = req.Value
-			go app.rpc.BroadcastTx("VAL", req.Value, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-		}
-		if req.Key == "VOTE" {
-			app.PendingValidator = req.Value
-		}
-	}()
+
 	return
 }
 
@@ -325,6 +331,11 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
+	}
+
+	// monitor confirmed tx
+	if app.state.ChainSynced && app.config.DoAnchor {
+		go app.MonitorConfirmedTx()
 	}
 
 	// Finalize new block by calculating appHash and incrementing height
