@@ -67,7 +67,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 
 	// Aggregate all txs in range into a new merkle tree in prep for BTC anchoring
 	treeData := app.calendar.AggregateAnchorTx(txLeaves)
-	app.logger.Info(fmt.Sprintf("treeData for Anchor for tx ranges %d to %d: %v", treeData, startTxRange, endTxRange))
+	app.logger.Info(fmt.Sprintf("treeData for Anchor for tx ranges %d to %d: %v", startTxRange, endTxRange, treeData))
 
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
