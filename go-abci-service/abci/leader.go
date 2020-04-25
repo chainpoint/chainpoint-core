@@ -127,8 +127,7 @@ func determineValidatorLeader(numLeaders int, blacklistedIDs []string, status co
 	leaders := make([]types.Validator, 0)
 	validatorList := GetSortedValidatorList(validators)
 	filteredArray := make([]types.Validator, 0)
-	validatorLength := len(filteredArray)
-	if validatorLength == 0 {
+	if len(validatorList) == 0 {
 		return false, []string{}
 	}
 	for _, val := range validatorList {
@@ -142,6 +141,7 @@ func determineValidatorLeader(numLeaders int, blacklistedIDs []string, status co
 			filteredArray = append(filteredArray, val)
 		}
 	}
+	validatorLength := len(filteredArray)
 	index := util.GetSeededRandInt([]byte(seed), validatorLength)    //seed the first time
 	if err := util.RotateLeft(filteredArray[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)

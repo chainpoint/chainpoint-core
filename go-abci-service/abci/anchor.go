@@ -169,20 +169,17 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
-	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.btcmon", "confirmedtx", txIDBytes)
-	if err != nil {
-		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+	result := app.redisClient.SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	if app.LogError(result.Err()) != nil {
 		return err
 	}
 	return nil
 }
 
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
-func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
+func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
 	var anchoringCoreID string
 	var hash []byte
-	var btcMonObj types.BtcMonMsg
-	app.LogError(json.Unmarshal(msg.Body, &btcMonObj))
 	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
 	queryLine := fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID)
 	app.logger.Info("Anchor confirmation query: " + queryLine)
@@ -197,40 +194,36 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 		}
 	}
 	if len(anchoringCoreID) == 0 {
-		app.logger.Error(fmt.Sprintf("Anchor: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
+		app.logger.Error(fmt.Sprintf( "Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
+	}else {
+		app.logger.Info(fmt.Sprintf("Retrieved confirmation query for core %s", anchoringCoreID))
 	}
 
-	deadline := time.Now().Add(time.Duration(4) * time.Minute)
-	conf_found := false
-	for !time.Now().After(deadline) && !conf_found {
+	deadline := time.Now().Add(time.Duration(5) * time.Minute)
+	for !time.Now().After(deadline) {
+		if btcMonObj.BtcHeadRoot == string(app.state.LatestBtccTx) {
+			return errors.New(fmt.Sprintf("Already seen BTC-C confirmation for root %s", btcMonObj.BtcHeadRoot))
+		}
 		// Broadcast the confirmation message with metadata
 		amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
 		if amLeader {
 			result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
 			app.LogError(err)
-			app.logger.Info(fmt.Sprint("BTC-C Hash: %v", result.Hash))
+			app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
 		}
-		deadline := app.state.Height + 2
-		for app.state.Height < deadline {
-			time.Sleep(10 * time.Second) // wait until next block to query for btc-c
-		}
+		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
 		btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
 		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25)
 		if app.LogError(err) == nil {
 			for _, tx := range txResult.Txs {
 				hash = tx.Hash
-				if app.LogError(err) != nil {
-					continue;
-				} else {
-					app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
-					conf_found = true
-					break;
-				}
-			}
-			if len(hash) > 0 {
-				break;
+				app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
 			}
 		}
+		if len(hash) > 0 {
+			break;
+		}
+		app.logger.Info("Restarting confirmation process")
 	}
 
 	var btccStateObj types.BtccStateObj
@@ -259,7 +252,6 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(msg amqp.Delivery) error {
 		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
 		return err
 	}
-	msg.Ack(false)
 	return nil
 }
 
@@ -282,10 +274,10 @@ func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
 		}
 		msg.Ack(false)
 		break
-	case "btcmon_confirmed":
+/*	case "btcmon_confirmed":
 		err := app.ConsumeBtcMonMsg(msg)
 		app.LogError(err)
-		break
+		break*/
 	case "reward":
 		break
 	default:

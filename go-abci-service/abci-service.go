@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	types3 "github.com/chainpoint/tendermint/abci/types"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -31,8 +30,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	cfg "github.com/chainpoint/tendermint/config"
 	tmflags "github.com/chainpoint/tendermint/libs/cli/flags"
-	tmtime "github.com/chainpoint/tendermint/types/time"
 	tmos "github.com/chainpoint/tendermint/libs/os"
+	tmtime "github.com/chainpoint/tendermint/types/time"
 )
 
 func main() {
@@ -82,20 +81,6 @@ func main() {
 		return
 	}
 	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
-
-	client, err := appProxy.NewABCIClient()
-	if err != nil {
-		util.LogError(err)
-		return
-	}
-	key := util.GetEnv("SET_OPTION_KEY", "")
-	val := util.GetEnv("SET_OPTION_VAL", "")
-	if key == "VOTE" || key == "VAL" {
-		client.SetOptionAsync(types3.RequestSetOption{
-			Key: key,
-			Value: val,
-		})
-	}
 
 	// Wait forever
 	select {}

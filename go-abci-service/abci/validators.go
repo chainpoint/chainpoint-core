@@ -34,6 +34,7 @@ func (app *AnchorApplication) execValidatorTx(tx []byte) types.ResponseDeliverTx
 	//get the pubkey and power
 	pubKeyAndPower := strings.Split(string(tx), "!")
 	if len(pubKeyAndPower) != 2 {
+		app.logger.Info(fmt.Sprintf("Expected 'pubkey!power'. Got %v", pubKeyAndPower))
 		return types.ResponseDeliverTx{
 			Code: code.CodeTypeEncodingError,
 			Log:  fmt.Sprintf("Expected 'pubkey!power'. Got %v", pubKeyAndPower)}
@@ -43,6 +44,7 @@ func (app *AnchorApplication) execValidatorTx(tx []byte) types.ResponseDeliverTx
 	// decode the pubkey
 	pubkey, err := base64.StdEncoding.DecodeString(pubkeyS)
 	if err != nil {
+		app.logger.Info(fmt.Sprintf("Pubkey (%s) is invalid base64", pubkeyS))
 		return types.ResponseDeliverTx{
 			Code: code.CodeTypeEncodingError,
 			Log:  fmt.Sprintf("Pubkey (%s) is invalid base64", pubkeyS)}
@@ -51,6 +53,7 @@ func (app *AnchorApplication) execValidatorTx(tx []byte) types.ResponseDeliverTx
 	// decode the power
 	power, err := strconv.ParseInt(powerS, 10, 64)
 	if err != nil {
+		app.logger.Info(fmt.Sprintf("Power (%s) is not an int", powerS))
 		return types.ResponseDeliverTx{
 			Code: code.CodeTypeEncodingError,
 			Log:  fmt.Sprintf("Power (%s) is not an int", powerS)}
@@ -75,6 +78,7 @@ func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate) types.Res
 		}
 		if !hasKey {
 			pubStr := base64.StdEncoding.EncodeToString(v.PubKey.Data)
+			app.logger.Info(fmt.Sprintf("Cannot remove non-existent validator %s", pubStr))
 			return types.ResponseDeliverTx{
 				Code: code.CodeTypeUnauthorized,
 				Log:  fmt.Sprintf("Cannot remove non-existent validator %s", pubStr)}
@@ -85,6 +89,7 @@ func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate) types.Res
 		// add or update validator
 		value := bytes.NewBuffer(make([]byte, 0))
 		if err := types.WriteMessage(&v, value); err != nil {
+			app.logger.Info(fmt.Sprintf("Error encoding validator: %v", err))
 			return types.ResponseDeliverTx{
 				Code: code.CodeTypeEncodingError,
 				Log:  fmt.Sprintf("Error encoding validator: %v", err)}
@@ -95,6 +100,6 @@ func (app *AnchorApplication) updateValidator(v types.ValidatorUpdate) types.Res
 
 	// we only update the changes array if we successfully updated the tree
 	app.ValUpdates = append(app.ValUpdates, v)
-
+	app.logger.Info(fmt.Sprintf("Val Updates: %v", app.ValUpdates))
 	return types.ResponseDeliverTx{Code: code.CodeTypeOK}
 }
