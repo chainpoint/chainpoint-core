@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/streadway/amqp"
@@ -321,14 +319,4 @@ func (app *AnchorApplication) resetAnchor(startTxRange int64, leaderID []string)
 	app.logger.Debug(fmt.Sprintf("Anchor failed, restarting anchor epoch from tx %d", startTxRange))
 	app.state.BeginCalTxInt = startTxRange
 	app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
-
-	//ban failed anchoring core for 6 hours
-	for _, leader := range leaderID {
-		_, record, err := validation.GetValidationRecord(leader, app.state)
-		if app.LogError(err) != nil {
-			continue
-		}
-		record.BtcaAllowedRate.Bucket = -12.0
-		app.LogError(validation.SetValidationRecord(leader, record, &app.state))
-	}
 }
