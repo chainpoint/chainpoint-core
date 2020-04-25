@@ -215,14 +215,14 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	go app.StakeIdentity()
 
 	//Migrations
-	if _, exists := app.state.Migrations[1]; !exists && config.ChainId == "mainnet-chain-32" {
+/*	if _, exists := app.state.Migrations[1]; !exists && config.ChainId == "mainnet-chain-32" {
 		app.state.BeginCalTxInt = 3096
 		app.state.Migrations[1] = "BeginCalTxInt=3096"
 	}
 	if _, exists := app.state.Migrations[2]; !exists && config.ChainId == "mainnet-chain-32" {
 		app.state.LatestBtcaHeight = 17399
 		app.state.Migrations[2] = "LatestBtcaHeight=17399"
-	}
+	}*/
 
 	key := util.GetEnv("SET_OPTION_KEY", "")
 	val := util.GetEnv("SET_OPTION_VAL", "")
