@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
+	"github.com/go-redis/redis"
 	"os"
 	"strings"
 
@@ -154,7 +156,7 @@ func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) 
 }
 
 // QueueBtcTxStateDataMessage
-func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClient, anchorDataObj types.BtcAgg) error {
+func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClient, redisClient *redis.Client, anchorDataObj types.BtcAgg) error {
 	hexRoot, err := hex.DecodeString(anchorDataObj.AnchorBtcAggRoot)
 	if util.LogError(err) != nil {
 		return err
@@ -174,13 +176,9 @@ func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClien
 	if util.LogError(err) != nil {
 		return err
 	}
-	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btcmon", "newtx", btcJSON)
-	if util.LogError(errBtcTx) != nil {
-		return errBtcTx
+	result := redisClient.SAdd(abci.NEW_BTC_TX_IDS_KEY, string(btcJSON))
+	if util.LogError(result.Err()) != nil {
+		return result.Err()
 	}
-	/*	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btctx", "", treeDataJSON)
-		if errBtcTx != nil {
-			return errBtcTx
-		}*/
 	return nil
 }

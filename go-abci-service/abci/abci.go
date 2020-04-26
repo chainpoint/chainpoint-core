@@ -205,7 +205,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	//Initialize anchoring to bitcoin if enabled
 	if config.DoAnchor {
 		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
-		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
 
 	// Load JWK into local mapping from redis
@@ -335,6 +334,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
+		go app.MonitorNewTx()
 		go app.MonitorConfirmedTx()
 	}
 

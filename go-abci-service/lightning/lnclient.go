@@ -143,10 +143,20 @@ func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) 
 	return *txResponse, nil
 }
 
-func (ln *LnClient) GetBlock(height int64) (lnrpc.BlockDetails, error){
+func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error){
 	client, closeFunc := ln.GetClient()
 	defer closeFunc()
 	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHeight: uint32(height)})
+	if ln.LoggerError(err) != nil {
+		return lnrpc.BlockDetails{}, err
+	}
+	return *block, nil
+}
+
+func (ln *LnClient) GetBlockByHash(hash string) (lnrpc.BlockDetails, error){
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHash: hash})
 	if ln.LoggerError(err) != nil {
 		return lnrpc.BlockDetails{}, err
 	}

@@ -10,10 +10,8 @@ import (
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/streadway/amqp"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
 // AggregateCalendar : Aggregate submitted hashes into a calendar transaction
@@ -75,7 +73,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 			app.state.LatestErrRoot = ""
 		}
 		if iAmLeader {
-			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, treeData)
+			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, app.redisClient, treeData)
 			if app.LogError(err) != nil {
 				_, err := app.rpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
@@ -251,67 +249,6 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		return err
 	}
 	return nil
-}
-
-func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
-	switch msg.Type {
-	case "btcmon_new":
-		time.Sleep(30 * time.Second)
-		var btcTxObj types.BtcTxMsg
-		err := json.Unmarshal(msg.Body, &btcTxObj)
-		if app.LogError(err) != nil {
-			return err
-		}
-		btcMonBytes, err := json.Marshal(btcTxObj)
-		if app.LogError(err) != nil {
-			return err
-		}
-		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-		if app.LogError(err) != nil {
-			return err
-		}
-		msg.Ack(false)
-		break
-/*	case "btcmon_confirmed":
-		err := app.ConsumeBtcMonMsg(msg)
-		app.LogError(err)
-		break*/
-	case "reward":
-		break
-	default:
-		msg.Ack(false)
-	}
-	return nil
-}
-
-// ReceiveCalRMQ : Continually consume the calendar work queue and
-// process any resulting messages from the tx and monitor services
-func (app *AnchorApplication) ReceiveCalRMQ() error {
-	var session rabbitmq.Session
-	var err error
-	endConsume := false
-	for {
-		session, err = rabbitmq.ConnectAndConsume(app.config.RabbitmqURI, "work.cal")
-		if err != nil {
-			rabbitmq.LogError(err, "failed to dial for work.cal queue")
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		for {
-			select {
-			case err = <-session.Notify:
-				if endConsume {
-					return err
-				}
-				time.Sleep(5 * time.Second)
-				break //reconnect
-			case msg := <-session.Msgs:
-				if len(msg.Body) > 0 {
-					go app.processMessage(msg)
-				}
-			}
-		}
-	}
 }
 
 // resetAnchor ensures that anchoring will begin again in the next block

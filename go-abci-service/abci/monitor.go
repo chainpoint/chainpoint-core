@@ -27,6 +27,7 @@ import (
 )
 
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
+const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -299,7 +300,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 }
 
 func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
-	block, err := app.lnClient.GetBlock(btcmsg.BtcTxHeight)
+	block, err := app.lnClient.GetBlockByHeight(btcmsg.BtcTxHeight)
 	if app.LogError(err) != nil {
 		return false
 	}
@@ -313,7 +314,7 @@ func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
 }
 
 func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
-	block, err := app.lnClient.GetBlock(btcTx.BlockHeight)
+	block, err := app.lnClient.GetBlockByHeight(btcTx.BlockHeight)
 	if app.LogError(err) != nil {
 		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
 	}
@@ -339,6 +340,50 @@ func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetail
 		return block, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
 	}
 	return block, tree, txIndex, nil
+}
+
+func (app *AnchorApplication) MonitorNewTx () {
+	results := app.redisClient.SMembers(NEW_BTC_TX_IDS_KEY)
+	if app.LogError(results.Err()) != nil {
+		return
+	}
+	for _, s := range results.Val() {
+		var tx types.BtcTxMsg
+		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
+			continue
+		}
+		txBytes, _ := hex.DecodeString(tx.BtcTxID)
+		txDetails, err := app.lnClient.GetTransaction(txBytes)
+		if app.LogError(err) != nil {
+			continue
+		}
+		if len(txDetails.GetTransactions()) == 0 {
+			app.LogError(errors.New("New BTC Check: No transactions found"))
+			continue
+		}
+		txData := txDetails.Transactions[0]
+		if txData.NumConfirmations < 1 {
+			app.logger.Info(fmt.Sprintf("New BTC Check: %s not yet confirmed", tx.BtcTxID))
+			continue
+		}
+		block, err := app.lnClient.GetBlockByHash(txData.BlockHash)
+		if app.LogError(err) != nil {
+			continue
+		}
+		tx.BtcTxHeight = int64(block.BlockHeight)
+		btcMonBytes, err := json.Marshal(tx)
+		if app.LogError(err) != nil {
+			continue
+		}
+		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		if app.LogError(err) != nil {
+			continue
+		}
+		delRes := app.redisClient.SRem(NEW_BTC_TX_IDS_KEY, s)
+		if app.LogError(delRes.Err()) != nil {
+			continue
+		}
+	}
 }
 
 func (app *AnchorApplication) MonitorConfirmedTx () {
@@ -383,7 +428,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
 		delRes := app.redisClient.SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
-			return
+			continue
 		}
 	}
 }
