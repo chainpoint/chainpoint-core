@@ -193,6 +193,8 @@ type BtcTxMsg struct {
 	BtcTxID          string `json:"btctx_id"`
 	BtcTxBody        string `json:"btctx_body"`
 	BtcTxHeight      int64  `json:"btctx_height"`
+	BeginCalTxInt    int64  `json:"begin_cal_int"`
+	EndCalTxInt      int64  `json:"end_cal_int"`
 }
 
 // BtcTxMsg : An RMQ message object from btc-tx to btc-mon service

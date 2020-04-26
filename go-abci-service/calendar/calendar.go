@@ -156,7 +156,7 @@ func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) 
 }
 
 // QueueBtcTxStateDataMessage
-func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClient, redisClient *redis.Client, anchorDataObj types.BtcAgg) error {
+func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClient, redisClient *redis.Client, anchorDataObj types.BtcAgg, start int64, end int64) error {
 	hexRoot, err := hex.DecodeString(anchorDataObj.AnchorBtcAggRoot)
 	if util.LogError(err) != nil {
 		return err
@@ -170,6 +170,8 @@ func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClien
 		AnchorBtcAggRoot: anchorDataObj.AnchorBtcAggRoot,
 		BtcTxBody:        rawtx,
 		BtcTxID:          txid,
+		BeginCalTxInt:    start,
+		EndCalTxInt:	  end,
 	}
 	btcJSON, err := json.Marshal(msgBtcMon)
 	calendar.Logger.Info(fmt.Sprint("Sending BTC-A OP_RETURN: %#v", msgBtcMon))

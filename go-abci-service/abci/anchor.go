@@ -73,7 +73,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 			app.state.LatestErrRoot = ""
 		}
 		if iAmLeader {
-			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, app.redisClient, treeData)
+			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, app.redisClient, treeData, startTxRange, endTxRange)
 			if app.LogError(err) != nil {
 				_, err := app.rpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
