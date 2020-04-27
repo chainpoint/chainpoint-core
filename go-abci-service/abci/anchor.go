@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -165,7 +166,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
-	result := app.redisClient.SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	result := app.redisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 	if app.LogError(result.Err()) != nil {
 		return err
 	}

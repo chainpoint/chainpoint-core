@@ -1,6 +1,7 @@
 package calendar
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -177,7 +178,8 @@ func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClien
 	if util.LogError(err) != nil {
 		return err
 	}
-	result := redisClient.SAdd("BTC_Mon:NewBTCTxIds", string(btcJSON))
+	result := redisClient.WithContext(context.Background()).SAdd("BTC_Mon:NewBTCTxIds", string(btcJSON))
+	calendar.Logger.Info("Added BTC-A message to redis")
 	if util.LogError(result.Err()) != nil {
 		return result.Err()
 	}

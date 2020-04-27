@@ -2,6 +2,7 @@ package abci
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/base64"
@@ -344,7 +345,7 @@ func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetail
 
 func (app *AnchorApplication) MonitorNewTx () {
 	app.logger.Info("Starting New BTC Check")
-	results := app.redisClient.SMembers(NEW_BTC_TX_IDS_KEY)
+	results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 	app.logger.Info(fmt.Sprintf("New BTC Check: Starting count for %d txns", len(results.Val())))
 	if app.LogError(results.Err()) != nil {
 		return
@@ -381,12 +382,12 @@ func (app *AnchorApplication) MonitorNewTx () {
 		}
 		app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(btcMonBytes)))
 		time.Sleep(10 * time.Second) // exit commit block before we send BTC-A
-		_, err = app.rpc.BroadcastTxCommit("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))
 			continue
 		}
-		delRes := app.redisClient.SRem(NEW_BTC_TX_IDS_KEY, s)
+		delRes := app.redisClient.WithContext(context.Background()).SRem(NEW_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			continue
 		}
@@ -394,7 +395,7 @@ func (app *AnchorApplication) MonitorNewTx () {
 }
 
 func (app *AnchorApplication) MonitorConfirmedTx () {
-	results := app.redisClient.SMembers(CONFIRMED_BTC_TX_IDS_KEY)
+	results := app.redisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
 	}
@@ -433,7 +434,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 		btcmsg.Path = jsproofs
 		go app.ConsumeBtcMonMsg(btcmsg)
 		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
-		delRes := app.redisClient.SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
+		delRes := app.redisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			continue
 		}
