@@ -179,9 +179,9 @@ func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClien
 		return err
 	}
 	result := redisClient.WithContext(context.Background()).SAdd("BTC_Mon:NewBTCTxIds", string(btcJSON))
-	calendar.Logger.Info("Added BTC-A message to redis")
 	if util.LogError(result.Err()) != nil {
 		return result.Err()
 	}
+	calendar.Logger.Info("Added BTC-A message to redis")
 	return nil
 }

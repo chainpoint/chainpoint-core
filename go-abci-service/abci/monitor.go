@@ -363,7 +363,7 @@ func (app *AnchorApplication) MonitorNewTx () {
 			continue
 		}
 		if len(txDetails.GetTransactions()) == 0 {
-			app.LogError(errors.New("New BTC Check: No transactions found"))
+			app.logger.Info("New BTC Check: No transactions found")
 			continue
 		}
 		txData := txDetails.Transactions[0]
