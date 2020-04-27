@@ -310,11 +310,6 @@ func (app *AnchorApplication) BeginBlock(req types2.RequestBeginBlock) types2.Re
 
 // EndBlock : Handler that runs at the end of every block, validators can be updated here
 func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.ResponseEndBlock {
-	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
-}
-
-//Commit is called at the end of every block to finalize and save chain state
-func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	// If the chain is synced, run all polling methods
 	if app.state.ChainSynced {
 		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
@@ -337,7 +332,11 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 		go app.MonitorNewTx()
 		go app.MonitorConfirmedTx()
 	}
+	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
+}
 
+//Commit is called at the end of every block to finalize and save chain state
+func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	// Finalize new block by calculating appHash and incrementing height
 	appHash := make([]byte, 8)
 	binary.PutVarint(appHash, app.state.Height)
