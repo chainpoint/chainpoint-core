@@ -29,6 +29,7 @@ import (
 
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
+const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -312,6 +313,28 @@ func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
 		}
 	}
 	return false
+}
+
+func (app *AnchorApplication) FailedAnchorMonitor () {
+	results := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
+	if app.LogError(results.Err()) != nil {
+		return
+	}
+	for _, s := range results.Val() {
+		var anchor types.AnchorRange
+		if app.LogError(json.Unmarshal([]byte(s), &anchor)) != nil {
+			app.logger.Error("cannot unmarshal json for Failed BTC check")
+			continue
+		}
+		if app.state.Height - anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
+			app.logger.Info("Anchor Failure, Resetting state")
+			app.resetAnchor(anchor.BeginCalTxInt)
+			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+			if app.LogError(delRes.Err()) != nil {
+				continue
+			}
+		}
+	}
 }
 
 func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {

@@ -73,8 +73,9 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if treeData.AnchorBtcAggRoot == app.state.LatestErrRoot {
 			app.state.LatestErrRoot = ""
 		}
+		// elect anchorer
 		if iAmLeader {
-			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, app.redisClient, treeData, startTxRange, endTxRange)
+			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, app.redisClient, treeData, app.state.Height, startTxRange, endTxRange)
 			if app.LogError(err) != nil {
 				_, err := app.rpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
@@ -82,25 +83,25 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				}
 			}
 		}
+		// begin monitoring for anchor
+		failedAnchorCheck := types.AnchorRange{
+			AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
+			CalBlockHeight:   app.state.Height,
+			BeginCalTxInt:    startTxRange,
+			EndCalTxInt:      endTxRange,
+		}
+		failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
+		redisResult := app.redisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+		if app.LogError(redisResult.Err()) != nil {
+			return redisResult.Err()
+		}
+		treeDataJSON, _ := json.Marshal(treeData)
+		setResult := app.redisClient.WithContext(context.Background()).Set(treeData.AnchorBtcAggRoot, string(treeDataJSON), 0)
+		if app.LogError(setResult.Err()) != nil {
+			return setResult.Err()
+		}
 		app.state.EndCalTxInt = endTxRange            // Ensure we update our range of CAL txs for next anchor period
 		app.state.LatestBtcaHeight = app.state.Height // So no one will try to re-anchor while processing the btc tx
-
-		// wait for a BTC-A tx
-		deadline := int64(app.config.AnchorTimeout) + app.state.Height
-		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && app.state.LatestErrRoot != treeData.AnchorBtcAggRoot && app.state.Height < deadline {
-			time.Sleep(10 * time.Second)
-		}
-
-		// A BTC-A tx should have hit by now
-		if app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot || app.state.LatestErrRoot == treeData.AnchorBtcAggRoot { // If not, it'll be less than the start of the current range.
-			app.resetAnchor(startTxRange, leaderIDs)
-		} else {
-			err = app.calendar.QueueBtcaStateDataMessage(treeData)
-			if app.LogError(err) != nil {
-				app.resetAnchor(startTxRange, leaderIDs)
-				return err
-			}
-		}
 		return nil
 	}
 	return errors.New("no transactions to aggregate")
@@ -167,6 +168,37 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	}
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
 	result := app.redisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+
+	// end monitoring for failed anchor
+	failedAnchorCheck := types.AnchorRange{
+		AnchorBtcAggRoot: btcTxObj.AnchorBtcAggRoot,
+		CalBlockHeight:   btcTxObj.CalBlockHeight,
+		BeginCalTxInt:    btcTxObj.BeginCalTxInt,
+		EndCalTxInt:      btcTxObj.EndCalTxInt,
+	}
+	failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
+	redisResult := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+	if app.LogError(redisResult.Err()) != nil {
+		return redisResult.Err()
+	}
+
+	// Create agg state messages
+	getResult := app.redisClient.WithContext(context.Background()).Get(btcTxObj.AnchorBtcAggRoot)
+	var btcAgg types.BtcAgg
+	if err := json.Unmarshal([]byte(getResult.Val()), &btcAgg); err != nil {
+		return err
+	}
+	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
+	if app.LogError(err) != nil {
+		app.resetAnchor(failedAnchorCheck.BeginCalTxInt)
+		return err
+	}
+	delResult := app.redisClient.WithContext(context.Background()).Del(btcTxObj.AnchorBtcAggRoot)
+	if app.LogError(delResult.Err()) != nil {
+		return err
+	}
+
+	app.logger.Info("Anchor Success")
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
@@ -253,7 +285,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 }
 
 // resetAnchor ensures that anchoring will begin again in the next block
-func (app *AnchorApplication) resetAnchor(startTxRange int64, leaderID []string) {
+func (app *AnchorApplication) resetAnchor(startTxRange int64) {
 	app.logger.Debug(fmt.Sprintf("Anchor failed, restarting anchor epoch from tx %d", startTxRange))
 	app.state.BeginCalTxInt = startTxRange
 	app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
