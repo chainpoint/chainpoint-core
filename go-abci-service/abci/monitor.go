@@ -366,17 +366,16 @@ func (app *AnchorApplication) MonitorNewTx () {
 			app.logger.Info(fmt.Sprintf("New BTC Check: %s not yet confirmed", tx.BtcTxID))
 			continue
 		}
-		block, err := app.lnClient.GetBlockByHash(txData.BlockHash)
-		if app.LogError(err) != nil {
-			continue
-		}
-		tx.BtcTxHeight = int64(block.BlockHeight)
+		tx.BtcTxHeight = int64(txData.BlockHeight)
 		btcMonBytes, err := json.Marshal(tx)
 		if app.LogError(err) != nil {
 			continue
 		}
+		app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(btcMonBytes)))
+		time.Sleep(10 * time.Second) // exit commit block before we send BTC-A
 		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
+			app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))
 			continue
 		}
 		delRes := app.redisClient.SRem(NEW_BTC_TX_IDS_KEY, s)
