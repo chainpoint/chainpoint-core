@@ -343,18 +343,22 @@ func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetail
 }
 
 func (app *AnchorApplication) MonitorNewTx () {
+	app.logger.Info("Starting New BTC Check")
 	results := app.redisClient.SMembers(NEW_BTC_TX_IDS_KEY)
+	app.logger.Info(fmt.Sprintf("New BTC Check: Starting count for %d txns", len(results.Val())))
 	if app.LogError(results.Err()) != nil {
 		return
 	}
 	for _, s := range results.Val() {
 		var tx types.BtcTxMsg
 		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
+			app.logger.Error("cannot unmarshal json for New BTC check")
 			continue
 		}
 		txBytes, _ := hex.DecodeString(tx.BtcTxID)
 		txDetails, err := app.lnClient.GetTransaction(txBytes)
 		if app.LogError(err) != nil {
+			app.logger.Info("New BTC Check: Cannot find transaction")
 			continue
 		}
 		if len(txDetails.GetTransactions()) == 0 {
@@ -365,15 +369,19 @@ func (app *AnchorApplication) MonitorNewTx () {
 		if txData.NumConfirmations < 1 {
 			app.logger.Info(fmt.Sprintf("New BTC Check: %s not yet confirmed", tx.BtcTxID))
 			continue
+		} else {
+			app.logger.Info(fmt.Sprintf("New BTC Check: %s has been confirmed", tx.BtcTxID))
 		}
+		app.logger.Info(fmt.Sprintf("New BTC Check: block height is %d", int64(txData.BlockHeight)))
 		tx.BtcTxHeight = int64(txData.BlockHeight)
 		btcMonBytes, err := json.Marshal(tx)
 		if app.LogError(err) != nil {
+			app.logger.Info(fmt.Sprintf("New BTC Check: cannot marshal json"))
 			continue
 		}
 		app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(btcMonBytes)))
 		time.Sleep(10 * time.Second) // exit commit block before we send BTC-A
-		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		_, err = app.rpc.BroadcastTxCommit("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))
 			continue

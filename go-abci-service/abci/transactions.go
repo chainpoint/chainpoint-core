@@ -112,7 +112,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			break
 		}
 		//Begin monitoring using the data contained in this transaction
-		if app.state.ChainSynced && app.CheckAnchor(btca) {
+		if app.state.ChainSynced {
 			go app.ConsumeBtcTxMsg([]byte(tx.Data))
 			app.logger.Info(fmt.Sprintf("BTC-A Anchor Data: %s", tx.Data))
 		}

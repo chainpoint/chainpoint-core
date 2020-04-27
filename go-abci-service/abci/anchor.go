@@ -14,8 +14,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
-// AggregateCalendar : Aggregate submitted hashes into a calendar transaction
-func (app *AnchorApplication) AggregateCalendar(height int64) error {
+// AnchorCalendar : Aggregate submitted hashes into a calendar transaction
+func (app *AnchorApplication) AnchorCalendar(height int64) error {
 	app.logger.Debug("starting scheduled aggregation")
 
 	// Get agg objects
@@ -51,7 +51,7 @@ func (app *AnchorApplication) AggregateCalendar(height int64) error {
 // AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
 	// elect leader to do the actual anchoring
-	iAmLeader, leaderIDs := app.ElectChainContributorAsLeader(1, []string{app.state.LastAnchorCoreID, app.state.LastErrorCoreID})
+	iAmLeader, leaderIDs := app.ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID})
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
