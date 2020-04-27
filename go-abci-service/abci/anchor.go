@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,14 +11,12 @@ import (
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/streadway/amqp"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
-// AggregateCalendar : Aggregate submitted hashes into a calendar transaction
-func (app *AnchorApplication) AggregateCalendar(height int64) error {
+// AnchorCalendar : Aggregate submitted hashes into a calendar transaction
+func (app *AnchorApplication) AnchorCalendar(height int64) error {
 	app.logger.Debug("starting scheduled aggregation")
 
 	// Get agg objects
@@ -53,7 +52,7 @@ func (app *AnchorApplication) AggregateCalendar(height int64) error {
 // AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
 	// elect leader to do the actual anchoring
-	iAmLeader, leaderIDs := app.ElectChainContributorAsLeader(1, []string{app.state.LastAnchorCoreID, app.state.LastErrorCoreID})
+	iAmLeader, leaderIDs := app.ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID})
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
@@ -74,8 +73,9 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if treeData.AnchorBtcAggRoot == app.state.LatestErrRoot {
 			app.state.LatestErrRoot = ""
 		}
+		// elect anchorer
 		if iAmLeader {
-			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, treeData)
+			err := app.calendar.QueueBtcTxStateDataMessage(app.lnClient, app.redisClient, treeData, app.state.Height, startTxRange, endTxRange)
 			if app.LogError(err) != nil {
 				_, err := app.rpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
@@ -83,25 +83,25 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				}
 			}
 		}
+		// begin monitoring for anchor
+		failedAnchorCheck := types.AnchorRange{
+			AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
+			CalBlockHeight:   app.state.Height,
+			BeginCalTxInt:    startTxRange,
+			EndCalTxInt:      endTxRange,
+		}
+		failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
+		redisResult := app.redisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+		if app.LogError(redisResult.Err()) != nil {
+			return redisResult.Err()
+		}
+		treeDataJSON, _ := json.Marshal(treeData)
+		setResult := app.redisClient.WithContext(context.Background()).Set(treeData.AnchorBtcAggRoot, string(treeDataJSON), 0)
+		if app.LogError(setResult.Err()) != nil {
+			return setResult.Err()
+		}
 		app.state.EndCalTxInt = endTxRange            // Ensure we update our range of CAL txs for next anchor period
 		app.state.LatestBtcaHeight = app.state.Height // So no one will try to re-anchor while processing the btc tx
-
-		// wait for a BTC-A tx
-		deadline := int64(app.config.AnchorTimeout) + app.state.Height
-		for app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot && app.state.LatestErrRoot != treeData.AnchorBtcAggRoot && app.state.Height < deadline {
-			time.Sleep(10 * time.Second)
-		}
-
-		// A BTC-A tx should have hit by now
-		if app.state.LatestBtcAggRoot != treeData.AnchorBtcAggRoot || app.state.LatestErrRoot == treeData.AnchorBtcAggRoot { // If not, it'll be less than the start of the current range.
-			app.resetAnchor(startTxRange, leaderIDs)
-		} else {
-			err = app.calendar.QueueBtcaStateDataMessage(treeData)
-			if app.LogError(err) != nil {
-				app.resetAnchor(startTxRange, leaderIDs)
-				return err
-			}
-		}
 		return nil
 	}
 	return errors.New("no transactions to aggregate")
@@ -167,7 +167,38 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
-	result := app.redisClient.SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	result := app.redisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+
+	// end monitoring for failed anchor
+	failedAnchorCheck := types.AnchorRange{
+		AnchorBtcAggRoot: btcTxObj.AnchorBtcAggRoot,
+		CalBlockHeight:   btcTxObj.CalBlockHeight,
+		BeginCalTxInt:    btcTxObj.BeginCalTxInt,
+		EndCalTxInt:      btcTxObj.EndCalTxInt,
+	}
+	failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
+	redisResult := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+	if app.LogError(redisResult.Err()) != nil {
+		return redisResult.Err()
+	}
+
+	// Create agg state messages
+	getResult := app.redisClient.WithContext(context.Background()).Get(btcTxObj.AnchorBtcAggRoot)
+	var btcAgg types.BtcAgg
+	if err := json.Unmarshal([]byte(getResult.Val()), &btcAgg); err != nil {
+		return err
+	}
+	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
+	if app.LogError(err) != nil {
+		app.resetAnchor(failedAnchorCheck.BeginCalTxInt)
+		return err
+	}
+	delResult := app.redisClient.WithContext(context.Background()).Del(btcTxObj.AnchorBtcAggRoot)
+	if app.LogError(delResult.Err()) != nil {
+		return err
+	}
+
+	app.logger.Info("Anchor Success")
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
@@ -253,69 +284,8 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 	return nil
 }
 
-func (app *AnchorApplication) processMessage(msg amqp.Delivery) error {
-	switch msg.Type {
-	case "btcmon_new":
-		time.Sleep(30 * time.Second)
-		var btcTxObj types.BtcTxMsg
-		err := json.Unmarshal(msg.Body, &btcTxObj)
-		if app.LogError(err) != nil {
-			return err
-		}
-		btcMonBytes, err := json.Marshal(btcTxObj)
-		if app.LogError(err) != nil {
-			return err
-		}
-		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-		if app.LogError(err) != nil {
-			return err
-		}
-		msg.Ack(false)
-		break
-/*	case "btcmon_confirmed":
-		err := app.ConsumeBtcMonMsg(msg)
-		app.LogError(err)
-		break*/
-	case "reward":
-		break
-	default:
-		msg.Ack(false)
-	}
-	return nil
-}
-
-// ReceiveCalRMQ : Continually consume the calendar work queue and
-// process any resulting messages from the tx and monitor services
-func (app *AnchorApplication) ReceiveCalRMQ() error {
-	var session rabbitmq.Session
-	var err error
-	endConsume := false
-	for {
-		session, err = rabbitmq.ConnectAndConsume(app.config.RabbitmqURI, "work.cal")
-		if err != nil {
-			rabbitmq.LogError(err, "failed to dial for work.cal queue")
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		for {
-			select {
-			case err = <-session.Notify:
-				if endConsume {
-					return err
-				}
-				time.Sleep(5 * time.Second)
-				break //reconnect
-			case msg := <-session.Msgs:
-				if len(msg.Body) > 0 {
-					go app.processMessage(msg)
-				}
-			}
-		}
-	}
-}
-
 // resetAnchor ensures that anchoring will begin again in the next block
-func (app *AnchorApplication) resetAnchor(startTxRange int64, leaderID []string) {
+func (app *AnchorApplication) resetAnchor(startTxRange int64) {
 	app.logger.Debug(fmt.Sprintf("Anchor failed, restarting anchor epoch from tx %d", startTxRange))
 	app.state.BeginCalTxInt = startTxRange
 	app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block

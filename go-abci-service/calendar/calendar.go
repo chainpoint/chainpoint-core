@@ -1,9 +1,11 @@
 package calendar
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/go-redis/redis"
 	"os"
 	"strings"
 
@@ -154,7 +156,7 @@ func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) 
 }
 
 // QueueBtcTxStateDataMessage
-func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClient, anchorDataObj types.BtcAgg) error {
+func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClient, redisClient *redis.Client, anchorDataObj types.BtcAgg, height int64, start int64, end int64) error {
 	hexRoot, err := hex.DecodeString(anchorDataObj.AnchorBtcAggRoot)
 	if util.LogError(err) != nil {
 		return err
@@ -168,19 +170,19 @@ func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClien
 		AnchorBtcAggRoot: anchorDataObj.AnchorBtcAggRoot,
 		BtcTxBody:        rawtx,
 		BtcTxID:          txid,
+		CalBlockHeight:   height,
+		BeginCalTxInt:    start,
+		EndCalTxInt:	  end,
 	}
 	btcJSON, err := json.Marshal(msgBtcMon)
 	calendar.Logger.Info(fmt.Sprint("Sending BTC-A OP_RETURN: %#v", msgBtcMon))
 	if util.LogError(err) != nil {
 		return err
 	}
-	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btcmon", "newtx", btcJSON)
-	if util.LogError(errBtcTx) != nil {
-		return errBtcTx
+	result := redisClient.WithContext(context.Background()).SAdd("BTC_Mon:NewBTCTxIds", string(btcJSON))
+	if util.LogError(result.Err()) != nil {
+		return result.Err()
 	}
-	/*	errBtcTx := rabbitmq.Publish(calendar.RabbitmqURI, "work.btctx", "", treeDataJSON)
-		if errBtcTx != nil {
-			return errBtcTx
-		}*/
+	calendar.Logger.Info("Added BTC-A message to redis")
 	return nil
 }

@@ -112,7 +112,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			break
 		}
 		//Begin monitoring using the data contained in this transaction
-		if app.state.ChainSynced && app.CheckAnchor(btca) {
+		if app.state.ChainSynced {
 			go app.ConsumeBtcTxMsg([]byte(tx.Data))
 			app.logger.Info(fmt.Sprintf("BTC-A Anchor Data: %s", tx.Data))
 		}
@@ -120,7 +120,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		app.state.LatestBtcaHeight = app.state.Height + 1
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
-		app.state.BeginCalTxInt = app.state.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
+		app.state.BeginCalTxInt = btca.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
 		tags = append(tags, kv.Pair{Key: []byte("BTCTX"), Value: []byte(btca.BtcTxID)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break

@@ -213,31 +213,6 @@ services:
   #      - ~/.chainpoint/core/.lnd:/root/.lnd
   #    tty: true
 
-  # Bitcoin Transmit Monitor
-  # Monitor and report on the state of BTC transactions.
-  #
-  btc-mon:
-    restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-mon-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.btc-mon
-    container_name: btc-mon-core
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - base
-      - rabbitmq
-      - redis
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      LND_SOCKET: ${LND_SOCKET}
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd
-    tty: true
-
   # Lightning Invoice Monitor
   # Monitor and report on the state of LND invoices.
   #

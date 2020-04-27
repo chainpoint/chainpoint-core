@@ -205,7 +205,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	//Initialize anchoring to bitcoin if enabled
 	if config.DoAnchor {
 		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
-		go app.ReceiveCalRMQ() // Infinite loop to process btctx and btcmon rabbitMQ messages
 	}
 
 	// Load JWK into local mapping from redis
@@ -311,16 +310,11 @@ func (app *AnchorApplication) BeginBlock(req types2.RequestBeginBlock) types2.Re
 
 // EndBlock : Handler that runs at the end of every block, validators can be updated here
 func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.ResponseEndBlock {
-	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
-}
-
-//Commit is called at the end of every block to finalize and save chain state
-func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	// If the chain is synced, run all polling methods
 	if app.state.ChainSynced {
 		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
 		if app.config.DoCal {
-			go app.AggregateCalendar(app.state.Height)
+			go app.AnchorCalendar(app.state.Height)
 		}
 	}
 
@@ -335,9 +329,15 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
+		app.FailedAnchorMonitor() //must be synchronous with chain operation in order to recover from failed anchors
+		go app.MonitorNewTx()
 		go app.MonitorConfirmedTx()
 	}
+	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
+}
 
+//Commit is called at the end of every block to finalize and save chain state
+func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	// Finalize new block by calculating appHash and incrementing height
 	appHash := make([]byte, 8)
 	binary.PutVarint(appHash, app.state.Height)

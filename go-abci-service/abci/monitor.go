@@ -2,6 +2,7 @@ package abci
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/base64"
@@ -27,6 +28,8 @@ import (
 )
 
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
+const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
+const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -299,7 +302,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 }
 
 func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
-	block, err := app.lnClient.GetBlock(btcmsg.BtcTxHeight)
+	block, err := app.lnClient.GetBlockByHeight(btcmsg.BtcTxHeight)
 	if app.LogError(err) != nil {
 		return false
 	}
@@ -312,8 +315,30 @@ func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
 	return false
 }
 
+func (app *AnchorApplication) FailedAnchorMonitor () {
+	results := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
+	if app.LogError(results.Err()) != nil {
+		return
+	}
+	for _, s := range results.Val() {
+		var anchor types.AnchorRange
+		if app.LogError(json.Unmarshal([]byte(s), &anchor)) != nil {
+			app.logger.Error("cannot unmarshal json for Failed BTC check")
+			continue
+		}
+		if app.state.Height - anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
+			app.logger.Info("Anchor Failure, Resetting state")
+			app.resetAnchor(anchor.BeginCalTxInt)
+			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+			if app.LogError(delRes.Err()) != nil {
+				continue
+			}
+		}
+	}
+}
+
 func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
-	block, err := app.lnClient.GetBlock(btcTx.BlockHeight)
+	block, err := app.lnClient.GetBlockByHeight(btcTx.BlockHeight)
 	if app.LogError(err) != nil {
 		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
 	}
@@ -341,8 +366,59 @@ func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetail
 	return block, tree, txIndex, nil
 }
 
+func (app *AnchorApplication) MonitorNewTx () {
+	app.logger.Info("Starting New BTC Check")
+	results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
+	app.logger.Info(fmt.Sprintf("New BTC Check: Starting count for %d txns", len(results.Val())))
+	if app.LogError(results.Err()) != nil {
+		return
+	}
+	for _, s := range results.Val() {
+		var tx types.BtcTxMsg
+		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
+			app.logger.Error("cannot unmarshal json for New BTC check")
+			continue
+		}
+		txBytes, _ := hex.DecodeString(tx.BtcTxID)
+		txDetails, err := app.lnClient.GetTransaction(txBytes)
+		if app.LogError(err) != nil {
+			app.logger.Info("New BTC Check: Cannot find transaction")
+			continue
+		}
+		if len(txDetails.GetTransactions()) == 0 {
+			app.logger.Info("New BTC Check: No transactions found")
+			continue
+		}
+		txData := txDetails.Transactions[0]
+		if txData.NumConfirmations < 1 {
+			app.logger.Info(fmt.Sprintf("New BTC Check: %s not yet confirmed", tx.BtcTxID))
+			continue
+		} else {
+			app.logger.Info(fmt.Sprintf("New BTC Check: %s has been confirmed", tx.BtcTxID))
+		}
+		app.logger.Info(fmt.Sprintf("New BTC Check: block height is %d", int64(txData.BlockHeight)))
+		tx.BtcTxHeight = int64(txData.BlockHeight)
+		btcMonBytes, err := json.Marshal(tx)
+		if app.LogError(err) != nil {
+			app.logger.Info(fmt.Sprintf("New BTC Check: cannot marshal json"))
+			continue
+		}
+		app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(btcMonBytes)))
+		time.Sleep(10 * time.Second) // exit commit block before we send BTC-A
+		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		if app.LogError(err) != nil {
+			app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))
+			continue
+		}
+		delRes := app.redisClient.WithContext(context.Background()).SRem(NEW_BTC_TX_IDS_KEY, s)
+		if app.LogError(delRes.Err()) != nil {
+			continue
+		}
+	}
+}
+
 func (app *AnchorApplication) MonitorConfirmedTx () {
-	results := app.redisClient.SMembers(CONFIRMED_BTC_TX_IDS_KEY)
+	results := app.redisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
 	}
@@ -381,9 +457,9 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 		btcmsg.Path = jsproofs
 		go app.ConsumeBtcMonMsg(btcmsg)
 		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
-		delRes := app.redisClient.SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
+		delRes := app.redisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
-			return
+			continue
 		}
 	}
 }

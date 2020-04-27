@@ -186,13 +186,24 @@ type BtcProofData struct {
 	Proof []ProofLineItem `json:"proof"`
 }
 
-// BtcTxMsg : An RMQ message object
+// AnchorRange : To store anchor state to compensate for failed anchors
+type AnchorRange struct {
+	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
+	CalBlockHeight	 int64  `json:"cal_block_height"`
+	BeginCalTxInt    int64  `json:"begin_cal_int"`
+	EndCalTxInt      int64  `json:"end_cal_int"`
+}
+
+// BtcTxMsg : A RMQ message object
 type BtcTxMsg struct {
 	AnchorBtcAggID   string `json:"anchor_btc_agg_id"`
 	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
 	BtcTxID          string `json:"btctx_id"`
 	BtcTxBody        string `json:"btctx_body"`
 	BtcTxHeight      int64  `json:"btctx_height"`
+	CalBlockHeight	 int64  `json:"cal_block_height"`
+	BeginCalTxInt    int64  `json:"begin_cal_int"`
+	EndCalTxInt      int64  `json:"end_cal_int"`
 }
 
 // BtcTxMsg : An RMQ message object from btc-tx to btc-mon service
