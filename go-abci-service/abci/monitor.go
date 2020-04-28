@@ -350,6 +350,7 @@ func (app *AnchorApplication) FailedAnchorMonitor () {
 					if app.LogError(delRes.Err()) != nil {
 						continue
 					}
+					break
 				}
 			}
 		}
