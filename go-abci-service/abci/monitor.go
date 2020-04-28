@@ -333,6 +333,25 @@ func (app *AnchorApplication) FailedAnchorMonitor () {
 			if app.LogError(delRes.Err()) != nil {
 				continue
 			}
+			app.logger.Info("Checking if we were leader and need to remove New BTC Check....")
+			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
+			if app.LogError(results.Err()) != nil {
+				continue
+			}
+			for _, a := range results.Val() {
+				var tx types.BtcTxMsg
+				if app.LogError(json.Unmarshal([]byte(a), &tx)) != nil {
+					app.logger.Error("cannot unmarshal json for New BTC check")
+					continue
+				}
+				if tx.AnchorBtcAggRoot == anchor.AnchorBtcAggRoot {
+					app.logger.Info("Removing New BTC Check", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
+					delRes = app.redisClient.WithContext(context.Background()).SRem(NEW_BTC_TX_IDS_KEY, a)
+					if app.LogError(delRes.Err()) != nil {
+						continue
+					}
+				}
+			}
 		}
 	}
 }
