@@ -227,7 +227,7 @@ func TestQueueBtcaStateDataMessage(t *testing.T) {
 		AnchorBtcAggID:   "blah",
 		AnchorBtcAggRoot: "hurr",
 	}
-	err := cal.QueueBtcaStateDataMessage(true, btcAgg)
+	err := cal.QueueBtcaStateDataMessage(btcAgg)
 	assert.Equal(nil, err, "output of QueueBtcaStateDataMessage should be nil")
 	// Test that object is in proofstate queue
 	session, err := rabbitmq.ConnectAndConsume(rabbitTestURI, "work.proofstate")

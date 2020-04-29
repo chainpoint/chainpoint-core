@@ -1,15 +1,11 @@
 package calendar
 
 import (
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/go-redis/redis"
 	"os"
 	"strings"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
 	"github.com/chainpoint/tendermint/libs/log"
 
@@ -152,37 +148,5 @@ func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) 
 	if errBatch != nil {
 		return errBatch
 	}
-	return nil
-}
-
-// QueueBtcTxStateDataMessage
-func (calendar *Calendar) QueueBtcTxStateDataMessage(lnClient *lightning.LnClient, redisClient *redis.Client, anchorDataObj types.BtcAgg, height int64, start int64, end int64) error {
-	hexRoot, err := hex.DecodeString(anchorDataObj.AnchorBtcAggRoot)
-	if util.LogError(err) != nil {
-		return err
-	}
-	txid, rawtx, err := lnClient.SendOpReturn(hexRoot)
-	if util.LogError(err) != nil {
-		return err
-	}
-	msgBtcMon := types.BtcTxMsg{
-		AnchorBtcAggID:   anchorDataObj.AnchorBtcAggID,
-		AnchorBtcAggRoot: anchorDataObj.AnchorBtcAggRoot,
-		BtcTxBody:        rawtx,
-		BtcTxID:          txid,
-		CalBlockHeight:   height,
-		BeginCalTxInt:    start,
-		EndCalTxInt:	  end,
-	}
-	btcJSON, err := json.Marshal(msgBtcMon)
-	calendar.Logger.Info(fmt.Sprint("Sending BTC-A OP_RETURN: %#v", msgBtcMon))
-	if util.LogError(err) != nil {
-		return err
-	}
-	result := redisClient.WithContext(context.Background()).SAdd("BTC_Mon:NewBTCTxIds", string(btcJSON))
-	if util.LogError(result.Err()) != nil {
-		return result.Err()
-	}
-	calendar.Logger.Info("Added BTC-A message to redis")
 	return nil
 }
