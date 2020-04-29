@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
@@ -50,7 +51,15 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 				goodCandidate := false
 				if _, record, err := validation.GetValidationRecord(id, app.state); err != nil {
 					numValidators := len(app.Validators)
-					goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
+					power, err := strconv.ParseInt(components[2], 10, 32)
+					if err != nil {
+						return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+					}
+					if power == -1 {
+						goodCandidate = true
+					} else {
+						goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
+					}
 				}
 				if !(goodCandidate && app.PendingValidator == tx.Data) {
 					app.logger.Info("Validator failed to validate VAL tx")
