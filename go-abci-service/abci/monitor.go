@@ -255,6 +255,8 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	} else if (!app.state.ChainSynced){
 		// we're fast-syncing, so agree with the prior chainstate
 		return true
+	} else if isVal, err := app.IsValidator(tx.CoreID); err == nil && isVal && app.state.AmValidator {
+		return true
 	}
 	app.logger.Info("JWK Identity", "alreadyExists", alreadyExists)
 	return !alreadyExists
