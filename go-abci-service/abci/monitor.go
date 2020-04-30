@@ -73,12 +73,15 @@ func (app *AnchorApplication) SyncMonitor() {
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
 func (app *AnchorApplication) StakeIdentity() {
-	for !app.state.JWKStaked {
+	for {
 		app.logger.Info("Beginning Lightning staking loop")
 		time.Sleep(60 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
 		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
 			continue
 		}
+		time.Sleep(120 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
+		validators, err := app.rpc.GetValidators(app.state.Height)
+		app.Validators = validators.Validators
 		amValidator, err := app.AmValidator()
 		if app.LogError(err) != nil {
 			continue
@@ -146,7 +149,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		//Declare our identity to the network
 		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
-			continue
+			return
 		}
 	}
 }

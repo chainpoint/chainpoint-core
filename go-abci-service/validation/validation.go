@@ -148,15 +148,6 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 	txType := string(tx.TxType)
 	coreID := string(tx.CoreID)
 
-	// Allow a Core to transmit JWK for the first time
-	if _, exists := state.CoreKeys[coreID]; !exists {
-		if txType == "JWK" {
-			return tx, true, nil
-		} else {
-			return tx, false, errors.New("Transmitting Core has not yet declared its keys")
-		}
-	}
-
 	pubKeyHex, validationRecord, err := GetValidationRecord(coreID, *state)
 
 	validated := false
@@ -204,13 +195,14 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			validationRecord.LastNISTTxHeight = state.Height
 		}
 		break
-	case "JWT":
-		RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
+	case "JWK":
+		validated = true
+		/*RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
 		if !IsHabitualViolator(validationRecord.JWKAllowedRate) {
 			validated = true
 			UpdateAcceptTx(&validationRecord.JWKAllowedRate)
 			validationRecord.LastJWKTxHeight = state.Height
-		}
+		}*/
 	}
 	fmt.Printf("Tx Validation: %#v\nTx:%#v\nValidated:%t", validationRecord, tx, validated)
 	state.TxValidation[pubKeyHex] = validationRecord
