@@ -149,7 +149,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		//Declare our identity to the network
 		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
-			return
+			continue
 		}
 	}
 }
