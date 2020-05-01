@@ -79,8 +79,6 @@ func (app *AnchorApplication) StakeIdentity() {
 		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
 			continue
 		}
-		validators, err := app.rpc.GetValidators(app.state.Height)
-		app.Validators = validators.Validators
 		amValidator, err := app.AmValidator()
 		if app.LogError(err) != nil {
 			continue
