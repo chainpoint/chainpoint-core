@@ -79,8 +79,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
 			continue
 		}
-		time.Sleep(120 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
-		validators, err := app.rpc.GetValidators(app.state.Height)
+]		validators, err := app.rpc.GetValidators(app.state.Height)
 		app.Validators = validators.Validators
 		amValidator, err := app.AmValidator()
 		if app.LogError(err) != nil {
@@ -336,6 +335,10 @@ func (app *AnchorApplication) FailedAnchorMonitor () {
 			app.resetAnchor(anchor.BeginCalTxInt)
 			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			if app.LogError(delRes.Err()) != nil {
+				continue
+			}
+			delResult := app.redisClient.WithContext(context.Background()).Del(anchor.AnchorBtcAggRoot)
+			if app.LogError(delResult.Err()) != nil {
 				continue
 			}
 			app.logger.Info("Checking if we were leader and need to remove New BTC Check....")
