@@ -73,7 +73,7 @@ func (app *AnchorApplication) SyncMonitor() {
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
 func (app *AnchorApplication) StakeIdentity() {
-	for {
+	for !app.state.JWKStaked {
 		app.logger.Info("Beginning Lightning staking loop")
 		time.Sleep(60 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
 		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
