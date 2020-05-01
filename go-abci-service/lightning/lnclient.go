@@ -409,7 +409,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 		},
 	}
 	ln.Logger.Info(fmt.Sprintf("Sending Outputs: %v", outputs))
-	margin := 1.0 * float64(estimatedFee.SatPerKw)
+	margin := 1.2 * float64(estimatedFee.SatPerKw)
 	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: estimatedFee.SatPerKw + int64(margin), Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
 	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
