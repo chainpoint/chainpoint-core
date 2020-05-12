@@ -42,6 +42,7 @@ type LnClient struct {
 	Logger         log.Logger
 	Testnet		   bool
 	WalletAddress  string
+	FeeMultiplier  float64
 }
 
 var (
@@ -409,8 +410,8 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 		},
 	}
 	ln.Logger.Info(fmt.Sprintf("Sending Outputs: %v", outputs))
-	margin := 1.2 * float64(estimatedFee.SatPerKw)
-	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: estimatedFee.SatPerKw + int64(margin), Outputs: outputs}
+	multipliedFee := ln.FeeMultiplier * float64(estimatedFee.SatPerKw)
+	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: int64(multipliedFee), Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
 	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
 	if ln.LoggerError(err) != nil {
