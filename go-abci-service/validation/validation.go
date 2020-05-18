@@ -140,6 +140,17 @@ func IncrementSuccessAnchor(coreID string, state *types.AnchorState) error {
 	return err
 }
 
+// IncrementFailedAnchor : increments the successful anchor record, given a coreID string and a pointer to state db
+func IncrementFailedAnchor(coreID string, state *types.AnchorState) error {
+	_, validationRecord, err := GetValidationRecord(coreID, *state)
+	if err != nil {
+		return err
+	}
+	validationRecord.FailedAnchors++
+	err = SetValidationRecord(coreID, validationRecord, state)
+	return err
+}
+
 func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error) {
 	tx, err := util.DecodeTxAndVerifySig(incoming, state.CoreKeys)
 	if err != nil {

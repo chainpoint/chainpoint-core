@@ -80,6 +80,7 @@ type AnchorState struct {
 	LatestBtccTxInt  int64                      `json:"latest_btcc_int"`
 	LatestBtccHeight int64                      `json:"latest_btcc_height"`
 	LatestErrRoot    string                     `json:"latest_btce"`
+	LastElectedCoreID string                    `json:"last_elected_core_id"`
 	LastAnchorCoreID string                     `json:"last_anchor_core_id"`
 	LastErrorCoreID  string                     `json:"last_error_core_id"`
 	TxValidation     map[string]TxValidation    `json:"tx_validation"`
@@ -134,6 +135,7 @@ type TxValidation struct {
 
 	LastNISTTxHeight int64 // last "good", non-stale nist record
 	NISTAllowedRate  RateLimit
+	FailedAnchors    int64
 }
 
 // EcdsaSignature : Allows for unmarshalling an ecdsa signature

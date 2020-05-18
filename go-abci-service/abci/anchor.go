@@ -71,6 +71,8 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
+		app.state.LastElectedCoreID = leaderIDs[0]
+
 		if treeData.AnchorBtcAggRoot == app.state.LatestErrRoot {
 			app.state.LatestErrRoot = ""
 		}

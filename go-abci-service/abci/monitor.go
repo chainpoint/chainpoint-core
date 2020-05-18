@@ -331,6 +331,7 @@ func (app *AnchorApplication) FailedAnchorMonitor () {
 		if app.state.Height - anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
 			app.logger.Info("Anchor Failure, Resetting state")
 			app.resetAnchor(anchor.BeginCalTxInt)
+			validation.IncrementFailedAnchor(app.state.LastElectedCoreID, &app.state)
 			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			if app.LogError(delRes.Err()) != nil {
 				continue
