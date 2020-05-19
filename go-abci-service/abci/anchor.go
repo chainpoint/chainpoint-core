@@ -57,7 +57,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
-	app.logger.Info(fmt.Sprintf("Leaders: %v", leaderIDs))
+	app.logger.Info(fmt.Sprintf("Anchor Leaders: %v", leaderIDs))
 
 	// Get CAL transactions between the latest BTCA tx and the current latest tx
 	txLeaves, err := app.getCalTxRange(startTxRange, endTxRange)
