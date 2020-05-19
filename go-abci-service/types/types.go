@@ -357,3 +357,4 @@ type CoreAPIStatus struct {
 		VotingPower string `json:"voting_power"`
 	} `json:"validator_info"`
 }
+

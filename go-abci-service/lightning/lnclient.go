@@ -4,17 +4,21 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
-/*	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcwallet/wallet/txrules"
-	"github.com/btcsuite/btcwallet/wallet/txsizes"*/
+	"net/http"
+	"time"
+
+	/*	"github.com/btcsuite/btcd/chaincfg"
+		"github.com/btcsuite/btcwallet/wallet/txrules"
+		"github.com/btcsuite/btcwallet/wallet/txsizes"*/
 	"io/ioutil"
 	"net"
 	"strings"
 
-	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 
 	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
 
@@ -44,6 +48,132 @@ type LnClient struct {
 	WalletAddress  string
 	FeeMultiplier  float64
 }
+// BitcoinerFee : estimates fee from bitcoiner service
+type BitcoinerFee struct {
+	Timestamp int `json:"timestamp"`
+	Estimates struct {
+		Num30 struct {
+			SatPerVbyte float64 `json:"sat_per_vbyte"`
+			Total       struct {
+				P2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2wpkh"`
+				P2ShP2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2sh-p2wpkh"`
+				P2Pkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2pkh"`
+			} `json:"total"`
+		} `json:"30"`
+		Num60 struct {
+			SatPerVbyte float64 `json:"sat_per_vbyte"`
+			Total       struct {
+				P2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2wpkh"`
+				P2ShP2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2sh-p2wpkh"`
+				P2Pkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2pkh"`
+			} `json:"total"`
+		} `json:"60"`
+		Num120 struct {
+			SatPerVbyte float64 `json:"sat_per_vbyte"`
+			Total       struct {
+				P2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2wpkh"`
+				P2ShP2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2sh-p2wpkh"`
+				P2Pkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2pkh"`
+			} `json:"total"`
+		} `json:"120"`
+		Num180 struct {
+			SatPerVbyte float64 `json:"sat_per_vbyte"`
+			Total       struct {
+				P2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2wpkh"`
+				P2ShP2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2sh-p2wpkh"`
+				P2Pkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2pkh"`
+			} `json:"total"`
+		} `json:"180"`
+		Num360 struct {
+			SatPerVbyte float64 `json:"sat_per_vbyte"`
+			Total       struct {
+				P2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2wpkh"`
+				P2ShP2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2sh-p2wpkh"`
+				P2Pkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2pkh"`
+			} `json:"total"`
+		} `json:"360"`
+		Num720 struct {
+			SatPerVbyte float64 `json:"sat_per_vbyte"`
+			Total       struct {
+				P2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2wpkh"`
+				P2ShP2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2sh-p2wpkh"`
+				P2Pkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2pkh"`
+			} `json:"total"`
+		} `json:"720"`
+		Num1440 struct {
+			SatPerVbyte float64 `json:"sat_per_vbyte"`
+			Total       struct {
+				P2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2wpkh"`
+				P2ShP2Wpkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2sh-p2wpkh"`
+				P2Pkh struct {
+					Usd     float64 `json:"usd"`
+					Satoshi float64 `json:"satoshi"`
+				} `json:"p2pkh"`
+			} `json:"total"`
+		} `json:"1440"`
+	} `json:"estimates"`
+}
+
 
 var (
 	maxMsgRecvSize = grpc.MaxCallRecvMsgSize(1 * 1024 * 1024 * 200)
@@ -387,6 +517,22 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
+// GetThirdPartyFeeEstimate : get sat/vbyte fee and convert to sat/kw
+func (ln *LnClient) GetThirdPartyFeeEstimate() (int64, error) {
+	var httpClient = &http.Client{Timeout: 10 * time.Second}
+	resp, err := httpClient.Get("https://bitcoiner.live/api/fees/estimates/latest")
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	fee := BitcoinerFee{}
+	err = json.NewDecoder(resp.Body).Decode(&fee)
+	if err != nil {
+		return 0, err
+	}
+	return int64(int64(fee.Estimates.Num30.SatPerVbyte) * 1000 / 4), nil
+}
+
 func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
@@ -398,11 +544,17 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	wallet, closeFunc := ln.GetWalletClient()
 	defer closeFunc()
 	ln.Logger.Info("Ln Wallet client created")
-	estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
+	var fee int64
+	fee, err = ln.GetThirdPartyFeeEstimate()
 	if err != nil {
-		return "", "", err
+		ln.Logger.Info("Ln Wallet Third Party Fee Estimate Error: ", "error", err.Error())
+		estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
+		if err != nil {
+			return "", "", err
+		}
+		fee = int64(ln.FeeMultiplier * float64(estimatedFee.SatPerKw))
 	}
-	ln.Logger.Info(fmt.Sprintf("Ln EstimateFee: %v", estimatedFee))
+	ln.Logger.Info(fmt.Sprintf("Ln Wallet EstimateFee: %v", fee))
 	outputs := []*signrpc.TxOut{
 		&signrpc.TxOut{
 			Value:    0,
@@ -410,8 +562,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 		},
 	}
 	ln.Logger.Info(fmt.Sprintf("Sending Outputs: %v", outputs))
-	multipliedFee := ln.FeeMultiplier * float64(estimatedFee.SatPerKw)
-	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: int64(multipliedFee), Outputs: outputs}
+	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: fee, Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
 	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
 	if ln.LoggerError(err) != nil {
