@@ -546,7 +546,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	ln.Logger.Info("Ln Wallet client created")
 	var fee int64
 	fee, err = ln.GetThirdPartyFeeEstimate()
-	if err != nil {
+	if err != nil || ln.Testnet {
 		ln.Logger.Info("Ln Wallet Third Party Fee Estimate Error: ", "error", err.Error())
 		estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
 		if err != nil {
