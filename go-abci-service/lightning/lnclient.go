@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/blockchain"
 	"net/http"
 	"time"
 
@@ -530,7 +531,7 @@ func (ln *LnClient) GetThirdPartyFeeEstimate() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int64(int64(fee.Estimates.Num30.SatPerVbyte) * 1000 / 4), nil
+	return int64(int64(fee.Estimates.Num30.SatPerVbyte) * 1000 / blockchain.WitnessScaleFactor), nil
 }
 
 func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
