@@ -161,6 +161,16 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			app.aggregator.LatestNist = app.state.LatestNistRecord
 		}
 		break
+	case "FEE":
+		i, err := strconv.ParseInt(tx.Data, 10, 64)
+		if app.LogError(err) != nil {
+			resp = types2.ResponseDeliverTx{Code: code.CodeTypeEncodingError}
+			break
+		}
+		app.state.LatestBtcFee = i
+		app.lnClient.LastFee = app.state.LatestBtcFee
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
+		break
 	case "JWK":
 		if app.LogError(app.SaveIdentity(tx)) == nil {
 			tags = app.incrementTxInt(tags)

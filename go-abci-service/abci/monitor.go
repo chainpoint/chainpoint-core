@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/lightningnetwork/lnd/lnrpc"
+	"strconv"
 	"strings"
 	"time"
 
@@ -154,7 +155,7 @@ func (app *AnchorApplication) StakeIdentity() {
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if app.state.Height > 2 && app.state.ChainSynced {
+	if app.state.Height > 2 {
 		if leader, leaders := app.ElectChainContributorAsLeaderNaive(1, []string{}); leader {
 			app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 			nistRecord, err := beacon.LastRecord()
@@ -170,6 +171,30 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 			_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if app.LogError(err) != nil {
 				app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
+			}
+		}
+	}
+}
+
+// FeeMonitor : elects a leader to poll and gossip Fee. Called every n minutes by ABCI.commit
+func (app *AnchorApplication) FeeMonitor() {
+	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
+	if app.state.Height > 2 && app.state.Height % 15 == 0 {
+		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}); leader {
+			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
+			var fee int64
+			fee, err := app.lnClient.GetLndFeeEstimate()
+			if err != nil || app.lnClient.Testnet {
+				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
+				app.lnClient.Logger.Info("Ln Wallet Third Party Fee Estimate Error: ", "error", err.Error())
+				if err != nil {
+					fee = int64(app.lnClient.FeeMultiplier * float64(12500))
+				}
+			}
+			app.lnClient.Logger.Info(fmt.Sprintf("Ln Wallet EstimateFee: %v", fee))
+			_, err = app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+			if app.LogError(err) != nil {
+				app.logger.Debug(fmt.Sprintf("Failed to gossip Fee value of %d", fee))
 			}
 		}
 	}
