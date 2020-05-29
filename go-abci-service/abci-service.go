@@ -118,6 +118,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	macaroonPath := util.GetEnv("MACAROON_PATH", fmt.Sprintf("/root/.lnd/data/chain/bitcoin/%s/admin.macaroon", strings.ToLower(bitcoinNetwork)))
 	lndSocket := util.GetEnv("LND_SOCKET", "lnd:10009")
 	feeMultiplier, _ := strconv.ParseFloat(util.GetEnv("BTC_FEE_MULTIPLIER", "2.2"), 64)
+	feeInterval, _ := strconv.Atoi(util.GetEnv("FEE_INTERVAL", "15"))
 
 	//testMode := util.GetEnv("NETWORK", "testnet")
 	tendermintRPC := types.TendermintConfig{
@@ -178,6 +179,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		AnchorTimeout:    anchorTimeout,
 		AnchorReward:     anchorReward,
 		StakePerCore:     1000000,
+		FeeInterval:      int64(feeInterval),
 	}
 }
 

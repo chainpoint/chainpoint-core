@@ -180,7 +180,7 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 // FeeMonitor : elects a leader to poll and gossip Fee. Called every n minutes by ABCI.commit
 func (app *AnchorApplication) FeeMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if app.state.Height > 2 && app.state.Height % 15 == 0 {
+	if app.state.Height > 2 && app.state.Height % app.config.FeeInterval == 0 {
 		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}); leader {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64

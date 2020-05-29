@@ -52,6 +52,7 @@ type AnchorConfig struct {
 	AnchorTimeout    int
 	AnchorReward     int
 	StakePerCore     int64
+	FeeInterval      int64
 }
 
 //EthConfig holds contract addresses and eth node URI
