@@ -41,12 +41,19 @@ func NewTxValidation() types.TxValidation {
 		LastCheck:   0,
 		Bucket:      0.0,
 	}
+	permittedBtcFeeRate := types.RateLimit{
+		AllowedRate: 4,
+		PerBlocks:   60,
+		LastCheck:   0,
+		Bucket:      0.0,
+	}
 	return types.TxValidation{
 		JWKAllowedRate:  permittedJWKRate,
 		CalAllowedRate:  permittedCalRate,
 		BtcaAllowedRate: permittedBtcRate,
 		BtccAllowedRate: permittedBtccRate,
 		NISTAllowedRate: permittedCalRate,
+		FeeAllowedRate:  permittedBtcFeeRate,
 	}
 }
 
@@ -215,6 +222,14 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			validationRecord.LastNISTTxHeight = state.Height
 		}
 		break
+	case "FEE":
+		RateLimitUpdate(state.Height, &validationRecord.FeeAllowedRate)
+		if !IsHabitualViolator(validationRecord.FeeAllowedRate) {
+			validated = true
+			UpdateAcceptTx(&validationRecord.FeeAllowedRate)
+			validationRecord.LastFeeTxHeight = state.Height
+		}
+		break;
 	case "JWT":
 		RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
 		if !IsHabitualViolator(validationRecord.JWKAllowedRate) {

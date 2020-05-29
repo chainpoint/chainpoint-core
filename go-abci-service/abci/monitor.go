@@ -31,6 +31,7 @@ import (
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
 const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
+const STATIC_FEE_AMT = 12500
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -184,11 +185,11 @@ func (app *AnchorApplication) FeeMonitor() {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
 			fee, err := app.lnClient.GetLndFeeEstimate()
-			if err != nil || app.lnClient.Testnet {
+			if err != nil || fee == STATIC_FEE_AMT {
 				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
 				app.lnClient.Logger.Info("Ln Wallet Third Party Fee Estimate Error: ", "error", err.Error())
-				if err != nil {
-					fee = int64(app.lnClient.FeeMultiplier * float64(12500))
+				if err != nil || app.lnClient.Testnet {
+					fee = int64(app.lnClient.FeeMultiplier * float64(STATIC_FEE_AMT))
 				}
 			}
 			app.lnClient.Logger.Info(fmt.Sprintf("Ln Wallet EstimateFee: %v", fee))

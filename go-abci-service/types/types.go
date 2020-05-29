@@ -137,6 +137,9 @@ type TxValidation struct {
 	LastNISTTxHeight int64 // last "good", non-stale nist record
 	NISTAllowedRate  RateLimit
 	FailedAnchors    int64
+
+	LastFeeTxHeight  int64
+	FeeAllowedRate   RateLimit
 }
 
 // EcdsaSignature : Allows for unmarshalling an ecdsa signature
