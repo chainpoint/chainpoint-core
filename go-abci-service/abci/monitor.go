@@ -187,14 +187,14 @@ func (app *AnchorApplication) FeeMonitor() {
 			fee, err := app.lnClient.GetLndFeeEstimate()
 			app.lnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
 			if err != nil || fee == STATIC_FEE_AMT {
-				app.lnClient.Logger.Info("Attempting to use third party FEE....")
+				app.logger.Info("Attempting to use third party FEE....")
 				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
 				if err != nil || app.lnClient.Testnet {
-					app.lnClient.Logger.Info("falling back to static FEE")
+					app.logger.Info("falling back to static FEE")
 					fee = int64(app.lnClient.FeeMultiplier * float64(STATIC_FEE_AMT))
 				}
 			}
-			app.lnClient.Logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
+			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
 			_, err = app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if app.LogError(err) != nil {
 				app.logger.Debug(fmt.Sprintf("Failed to gossip Fee value of %d", fee))
