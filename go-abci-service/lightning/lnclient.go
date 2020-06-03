@@ -519,6 +519,10 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
+func (ln *LnClient) feeSatByteToWeight() (int64) {
+	return int64(ln.LastFee * 1000 / blockchain.WitnessScaleFactor)
+}
+
 // GetThirdPartyFeeEstimate : get sat/vbyte fee and convert to sat/kw
 func (ln *LnClient) GetThirdPartyFeeEstimate() (int64, error) {
 	var httpClient = &http.Client{Timeout: 10 * time.Second}

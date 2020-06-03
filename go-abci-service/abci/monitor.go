@@ -185,10 +185,12 @@ func (app *AnchorApplication) FeeMonitor() {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
 			fee, err := app.lnClient.GetLndFeeEstimate()
+			app.lnClient.Logger.Info(fmt.Sprintf("fee from LND: %d", fee))
 			if err != nil || fee == STATIC_FEE_AMT {
+				app.lnClient.Logger.Info("Attempting to use third party fee....")
 				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
-				app.lnClient.Logger.Info("Ln Wallet Third Party Fee Estimate Error: ", "error", err.Error())
 				if err != nil || app.lnClient.Testnet {
+					app.lnClient.Logger.Info("falling back to static fee")
 					fee = int64(app.lnClient.FeeMultiplier * float64(STATIC_FEE_AMT))
 				}
 			}
