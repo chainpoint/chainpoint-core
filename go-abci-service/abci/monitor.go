@@ -180,21 +180,21 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 // FeeMonitor : elects a leader to poll and gossip Fee. Called every n minutes by ABCI.commit
 func (app *AnchorApplication) FeeMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if app.state.Height > 2 && app.state.Height % app.config.FeeInterval == 0 {
+	if app.state.Height > 2 && app.state.Height - app.state.LastBtcFeeHeight >= app.config.FeeInterval {
 		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}); leader {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
 			fee, err := app.lnClient.GetLndFeeEstimate()
-			app.lnClient.Logger.Info(fmt.Sprintf("fee from LND: %d", fee))
+			app.lnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
 			if err != nil || fee == STATIC_FEE_AMT {
-				app.lnClient.Logger.Info("Attempting to use third party fee....")
+				app.lnClient.Logger.Info("Attempting to use third party FEE....")
 				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
 				if err != nil || app.lnClient.Testnet {
-					app.lnClient.Logger.Info("falling back to static fee")
+					app.lnClient.Logger.Info("falling back to static FEE")
 					fee = int64(app.lnClient.FeeMultiplier * float64(STATIC_FEE_AMT))
 				}
 			}
-			app.lnClient.Logger.Info(fmt.Sprintf("Ln Wallet EstimateFee: %v", fee))
+			app.lnClient.Logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
 			_, err = app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if app.LogError(err) != nil {
 				app.logger.Debug(fmt.Sprintf("Failed to gossip Fee value of %d", fee))
