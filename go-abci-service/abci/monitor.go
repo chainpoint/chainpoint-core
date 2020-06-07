@@ -189,6 +189,9 @@ func (app *AnchorApplication) FeeMonitor() {
 			if err != nil || fee <= STATIC_FEE_AMT {
 				app.logger.Info("Attempting to use third party FEE....")
 				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
+				if fee < STATIC_FEE_AMT {
+					fee = STATIC_FEE_AMT
+				}
 				if err != nil || app.lnClient.Testnet {
 					app.logger.Info("falling back to static FEE")
 					fee = int64(app.lnClient.FeeMultiplier * float64(STATIC_FEE_AMT))
