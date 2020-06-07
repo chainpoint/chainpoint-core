@@ -43,11 +43,8 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
 	}
 	if tx.TxType == "FEE" {
-		i, err := strconv.ParseInt(tx.Data, 10, 64)
+		//i, err := strconv.ParseInt(tx.Data, 10, 64)
 		if app.LogError(err) != nil {
-			return types2.ResponseCheckTx{Code: code.CodeTypeUnknownError, GasWanted: 1}
-		}
-		if i < 12500 {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnknownError, GasWanted: 1}
 		}
 	}
