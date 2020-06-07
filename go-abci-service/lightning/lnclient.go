@@ -570,6 +570,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 		},
 	}
 	ln.Logger.Info(fmt.Sprintf("Sending Outputs: %v", outputs))
+	ln.Logger.Info(fmt.Sprintf("Anchoring with FEE: %d", ln.LastFee))
 	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: ln.LastFee, Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
 	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
