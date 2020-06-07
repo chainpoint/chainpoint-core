@@ -186,7 +186,7 @@ func (app *AnchorApplication) FeeMonitor() {
 			var fee int64
 			fee, err := app.lnClient.GetLndFeeEstimate()
 			app.lnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
-			if err != nil || fee == STATIC_FEE_AMT {
+			if err != nil || fee <= STATIC_FEE_AMT {
 				app.logger.Info("Attempting to use third party FEE....")
 				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
 				if err != nil || app.lnClient.Testnet {
