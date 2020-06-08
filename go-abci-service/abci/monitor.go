@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/lightningnetwork/lnd/lnrpc"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
 const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
+const STATIC_FEE_AMT = 12500
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -154,7 +156,7 @@ func (app *AnchorApplication) StakeIdentity() {
 // NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
 func (app *AnchorApplication) NistBeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if app.state.Height > 2 && app.state.ChainSynced {
+	if app.state.Height > 2 {
 		if leader, leaders := app.ElectChainContributorAsLeaderNaive(1, []string{}); leader {
 			app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
 			nistRecord, err := beacon.LastRecord()
@@ -170,6 +172,35 @@ func (app *AnchorApplication) NistBeaconMonitor() {
 			_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if app.LogError(err) != nil {
 				app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
+			}
+		}
+	}
+}
+
+// FeeMonitor : elects a leader to poll and gossip Fee. Called every n minutes by ABCI.commit
+func (app *AnchorApplication) FeeMonitor() {
+	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
+	if app.state.Height > 2 && app.state.Height - app.state.LastBtcFeeHeight >= app.config.FeeInterval {
+		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}); leader {
+			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
+			var fee int64
+			fee, err := app.lnClient.GetLndFeeEstimate()
+			app.lnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
+			if err != nil || fee <= STATIC_FEE_AMT {
+				app.logger.Info("Attempting to use third party FEE....")
+				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
+				if fee < STATIC_FEE_AMT {
+					fee = STATIC_FEE_AMT
+				}
+				if err != nil || app.lnClient.Testnet {
+					app.logger.Info("falling back to static FEE")
+					fee = int64(app.lnClient.FeeMultiplier * float64(STATIC_FEE_AMT))
+				}
+			}
+			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
+			_, err = app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+			if app.LogError(err) != nil {
+				app.logger.Debug(fmt.Sprintf("Failed to gossip Fee value of %d", fee))
 			}
 		}
 	}
@@ -329,7 +360,7 @@ func (app *AnchorApplication) FailedAnchorMonitor () {
 			continue
 		}
 		if app.state.Height - anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
-			app.logger.Info("Anchor Failure, Resetting state")
+			app.logger.Info(fmt.Sprintf("Anchor Failure, Resetting state for aggroot %s", anchor.AnchorBtcAggRoot))
 			app.resetAnchor(anchor.BeginCalTxInt)
 			validation.IncrementFailedAnchor(app.state.LastElectedCoreID, &app.state)
 			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)

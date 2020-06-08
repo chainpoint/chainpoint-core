@@ -52,6 +52,7 @@ type AnchorConfig struct {
 	AnchorTimeout    int
 	AnchorReward     int
 	StakePerCore     int64
+	FeeInterval      int64
 }
 
 //EthConfig holds contract addresses and eth node URI
@@ -91,6 +92,8 @@ type AnchorState struct {
 	LnStakePrice     int64 `json:"total_stake_price"`
 	LnStakePerVal    int64 `json:"validator_stake_price"`
 	LatestNistRecord string
+	LatestBtcFee     int64
+	LastBtcFeeHeight int64
 	Migrations       map[int]string `json:"migrations"`
 }
 
@@ -136,6 +139,9 @@ type TxValidation struct {
 	LastNISTTxHeight int64 // last "good", non-stale nist record
 	NISTAllowedRate  RateLimit
 	FailedAnchors    int64
+
+	LastFeeTxHeight  int64
+	FeeAllowedRate   RateLimit
 }
 
 // EcdsaSignature : Allows for unmarshalling an ecdsa signature

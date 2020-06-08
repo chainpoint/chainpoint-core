@@ -48,6 +48,7 @@ type LnClient struct {
 	Testnet		   bool
 	WalletAddress  string
 	FeeMultiplier  float64
+	LastFee		   int64
 }
 // BitcoinerFee : estimates fee from bitcoiner service
 type BitcoinerFee struct {
@@ -518,6 +519,10 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
+func (ln *LnClient) feeSatByteToWeight() (int64) {
+	return int64(ln.LastFee * 1000 / blockchain.WitnessScaleFactor)
+}
+
 // GetThirdPartyFeeEstimate : get sat/vbyte fee and convert to sat/kw
 func (ln *LnClient) GetThirdPartyFeeEstimate() (int64, error) {
 	var httpClient = &http.Client{Timeout: 10 * time.Second}
@@ -534,6 +539,19 @@ func (ln *LnClient) GetThirdPartyFeeEstimate() (int64, error) {
 	return int64(int64(fee.Estimates.Num30.SatPerVbyte) * 1000 / blockchain.WitnessScaleFactor), nil
 }
 
+func (ln *LnClient) GetLndFeeEstimate() (int64, error) {
+	wallet, closeFunc := ln.GetWalletClient()
+	defer closeFunc()
+	fee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
+	if err != nil {
+		return 0, err
+	}
+	if fee.SatPerKw == 12500 {
+		return fee.SatPerKw, errors.New("static fee has been returned")
+	}
+	return fee.SatPerKw, nil
+}
+
 func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
@@ -545,17 +563,6 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	wallet, closeFunc := ln.GetWalletClient()
 	defer closeFunc()
 	ln.Logger.Info("Ln Wallet client created")
-	var fee int64
-	fee, err = ln.GetThirdPartyFeeEstimate()
-	if err != nil || ln.Testnet {
-		ln.Logger.Info("Ln Wallet Third Party Fee Estimate Error: ", "error", err.Error())
-		estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
-		if err != nil {
-			return "", "", err
-		}
-		fee = int64(ln.FeeMultiplier * float64(estimatedFee.SatPerKw))
-	}
-	ln.Logger.Info(fmt.Sprintf("Ln Wallet EstimateFee: %v", fee))
 	outputs := []*signrpc.TxOut{
 		&signrpc.TxOut{
 			Value:    0,
@@ -563,7 +570,8 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 		},
 	}
 	ln.Logger.Info(fmt.Sprintf("Sending Outputs: %v", outputs))
-	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: fee, Outputs: outputs}
+	ln.Logger.Info(fmt.Sprintf("Anchoring with FEE: %d", ln.LastFee))
+	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: ln.LastFee, Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
 	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
 	if ln.LoggerError(err) != nil {

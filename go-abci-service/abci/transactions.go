@@ -42,6 +42,12 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed", tx.CoreID)))
 		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
 	}
+	if tx.TxType == "FEE" {
+		//i, err := strconv.ParseInt(tx.Data, 10, 64)
+		if app.LogError(err) != nil {
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnknownError, GasWanted: 1}
+		}
+	}
 	if tx.TxType == "VAL" {
 		components := strings.Split(tx.Data, "!")
 		if len(components) == 3 {
@@ -160,6 +166,17 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		if app.config.DoCal {
 			app.aggregator.LatestNist = app.state.LatestNistRecord
 		}
+		break
+	case "FEE":
+		i, err := strconv.ParseInt(tx.Data, 10, 64)
+		if app.LogError(err) != nil {
+			resp = types2.ResponseDeliverTx{Code: code.CodeTypeEncodingError}
+			break
+		}
+		app.state.LatestBtcFee = i
+		app.state.LastBtcFeeHeight = app.state.Height
+		app.lnClient.LastFee = app.state.LatestBtcFee
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "JWK":
 		if app.LogError(app.SaveIdentity(tx)) == nil {

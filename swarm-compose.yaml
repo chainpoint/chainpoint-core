@@ -105,13 +105,17 @@ services:
       endpoint_mode: dnsrr
     environment:
       - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
-      - RPCUSER
-      - RPCPASS
       - NETWORK=${NETWORK:-testnet}
       - CHAIN
       - DEBUG
       - BACKEND=neutrino
       - NEUTRINO
+      - RPCHOST
+      - RPCUSER
+      - RPCPASS
+      - BACKEND_RPC_PORT
+      - BITCOIND_ZMQPUBRAWBLOCK_PORT=28332
+      - BITCOIND_ZMQPUBRAWTX_PORT=28333
       - LND_REST_PORT
       - LND_RPC_PORT
       - TLSPATH
