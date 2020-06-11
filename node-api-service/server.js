@@ -138,6 +138,12 @@ function setupRestifyConfigAndRoutes(server) {
   )
   // get random core peers
   server.get({ path: '/peers', version: '1.0.0' }, ...applyProductionMiddleware([throttle(15, 3)]), peers.getPeersAsync)
+  // serve aggregator whitelist for clients to find free service
+  server.get(
+    { path: '/gateways/public', version: '1.0.0' },
+    ...applyProductionMiddleware([throttle(15, 3)]),
+    peers.getGatewayWhitelistAsync
+  )
   // get status
   server.get(
     { path: '/status', version: '1.0.0' },

@@ -184,6 +184,9 @@ module.exports = service => {
         default: '',
         desc: 'A comma separated list of IPs that may submit hashes without invoices'
       })
+      envDefinitions.AGGREGATOR_PUBLIC = envalid.bool({
+        desc: 'whether to publish the aggregator whitelist in an API endpoint'
+      })
       envDefinitions.SUBMIT_HASH_PRICE_SAT = envalid.num({
         default: 2,
         desc: 'The price, in satosh, to submit a hash for processing'

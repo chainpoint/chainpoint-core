@@ -183,6 +183,7 @@ services:
       - SESSION_SECRET
     environment:
       AGGREGATOR_WHITELIST: ${AGGREGATOR_WHITELIST}
+      AGGREGATOR_PUBLIC: false
       NODE_ENV: ${NODE_ENV}
       SUBMIT_HASH_PRICE_SAT: ${SUBMIT_HASH_PRICE_SAT:-2}
       NETWORK: ${NETWORK:-testnet}
