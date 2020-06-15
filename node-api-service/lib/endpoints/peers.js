@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+let env = require('../parse-env.js')('api')
 const errors = require('restify-errors')
 let tmRpc = require('../tendermint-rpc.js')
 const logger = require('../logger.js')
@@ -56,8 +57,23 @@ async function getPeersAsync(req, res, next) {
   return next()
 }
 
+async function getGatewayWhitelistAsync(req, res, next) {
+  if (!env.AGGREGATOR_PUBLIC) {
+    res.status(404)
+    return next()
+  }
+  res.contentType = 'application/json'
+  if (env.AGGREGATOR_WHITELIST.length == 0) {
+    res.send([])
+    return next()
+  }
+  res.send(env.AGGREGATOR_WHITELIST)
+  return next()
+}
+
 module.exports = {
   getPeersAsync: getPeersAsync,
+  getGatewayWhitelistAsync: getGatewayWhitelistAsync,
   // additional functions for testing purposes
   setTmRpc: rpc => {
     tmRpc = rpc
