@@ -39,7 +39,7 @@ services:
       ANCHOR_INTERVAL: '60'
       LOG_FILTER: 'main:debug,state:info,*:error'
       LOG_LEVEL: 'info'
-      ANCHOR_TIMEOUT: '20'
+      ANCHOR_TIMEOUT: '30'
       LN_STAKE: '100000'
       ANCHOR_REWARD: '0'
       BTC_FEE_MULTIPLIER: '2.2'
