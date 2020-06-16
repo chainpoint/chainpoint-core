@@ -155,8 +155,9 @@ The following are the descriptions of the configuration parameters:
 | NODE_ENV                 | String  | .env               | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                                    |
 | PEERS                    | String  | .env               | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
 | SEEDS                    | String  | .env               | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
-| ANCHOR_INTERVAL          | String  | swarm-compose.yaml | how often, in block time, the Core network should be anchored to Bitccoin. Default is 60.                                                        |
+| ANCHOR_INTERVAL          | String  | swarm-compose.yaml | how often, in block time, the Core network should be anchored to Bitcoin. Default is 60.                                                         |
 | AGGREGATOR_WHITELIST     | String  | swarm-compose.yaml | Comma-delimited list of IPs that are permitted to use Core's API without following the LSAT auth flow                                            |
+| AGGREGATOR_PUBLIC        | Boolean | swarm-compose.yaml | Whether to expose AGGREGATOR_WHITELIST at `/gateways/public` in the Core API.                                                                    |
 | HASHES_PER_MERKLE_TREE   | String  | swarm-compose.yaml | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000                                        |
 | AGGREGATE                | Boolean | swarm-compose.yaml | Whether to aggregate hashes and send them to the Calendar blockchain. Defaults to true                                                           |
 | ANCHOR                   | Boolean | swarm-compose.yaml | Whether to anchor the state of the Calendar to Bitcoin                                                                                           |
