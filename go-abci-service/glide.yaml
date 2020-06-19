@@ -4,7 +4,7 @@ import:
 - package: github.com/jasonlvhit/gocron
 - package: github.com/streadway/amqp
 - package: github.com/jacohend/lnd
-- package: github.com/chainpoint/tendermint
+- package: github.com/tendermint/tendermint
   subpackages:
   - abci/example/code
   - abci/server

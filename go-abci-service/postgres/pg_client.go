@@ -6,7 +6,7 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
-	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/log"
 	_ "github.com/lib/pq"
 )
 

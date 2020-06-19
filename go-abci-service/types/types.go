@@ -8,12 +8,12 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
-	"github.com/chainpoint/tendermint/privval"
+	"github.com/tendermint/tendermint/privval"
 
-	"github.com/chainpoint/tendermint/libs/log"
-	"github.com/chainpoint/tendermint/p2p"
+	"github.com/tendermint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/p2p"
 
-	cfg "github.com/chainpoint/tendermint/config"
+	cfg "github.com/tendermint/tendermint/config"
 )
 
 // TendermintConfig holds connection info for RPC

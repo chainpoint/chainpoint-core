@@ -24,7 +24,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
 
 	"github.com/btcsuite/btcd/txscript"
-	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/log"
 	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
 
 	"github.com/lightningnetwork/lnd/lnrpc"

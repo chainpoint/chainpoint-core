@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/google/uuid"

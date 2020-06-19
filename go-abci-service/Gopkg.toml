@@ -69,8 +69,8 @@
   name = "gopkg.in/macaroon.v2"
 
 [[constraint]]
-  name = "github.com/chainpoint/tendermint"
-  branch = "new"
+  name = "github.com/tendermint/tendermint"
+  branch = "release/v0.33.5"
 
 [[override]]
   name = "github.com/tendermint/tm-db"

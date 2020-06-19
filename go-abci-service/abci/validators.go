@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/chainpoint/tendermint/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"strconv"
 	"strings"
 
-	"github.com/chainpoint/tendermint/abci/example/code"
-	"github.com/chainpoint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/abci/example/code"
+	"github.com/tendermint/tendermint/abci/types"
 )
 
 // constant prefix for a validator transaction

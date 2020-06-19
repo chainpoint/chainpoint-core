@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	types3 "github.com/chainpoint/tendermint/types"
+	types3 "github.com/tendermint/tendermint/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
@@ -18,15 +18,15 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/go-redis/redis"
 
-	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	types2 "github.com/chainpoint/tendermint/abci/types"
+	types2 "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tm-db"
-	"github.com/chainpoint/tendermint/version"
+	"github.com/tendermint/tendermint/version"
 )
 
 // variables for protocol version and main db state key

@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	core_types "github.com/chainpoint/tendermint/rpc/core/types"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
 
