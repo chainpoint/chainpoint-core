@@ -134,7 +134,6 @@ clean: stop
 	@rm -rf ${CORE_DATADIR}/config/node_1/data/*
 	@rm -f ${CORE_DATADIR}/config/node_1/addrbook.json
 	@rm -f ${CORE_DATADIR}/config/node_1/genesis.json
-	@cp ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json || echo "priv_validator not found, file migration likely"
 	@docker system prune --volumes
 
 ## install-deps              : Install system dependencies
@@ -233,7 +232,6 @@ stop:
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint: stop
 	@sleep 20 && rm -rf ${CORE_DATADIR}/config/node_1/data/*
-	@mv ${CORE_DATADIR}/config/node_1/priv_validator_key.json ${CORE_DATADIR}/config/node_1/priv_validator.json
 	docker system prune -a
 
 ## optimize-network          : increases number of sockets host can use
