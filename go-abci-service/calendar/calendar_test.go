@@ -13,9 +13,9 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/stretchr/testify/assert"
 
-	types2 "github.com/chainpoint/tendermint/types"
+	types2 "github.com/tendermint/tendermint/types"
 
-	core_types "github.com/chainpoint/tendermint/rpc/core/types"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )

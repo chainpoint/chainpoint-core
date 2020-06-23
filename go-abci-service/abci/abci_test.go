@@ -12,11 +12,11 @@ import (
 
 	"github.com/knq/pemutil"
 
-	types2 "github.com/chainpoint/tendermint/abci/types"
+	types2 "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 func DeclareABCI() *AnchorApplication {

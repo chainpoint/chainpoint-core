@@ -12,26 +12,26 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
-	types2 "github.com/chainpoint/tendermint/types"
+	types2 "github.com/tendermint/tendermint/types"
 
-	"github.com/chainpoint/tendermint/node"
-	"github.com/chainpoint/tendermint/proxy"
+	"github.com/tendermint/tendermint/node"
+	"github.com/tendermint/tendermint/proxy"
 
-	"github.com/chainpoint/tendermint/p2p"
-	"github.com/chainpoint/tendermint/privval"
+	"github.com/tendermint/tendermint/p2p"
+	"github.com/tendermint/tendermint/privval"
 
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
 
-	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	cfg "github.com/chainpoint/tendermint/config"
-	tmflags "github.com/chainpoint/tendermint/libs/cli/flags"
-	tmos "github.com/chainpoint/tendermint/libs/os"
-	tmtime "github.com/chainpoint/tendermint/types/time"
+	cfg "github.com/tendermint/tendermint/config"
+	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
+	tmos "github.com/tendermint/tendermint/libs/os"
+	tmtime "github.com/tendermint/tendermint/types/time"
 )
 
 func main() {
@@ -284,21 +284,11 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	}
 
 	// initialize private validator key
-	// Convert old PrivValidator if it exists.
-	oldPrivVal := defaultConfig.OldPrivValidatorFile()
 	newPrivValKey := defaultConfig.PrivValidatorKeyFile()
 	newPrivValState := defaultConfig.PrivValidatorStateFile()
-	if _, err := os.Stat(oldPrivVal); !os.IsNotExist(err) {
-		oldPV, err := privval.LoadOldFilePV(oldPrivVal)
-		if err != nil {
-			panic(err)
-		}
-		logger.Info("Upgrading PrivValidator file",
-			"old", oldPrivVal,
-			"newKey", newPrivValKey,
-			"newState", newPrivValState,
-		)
-		oldPV.Upgrade(newPrivValKey, newPrivValState)
+	if !tmos.FileExists(newPrivValState) {
+		filePV := privval.GenFilePV(newPrivValKey, newPrivValState)
+		filePV.LastSignState.Save()
 	}
 	TMConfig.FilePV = *privval.LoadOrGenFilePV(newPrivValKey, newPrivValState)
 
@@ -316,7 +306,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 			GenesisTime:     tmtime.Now(),
 			ConsensusParams: types2.DefaultConsensusParams(),
 		}
-		key := TMConfig.FilePV.GetPubKey()
+		key, _ := TMConfig.FilePV.GetPubKey()
 		genDoc.Validators = []types2.GenesisValidator{{
 			Address: key.Address(),
 			PubKey:  key,

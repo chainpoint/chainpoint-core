@@ -7,22 +7,22 @@ import (
 	"fmt"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/chainpoint/tendermint/libs/log"
-	core_types "github.com/chainpoint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/libs/log"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/chainpoint/tendermint/rpc/client"
 )
 
 // RPC : hold abstract http client for mocking purposes
 type RPC struct {
-	client *client.HTTP
+	client *rpchttp.HTTP
 	logger log.Logger
 }
 
 // NewRPCClient : Creates a new client connected to a tendermint instance at web socket "tendermintRPC"
 func NewRPCClient(tendermintRPC types.TendermintConfig, logger log.Logger) (rpc *RPC) {
-	c, _ := client.NewHTTP(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket")
+	c, _ := rpchttp.New(fmt.Sprintf("http://%s:%s", tendermintRPC.TMServer, tendermintRPC.TMPort), "/websocket")
 	return &RPC{
 		client: c,
 		logger: logger,
@@ -93,7 +93,7 @@ func (rpc *RPC) GetNetInfo() (core_types.ResultNetInfo, error) {
 
 //GetTxByInt : Retrieves a tx by its unique integer ID (txInt)
 func (rpc *RPC) GetTxByInt(txInt int64) (core_types.ResultTxSearch, error) {
-	txResult, err := rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", txInt), false, 1, 1)
+	txResult, err := rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", txInt), false, 1, 1, "")
 	if rpc.LogError(err) != nil {
 		return core_types.ResultTxSearch{}, err
 	}

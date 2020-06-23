@@ -26,9 +26,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	core_types "github.com/chainpoint/tendermint/rpc/core/types"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
-	"github.com/chainpoint/tendermint/libs/log"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/google/uuid"
 

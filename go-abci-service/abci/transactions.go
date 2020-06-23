@@ -11,12 +11,12 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
-	types2 "github.com/chainpoint/tendermint/abci/types"
+	types2 "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/chainpoint/tendermint/abci/example/code"
-	"github.com/chainpoint/tendermint/libs/kv"
-	core_types "github.com/chainpoint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/abci/example/code"
+	"github.com/tendermint/tendermint/libs/kv"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 // incrementTxInt: Helper method to increment transaction integer
@@ -206,7 +206,7 @@ func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]c
 	}
 	Txs := []core_types.ResultTx{}
 	for i := minTxInt; i <= maxTxInt; i++ {
-		txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", i), false, 1, 1)
+		txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", i), false, 1, 1, "")
 		if err != nil {
 			return nil, err
 		} else if txResult.TotalCount > 0 {

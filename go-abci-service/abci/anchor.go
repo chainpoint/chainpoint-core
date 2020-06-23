@@ -247,7 +247,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
 	queryLine := fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID)
 	app.logger.Info("Anchor confirmation query: " + queryLine)
-	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25)
+	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
 	if app.LogError(err) == nil {
 		for _, tx := range txResult.Txs {
 			decoded, err := util.DecodeTx(tx.Tx)
@@ -277,7 +277,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		}
 		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
 		btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
-		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25)
+		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25, "")
 		if app.LogError(err) == nil {
 			for _, tx := range txResult.Txs {
 				hash = tx.Hash
