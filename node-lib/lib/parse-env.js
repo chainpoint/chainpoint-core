@@ -185,6 +185,7 @@ module.exports = service => {
         desc: 'A comma separated list of IPs that may submit hashes without invoices'
       })
       envDefinitions.AGGREGATOR_PUBLIC = envalid.bool({
+        default: false,
         desc: 'whether to publish the aggregator whitelist in an API endpoint'
       })
       envDefinitions.SUBMIT_HASH_PRICE_SAT = envalid.num({
