@@ -286,7 +286,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	} else if (!app.state.ChainSynced){
 		// we're fast-syncing, so agree with the prior chainstate
 		return true
-	} else if isVal, err := app.IsValidator(tx.CoreID); err == nil && isVal && app.state.AmValidator {\
+	} else if isVal, err := app.IsValidator(tx.CoreID); err == nil && isVal && app.state.AmValidator {
 	    // if we're both validators, verify identity
 		return true
 	}
