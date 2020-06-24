@@ -300,10 +300,6 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	json.Unmarshal([]byte(tx.Data), &jwkType)
 	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
 	app.logger.Info("JWK kid", "JWK Tx kid", jwkType.Kid, "app JWK kid", app.JWK.Kid)
-	if jwkType.Kid != "" && app.JWK.Kid != "" && jwkType.Kid == app.JWK.Kid {
-		app.logger.Info("JWK keysync tx committed")
-		app.state.JWKStaked = true
-	}
 	jsonJwk, err := json.Marshal(jwkType)
 	if app.LogError(err) != nil {
 		return err
@@ -334,6 +330,10 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID))
 	if lightning.IsLnUri(lnID.Peer) {
 		app.state.LnUris[tx.CoreID] = lnID
+	}
+	if jwkType.Kid != "" && app.JWK.Kid != "" && jwkType.Kid == app.JWK.Kid {
+		app.logger.Info("JWK keysync tx committed")
+		app.state.JWKStaked = true
 	}
 	return nil
 }
