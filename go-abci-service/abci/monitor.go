@@ -260,7 +260,10 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	// Verification only matters to the chain if the chain is synced and we're a validator.
 	// If we're the first validator, we accept by default.
 	_, alreadyExists := app.state.CoreKeys[tx.CoreID]
-	if app.state.ChainSynced && app.state.AmValidator && !alreadyExists && app.ID != tx.CoreID {
+	if app.ID == tx.CoreID {
+		app.logger.Info("Validated JWK since we're the proposer")
+		return true
+	} else if app.state.ChainSynced && app.state.AmValidator && !alreadyExists {
 		lnID := types.LnIdentity{}
 		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
 			return false
@@ -283,7 +286,8 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	} else if (!app.state.ChainSynced){
 		// we're fast-syncing, so agree with the prior chainstate
 		return true
-	} else if isVal, err := app.IsValidator(tx.CoreID); err == nil && isVal && app.state.AmValidator {
+	} else if isVal, err := app.IsValidator(tx.CoreID); err == nil && isVal && app.state.AmValidator {\
+	    // if we're both validators, verify identity
 		return true
 	}
 	app.logger.Info("JWK Identity", "alreadyExists", alreadyExists)
