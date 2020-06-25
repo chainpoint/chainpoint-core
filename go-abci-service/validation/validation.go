@@ -24,7 +24,7 @@ func NewTxValidation() types.TxValidation {
 		Bucket:      0.0,
 	}
 	permittedJWKRate := types.RateLimit{
-		AllowedRate: 2,
+		AllowedRate: 6,
 		PerBlocks:   1440,
 		LastCheck:   0,
 		Bucket:      0.0,
@@ -230,13 +230,14 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			validationRecord.LastFeeTxHeight = state.Height
 		}
 		break;
-	case "JWT":
-		RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
+	case "JWK":
+/*		RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
 		if !IsHabitualViolator(validationRecord.JWKAllowedRate) {
 			validated = true
 			UpdateAcceptTx(&validationRecord.JWKAllowedRate)
 			validationRecord.LastJWKTxHeight = state.Height
-		}
+		}*/
+		validated = true
 	}
 	fmt.Printf("Tx Validation: %#v\nTx:%#v\nValidated:%t", validationRecord, tx, validated)
 	state.TxValidation[pubKeyHex] = validationRecord

@@ -275,7 +275,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return true
 		}
 		app.logger.Info("JWK Identity: Checking Channel Funding")
-		chanExists, err := app.lnClient.RemoteChannelOpenAndFunded(lnID.Peer, app.lnClient.LocalSats)
+		chanExists, err := app.lnClient.ChannelExists(lnID.Peer, app.lnClient.LocalSats)
 		if app.LogError(err) == nil && chanExists {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true
