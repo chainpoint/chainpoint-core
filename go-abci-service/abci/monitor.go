@@ -100,7 +100,7 @@ func (app *AnchorApplication) StakeIdentity() {
 						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, app.lnClient.LocalSats)
 						app.LogError(err)
 						if !chanExists {
-							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", lnID.RequiredChanAmt, lnID.Peer))
+							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", app.lnClient.LocalSats, lnID.Peer))
 							_, err := app.lnClient.CreateChannel(lnID.Peer, app.lnClient.LocalSats)
 							app.LogError(err)
 						} else {
