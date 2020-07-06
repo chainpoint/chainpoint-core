@@ -221,6 +221,13 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			UpdateAcceptTx(&validationRecord.NISTAllowedRate)
 			validationRecord.LastNISTTxHeight = state.Height
 		}
+	case "DRAND":
+		RateLimitUpdate(state.Height, &validationRecord.NISTAllowedRate)
+		if !(IsHabitualViolator(validationRecord.NISTAllowedRate)) {
+			validated = true
+			UpdateAcceptTx(&validationRecord.NISTAllowedRate)
+			validationRecord.LastNISTTxHeight = state.Height
+		}
 		break
 	case "FEE":
 		RateLimitUpdate(state.Height, &validationRecord.FeeAllowedRate)
