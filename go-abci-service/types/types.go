@@ -92,6 +92,7 @@ type AnchorState struct {
 	LnStakePrice     int64 `json:"total_stake_price"`
 	LnStakePerVal    int64 `json:"validator_stake_price"`
 	LatestNistRecord string
+	LatestTimeRecord string
 	LatestBtcFee     int64
 	LastBtcFeeHeight int64
 	Migrations       map[int]string `json:"migrations"`

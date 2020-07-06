@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:e4b30804a381d7603b8a344009987c1ba351c26043501b23b8c7ce21f0b67474"
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  pruneopts = ""
+  revision = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005"
+  version = "v0.3.1"
+
+[[projects]]
   digest = "1:faa0c8ab59056b1c6aa32c3823ce4a8e60b61af97242cfb21718d3f648404b38"
   name = "github.com/ChainSafe/go-schnorrkel"
   packages = ["."]
@@ -146,6 +154,53 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:2841841c90842645c6a3ed260fa4242a18e1f2f4edd309d40347443b2c662fcb"
+  name = "github.com/drand/drand"
+  packages = [
+    "chain",
+    "client",
+    "client/grpc",
+    "fs",
+    "key",
+    "log",
+    "metrics",
+    "protobuf/crypto/dkg",
+    "protobuf/drand",
+  ]
+  pruneopts = ""
+  revision = "7108fcd0e58c888686de3e80a732210680a96761"
+  version = "v1.0.0-rc1"
+
+[[projects]]
+  digest = "1:dc1b7546a419cb4b7965a287a50875c5b8bc9dee741f5ec5a6a39af9d206616a"
+  name = "github.com/drand/kyber"
+  packages = [
+    ".",
+    "encrypt/ecies",
+    "group/internal/marshalling",
+    "group/mod",
+    "pairing",
+    "share",
+    "share/dkg",
+    "sign",
+    "sign/bls",
+    "sign/tbls",
+    "util/random",
+    "xof/blake2xb",
+  ]
+  pruneopts = ""
+  revision = "d63cace830076fb2f270442453e0b269c37d9cb2"
+  version = "v1.1.1"
+
+[[projects]]
+  digest = "1:d9eeba27283d4dd3fade7f55e2c9a4194f19936ccd4648f5d162a6b42080ccaa"
+  name = "github.com/drand/kyber-bls12381"
+  packages = ["."]
+  pruneopts = ""
+  revision = "bbbf073a295a0f60d015c327573c67738c08dedd"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:988feb3d21be75c16b9d45d824d64534e346664ebbcae38eee5e0085415dc242"
   name = "github.com/etcd-io/bbolt"
   packages = ["."]
@@ -278,6 +333,14 @@
   version = "v1.4.2"
 
 [[projects]]
+  digest = "1:e24dc5ef44694848785de507f439a24e9e6d96d7b43b8cf3d6cfa857aa1e2186"
+  name = "github.com/grpc-ecosystem/go-grpc-prometheus"
+  packages = ["."]
+  pruneopts = ""
+  revision = "c225b8c3b01faf2899099b768856a9e916e5087b"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:98f03192de6834b9ef4e1c7e0d82d68bbc4c617d08d5b41811e7a606a1e2a998"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
@@ -309,6 +372,33 @@
   pruneopts = ""
   revision = "f33454717c935f5c93978e82b7bd1e848768bb91"
   version = "v0.1.2"
+
+[[projects]]
+  digest = "1:8e3bd93036b4a925fe2250d3e4f38f21cadb8ef623561cd80c3c50c114b13201"
+  name = "github.com/hashicorp/errwrap"
+  packages = ["."]
+  pruneopts = ""
+  revision = "8a6fb523712970c966eefc6b39ed2c5e74880354"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:c6e569ffa34fcd24febd3562bff0520a104d15d1a600199cb3141debf2e58c89"
+  name = "github.com/hashicorp/go-multierror"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2004d9dba6b07a5b8d133209244f376680f9d472"
+  version = "v1.1.0"
+
+[[projects]]
+  digest = "1:e9ba8bd7f740264f703a41911c9523fb06aaf439dd899cedb263aadddc4be90e"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = ""
+  revision = "14eae340515388ca95aa8e7b86f0de668e981f54"
+  version = "v0.5.4"
 
 [[projects]]
   digest = "1:d14365c51dd1d34d5c79833ec91413bfbb166be978724f15701e17080dc06dec"
@@ -344,6 +434,14 @@
   pruneopts = ""
   revision = "a93b200c26cbae3bb09dd0dc2c7c7fe1468a034a"
   version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f08d2675f498afc3da8b2b03bd8c511390bfd78d1e936c3dcebd9f3f32e0e64a"
+  name = "github.com/kilic/bls12-381"
+  packages = ["."]
+  pruneopts = ""
+  revision = "32e1441c8a9fe8da0a62e08c4ff7c28b40ef5d90"
 
 [[projects]]
   digest = "1:8132f68929fc99f8ce849fd49097511cb33bfffe47b8e37a440032db78c7cbe8"
@@ -536,6 +634,14 @@
   pruneopts = ""
   revision = "d16e9488127408e67948eb43b6d3fbb9f222da10"
   version = "v1.3.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:fa1e6169ee4d6c1803a78fa34856f3eb1c2933ae3559464859eebd4d62950ac6"
+  name = "github.com/nikkolasg/hexjson"
+  packages = ["."]
+  pruneopts = ""
+  revision = "78e39397e00c19adc06d5f44810e4694f251866d"
 
 [[projects]]
   digest = "1:3d899fe7ce211d8c9d44058df04c309b440acda454a4b46bab3dc5d907e5a301"
@@ -735,7 +841,7 @@
 
 [[projects]]
   branch = "release/v0.33.5"
-  digest = "0:"
+  digest = "1:f2ab7fb9949d32cb09419cee4aca6cca1da9b0776c0808f8858e74dc5b43df50"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -1120,6 +1226,9 @@
     "github.com/btcsuite/btcd/txscript",
     "github.com/btcsuite/btcd/wire",
     "github.com/btcsuite/btcutil",
+    "github.com/drand/drand/client",
+    "github.com/drand/drand/client/grpc",
+    "github.com/drand/drand/key",
     "github.com/ethereum/go-ethereum/common",
     "github.com/go-redis/redis",
     "github.com/google/uuid",

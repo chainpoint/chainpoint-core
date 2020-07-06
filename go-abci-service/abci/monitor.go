@@ -153,25 +153,20 @@ func (app *AnchorApplication) StakeIdentity() {
 	}
 }
 
-// NistBeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
-func (app *AnchorApplication) NistBeaconMonitor() {
+// BeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
+func (app *AnchorApplication) BeaconMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 {
 		if leader, leaders := app.ElectChainContributorAsLeaderNaive(1, []string{}); leader {
 			app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
-			nistRecord, err := beacon.LastRecord()
-			chainpointFormat := ""
+			round, randomness, err := beacon.GetPublicRandomness()
+			chainpointFormat := fmt.Sprintf("%d:%s", round, randomness)
 			if app.LogError(err) != nil {
-				if !strings.Contains(err.Error(), "stale") {
-					chainpointFormat = app.state.LatestNistRecord // use the last "good" entropy beacon value known to this Core
-				}
+				chainpointFormat = app.state.LatestTimeRecord // use the last "good" entropy beacon value known to this Core
 			}
-			if chainpointFormat == "" {
-				chainpointFormat = nistRecord.ChainpointFormat()
-			}
-			_, err = app.rpc.BroadcastTx("NIST", nistRecord.ChainpointFormat(), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+			_, err = app.rpc.BroadcastTx("DRAND", chainpointFormat, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if app.LogError(err) != nil {
-				app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", nistRecord.ChainpointFormat()))
+				app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", chainpointFormat))
 			}
 		}
 	}

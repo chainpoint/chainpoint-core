@@ -30,7 +30,7 @@ const proofStateQueueOut = "work.proofstate"
 type Aggregator struct {
 	RabbitmqURI  string
 	Logger       log.Logger
-	LatestNist   string
+	LatestTime   string
 	Aggregations []types.Aggregation
 	AggMutex     sync.Mutex
 	RestartMutex sync.Mutex
@@ -101,7 +101,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 							aggregator.Logger.Info(fmt.Sprintf("Hash: %s", string(hash.Body)))
 							//create new agg roots under heavy load
 							if len(msgStructSlice) > hashBatchSize {
-								if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
+								if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestTime); agg.AggRoot != "" {
 									aggregator.AggMutex.Lock()
 									aggregator.Aggregations = append(aggregator.Aggregations, agg)
 									aggregator.AggMutex.Unlock()
@@ -112,7 +112,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 					}
 				}
 				if len(msgStructSlice) > 0 {
-					if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestNist); agg.AggRoot != "" {
+					if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestTime); agg.AggRoot != "" {
 						aggregator.AggMutex.Lock()
 						aggregator.Aggregations = append(aggregator.Aggregations, agg)
 						aggregator.AggMutex.Unlock()
@@ -131,7 +131,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 }
 
 // ProcessAggregation creates merkle trees of received hashes a la https://github.com/chainpoint/chainpoint-services/blob/develop/node-aggregator-service/server.js#L66
-func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery, nist string) types.Aggregation {
+func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery, drand string) types.Aggregation {
 	var agg types.Aggregation
 	hashSlice := make([][]byte, 0)               // byte array
 	hashStructSlice := make([]types.HashItem, 0) // keep record for building proof path
@@ -150,10 +150,10 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 		//Create checksum
 		var newHash [32]byte
 
-		if nist != "" {
-			var nistBuffer bytes.Buffer
-			nistBuffer.WriteString(fmt.Sprintf("nistv2:%s", nist))
-			newHash = sha256.Sum256(append(nistBuffer.Bytes(), hashBytes...))
+		if drand != "" {
+			var timeBuffer bytes.Buffer
+			timeBuffer.WriteString(fmt.Sprintf("drand:%s", drand))
+			newHash = sha256.Sum256(append(timeBuffer.Bytes(), hashBytes...))
 		}else {
 			copy(newHash[:], hashBytes)
 		}
@@ -180,13 +180,13 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 		proofData.ProofID = unPackedHash.ProofID
 		proofData.Hash = unPackedHash.Hash
 		proofs := tree.GetProof(i)
-		if nist != "" {
-			proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("nistv2:%s", nist))}}, proofs...)
+		if drand != "" {
+			proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("drand:%s", drand))}}, proofs...)
 		}
 		proofData.Proof = make([]types.ProofLineItem, 0)
 		for _, p := range proofs {
 			if p.Left {
-				if strings.Contains(string(p.Value), "nistv2") {
+				if strings.Contains(string(p.Value), "drand") {
 					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: string(p.Value)})
 				} else {
 					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: hex.EncodeToString(p.Value)})

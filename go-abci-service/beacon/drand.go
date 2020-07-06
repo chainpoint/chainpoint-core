@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/drand/drand/key"
@@ -11,18 +12,18 @@ import (
 	"github.com/drand/drand/client/grpc"
 )
 
-func getPublicRandomness() (error, client.Result) {
+func GetPublicRandomness() (uint64, string, error) {
 	certPath := ""
 	ids, err := getNodes()
 	if err != nil {
-		return err, nil
+		return 0, "", nil
 	}
 	group, err := getGroup()
 	if err != nil {
-		return err, nil
+		return 0, "", nil
 	}
 	if group.PublicKey == nil {
-		return errors.New("drand: group file must contain the distributed public key"), nil
+		return 0, "", errors.New("drand: group file must contain the distributed public key")
 	}
 
 	var resp client.Result
@@ -43,9 +44,9 @@ func getPublicRandomness() (error, client.Result) {
 		fmt.Fprintf(os.Stderr, "drand: could not get public randomness from %s: %s", id.Addr, err)
 	}
 	if !foundCorrect {
-		return errors.New("drand: could not verify randomness"), nil
+		return 0, "", errors.New("drand: could not verify randomness")
 	}
-	return nil, resp
+	return resp.Round(), hex.EncodeToString(resp.Randomness()), nil
 }
 
 func getNodes() ([]*key.Node, error) {

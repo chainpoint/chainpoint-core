@@ -164,7 +164,14 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		app.state.LatestNistRecord = tx.Data
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		if app.config.DoCal {
-			app.aggregator.LatestNist = app.state.LatestNistRecord
+			app.aggregator.LatestTime = app.state.LatestNistRecord
+		}
+		break
+	case "DRAND":
+		app.state.LatestTimeRecord = tx.Data
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
+		if app.config.DoCal {
+			app.aggregator.LatestTime = app.state.LatestTimeRecord
 		}
 		break
 	case "FEE":
