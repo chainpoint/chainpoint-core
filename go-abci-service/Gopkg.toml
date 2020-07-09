@@ -21,6 +21,9 @@
 #  version = "2.4.0"
 
 [[constraint]]
+  name = "github.com/drand/drand"
+
+[[constraint]]
   name = "github.com/btcsuite/btcd"
 
 [[constraint]]

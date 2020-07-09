@@ -312,7 +312,7 @@ func (app *AnchorApplication) BeginBlock(req types2.RequestBeginBlock) types2.Re
 func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.ResponseEndBlock {
 	// If the chain is synced, run all polling methods
 	if app.state.ChainSynced {
-		go app.NistBeaconMonitor() // update NIST beacon using deterministic leader election
+		go app.BeaconMonitor() // update time beacon using deterministic leader election
 		go app.FeeMonitor()
 		if app.config.DoCal {
 			go app.AnchorCalendar(app.state.Height)
