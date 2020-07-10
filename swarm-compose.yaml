@@ -300,7 +300,7 @@ services:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG:-latest}
     user: ${USERID}:${GROUPID}
     deploy:
-      replicas: 2
+      replicas: 1
       restart_policy:
         condition: any
         delay: 5s
@@ -330,7 +330,7 @@ services:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG:-latest}
     user: ${USERID}:${GROUPID}
     deploy:
-      replicas: 2
+      replicas: 1
       restart_policy:
         condition: any
         delay: 5s
