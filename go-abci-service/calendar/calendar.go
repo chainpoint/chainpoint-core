@@ -141,6 +141,7 @@ func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) type
 // QueueBtcaStateDataMessage notifies proof and btc tx services of BTC-A anchoring
 func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) error {
 	treeDataJSON, err := json.Marshal(anchorDataObj)
+	calendar.Logger.Info(fmt.Sprintf("queueing anchor TreeData state message for aggroot: %s", anchorDataObj.AnchorBtcAggRoot))
 	if util.LogError(err) != nil {
 		return err
 	}

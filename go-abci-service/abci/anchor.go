@@ -67,7 +67,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 
 	// Aggregate all txs in range into a new merkle tree in prep for BTC anchoring
 	treeData := app.calendar.AggregateAnchorTx(txLeaves)
-	app.logger.Info(fmt.Sprintf("treeData for Anchor for tx ranges %d to %d: %v", startTxRange, endTxRange, treeData))
+	app.logger.Info(fmt.Sprintf("treeData for Anchor for tx ranges %d to %d for aggroot: %s: %v", startTxRange, endTxRange, treeData.AnchorBtcAggRoot, treeData))
 
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
@@ -98,9 +98,14 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if app.LogError(redisResult.Err()) != nil {
 			return redisResult.Err()
 		}
-		treeDataJSON, _ := json.Marshal(treeData)
+		treeDataJSON, err := json.Marshal(treeData)
+		if app.LogError(err) != nil {
+			app.logger.Info(fmt.Sprintf("Anchor TreeData marshal failure for aggroot: %s", treeData.AnchorBtcAggRoot))
+			return err
+		}
 		setResult := app.redisClient.WithContext(context.Background()).Set(treeData.AnchorBtcAggRoot, string(treeDataJSON), 0)
 		if app.LogError(setResult.Err()) != nil {
+			app.logger.Info("Anchor TreeData save failure")
 			return setResult.Err()
 		}
 		app.state.EndCalTxInt = endTxRange            // Ensure we update our range of CAL txs for next anchor period
@@ -221,6 +226,9 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	getResult := app.redisClient.WithContext(context.Background()).Get(btcTxObj.AnchorBtcAggRoot)
 	var btcAgg types.BtcAgg
 	if err := json.Unmarshal([]byte(getResult.Val()), &btcAgg); err != nil {
+		app.resetAnchor(failedAnchorCheck.BeginCalTxInt)
+		app.LogError(err)
+		app.logger.Info(fmt.Sprintf("Anchor TreeData retrieval failure for aggroot: %s", btcAgg.AnchorBtcAggRoot))
 		return err
 	}
 	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
