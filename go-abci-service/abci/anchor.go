@@ -233,6 +233,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	}
 	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
 	if app.LogError(err) != nil {
+		app.logger.Info(fmt.Sprintf("Anchor TreeData queue failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
 		app.resetAnchor(failedAnchorCheck.BeginCalTxInt)
 		return err
 	}
@@ -240,7 +241,6 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	if app.LogError(delResult.Err()) != nil {
 		return err
 	}
-
 	app.logger.Info("Anchor Success")
 	if app.LogError(result.Err()) != nil {
 		return err
