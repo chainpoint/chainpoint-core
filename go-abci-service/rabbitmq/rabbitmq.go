@@ -57,7 +57,7 @@ func Dial(amqpURL string, queue string) (Session, error) {
 	session.Queue, err = session.Ch.QueueDeclare(
 		queue, // name
 		true,  // durable
-		false, // delete when usused
+		false, // delete when used
 		false, // exclusive
 		false, // no-wait
 		nil,   // arguments

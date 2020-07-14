@@ -359,7 +359,11 @@ func (app *AnchorApplication) FailedAnchorMonitor () {
 			continue
 		}
 		if app.state.Height - anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
-			app.logger.Info(fmt.Sprintf("Anchor Failure, Resetting state for aggroot %s", anchor.AnchorBtcAggRoot))
+			if (app.state.Height - anchor.CalBlockHeight >= int64(app.config.AnchorTimeout)){
+				app.logger.Info(fmt.Sprintf("Anchor Failure (timeout), Resetting state for aggroot %s", anchor.AnchorBtcAggRoot))
+			} else {
+				app.logger.Info(fmt.Sprintf("Anchor Failure (BTC-E), Resetting state for aggroot %s", anchor.AnchorBtcAggRoot))
+			}
 			app.resetAnchor(anchor.BeginCalTxInt)
 			validation.IncrementFailedAnchor(app.state.LastElectedCoreID, &app.state)
 			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)

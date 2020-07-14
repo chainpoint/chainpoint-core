@@ -103,7 +103,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 			app.logger.Info(fmt.Sprintf("Anchor TreeData marshal failure for aggroot: %s", treeData.AnchorBtcAggRoot))
 			return err
 		}
-		setResult := app.redisClient.WithContext(context.Background()).Set(treeData.AnchorBtcAggRoot, string(treeDataJSON), 0)
+		setResult := app.redisClient.WithContext(context.Background()).Set(treeData.AnchorBtcAggRoot, string(treeDataJSON), (6 * time.Hour))
 		if app.LogError(setResult.Err()) != nil {
 			app.logger.Info("Anchor TreeData save failure")
 			return setResult.Err()
@@ -139,7 +139,7 @@ func (app *AnchorApplication) SendBtcTx(anchorDataObj types.BtcAgg, height int64
 	if util.LogError(err) != nil {
 		return err
 	}
-	result := app.redisClient.WithContext(context.Background()).SAdd("BTC_Mon:NewBTCTxIds", string(btcJSON))
+	result := app.redisClient.WithContext(context.Background()).SAdd(NEW_BTC_TX_IDS_KEY, string(btcJSON))
 	if util.LogError(result.Err()) != nil {
 		return result.Err()
 	}
