@@ -44,6 +44,7 @@ type AnchorConfig struct {
 	DoPrivateNetwork bool
 	PrivateNodeIPs   []string
 	PrivateCoreIPs   []string
+	CIDRBlockList    []string
 	DoCal            bool
 	DoAnchor         bool
 	AnchorInterval   int

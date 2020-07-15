@@ -5,8 +5,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 	"time"
+	"path"
 
 	types3 "github.com/tendermint/tendermint/types"
 
@@ -351,6 +353,25 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 // Query : Custom ABCI query method. TODO: implement
 func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery types2.ResponseQuery) {
+	urlPath := reqQuery.Path
+	base := path.Base(urlPath)
+	if strings.Contains(urlPath, "/p2p/filter/addr") {
+		ipStr := base
+		if strings.Contains(base, ":"){
+			ipStr = strings.Split(base, ":")[0]
+		}
+		ip := net.ParseIP(ipStr)
+		for _, blockCIDR := range app.config.CIDRBlockList {
+			_, ipNet, _ := net.ParseCIDR(blockCIDR)
+			if ipNet.Contains(ip){
+				resQuery.Code = 401
+				return
+			}
+		}
+	} /*else if strings.Contains(urlPath, "/p2p/filter/id") {
+
+	} */
+	resQuery.Code = 200
 	return
 }
 
