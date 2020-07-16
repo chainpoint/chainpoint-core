@@ -147,6 +147,12 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		util.LogError(errors.New("ecdsa key load failed"))
 	}
 
+	var blocklist []string
+	blocklist, err = util.ReadLines("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ip_blocklist.txt")
+	if util.LogError(err) != nil {
+		blocklist = []string{}
+	}
+
 	// Create config object
 	return types.AnchorConfig{
 		DBType:           "goleveldb",
@@ -173,6 +179,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		PrivateNodeIPs:   nodeIPs,
 		PrivateCoreIPs:   coreIPs,
 		CIDRBlockList:    blockCIDRs,
+		IPBlockList:      blocklist,
 		DoCal:            doCalLoop,
 		DoAnchor:         doAnchorLoop,
 		AnchorInterval:   anchorInterval,

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/chainpoint/tendermint/abci/example/code"
 	"net"
 	"strings"
 	"time"
@@ -364,14 +365,20 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 		for _, blockCIDR := range app.config.CIDRBlockList {
 			_, ipNet, _ := net.ParseCIDR(blockCIDR)
 			if ipNet.Contains(ip){
-				resQuery.Code = 401
+				resQuery.Code = code.CodeTypeUnauthorized
+				return
+			}
+		}
+		for _, blockIP := range app.config.IPBlockList {
+			if strings.Contains(blockIP, ipStr) {
+				resQuery.Code = code.CodeTypeUnauthorized
 				return
 			}
 		}
 	} /*else if strings.Contains(urlPath, "/p2p/filter/id") {
 
 	} */
-	resQuery.Code = 200
+	resQuery.Code = code.CodeTypeOK
 	return
 }
 
