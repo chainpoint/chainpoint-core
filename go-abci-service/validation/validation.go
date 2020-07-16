@@ -4,6 +4,7 @@ import (
 	"crypto/elliptic"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -67,7 +68,7 @@ func RateLimitUpdate(currHeight int64, limit *types.RateLimit) {
 	}
 }
 
-// IsHabitualViolator : find out if the core has been violating rat elimits
+// IsHabitualViolator : find out if the core has been violating rate limits
 func IsHabitualViolator(limit types.RateLimit) bool {
 	return limit.Bucket < 1.0
 }
@@ -96,8 +97,8 @@ func GetPubKeyHex(coreID string, state types.AnchorState) string {
 	return pubKeyHex
 }
 
-// GetLastNistSubmitters : Given a past block range, get map of Cores that have submitted NIST tx
-func GetLastNistSubmitters(n int64, state types.AnchorState) (map[string]int64) {
+// GetLastDrandSubmitters : Given a past block range, get map of Cores that have submitted NIST tx
+func GetLastDrandSubmitters(n int64, state types.AnchorState) (map[string]int64) {
 	coreList := map[string]int64{}
 	for id,_ := range state.CoreKeys {
 		pubKeyHex := GetPubKeyHex(id, state)
@@ -188,7 +189,10 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		if !IsHabitualViolator(validationRecord.CalAllowedRate) {
 			validated = true
 			UpdateAcceptTx(&validationRecord.CalAllowedRate)
+			validationRecord.CalValidationSuccess++
 			validationRecord.LastCalTxHeight = state.Height
+		} else {
+			validationRecord.CalValidationFailures++
 		}
 		break
 	case "BTC-E":
@@ -200,6 +204,9 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			validated = true
 			UpdateAcceptTx(&validationRecord.BtcaAllowedRate)
 			validationRecord.LastBtcaTxHeight = state.Height
+			validationRecord.BtcaValidationSuccess++
+		} else {
+			validationRecord.BtcaValidationFailures++
 		}
 		break
 	case "BTC-C":
@@ -230,8 +237,9 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		}
 		break
 	case "FEE":
+		i, err := strconv.ParseInt(tx.Data, 10, 64)
 		RateLimitUpdate(state.Height, &validationRecord.FeeAllowedRate)
-		if !IsHabitualViolator(validationRecord.FeeAllowedRate) {
+		if !IsHabitualViolator(validationRecord.FeeAllowedRate) && err == nil && i >= 50 {
 			validated = true
 			UpdateAcceptTx(&validationRecord.FeeAllowedRate)
 			validationRecord.LastFeeTxHeight = state.Height

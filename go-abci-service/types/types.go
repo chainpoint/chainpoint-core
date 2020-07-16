@@ -128,13 +128,18 @@ type RateLimit struct {
 type TxValidation struct {
 	LastJWKTxHeight int64
 	JWKAllowedRate  RateLimit
+	JWKValidationFailures int64
 
 	LastCalTxHeight int64
 	CalAllowedRate  RateLimit
+	CalValidationSuccess int64
+	CalValidationFailures int64
 
 	LastBtcaTxHeight int64 // for anchoring Cores
 	ConfirmedAnchors int64
 	BtcaAllowedRate  RateLimit
+	BtcaValidationSuccess int64
+	BtcaValidationFailures int64
 
 	LastBtccTxHeight int64 // for Cores submitting confirmations, not anchoring Cores
 	BtccAllowedRate  RateLimit
@@ -145,6 +150,7 @@ type TxValidation struct {
 
 	LastFeeTxHeight  int64
 	FeeAllowedRate   RateLimit
+	FeeValidationFailures int64
 }
 
 // EcdsaSignature : Allows for unmarshalling an ecdsa signature

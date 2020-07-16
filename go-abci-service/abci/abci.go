@@ -375,6 +375,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 				return
 			}
 		}
+
 	} /*else if strings.Contains(urlPath, "/p2p/filter/id") {
 
 	} */
