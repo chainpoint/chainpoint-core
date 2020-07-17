@@ -246,6 +246,19 @@ func (app *AnchorApplication) LoadIdentity() error {
 		app.state.CoreKeys[coreID] = pubKey
 		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.NewTxValidation()
 	}
+
+	//map all NodeKey IDs to PrivateValidator addresses for consumption by peer filter
+	txs, err := app.getAllJWKs()
+	if err == nil {
+		for _, tx := range txs {
+			var jwkType types.Jwk
+			err := json.Unmarshal([]byte(tx.Data), &jwkType)
+			if app.LogError(err) != nil {
+				continue
+			}
+			app.state.IDMap[jwkType.Kid] = tx.CoreID
+		}
+	}
 	return nil
 }
 

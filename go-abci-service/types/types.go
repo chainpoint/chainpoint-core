@@ -89,6 +89,7 @@ type AnchorState struct {
 	TxValidation     map[string]TxValidation    `json:"tx_validation"`
 	CoreKeys         map[string]ecdsa.PublicKey `json:"-"`
 	LnUris           map[string]LnIdentity      `json:"lightning_identities"`
+	IDMap            map[string]string          `json:"-"`
 	ChainSynced      bool
 	JWKStaked        bool
 	LnStakePrice     int64 `json:"total_stake_price"`

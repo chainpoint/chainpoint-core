@@ -231,3 +231,20 @@ func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]c
 	}
 	return Txs, nil
 }
+
+// getAllJWKs gets all JWK TXs
+func (app *AnchorApplication) getAllJWKs() ([]types.Tx, error) {
+	Txs := []types.Tx{}
+	txResult, err := app.rpc.client.TxSearch("JWK.CORE='NEW'", false, 1, 200, "")
+	if err != nil {
+		return nil, err
+	} else if txResult.TotalCount > 0 {
+		for _, tx := range txResult.Txs {
+			decoded, err := util.DecodeTx(tx.Tx)
+			if app.LogError(err) == nil {
+				Txs = append(Txs, decoded)
+			}
+		}
+	}
+	return Txs, nil
+}
