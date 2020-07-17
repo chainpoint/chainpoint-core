@@ -149,6 +149,8 @@ type TxValidation struct {
 	LastFeeTxHeight  int64
 	FeeAllowedRate   RateLimit
 	FeeValidationFailures int64
+
+	UnAuthValSubmissions int64
 }
 
 // EcdsaSignature : Allows for unmarshalling an ecdsa signature

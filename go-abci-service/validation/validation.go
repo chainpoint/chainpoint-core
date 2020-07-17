@@ -281,9 +281,10 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			UpdateAcceptTx(&validationRecord.JWKAllowedRate)
 			validationRecord.LastJWKTxHeight = state.Height
 		}*/
+		validationRecord.LastJWKTxHeight = state.Height
 		validated = true
 	}
-	fmt.Printf("Tx Validation: %#v\nTx:%#v\nValidated:%t", validationRecord, tx, validated)
+	fmt.Printf("Validated:%t\n", validated)
 	state.TxValidation[pubKeyHex] = validationRecord
 	return tx, validated, err
 }

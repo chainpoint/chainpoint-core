@@ -52,6 +52,13 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		components := strings.Split(tx.Data, "!")
 		if len(components) == 3 {
 			amVal, _ := app.IsValidator(app.ID)
+			isSubmitterVal, _ := app.IsValidator(tx.CoreID)
+			if !isSubmitterVal {
+				if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, app.state); err != nil {
+					submitterRecord.UnAuthValSubmissions++
+					validation.SetValidationRecord(tx.CoreID, submitterRecord, &app.state)
+				}
+			}
 			id := components[0]
 			if amVal {
 				goodCandidate := false
@@ -61,7 +68,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 					if err != nil {
 						return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 					}
-					if power == -1 || components[1] == "val:KK7n38cLFcs9Lbkv/Eh45TtV1lfkpKehDaxXPe4H8a4=" || components[1] == "val:+MU67U5bacm7H/2ZWaAltvchl7RyXwHJ8pl6lIq7zYw=" {
+					if power == -1 {
 						goodCandidate = true
 					} else {
 						goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
