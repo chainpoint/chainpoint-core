@@ -2,6 +2,7 @@ package validation
 
 import (
 	"crypto/elliptic"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -159,6 +160,30 @@ func IncrementFailedAnchor(coreID string, state *types.AnchorState) error {
 	return err
 }
 
+func GetAnchorSuccessRatio(coreID string, state *types.AnchorState) (float64, error) {
+	_, validationRecord, err := GetValidationRecord(coreID, *state)
+	if err != nil {
+		return 0, err
+	}
+	return float64(validationRecord.ConfirmedAnchors) / float64(validationRecord.FailedAnchors), nil
+}
+
+func GetCalSuccessRatio(coreID string, state *types.AnchorState) (float64, error) {
+	_, validationRecord, err := GetValidationRecord(coreID, *state)
+	if err != nil {
+		return 0, err
+	}
+	return float64(validationRecord.CalValidationSuccess) / float64(validationRecord.CalValidationFailures), nil
+}
+
+func GetJWKChanges(coreID string, state *types.AnchorState) (int64, error) {
+	_, validationRecord, err := GetValidationRecord(coreID, *state)
+	if err != nil {
+		return 0, err
+	}
+	return validationRecord.JWKSubmissions, nil
+}
+
 func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error) {
 	tx, err := util.DecodeTxAndVerifySig(incoming, state.CoreKeys)
 	if err != nil {
@@ -204,9 +229,6 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			validated = true
 			UpdateAcceptTx(&validationRecord.BtcaAllowedRate)
 			validationRecord.LastBtcaTxHeight = state.Height
-			validationRecord.BtcaValidationSuccess++
-		} else {
-			validationRecord.BtcaValidationFailures++
 		}
 		break
 	case "BTC-C":
@@ -246,6 +268,13 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		}
 		break;
 	case "JWK":
+		if lnUri, exists := state.LnUris[coreID]; exists {
+			lnID := types.LnIdentity{}
+			err = json.Unmarshal([]byte(tx.Meta), &lnID)
+			if lnUri != lnID {
+				validationRecord.JWKSubmissions++
+			}
+		}
 /*		RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
 		if !IsHabitualViolator(validationRecord.JWKAllowedRate) {
 			validated = true
