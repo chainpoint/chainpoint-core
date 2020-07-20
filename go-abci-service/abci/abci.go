@@ -359,6 +359,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 	resQuery.Code = code.CodeTypeOK
 	if strings.Contains(urlPath, "/p2p/filter/addr") {
 		ipStr := base
+		app.logger.Info(fmt.Sprintf("Looking up peer info for ip %s", base))
 		if strings.Contains(base, ":"){
 			ipStr = strings.Split(base, ":")[0]
 		}
@@ -376,14 +377,17 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 				return
 			}
 		}
-
+		app.logger.Info(fmt.Sprintf("connection allowed for ip %s", base))
 	} else if strings.Contains(urlPath, "/p2p/filter/id") {
 		coreID, exists := app.state.IDMap[base]
 		if !exists {
+			app.logger.Info(fmt.Sprintf("id record does not exist for %s", base))
 			return
 		}
+		app.logger.Info(fmt.Sprintf("Looking up peer info for id %s", base))
 		_, validationRecord, err := validation.GetValidationRecord(coreID, app.state)
 		if app.LogError(err) != nil {
+			app.logger.Info(fmt.Sprintf("validation record does not exist for %s", base))
 			return
 		}
 		anchorRatio, _ := validation.GetAnchorSuccessRatio(coreID, &app.state)
@@ -401,6 +405,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
 		}
+		app.logger.Info(fmt.Sprintf("connection allowed for id %s", base))
 	}
 	return
 }
