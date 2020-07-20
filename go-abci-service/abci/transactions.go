@@ -236,6 +236,7 @@ func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]c
 func (app *AnchorApplication) getAllJWKs() ([]types.Tx, error) {
 	Txs := []types.Tx{}
 	txResult, err := app.rpc.client.TxSearch("JWK.CORE='NEW'", false, 1, 200, "")
+	app.logger.Info(fmt.Sprintf("Found %d JWK tx while loading", txResult.TotalCount))
 	if err != nil {
 		return nil, err
 	} else if txResult.TotalCount > 0 {

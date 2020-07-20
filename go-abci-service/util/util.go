@@ -527,7 +527,7 @@ func ReadLines(path string) ([]string, error) {
 	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+		lines = append(lines, strings.TrimSpace(scanner.Text()))
 	}
 	return lines, scanner.Err()
 }

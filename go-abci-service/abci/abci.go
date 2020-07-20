@@ -356,6 +356,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery types2.ResponseQuery) {
 	urlPath := reqQuery.Path
 	base := path.Base(urlPath)
+	resQuery.Code = code.CodeTypeOK
 	if strings.Contains(urlPath, "/p2p/filter/addr") {
 		ipStr := base
 		if strings.Contains(base, ":"){
@@ -376,10 +377,27 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 			}
 		}
 
-	} /*else if strings.Contains(urlPath, "/p2p/filter/id") {
-
-	} */
-	resQuery.Code = code.CodeTypeOK
+	} else if strings.Contains(urlPath, "/p2p/filter/id") {
+		coreID, exists := app.state.IDMap[base]
+		if !exists {
+			return
+		}
+		anchorRatio, _ := validation.GetAnchorSuccessRatio(coreID, &app.state)
+		if anchorRatio < 0.3 {
+			resQuery.Code = code.CodeTypeUnauthorized
+			return
+		}
+		calRatio, _ := validation.GetCalSuccessRatio(coreID, &app.state)
+		if calRatio < 0.3 {
+			resQuery.Code = code.CodeTypeUnauthorized
+			return
+		}
+		JWKChanges, _ := validation.GetJWKChanges(coreID, &app.state)
+		if JWKChanges > 3 {
+			resQuery.Code = code.CodeTypeUnauthorized
+			return
+		}
+	}
 	return
 }
 
