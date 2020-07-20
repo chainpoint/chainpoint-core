@@ -382,13 +382,17 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 		if !exists {
 			return
 		}
+		_, validationRecord, err := validation.GetValidationRecord(coreID, app.state)
+		if app.LogError(err) != nil {
+			return
+		}
 		anchorRatio, _ := validation.GetAnchorSuccessRatio(coreID, &app.state)
-		if anchorRatio < 0.3 {
+		if anchorRatio < 0.3 && app.state.Height - validationRecord.LastBtcaTxHeight > 10000 {
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
 		}
 		calRatio, _ := validation.GetCalSuccessRatio(coreID, &app.state)
-		if calRatio < 0.3 {
+		if calRatio < 0.3 && app.state.Height - validationRecord.LastCalTxHeight > 10000 {
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
 		}
