@@ -258,6 +258,8 @@ func (app *AnchorApplication) LoadIdentity() error {
 			}
 			app.state.IDMap[jwkType.Kid] = tx.CoreID
 		}
+	} else {
+		app.LogError(err)
 	}
 	return nil
 }
