@@ -137,11 +137,13 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	for !time.Now().After(deadline) {
 		opt, err := redis.ParseURL(config.RedisURI)
 		if util.LoggerError(*config.Logger, err) != nil {
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		redisClient = redis.NewClient(opt)
 		_, err = redisClient.Ping().Result()
 		if util.LoggerError(*config.Logger, err) != nil {
+			time.Sleep(5 * time.Second)
 			continue
 		} else {
 			break
@@ -159,6 +161,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	for !time.Now().After(deadline) {
 		conn, err := config.LightningConfig.CreateConn()
 		if util.LoggerError(*config.Logger, err) != nil {
+			time.Sleep(5 * time.Second)
 			continue
 		} else {
 			conn.Close()

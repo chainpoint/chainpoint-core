@@ -248,19 +248,30 @@ func (app *AnchorApplication) LoadIdentity() error {
 	}
 
 	//map all NodeKey IDs to PrivateValidator addresses for consumption by peer filter
-	txs, err := app.getAllJWKs()
-	if err == nil {
-		for _, tx := range txs {
-			var jwkType types.Jwk
-			err := json.Unmarshal([]byte(tx.Data), &jwkType)
-			if app.LogError(err) != nil {
-				continue
+	go func() {
+		for i := 1; i < 5; i++ {
+			_, err := app.rpc.GetStatus()
+			if err == nil {
+				break;
+			} else {
+				app.logger.Info("Waiting for tendermint to be ready...")
+				time.Sleep(5 * time.Second)
 			}
-			app.state.IDMap[jwkType.Kid] = tx.CoreID
 		}
-	} else {
-		app.LogError(err)
-	}
+		txs, err := app.getAllJWKs()
+		if err == nil {
+			for _, tx := range txs {
+				var jwkType types.Jwk
+				err := json.Unmarshal([]byte(tx.Data), &jwkType)
+				if app.LogError(err) != nil {
+					continue
+				}
+				app.state.IDMap[jwkType.Kid] = tx.CoreID
+			}
+		} else {
+			app.LogError(err)
+		}
+	}()
 	return nil
 }
 
