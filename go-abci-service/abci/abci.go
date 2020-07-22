@@ -365,12 +365,15 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 	resQuery.Code = code.CodeTypeOK
 	if strings.Contains(urlPath, "/p2p/filter/addr") {
 		ipStr := base
-		app.logger.Info(fmt.Sprintf("Looking up peer info for ip %s", base))
 		if strings.Contains(base, ":"){
 			ipStr = strings.Split(base, ":")[0]
 		}
+		app.logger.Info(fmt.Sprintf("Looking up peer info for ip %s", ipStr))
 		ip := net.ParseIP(ipStr)
 		for _, blockCIDR := range app.config.CIDRBlockList {
+			if blockCIDR == "" {
+				continue
+			}
 			_, ipNet, _ := net.ParseCIDR(blockCIDR)
 			if ipNet.Contains(ip){
 				resQuery.Code = code.CodeTypeUnauthorized
