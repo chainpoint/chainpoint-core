@@ -109,6 +109,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if state.Migrations == nil {
 		state.Migrations = make(map[int]string)
 	}
+	if state.IDMap == nil {
+		state.IDMap = make(map[string]string)
+	}
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
 
