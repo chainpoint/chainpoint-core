@@ -227,11 +227,11 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	// Create agg state messages
 	getResult := app.redisClient.WithContext(context.Background()).Get(btcTxObj.AnchorBtcAggRoot)
 	var btcAgg types.BtcAgg
-	if err := json.Unmarshal([]byte(getResult.String()), &btcAgg); err != nil {
+	if err := json.Unmarshal([]byte(getResult.Val()), &btcAgg); err != nil {
 		app.resetAnchor(failedAnchorCheck.BeginCalTxInt)
 		app.LogError(getResult.Err())
 		app.LogError(err)
-		app.logger.Info(fmt.Sprintf("Anchor TreeData retrieval failure for aggroot: %s, result was %s", btcTxObj.AnchorBtcAggRoot, getResult.String()))
+		app.logger.Info(fmt.Sprintf("Anchor TreeData retrieval failure for aggroot: %s, result was %s", btcTxObj.AnchorBtcAggRoot, getResult.Val()))
 		return err
 	}
 	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
