@@ -107,6 +107,8 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if app.LogError(setResult.Err()) != nil {
 			app.logger.Info("Anchor TreeData save failure")
 			return setResult.Err()
+		} else {
+			app.logger.Info(fmt.Sprintf("Saved Anchor TreeData under root %s", treeData.AnchorBtcAggRoot))
 		}
 		app.state.EndCalTxInt = endTxRange            // Ensure we update our range of CAL txs for next anchor period
 		app.state.LatestBtcaHeight = app.state.Height // So no one will try to re-anchor while processing the btc tx
@@ -225,10 +227,11 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	// Create agg state messages
 	getResult := app.redisClient.WithContext(context.Background()).Get(btcTxObj.AnchorBtcAggRoot)
 	var btcAgg types.BtcAgg
-	if err := json.Unmarshal([]byte(getResult.Val()), &btcAgg); err != nil {
+	if err := json.Unmarshal([]byte(getResult.String()), &btcAgg); err != nil {
 		app.resetAnchor(failedAnchorCheck.BeginCalTxInt)
+		app.LogError(getResult.Err())
 		app.LogError(err)
-		app.logger.Info(fmt.Sprintf("Anchor TreeData retrieval failure for aggroot: %s", btcAgg.AnchorBtcAggRoot))
+		app.logger.Info(fmt.Sprintf("Anchor TreeData retrieval failure for aggroot: %s, result was %s", btcTxObj.AnchorBtcAggRoot, getResult.String()))
 		return err
 	}
 	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
