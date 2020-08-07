@@ -152,6 +152,13 @@ function setupRestifyConfigAndRoutes(server) {
   )
   // teapot
   server.get({ path: '/', version: '1.0.0' }, root.getV1)
+
+  // error handler
+  // eslint-disable-next-line no-unused-vars
+  server.on('restifyError', (req, res, err, cb) => {
+    logger.error(err)
+    return cb()
+  })
 }
 
 // HTTP Server
