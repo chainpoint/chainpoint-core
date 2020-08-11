@@ -159,6 +159,10 @@ services:
     networks:
       - chainpoint
     deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 2G
       mode: replicated
       replicas: 1
       labels:
