@@ -173,8 +173,7 @@ function validatePostHashRequest(req, res, next) {
   }
 
   if (env.AGGREGATOR_WHITELIST && env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
-    postHashV1Async(req, res, next)
-    return false //halt middleware chain
+    return postHashV1Async(req, res, next)
   }
 
   return next()
@@ -221,7 +220,7 @@ async function postHashV1Async(req, res, next) {
   }
 
   res.send(responseObj)
-  return next()
+  return next(false)
 }
 
 const boltwallConfigs = {
