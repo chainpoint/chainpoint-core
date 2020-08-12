@@ -180,10 +180,15 @@ function validatePostHashRequest(req, res, next) {
 }
 
 /* logErrorAndHalt sends an error code and halts the middleware chain */
+// eslint-disable-next-line no-unused-vars
 function logErrorAndHalt(err, res, next) {
   logger.error(err)
-  res.send(err)
-  return next(false)
+  try {
+    res.send(err)
+  } catch (error) {
+    return false
+  }
+  return false
 }
 
 /**
