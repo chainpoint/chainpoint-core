@@ -173,7 +173,8 @@ function validatePostHashRequest(req, res, next) {
   }
 
   if (env.AGGREGATOR_WHITELIST && env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
-    return postHashV1Async(req, res, next)
+    postHashV1Async(req, res, next)
+    return false //halt middleware chain
   }
 
   return next()
