@@ -103,6 +103,10 @@ services:
         max_attempts: 15
         window: 90s
       endpoint_mode: dnsrr
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 6G
     environment:
       - PUBLICIP=${CORE_PUBLIC_IP_ADDRESS}
       - NETWORK=${NETWORK:-testnet}

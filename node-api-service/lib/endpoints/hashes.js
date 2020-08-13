@@ -173,6 +173,7 @@ function validatePostHashRequest(req, res, next) {
   }
 
   if (env.AGGREGATOR_WHITELIST && env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
+    logger.info('processing allowlisted request')
     return postHashV1Async(req, res, next)
   }
 
@@ -186,9 +187,9 @@ function logErrorAndHalt(err, res, next) {
   try {
     res.send(err)
   } catch (error) {
-    return false
+    return next(false)
   }
-  return false
+  return next(false)
 }
 
 /**
