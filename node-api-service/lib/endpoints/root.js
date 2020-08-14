@@ -15,6 +15,8 @@
  */
 
 const errors = require('restify-errors')
+const logger = require('../logger.js')
+const utils = require('../utils.js')
 
 /**
  * GET / handler
@@ -23,6 +25,8 @@ const errors = require('restify-errors')
  *
  */
 function getV1(req, res, next) {
+  let submittingIP = utils.getClientIP(req)
+  logger.info('Client IP: ' + submittingIP)
   return next(new errors.ImATeapotError('This is an API endpoint. Please consult https://chainpoint.org'))
 }
 
