@@ -5,8 +5,11 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/chainpoint/tendermint/abci/example/code"
+	"net"
 	"strings"
 	"time"
+	"path"
 
 	types3 "github.com/tendermint/tendermint/types"
 
@@ -106,6 +109,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if state.Migrations == nil {
 		state.Migrations = make(map[int]string)
 	}
+	if state.IDMap == nil {
+		state.IDMap = make(map[string]string)
+	}
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
 
@@ -134,11 +140,13 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	for !time.Now().After(deadline) {
 		opt, err := redis.ParseURL(config.RedisURI)
 		if util.LoggerError(*config.Logger, err) != nil {
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		redisClient = redis.NewClient(opt)
 		_, err = redisClient.Ping().Result()
 		if util.LoggerError(*config.Logger, err) != nil {
+			time.Sleep(5 * time.Second)
 			continue
 		} else {
 			break
@@ -156,6 +164,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	for !time.Now().After(deadline) {
 		conn, err := config.LightningConfig.CreateConn()
 		if util.LoggerError(*config.Logger, err) != nil {
+			time.Sleep(5 * time.Second)
 			continue
 		} else {
 			conn.Close()
@@ -351,6 +360,62 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 
 // Query : Custom ABCI query method. TODO: implement
 func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery types2.ResponseQuery) {
+	urlPath := reqQuery.Path
+	base := path.Base(urlPath)
+	resQuery.Code = code.CodeTypeOK
+	if strings.Contains(urlPath, "/p2p/filter/addr") {
+		ipStr := base
+		if strings.Contains(base, ":"){
+			ipStr = strings.Split(base, ":")[0]
+		}
+		app.logger.Info(fmt.Sprintf("Looking up peer info for ip %s", ipStr))
+		ip := net.ParseIP(ipStr)
+		for _, blockCIDR := range app.config.CIDRBlockList {
+			if blockCIDR == "" {
+				continue
+			}
+			_, ipNet, _ := net.ParseCIDR(blockCIDR)
+			if ipNet.Contains(ip){
+				resQuery.Code = code.CodeTypeUnauthorized
+				return
+			}
+		}
+		for _, blockIP := range app.config.IPBlockList {
+			if strings.Contains(blockIP, ipStr) {
+				resQuery.Code = code.CodeTypeUnauthorized
+				return
+			}
+		}
+		app.logger.Info(fmt.Sprintf("connection allowed for ip %s", base))
+	} else if strings.Contains(urlPath, "/p2p/filter/id") {
+		coreID, exists := app.state.IDMap[base]
+		if !exists {
+			app.logger.Info(fmt.Sprintf("id record does not exist for %s", base))
+			return
+		}
+		app.logger.Info(fmt.Sprintf("Looking up peer info for id %s", base))
+		_, validationRecord, err := validation.GetValidationRecord(coreID, app.state)
+		if app.LogError(err) != nil {
+			app.logger.Info(fmt.Sprintf("validation record does not exist for %s", base))
+			return
+		}
+		anchorRatio, _ := validation.GetAnchorSuccessRatio(coreID, &app.state)
+		if anchorRatio < 0.3 && app.state.Height - validationRecord.LastBtcaTxHeight > 10000 {
+			resQuery.Code = code.CodeTypeUnauthorized
+			return
+		}
+		calRatio, _ := validation.GetCalSuccessRatio(coreID, &app.state)
+		if calRatio < 0.3 && app.state.Height - validationRecord.LastCalTxHeight > 10000 {
+			resQuery.Code = code.CodeTypeUnauthorized
+			return
+		}
+		JWKChanges, _ := validation.GetJWKChanges(coreID, &app.state)
+		if JWKChanges > 3 {
+			resQuery.Code = code.CodeTypeUnauthorized
+			return
+		}
+		app.logger.Info(fmt.Sprintf("connection allowed for id %s", base))
+	}
 	return
 }
 

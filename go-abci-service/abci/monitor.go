@@ -52,7 +52,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			if app.LogError(err) != nil {
 				continue
 			}
-			cores := validation.GetLastNistSubmitters(128, app.state) //get Active cores on network
+			cores := validation.GetLastDrandSubmitters(128, app.state) //get Active cores on network
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
 			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by 2/3 of validators
 			app.Validators = validators.Validators
@@ -246,6 +246,32 @@ func (app *AnchorApplication) LoadIdentity() error {
 		app.state.CoreKeys[coreID] = pubKey
 		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.NewTxValidation()
 	}
+
+	//map all NodeKey IDs to PrivateValidator addresses for consumption by peer filter
+	go func() {
+		for i := 1; i < 5; i++ {
+			_, err := app.rpc.GetStatus()
+			if err == nil {
+				break;
+			} else {
+				app.logger.Info("Waiting for tendermint to be ready...")
+				time.Sleep(5 * time.Second)
+			}
+		}
+		txs, err := app.getAllJWKs()
+		if err == nil {
+			for _, tx := range txs {
+				var jwkType types.Jwk
+				err := json.Unmarshal([]byte(tx.Data), &jwkType)
+				if app.LogError(err) != nil {
+					continue
+				}
+				app.state.IDMap[jwkType.Kid] = tx.CoreID
+			}
+		} else {
+			app.LogError(err)
+		}
+	}()
 	return nil
 }
 

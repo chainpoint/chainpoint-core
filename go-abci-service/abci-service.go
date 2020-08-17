@@ -103,6 +103,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
 	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "20"))
 	anchorReward, _ := strconv.Atoi(util.GetEnv("ANCHOR_REWARD", "0"))
+	blockCIDRs := strings.Split(util.GetEnv("CIDR_BLOCKLIST", ""), ",")
 
 	walletAddress := util.GetEnv("HOT_WALLET_ADDRESS", "")
 	if walletAddress == "" {
@@ -146,6 +147,12 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		util.LogError(errors.New("ecdsa key load failed"))
 	}
 
+	var blocklist []string
+	blocklist, err = util.ReadLines("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ip_blocklist.txt")
+	if util.LogError(err) != nil {
+		blocklist = []string{}
+	}
+
 	// Create config object
 	return types.AnchorConfig{
 		DBType:           "goleveldb",
@@ -171,6 +178,8 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		DoPrivateNetwork: doPrivateNetwork,
 		PrivateNodeIPs:   nodeIPs,
 		PrivateCoreIPs:   coreIPs,
+		CIDRBlockList:    blockCIDRs,
+		IPBlockList:      blocklist,
 		DoCal:            doCalLoop,
 		DoAnchor:         doAnchorLoop,
 		AnchorInterval:   anchorInterval,
