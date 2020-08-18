@@ -44,6 +44,8 @@ type AnchorConfig struct {
 	DoPrivateNetwork bool
 	PrivateNodeIPs   []string
 	PrivateCoreIPs   []string
+	CIDRBlockList    []string
+	IPBlockList      []string
 	DoCal            bool
 	DoAnchor         bool
 	AnchorInterval   int
@@ -87,6 +89,7 @@ type AnchorState struct {
 	TxValidation     map[string]TxValidation    `json:"tx_validation"`
 	CoreKeys         map[string]ecdsa.PublicKey `json:"-"`
 	LnUris           map[string]LnIdentity      `json:"lightning_identities"`
+	IDMap            map[string]string          `json:"-"`
 	ChainSynced      bool
 	JWKStaked        bool
 	LnStakePrice     int64 `json:"total_stake_price"`
@@ -126,12 +129,16 @@ type RateLimit struct {
 type TxValidation struct {
 	LastJWKTxHeight int64
 	JWKAllowedRate  RateLimit
+	JWKSubmissions  int64
 
 	LastCalTxHeight int64
 	CalAllowedRate  RateLimit
+	CalValidationSuccess int64
+	CalValidationFailures int64
 
 	LastBtcaTxHeight int64 // for anchoring Cores
 	ConfirmedAnchors int64
+	FailedAnchors    int64
 	BtcaAllowedRate  RateLimit
 
 	LastBtccTxHeight int64 // for Cores submitting confirmations, not anchoring Cores
@@ -139,10 +146,12 @@ type TxValidation struct {
 
 	LastNISTTxHeight int64 // last "good", non-stale nist record
 	NISTAllowedRate  RateLimit
-	FailedAnchors    int64
 
 	LastFeeTxHeight  int64
 	FeeAllowedRate   RateLimit
+	FeeValidationFailures int64
+
+	UnAuthValSubmissions int64
 }
 
 // EcdsaSignature : Allows for unmarshalling an ecdsa signature

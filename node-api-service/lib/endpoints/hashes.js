@@ -143,39 +143,53 @@ function generateProcessingHints(timestampDate) {
  * before even making a request to boltwall which requires extra async requests
  */
 function validatePostHashRequest(req, res, next) {
+  let submittingIP = utils.getClientIP(req)
+  logger.info('Client IP: ' + submittingIP)
+
   // validate content-type sent was 'application/json'
   if (req.contentType() !== 'application/json') {
-    return next(new errors.InvalidArgumentError('invalid content type'))
+    return logErrorAndHalt(new errors.InvalidArgumentError('invalid content type'), res, next)
   }
 
   // validate params has parse a 'hash' key
   if (!req.params.hasOwnProperty('hash')) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: missing hash'))
+    return logErrorAndHalt(new errors.InvalidArgumentError('invalid JSON body: missing hash'), res, next)
   }
 
   // validate 'hash' is a string
   if (!_.isString(req.params.hash)) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
+    return logErrorAndHalt(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'), res, next)
   }
 
   // validate hash param is a valid hex string
   let isValidHash = /^([a-fA-F0-9]{2}){20,64}$/.test(req.params.hash)
   if (!isValidHash) {
-    return next(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'))
+    return logErrorAndHalt(new errors.InvalidArgumentError('invalid JSON body: bad hash submitted'), res, next)
   }
 
   // validate amqp channel has been established
   if (!amqpChannel) {
-    return next(new errors.InternalServerError('Message could not be delivered'))
+    return logErrorAndHalt(new errors.InternalServerError('Message could not be delivered'), res, next)
   }
 
-  let submittingIP = utils.getClientIP(req)
   if (env.AGGREGATOR_WHITELIST && env.AGGREGATOR_WHITELIST.includes(submittingIP)) {
+    logger.info('processing allowlisted request')
     return postHashV1Async(req, res, next)
-  } else {
-    logger.info('Client IP: ' + submittingIP)
   }
+
   return next()
+}
+
+/* logErrorAndHalt sends an error code and halts the middleware chain */
+// eslint-disable-next-line no-unused-vars
+function logErrorAndHalt(err, res, next) {
+  logger.error(err)
+  try {
+    res.send(err)
+  } catch (error) {
+    return next(false)
+  }
+  return next(false)
 }
 
 /**
@@ -203,11 +217,11 @@ async function postHashV1Async(req, res, next) {
     })
   } catch (error) {
     logger.error(`${env.RMQ_WORK_OUT_AGG_QUEUE} : publish message nacked`)
-    return next(new errors.InternalServerError('Message could not be delivered'))
+    return logErrorAndHalt(new errors.InternalServerError('Message could not be delivered'), res, next)
   }
 
   res.send(responseObj)
-  return next()
+  return next(false)
 }
 
 const boltwallConfigs = {
@@ -241,7 +255,7 @@ async function parsePostHashRequest(req, res, next) {
       return res.send({ error: { message: 'Payment Required' } })
     } catch (e) {
       logger.error('Could not generate HODL lsat:', e)
-      return next(new errors.InternalServerError('There was a problem generating your request.'))
+      return logErrorAndHalt(new errors.InternalServerError('There was a problem generating your request.'), res, next)
     }
   } else {
     try {
@@ -251,15 +265,22 @@ async function parsePostHashRequest(req, res, next) {
       })
 
       // no invoice found, then return a 404
-      if (!invoice) return next(new errors.NotFoundError({ message: 'Unable to locate invoice for that LSAT' }))
+      if (!invoice)
+        return logErrorAndHalt(
+          new errors.NotFoundError({ message: 'Unable to locate invoice for that LSAT' }),
+          res,
+          next
+        )
 
       // determine if the invoice is held. Unpaid invoices, should return a 402
       // since they still require payment before they can be allowed through
       if (invoice.state === 'SETTLED') {
-        return next(
+        return logErrorAndHalt(
           new errors.UnauthorizedError(
             'Unauthorized: Invoice has already been settled. Try again with a different LSAT'
-          )
+          ),
+          res,
+          next
         )
       } else if (invoice.state === 'OPEN') {
         logger.warn(`Request made for open LSAT: invoice: ${lsat.paymentHash}`)
@@ -268,10 +289,12 @@ async function parsePostHashRequest(req, res, next) {
         res.status(402)
         return res.send({ error: { message: 'Payment Required' } })
       } else if (invoice.state === 'CANCELED') {
-        return next(
+        return logErrorAndHalt(
           new errors.UnauthorizedError(
             'Unauthorized: Invoice has expired or been canceled. Try again with a different LSAT'
-          )
+          ),
+          res,
+          next
         )
       } else if (invoice.state !== 'ACCEPTED') {
         logger.error(
@@ -279,7 +302,11 @@ async function parsePostHashRequest(req, res, next) {
             invoice.state
           }`
         )
-        return next(new errors.InternalServerError('Could not check invoice state. Contact core administrator'))
+        return logErrorAndHalt(
+          new errors.InternalServerError('Could not check invoice state. Contact core administrator'),
+          res,
+          next
+        )
       }
 
       // if the invoice exists and has been paid, then the LSAT just needs the
@@ -295,7 +322,7 @@ async function parsePostHashRequest(req, res, next) {
       else if (e.message) error = e.message
       const message = `Invalid LSAT provided in Authorization header: ${error}`
       logger.error(message)
-      return next(new errors.InvalidHeaderError(message))
+      return logErrorAndHalt(new errors.InvalidHeaderError(message), res, next)
     }
   }
 }
