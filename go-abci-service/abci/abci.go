@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"github.com/chainpoint/tendermint/abci/example/code"
 	"net"
+	"path"
 	"strings"
 	"time"
-	"path"
 
 	types3 "github.com/tendermint/tendermint/types"
 
@@ -28,8 +28,8 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	types2 "github.com/tendermint/tendermint/abci/types"
-	dbm "github.com/tendermint/tm-db"
 	"github.com/tendermint/tendermint/version"
+	dbm "github.com/tendermint/tm-db"
 )
 
 // variables for protocol version and main db state key
@@ -201,7 +201,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		redisClient: redisClient,
 		lnClient:    &config.LightningConfig,
 		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
-		JWK: 		 jwkType,
+		JWK:         jwkType,
 	}
 
 	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked, "JWK Kid", jwkType.Kid)
@@ -213,7 +213,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	//Initialize anchoring to bitcoin if enabled
 	if config.DoAnchor {
-		go app.SyncMonitor()   //make sure we're synced before enabling anchoring
+		go app.SyncMonitor() //make sure we're synced before enabling anchoring
 	}
 
 	// Load JWK into local mapping from redis
@@ -223,14 +223,14 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	go app.StakeIdentity()
 
 	//Migrations
-/*	if _, exists := app.state.Migrations[1]; !exists && config.ChainId == "mainnet-chain-32" {
-		app.state.BeginCalTxInt = 3096
-		app.state.Migrations[1] = "BeginCalTxInt=3096"
-	}
-	if _, exists := app.state.Migrations[2]; !exists && config.ChainId == "mainnet-chain-32" {
-		app.state.LatestBtcaHeight = 17399
-		app.state.Migrations[2] = "LatestBtcaHeight=17399"
-	}*/
+	/*	if _, exists := app.state.Migrations[1]; !exists && config.ChainId == "mainnet-chain-32" {
+			app.state.BeginCalTxInt = 3096
+			app.state.Migrations[1] = "BeginCalTxInt=3096"
+		}
+		if _, exists := app.state.Migrations[2]; !exists && config.ChainId == "mainnet-chain-32" {
+			app.state.LatestBtcaHeight = 17399
+			app.state.Migrations[2] = "LatestBtcaHeight=17399"
+		}*/
 
 	key := util.GetEnv("SET_OPTION_KEY", "")
 	val := util.GetEnv("SET_OPTION_VAL", "")
@@ -365,7 +365,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 	resQuery.Code = code.CodeTypeOK
 	if strings.Contains(urlPath, "/p2p/filter/addr") {
 		ipStr := base
-		if strings.Contains(base, ":"){
+		if strings.Contains(base, ":") {
 			ipStr = strings.Split(base, ":")[0]
 		}
 		app.logger.Info(fmt.Sprintf("Looking up peer info for ip %s", ipStr))
@@ -375,7 +375,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 				continue
 			}
 			_, ipNet, _ := net.ParseCIDR(blockCIDR)
-			if ipNet.Contains(ip){
+			if ipNet.Contains(ip) {
 				resQuery.Code = code.CodeTypeUnauthorized
 				return
 			}
@@ -400,12 +400,12 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 			return
 		}
 		anchorRatio, _ := validation.GetAnchorSuccessRatio(coreID, &app.state)
-		if anchorRatio < 0.3 && app.state.Height - validationRecord.LastBtcaTxHeight > 10000 {
+		if anchorRatio < 0.3 && app.state.Height-validationRecord.LastBtcaTxHeight > 10000 {
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
 		}
 		calRatio, _ := validation.GetCalSuccessRatio(coreID, &app.state)
-		if calRatio < 0.3 && app.state.Height - validationRecord.LastCalTxHeight > 10000 {
+		if calRatio < 0.3 && app.state.Height-validationRecord.LastCalTxHeight > 10000 {
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
 		}

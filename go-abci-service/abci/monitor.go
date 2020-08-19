@@ -58,7 +58,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.Validators = validators.Validators
 			app.lnClient.LocalSats = stakeAmt
 			app.state.LnStakePerVal = stakeAmt
-			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators))  //Total Stake Price includes the other 1/3 just in case
+			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators)) //Total Stake Price includes the other 1/3 just in case
 			app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
 		}
 		if app.LogError(err) != nil {
@@ -175,7 +175,7 @@ func (app *AnchorApplication) BeaconMonitor() {
 // FeeMonitor : elects a leader to poll and gossip Fee. Called every n minutes by ABCI.commit
 func (app *AnchorApplication) FeeMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if app.state.Height > 2 && app.state.Height - app.state.LastBtcFeeHeight >= app.config.FeeInterval {
+	if app.state.Height > 2 && app.state.Height-app.state.LastBtcFeeHeight >= app.config.FeeInterval {
 		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}); leader {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
@@ -252,7 +252,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 		for i := 1; i < 5; i++ {
 			_, err := app.rpc.GetStatus()
 			if err == nil {
-				break;
+				break
 			} else {
 				app.logger.Info("Waiting for tendermint to be ready...")
 				time.Sleep(5 * time.Second)
@@ -304,11 +304,11 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			app.logger.Info("JWK Identity: Channel not open, rejecting")
 			return false
 		}
-	} else if (!app.state.ChainSynced){
+	} else if !app.state.ChainSynced {
 		// we're fast-syncing, so agree with the prior chainstate
 		return true
 	} else if isVal, err := app.IsValidator(tx.CoreID); err == nil && isVal && app.state.AmValidator {
-	    // if we're both validators, verify identity
+		// if we're both validators, verify identity
 		return true
 	}
 	app.logger.Info("JWK Identity", "alreadyExists", alreadyExists)
@@ -359,7 +359,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	return nil
 }
 
-func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
+func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) bool {
 	block, err := app.lnClient.GetBlockByHeight(btcmsg.BtcTxHeight)
 	if app.LogError(err) != nil {
 		return false
@@ -373,7 +373,7 @@ func (app *AnchorApplication) CheckAnchor (btcmsg types.BtcTxMsg) (bool) {
 	return false
 }
 
-func (app *AnchorApplication) FailedAnchorMonitor () {
+func (app *AnchorApplication) FailedAnchorMonitor() {
 	results := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
@@ -384,8 +384,8 @@ func (app *AnchorApplication) FailedAnchorMonitor () {
 			app.logger.Error("cannot unmarshal json for Failed BTC check")
 			continue
 		}
-		if app.state.Height - anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
-			if (app.state.Height - anchor.CalBlockHeight >= int64(app.config.AnchorTimeout)){
+		if app.state.Height-anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
+			if app.state.Height-anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) {
 				app.logger.Info(fmt.Sprintf("Anchor Failure (timeout), Resetting state for aggroot %s", anchor.AnchorBtcAggRoot))
 			} else {
 				app.logger.Info(fmt.Sprintf("Anchor Failure (BTC-E), Resetting state for aggroot %s", anchor.AnchorBtcAggRoot))
@@ -424,7 +424,7 @@ func (app *AnchorApplication) FailedAnchorMonitor () {
 	}
 }
 
-func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
+func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
 	block, err := app.lnClient.GetBlockByHeight(btcTx.BlockHeight)
 	if app.LogError(err) != nil {
 		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
@@ -447,13 +447,13 @@ func (app *AnchorApplication) GetBlockTree (btcTx types.TxID) (lnrpc.BlockDetail
 	reversedRoot := util.ReverseTxHex(hex.EncodeToString(root))
 	reversedRootBytes, _ := hex.DecodeString(reversedRoot)
 	reversedMerkleRoot, _ := hex.DecodeString(util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot)))
-	if ! bytes.Equal(reversedRootBytes, reversedMerkleRoot) {
+	if !bytes.Equal(reversedRootBytes, reversedMerkleRoot) {
 		return block, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
 	}
 	return block, tree, txIndex, nil
 }
 
-func (app *AnchorApplication) MonitorNewTx () {
+func (app *AnchorApplication) MonitorNewTx() {
 	app.logger.Info("Starting New BTC Check")
 	results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 	app.logger.Info(fmt.Sprintf("New BTC Check: Starting count for %d txns", len(results.Val())))
@@ -504,7 +504,7 @@ func (app *AnchorApplication) MonitorNewTx () {
 	}
 }
 
-func (app *AnchorApplication) MonitorConfirmedTx () {
+func (app *AnchorApplication) MonitorConfirmedTx() {
 	results := app.redisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
@@ -537,7 +537,7 @@ func (app *AnchorApplication) MonitorConfirmedTx () {
 		for i, proof := range proofs {
 			if proof.Left {
 				jsproofs[i] = types.JSProof{Left: hex.EncodeToString(proof.Value)}
-			}else {
+			} else {
 				jsproofs[i] = types.JSProof{Right: hex.EncodeToString(proof.Value)}
 			}
 		}

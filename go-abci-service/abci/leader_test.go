@@ -34,25 +34,25 @@ func TestLeaderElectionLeader(t *testing.T) {
 	}
 	netInfo := core_types.ResultNetInfo{
 		Peers: []core_types.Peer{
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "a",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "b",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "c",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "d",
 				},
@@ -80,25 +80,25 @@ func TestLeaderElectionNotLeader(t *testing.T) {
 	}
 	netInfo := core_types.ResultNetInfo{
 		Peers: []core_types.Peer{
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "a",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "b",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "c",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "d",
 				},
@@ -147,25 +147,25 @@ func TestLeaderElectionCatchingUp(t *testing.T) {
 	}
 	netInfo := core_types.ResultNetInfo{
 		Peers: []core_types.Peer{
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "a",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "b",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "c",
 				},
 				RemoteIP: "127.0.0.1",
 			},
-			core_types.Peer{
+			{
 				NodeInfo: p2p.DefaultNodeInfo{
 					ID_: "d",
 				},

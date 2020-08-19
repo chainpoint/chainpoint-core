@@ -24,8 +24,8 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc/signrpc"
 
 	"github.com/btcsuite/btcd/txscript"
-	"github.com/tendermint/tendermint/libs/log"
 	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/lightningnetwork/lnd/lnrpc"
 
@@ -45,11 +45,12 @@ type LnClient struct {
 	LocalSats      int64
 	PushSats       int64
 	Logger         log.Logger
-	Testnet		   bool
+	Testnet        bool
 	WalletAddress  string
 	FeeMultiplier  float64
-	LastFee		   int64
+	LastFee        int64
 }
+
 // BitcoinerFee : estimates fee from bitcoiner service
 type BitcoinerFee struct {
 	Timestamp int `json:"timestamp"`
@@ -176,7 +177,6 @@ type BitcoinerFee struct {
 	} `json:"estimates"`
 }
 
-
 var (
 	maxMsgRecvSize = grpc.MaxCallRecvMsgSize(1 * 1024 * 1024 * 200)
 )
@@ -268,7 +268,7 @@ func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) 
 	client, closeFunc := ln.GetClient()
 	defer closeFunc()
 	txResponse, err := client.GetTransactions(context.Background(), &lnrpc.GetTransactionsRequest{
-		Txid:                 id,
+		Txid: id,
 	})
 	if ln.LoggerError(err) != nil {
 		return lnrpc.TransactionDetails{}, err
@@ -276,7 +276,7 @@ func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) 
 	return *txResponse, nil
 }
 
-func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error){
+func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error) {
 	client, closeFunc := ln.GetClient()
 	defer closeFunc()
 	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHeight: uint32(height)})
@@ -286,7 +286,7 @@ func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error){
 	return *block, nil
 }
 
-func (ln *LnClient) GetBlockByHash(hash string) (lnrpc.BlockDetails, error){
+func (ln *LnClient) GetBlockByHash(hash string) (lnrpc.BlockDetails, error) {
 	client, closeFunc := ln.GetClient()
 	defer closeFunc()
 	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHash: hash})
@@ -519,7 +519,7 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 	return conn, nil
 }
 
-func (ln *LnClient) feeSatByteToWeight() (int64) {
+func (ln *LnClient) feeSatByteToWeight() int64 {
 	return int64(ln.LastFee * 1000 / blockchain.WitnessScaleFactor)
 }
 
@@ -564,7 +564,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	defer closeFunc()
 	ln.Logger.Info("Ln Wallet client created")
 	outputs := []*signrpc.TxOut{
-		&signrpc.TxOut{
+		{
 			Value:    0,
 			PkScript: outputScript,
 		},
@@ -592,7 +592,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	return tx.Hash().String(), hex.EncodeToString(buf.Bytes()), nil
 }
 
-func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCoinsResponse, error){
+func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCoinsResponse, error) {
 	wallet, closeWalletFunc := ln.GetWalletClient()
 	defer closeWalletFunc()
 	estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
@@ -602,10 +602,10 @@ func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCo
 	client, closeFunc := ln.GetClient()
 	defer closeFunc()
 	sendCoinsReq := lnrpc.SendCoinsRequest{
-		Addr:                 addr,
-		Amount:               amt,
-		TargetConf:           confs,
-		SatPerByte:           estimatedFee.SatPerKw,
+		Addr:       addr,
+		Amount:     amt,
+		TargetConf: confs,
+		SatPerByte: estimatedFee.SatPerKw,
 	}
 	resp, err := client.SendCoins(context.Background(), &sendCoinsReq)
 	ln.LoggerError(err)

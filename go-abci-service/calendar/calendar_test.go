@@ -31,38 +31,38 @@ func TestEmptyCalTreeGeneration(t *testing.T) {
 func TestFullCalTreeGeneration(t *testing.T) {
 	cal := NewCalendar("")
 	aggregationItems := []types.Aggregation{
-		types.Aggregation{AggID: "f4c5445a-49ca-11e9-b3cf-0242ac190005", AggRoot: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", ProofData: []types.ProofData{
-			types.ProofData{ProofID: "d297b590-49ca-11e9-83c4-01bcf13503c2", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
-				types.ProofLineItem{Left: "core_id:d297b590-49ca-11e9-83c4-01bcf13503c2", Right: "", Op: ""},
-				types.ProofLineItem{Left: "", Right: "", Op: "sha-256"},
-				types.ProofLineItem{Left: "", Right: "5c44f9f7764f808729edb87f7857f0cefe3f02c45c41670fe476237adbcc66f0", Op: ""},
-				types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}},
-			types.ProofData{ProofID: "d46808c0-49ca-11e9-83c4-01077bdc855a", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
-				types.ProofLineItem{Left: "core_id:d46808c0-49ca-11e9-83c4-01077bdc855a", Right: "", Op: ""},
-				types.ProofLineItem{Left: "", Right: "", Op: "sha-256"},
-				types.ProofLineItem{Left: "04a284b232924661fe811f18cabe5a789f2fe40ac5c684aecc57545abd72de1b", Right: "", Op: ""},
-				types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}}}},
-		types.Aggregation{AggID: "f4c549c3-49ca-11e9-b3cf-0242ac190005", AggRoot: "e05d2a67a74278dd4bca5866f4c5a5e66ba7a2217205959bfb27fc0e727aa7d0", ProofData: []types.ProofData{
-			types.ProofData{ProofID: "d333a770-49ca-11e9-83c4-01ca0c374194", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
-				types.ProofLineItem{Left: "core_id:d333a770-49ca-11e9-83c4-01ca0c374194", Right: "", Op: ""},
-				types.ProofLineItem{Left: "", Right: "", Op: "sha-256"},
-				types.ProofLineItem{Left: "", Right: "79f25ff04782f833e9cecedf738c0694ef8662d36f7dab4496c16bca4da36bbd", Op: ""},
-				types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}},
-			types.ProofData{ProofID: "d3cdeba0-49ca-11e9-83c4-01407c7798ae", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
-				types.ProofLineItem{Left: "core_id:d3cdeba0-49ca-11e9-83c4-01407c7798ae", Right: "", Op: ""},
-				types.ProofLineItem{Left: "", Right: "", Op: "sha-256"},
-				types.ProofLineItem{Left: "99d85ca25f295c5f4d841d706d9c2ccc4ac9528edc09a2a993d9c6553ace5be2", Right: "", Op: ""},
-				types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}}}}}
+		{AggID: "f4c5445a-49ca-11e9-b3cf-0242ac190005", AggRoot: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", ProofData: []types.ProofData{
+			{ProofID: "d297b590-49ca-11e9-83c4-01bcf13503c2", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
+				{Left: "core_id:d297b590-49ca-11e9-83c4-01bcf13503c2", Right: "", Op: ""},
+				{Left: "", Right: "", Op: "sha-256"},
+				{Left: "", Right: "5c44f9f7764f808729edb87f7857f0cefe3f02c45c41670fe476237adbcc66f0", Op: ""},
+				{Left: "", Right: "", Op: "sha-256"}}},
+			{ProofID: "d46808c0-49ca-11e9-83c4-01077bdc855a", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
+				{Left: "core_id:d46808c0-49ca-11e9-83c4-01077bdc855a", Right: "", Op: ""},
+				{Left: "", Right: "", Op: "sha-256"},
+				{Left: "04a284b232924661fe811f18cabe5a789f2fe40ac5c684aecc57545abd72de1b", Right: "", Op: ""},
+				{Left: "", Right: "", Op: "sha-256"}}}}},
+		{AggID: "f4c549c3-49ca-11e9-b3cf-0242ac190005", AggRoot: "e05d2a67a74278dd4bca5866f4c5a5e66ba7a2217205959bfb27fc0e727aa7d0", ProofData: []types.ProofData{
+			{ProofID: "d333a770-49ca-11e9-83c4-01ca0c374194", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
+				{Left: "core_id:d333a770-49ca-11e9-83c4-01ca0c374194", Right: "", Op: ""},
+				{Left: "", Right: "", Op: "sha-256"},
+				{Left: "", Right: "79f25ff04782f833e9cecedf738c0694ef8662d36f7dab4496c16bca4da36bbd", Op: ""},
+				{Left: "", Right: "", Op: "sha-256"}}},
+			{ProofID: "d3cdeba0-49ca-11e9-83c4-01407c7798ae", Hash: "c3ab8ff13720e8ad97dd39466b3c8974e592c2fa383d4a3960714caef0c4f2", Proof: []types.ProofLineItem{
+				{Left: "core_id:d3cdeba0-49ca-11e9-83c4-01407c7798ae", Right: "", Op: ""},
+				{Left: "", Right: "", Op: "sha-256"},
+				{Left: "99d85ca25f295c5f4d841d706d9c2ccc4ac9528edc09a2a993d9c6553ace5be2", Right: "", Op: ""},
+				{Left: "", Right: "", Op: "sha-256"}}}}}}
 
 	calAggregation := cal.GenerateCalendarTree(aggregationItems)
 
 	calAggregationResult := types.CalAgg{CalRoot: "80e157fd9029660d2900391b003ee0017671431e5e37fb46dc252877e13355ec", ProofData: []types.CalProofData{
-		types.CalProofData{AggID: "f4c5445a-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
-			types.ProofLineItem{Left: "", Right: "e05d2a67a74278dd4bca5866f4c5a5e66ba7a2217205959bfb27fc0e727aa7d0", Op: ""},
-			types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}},
-		types.CalProofData{AggID: "f4c549c3-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
-			types.ProofLineItem{Left: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", Right: "", Op: ""},
-			types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}}}}
+		{AggID: "f4c5445a-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
+			{Left: "", Right: "e05d2a67a74278dd4bca5866f4c5a5e66ba7a2217205959bfb27fc0e727aa7d0", Op: ""},
+			{Left: "", Right: "", Op: "sha-256"}}},
+		{AggID: "f4c549c3-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
+			{Left: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", Right: "", Op: ""},
+			{Left: "", Right: "", Op: "sha-256"}}}}}
 	if calAggregation.CalRoot != calAggregation.CalRoot {
 		t.Errorf("CalRoots don't match; expected %s, got %s\n", calAggregationResult.CalRoot, calAggregation.CalRoot)
 	}
@@ -83,7 +83,7 @@ func TestEmptyAnchorTreeGeneration(t *testing.T) {
 func TestFullAnchorTreeGeneration(t *testing.T) {
 	cal := NewCalendar("")
 	aggregationItems := []core_types.ResultTx{
-		core_types.ResultTx{
+		{
 			Tx: types2.Tx{0x65, 0x79, 0x4a, 0x30, 0x65, 0x58, 0x42, 0x6c,
 				0x49, 0x6a, 0x6f, 0x69, 0x51, 0x30, 0x46, 0x4d,
 				0x49, 0x69, 0x77, 0x69, 0x5a, 0x47, 0x46, 0x30,
@@ -105,7 +105,7 @@ func TestFullAnchorTreeGeneration(t *testing.T) {
 				0x4e, 0x54, 0x55, 0x79, 0x4f, 0x54, 0x51, 0x34,
 				0x4d, 0x7a, 0x41, 0x31, 0x66, 0x51, 0x3d, 0x3d},
 		},
-		core_types.ResultTx{
+		{
 			Tx: types2.Tx{0x65, 0x79, 0x4a, 0x30, 0x65, 0x58, 0x42, 0x6c,
 				0x49, 0x6a, 0x6f, 0x69, 0x51, 0x30, 0x46, 0x4d,
 				0x49, 0x69, 0x77, 0x69, 0x5a, 0x47, 0x46, 0x30,
@@ -127,7 +127,7 @@ func TestFullAnchorTreeGeneration(t *testing.T) {
 				0x4e, 0x54, 0x55, 0x79, 0x4f, 0x54, 0x51, 0x34,
 				0x4d, 0x7a, 0x59, 0x31, 0x66, 0x51, 0x3d, 0x3d},
 		},
-		core_types.ResultTx{
+		{
 			Tx: types2.Tx{0x65, 0x79, 0x4a, 0x30, 0x65, 0x58, 0x42, 0x6c,
 				0x49, 0x6a, 0x6f, 0x69, 0x51, 0x30, 0x46, 0x4d,
 				0x49, 0x69, 0x77, 0x69, 0x5a, 0x47, 0x46, 0x30,
@@ -149,7 +149,7 @@ func TestFullAnchorTreeGeneration(t *testing.T) {
 				0x4e, 0x54, 0x55, 0x79, 0x4f, 0x54, 0x51, 0x34,
 				0x4e, 0x44, 0x49, 0x31, 0x66, 0x51, 0x3d, 0x3d},
 		},
-		core_types.ResultTx{
+		{
 			Tx: types2.Tx{0x65, 0x79, 0x4a, 0x30, 0x65, 0x58, 0x42, 0x6c,
 				0x49, 0x6a, 0x6f, 0x69, 0x51, 0x30, 0x46, 0x4d,
 				0x49, 0x69, 0x77, 0x69, 0x5a, 0x47, 0x46, 0x30,
@@ -196,12 +196,12 @@ func TestQueueCalStateMessage(t *testing.T) {
 	}
 	cal := NewCalendar(rabbitTestURI)
 	calAggregation := types.CalAgg{CalRoot: "80e157fd9029660d2900391b003ee0017671431e5e37fb46dc252877e13355ec", ProofData: []types.CalProofData{
-		types.CalProofData{AggID: "f4c5445a-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
-			types.ProofLineItem{Left: "", Right: "e05d2a67a74278dd4bca5866f4c5a5e66ba7a2217205959bfb27fc0e727aa7d0", Op: ""},
-			types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}},
-		types.CalProofData{AggID: "f4c549c3-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
-			types.ProofLineItem{Left: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", Right: "", Op: ""},
-			types.ProofLineItem{Left: "", Right: "", Op: "sha-256"}}}}}
+		{AggID: "f4c5445a-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
+			{Left: "", Right: "e05d2a67a74278dd4bca5866f4c5a5e66ba7a2217205959bfb27fc0e727aa7d0", Op: ""},
+			{Left: "", Right: "", Op: "sha-256"}}},
+		{AggID: "f4c549c3-49ca-11e9-b3cf-0242ac190005", Proof: []types.ProofLineItem{
+			{Left: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", Right: "", Op: ""},
+			{Left: "", Right: "", Op: "sha-256"}}}}}
 
 	cal.QueueCalStateMessage(txTm, calAggregation)
 

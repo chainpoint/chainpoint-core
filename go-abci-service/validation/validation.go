@@ -99,9 +99,9 @@ func GetPubKeyHex(coreID string, state types.AnchorState) string {
 }
 
 // GetLastDrandSubmitters : Given a past block range, get map of Cores that have submitted NIST tx
-func GetLastDrandSubmitters(n int64, state types.AnchorState) (map[string]int64) {
+func GetLastDrandSubmitters(n int64, state types.AnchorState) map[string]int64 {
 	coreList := map[string]int64{}
-	for id,_ := range state.CoreKeys {
+	for id := range state.CoreKeys {
 		pubKeyHex := GetPubKeyHex(id, state)
 		if validationRecord, exists := state.TxValidation[pubKeyHex]; exists {
 			if validationRecord.LastNISTTxHeight > (state.Height - n) {
@@ -233,12 +233,12 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		break
 	case "BTC-C":
 		validated = true
-/*		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
-		if !(IsHabitualViolator(validationRecord.BtccAllowedRate) ) {
-			validated = true
-			UpdateAcceptTx(&validationRecord.BtccAllowedRate)
-			validationRecord.LastBtccTxHeight = state.Height
-		}*/
+		/*		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
+				if !(IsHabitualViolator(validationRecord.BtccAllowedRate) ) {
+					validated = true
+					UpdateAcceptTx(&validationRecord.BtccAllowedRate)
+					validationRecord.LastBtccTxHeight = state.Height
+				}*/
 		break
 	case "NIST":
 		timeRecord := util.GetNISTTimestamp(tx.Data)
@@ -266,7 +266,7 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 			UpdateAcceptTx(&validationRecord.FeeAllowedRate)
 			validationRecord.LastFeeTxHeight = state.Height
 		}
-		break;
+		break
 	case "JWK":
 		if lnUri, exists := state.LnUris[coreID]; exists {
 			lnID := types.LnIdentity{}
@@ -275,12 +275,12 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 				validationRecord.JWKSubmissions++
 			}
 		}
-/*		RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
-		if !IsHabitualViolator(validationRecord.JWKAllowedRate) {
-			validated = true
-			UpdateAcceptTx(&validationRecord.JWKAllowedRate)
-			validationRecord.LastJWKTxHeight = state.Height
-		}*/
+		/*		RateLimitUpdate(state.Height, &validationRecord.JWKAllowedRate)
+				if !IsHabitualViolator(validationRecord.JWKAllowedRate) {
+					validated = true
+					UpdateAcceptTx(&validationRecord.JWKAllowedRate)
+					validationRecord.LastJWKTxHeight = state.Height
+				}*/
 		validationRecord.LastJWKTxHeight = state.Height
 		validated = true
 	}

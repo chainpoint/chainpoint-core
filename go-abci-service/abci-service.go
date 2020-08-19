@@ -121,7 +121,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	tendermintRPC := types.TendermintConfig{
 		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
-		NodeKey: nodeKey,
+		NodeKey:  nodeKey,
 	}
 	postgresUser := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
 	postgresPw := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")

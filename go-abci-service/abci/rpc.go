@@ -8,8 +8,8 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/tendermint/tendermint/libs/log"
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )

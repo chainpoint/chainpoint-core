@@ -54,7 +54,7 @@ func LoggerError(logger log.Logger, err error) error {
 	return err
 }
 
-func ReverseTxHex (str string) string {
+func ReverseTxHex(str string) string {
 	re := regexp.MustCompile(`(\S{2})`)
 	x := re.FindAllString(str, -1)
 	reverseAny(x)
@@ -90,7 +90,7 @@ func GetEnv(key string, def string) string {
 }
 
 // GetAPIStatus : get metadata from a core, given its IP
-func GetAPIStatus (ip string) types.CoreAPIStatus {
+func GetAPIStatus(ip string) types.CoreAPIStatus {
 	selfStatusURL := fmt.Sprintf("http://%s/status", ip)
 	response, err := http.Get(selfStatusURL)
 	if LogError(err) != nil {
@@ -170,7 +170,7 @@ func DecodeTx(incoming []byte) (types.Tx, error) {
 }
 
 // VerifySig : verifies an ecdsa signature
-func VerifySig(data string, originalSig string,  key ecdsa.PublicKey) bool {
+func VerifySig(data string, originalSig string, key ecdsa.PublicKey) bool {
 	der, err := base64.StdEncoding.DecodeString(originalSig)
 	if LogError(err) != nil {
 		return false
@@ -260,19 +260,19 @@ func EncodeTxWithKey(outgoing types.Tx, privateKey *ecdsa.PrivateKey) string {
 	return base64.StdEncoding.EncodeToString(txJSON)
 }
 
-func GenerateKey(privateKey *ecdsa.PrivateKey, kid string) (types.Jwk) {
+func GenerateKey(privateKey *ecdsa.PrivateKey, kid string) types.Jwk {
 	jwk, err := jwk.New(privateKey.Public())
 	if err != nil {
-		panic (err)
+		panic(err)
 	}
 	jwkJson, err := json.MarshalIndent(jwk, "", "  ")
 	if err != nil {
-		panic (err)
+		panic(err)
 	}
 	var jwkType types.Jwk
 	err = json.Unmarshal([]byte(jwkJson), &jwkType)
 	if err != nil {
-		panic (err)
+		panic(err)
 	}
 	jwkType.Kid = kid
 	return jwkType

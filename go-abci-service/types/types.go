@@ -67,38 +67,38 @@ type EthConfig struct {
 
 // AnchorState holds Tendermint/ABCI application state. Persisted by ABCI app
 type AnchorState struct {
-	TxInt            int64                      `json:"tx_int"`
-	Height           int64                      `json:"height"`
-	AmValidator      bool                       `json:"validator"`
-	AppHash          []byte                     `json:"app_hash"`
-	BeginCalTxInt    int64                      `json:"begin_cal_int"`
-	EndCalTxInt      int64                      `json:"end_cal_int"`
-	LatestCalTxInt   int64                      `json:"latest_cal_int"`
-	LatestBtcaTx     []byte                     `json:"latest_btca"`
-	LatestBtcaTxInt  int64                      `json:"latest_btca_int"`
-	LatestBtcaHeight int64                      `json:"latest_btca_height"`
-	LatestBtcTx      string                     `json:"latest_btc"`
-	LatestBtcAggRoot string                     `json:"latest_btc_root"`
-	LatestBtccTx     []byte                     `json:"latest_btcc"`
-	LatestBtccTxInt  int64                      `json:"latest_btcc_int"`
-	LatestBtccHeight int64                      `json:"latest_btcc_height"`
-	LatestErrRoot    string                     `json:"latest_btce"`
-	LastElectedCoreID string                    `json:"last_elected_core_id"`
-	LastAnchorCoreID string                     `json:"last_anchor_core_id"`
-	LastErrorCoreID  string                     `json:"last_error_core_id"`
-	TxValidation     map[string]TxValidation    `json:"tx_validation"`
-	CoreKeys         map[string]ecdsa.PublicKey `json:"-"`
-	LnUris           map[string]LnIdentity      `json:"lightning_identities"`
-	IDMap            map[string]string          `json:"-"`
-	ChainSynced      bool
-	JWKStaked        bool
-	LnStakePrice     int64 `json:"total_stake_price"`
-	LnStakePerVal    int64 `json:"validator_stake_price"`
-	LatestNistRecord string
-	LatestTimeRecord string
-	LatestBtcFee     int64
-	LastBtcFeeHeight int64
-	Migrations       map[int]string `json:"migrations"`
+	TxInt             int64                      `json:"tx_int"`
+	Height            int64                      `json:"height"`
+	AmValidator       bool                       `json:"validator"`
+	AppHash           []byte                     `json:"app_hash"`
+	BeginCalTxInt     int64                      `json:"begin_cal_int"`
+	EndCalTxInt       int64                      `json:"end_cal_int"`
+	LatestCalTxInt    int64                      `json:"latest_cal_int"`
+	LatestBtcaTx      []byte                     `json:"latest_btca"`
+	LatestBtcaTxInt   int64                      `json:"latest_btca_int"`
+	LatestBtcaHeight  int64                      `json:"latest_btca_height"`
+	LatestBtcTx       string                     `json:"latest_btc"`
+	LatestBtcAggRoot  string                     `json:"latest_btc_root"`
+	LatestBtccTx      []byte                     `json:"latest_btcc"`
+	LatestBtccTxInt   int64                      `json:"latest_btcc_int"`
+	LatestBtccHeight  int64                      `json:"latest_btcc_height"`
+	LatestErrRoot     string                     `json:"latest_btce"`
+	LastElectedCoreID string                     `json:"last_elected_core_id"`
+	LastAnchorCoreID  string                     `json:"last_anchor_core_id"`
+	LastErrorCoreID   string                     `json:"last_error_core_id"`
+	TxValidation      map[string]TxValidation    `json:"tx_validation"`
+	CoreKeys          map[string]ecdsa.PublicKey `json:"-"`
+	LnUris            map[string]LnIdentity      `json:"lightning_identities"`
+	IDMap             map[string]string          `json:"-"`
+	ChainSynced       bool
+	JWKStaked         bool
+	LnStakePrice      int64 `json:"total_stake_price"`
+	LnStakePerVal     int64 `json:"validator_stake_price"`
+	LatestNistRecord  string
+	LatestTimeRecord  string
+	LatestBtcFee      int64
+	LastBtcFeeHeight  int64
+	Migrations        map[int]string `json:"migrations"`
 }
 
 type LnIdentity struct {
@@ -131,9 +131,9 @@ type TxValidation struct {
 	JWKAllowedRate  RateLimit
 	JWKSubmissions  int64
 
-	LastCalTxHeight int64
-	CalAllowedRate  RateLimit
-	CalValidationSuccess int64
+	LastCalTxHeight       int64
+	CalAllowedRate        RateLimit
+	CalValidationSuccess  int64
 	CalValidationFailures int64
 
 	LastBtcaTxHeight int64 // for anchoring Cores
@@ -147,8 +147,8 @@ type TxValidation struct {
 	LastNISTTxHeight int64 // last "good", non-stale nist record
 	NISTAllowedRate  RateLimit
 
-	LastFeeTxHeight  int64
-	FeeAllowedRate   RateLimit
+	LastFeeTxHeight       int64
+	FeeAllowedRate        RateLimit
 	FeeValidationFailures int64
 
 	UnAuthValSubmissions int64
@@ -207,7 +207,7 @@ type BtcProofData struct {
 // AnchorRange : To store anchor state to compensate for failed anchors
 type AnchorRange struct {
 	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
-	CalBlockHeight	 int64  `json:"cal_block_height"`
+	CalBlockHeight   int64  `json:"cal_block_height"`
 	BeginCalTxInt    int64  `json:"begin_cal_int"`
 	EndCalTxInt      int64  `json:"end_cal_int"`
 }
@@ -219,7 +219,7 @@ type BtcTxMsg struct {
 	BtcTxID          string `json:"btctx_id"`
 	BtcTxBody        string `json:"btctx_body"`
 	BtcTxHeight      int64  `json:"btctx_height"`
-	CalBlockHeight	 int64  `json:"cal_block_height"`
+	CalBlockHeight   int64  `json:"cal_block_height"`
 	BeginCalTxInt    int64  `json:"begin_cal_int"`
 	EndCalTxInt      int64  `json:"end_cal_int"`
 }
@@ -373,4 +373,3 @@ type CoreAPIStatus struct {
 		VotingPower string `json:"voting_power"`
 	} `json:"validator_info"`
 }
-

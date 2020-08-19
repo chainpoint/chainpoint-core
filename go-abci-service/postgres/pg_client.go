@@ -6,8 +6,8 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
-	"github.com/tendermint/tendermint/libs/log"
 	_ "github.com/lib/pq"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 // Postgres : holds db connection info

@@ -25,7 +25,7 @@ func TestHashResult(t *testing.T) {
 	itemBytes, _ := json.Marshal(item)
 	itemBytes2, _ := json.Marshal(item2)
 	msgArray := []amqp.Delivery{
-		amqp.Delivery{
+		{
 			Acknowledger:    nil,
 			Headers:         amqp.Table{},
 			ContentType:     "",
@@ -48,7 +48,7 @@ func TestHashResult(t *testing.T) {
 			RoutingKey:      "",
 			Body:            itemBytes,
 		},
-		amqp.Delivery{
+		{
 			Acknowledger:    nil,
 			Headers:         amqp.Table{},
 			ContentType:     "",

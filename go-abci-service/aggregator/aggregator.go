@@ -154,7 +154,7 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 			var timeBuffer bytes.Buffer
 			timeBuffer.WriteString(fmt.Sprintf("drand:%s", drand))
 			newHash = sha256.Sum256(append(timeBuffer.Bytes(), hashBytes...))
-		}else {
+		} else {
 			copy(newHash[:], hashBytes)
 		}
 		hashSlice = append(hashSlice, newHash[:])
@@ -181,7 +181,7 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 		proofData.Hash = unPackedHash.Hash
 		proofs := tree.GetProof(i)
 		if drand != "" {
-			proofs = append([]merkletools.ProofStep{merkletools.ProofStep{Left: true, Value: []byte(fmt.Sprintf("drand:%s", drand))}}, proofs...)
+			proofs = append([]merkletools.ProofStep{{Left: true, Value: []byte(fmt.Sprintf("drand:%s", drand))}}, proofs...)
 		}
 		proofData.Proof = make([]types.ProofLineItem, 0)
 		for _, p := range proofs {

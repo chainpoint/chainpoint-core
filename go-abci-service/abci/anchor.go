@@ -134,7 +134,7 @@ func (app *AnchorApplication) SendBtcTx(anchorDataObj types.BtcAgg, height int64
 		BtcTxID:          txid,
 		CalBlockHeight:   height,
 		BeginCalTxInt:    start,
-		EndCalTxInt:	  end,
+		EndCalTxInt:      end,
 	}
 	btcJSON, err := json.Marshal(msgBtcMon)
 	app.logger.Info(fmt.Sprint("Sending BTC-A OP_RETURN: %#v", msgBtcMon))
@@ -186,13 +186,13 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		BtcTxID:        btcTxObj.BtcTxID,
 		BtcTxState: types.BtcTxOpsState{
 			Ops: []types.ProofLineItem{
-				types.ProofLineItem{
+				{
 					Left: btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
 				},
-				types.ProofLineItem{
+				{
 					Right: btcTxObj.BtcTxBody[strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)+len(btcTxObj.AnchorBtcAggRoot):],
 				},
-				types.ProofLineItem{
+				{
 					Op: "sha-256-x2",
 				},
 			},
@@ -269,8 +269,8 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		}
 	}
 	if len(anchoringCoreID) == 0 {
-		app.logger.Error(fmt.Sprintf( "Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
-	}else {
+		app.logger.Error(fmt.Sprintf("Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
+	} else {
 		app.logger.Info(fmt.Sprintf("Retrieved confirmation query for core %s", anchoringCoreID))
 	}
 
@@ -296,7 +296,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 			}
 		}
 		if len(hash) > 0 {
-			break;
+			break
 		}
 		app.logger.Info("Restarting confirmation process")
 	}
