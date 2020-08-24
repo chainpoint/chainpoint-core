@@ -39,8 +39,8 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 	}
 	if !valid && tx.CoreID != app.ID {
-		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed for txtype %s", tx.CoreID, tx.TxType)))
-		return types2.ResponseCheckTx{Code: 66, GasWanted: 1} //CodeType for peer disconnection
+		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed for tx %+v", tx.CoreID, tx)))
+		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1} //CodeType for peer disconnection
 	}
 	if tx.TxType == "FEE" {
 		//i, err := strconv.ParseInt(tx.Data, 10, 64)
