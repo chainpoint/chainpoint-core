@@ -187,7 +187,7 @@ func GetJWKChanges(coreID string, state *types.AnchorState) (int64, error) {
 func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error) {
 	tx, err := util.DecodeTxAndVerifySig(incoming, state.CoreKeys)
 	if err != nil {
-		return tx, false, nil
+		return tx, false, err
 	}
 	txType := string(tx.TxType)
 	coreID := string(tx.CoreID)
