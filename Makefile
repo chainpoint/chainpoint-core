@@ -227,7 +227,6 @@ deploy: init-volumes
 ## stop                      : stops a swarm stack
 stop:
 	@docker stack rm chainpoint-core || echo "removal in progress"
-	@rm -rf ${HOMEDIR}/.chainpoint/core/.lnd/tls.*
 
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint: stop
