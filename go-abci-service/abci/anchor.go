@@ -84,7 +84,6 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				if app.LogError(err) != nil {
 					panic(err)
 				}
-				//return errors.New("no balance")
 			}
 		}
 		// begin monitoring for anchor
@@ -229,7 +228,6 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	getResult := app.redisClient.WithContext(context.Background()).Get(btcTxObj.AnchorBtcAggRoot)
 	var btcAgg types.BtcAgg
 	if err := json.Unmarshal([]byte(getResult.Val()), &btcAgg); err != nil {
-		//app.resetAnchor(failedAnchorCheck.BeginCalTxInt)
 		app.LogError(getResult.Err())
 		app.LogError(err)
 		app.logger.Info(fmt.Sprintf("Anchor TreeData retrieval failure for aggroot: %s, result was %s", btcTxObj.AnchorBtcAggRoot, getResult.Val()))
@@ -238,7 +236,6 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
 	if app.LogError(err) != nil {
 		app.logger.Info(fmt.Sprintf("Anchor TreeData queue failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
-		//app.resetAnchor(failedAnchorCheck.BeginCalTxInt)
 		return err
 	}
 	delResult := app.redisClient.WithContext(context.Background()).Del(btcTxObj.AnchorBtcAggRoot)
