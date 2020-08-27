@@ -84,7 +84,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				if app.LogError(err) != nil {
 					panic(err)
 				}
-				return errors.New("no balance")
+				//return errors.New("no balance")
 			}
 		}
 		// begin monitoring for anchor
