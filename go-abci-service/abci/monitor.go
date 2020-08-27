@@ -491,7 +491,6 @@ func (app *AnchorApplication) MonitorNewTx() {
 			continue
 		}
 		app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(btcMonBytes)))
-		time.Sleep(10 * time.Second) // exit commit block before we send BTC-A
 		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))
