@@ -242,7 +242,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	if app.LogError(delResult.Err()) != nil {
 		return err
 	}
-	app.logger.Info("Anchor Success")
+	app.logger.Info(fmt.Sprintf("Anchor Success for %s", btcTxObj.AnchorBtcAggRoot))
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
