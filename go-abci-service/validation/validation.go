@@ -112,6 +112,20 @@ func GetLastDrandSubmitters(n int64, state types.AnchorState) map[string]int64 {
 	return coreList
 }
 
+// GetLastCalSubmitters : Given a past block range, get map of Cores that have submitted CAL tx
+func GetLastCalSubmitters(n int64, state types.AnchorState) map[string]int64 {
+	coreList := map[string]int64{}
+	for id := range state.CoreKeys {
+		pubKeyHex := GetPubKeyHex(id, state)
+		if validationRecord, exists := state.TxValidation[pubKeyHex]; exists {
+			if validationRecord.LastCalTxHeight > (state.Height - n) {
+				coreList[id] = validationRecord.LastCalTxHeight
+			}
+		}
+	}
+	return coreList
+}
+
 // GetValidationRecord : Gets a validation record for a Core, given the CoreID
 func GetValidationRecord(coreID string, state types.AnchorState) (string, types.TxValidation, error) {
 	pubKeyHex := GetPubKeyHex(coreID, state)
