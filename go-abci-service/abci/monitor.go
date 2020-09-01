@@ -52,7 +52,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			if app.LogError(err) != nil {
 				continue
 			}
-			cores := validation.GetLastDrandSubmitters(128, app.state) //get Active cores on network
+			cores := validation.GetLastCalSubmitters(128, app.state) //get Active cores on network
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
 			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by 2/3 of validators
 			app.Validators = validators.Validators

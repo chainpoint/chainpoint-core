@@ -98,20 +98,6 @@ func GetPubKeyHex(coreID string, state types.AnchorState) string {
 	return pubKeyHex
 }
 
-// GetLastDrandSubmitters : Given a past block range, get map of Cores that have submitted NIST tx
-func GetLastDrandSubmitters(n int64, state types.AnchorState) map[string]int64 {
-	coreList := map[string]int64{}
-	for id := range state.CoreKeys {
-		pubKeyHex := GetPubKeyHex(id, state)
-		if validationRecord, exists := state.TxValidation[pubKeyHex]; exists {
-			if validationRecord.LastNISTTxHeight > (state.Height - n) {
-				coreList[id] = validationRecord.LastNISTTxHeight
-			}
-		}
-	}
-	return coreList
-}
-
 // GetLastCalSubmitters : Given a past block range, get map of Cores that have submitted CAL tx
 func GetLastCalSubmitters(n int64, state types.AnchorState) map[string]int64 {
 	coreList := map[string]int64{}
@@ -253,24 +239,6 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 					UpdateAcceptTx(&validationRecord.BtccAllowedRate)
 					validationRecord.LastBtccTxHeight = state.Height
 				}*/
-		break
-	case "NIST":
-		timeRecord := util.GetNISTTimestamp(tx.Data)
-		lastTimeRecord := util.GetNISTTimestamp(state.LatestNistRecord)
-		timeDiff := timeRecord - lastTimeRecord
-		RateLimitUpdate(state.Height, &validationRecord.NISTAllowedRate)
-		if !(IsHabitualViolator(validationRecord.NISTAllowedRate) || timeDiff < 0) {
-			validated = true
-			UpdateAcceptTx(&validationRecord.NISTAllowedRate)
-			validationRecord.LastNISTTxHeight = state.Height
-		}
-	case "DRAND":
-		RateLimitUpdate(state.Height, &validationRecord.NISTAllowedRate)
-		if !(IsHabitualViolator(validationRecord.NISTAllowedRate)) {
-			validated = true
-			UpdateAcceptTx(&validationRecord.NISTAllowedRate)
-			validationRecord.LastNISTTxHeight = state.Height
-		}
 		break
 	case "FEE":
 		i, err := strconv.ParseInt(tx.Data, 10, 64)
