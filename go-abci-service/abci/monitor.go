@@ -37,7 +37,7 @@ const STATIC_FEE_AMT = 12500
 func (app *AnchorApplication) SyncMonitor() {
 	for {
 		time.Sleep(30 * time.Second) // allow chain time to initialize
-		app.logger.Info("Syncing Chain status and validators")
+		//app.logger.Info("Syncing Chain status and validators")
 		status, err := app.rpc.GetStatus()
 		if app.LogError(err) != nil {
 			time.Sleep(5 * time.Second)
@@ -59,7 +59,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.lnClient.LocalSats = stakeAmt
 			app.state.LnStakePerVal = stakeAmt
 			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators)) //Total Stake Price includes the other 1/3 just in case
-			app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
+			//app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
 		}
 		if app.LogError(err) != nil {
 			continue
@@ -491,7 +491,6 @@ func (app *AnchorApplication) MonitorNewTx() {
 			continue
 		}
 		app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(btcMonBytes)))
-		time.Sleep(10 * time.Second) // exit commit block before we send BTC-A
 		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))

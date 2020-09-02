@@ -187,7 +187,7 @@ func GetJWKChanges(coreID string, state *types.AnchorState) (int64, error) {
 func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error) {
 	tx, err := util.DecodeTxAndVerifySig(incoming, state.CoreKeys)
 	if err != nil {
-		return tx, false, nil
+		return tx, false, err
 	}
 	txType := string(tx.TxType)
 	coreID := string(tx.CoreID)
@@ -284,7 +284,7 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		validationRecord.LastJWKTxHeight = state.Height
 		validated = true
 	}
-	fmt.Printf("Validated:%t\n", validated)
+	fmt.Printf("Validated Tx %s:%t\n", tx.TxType, validated)
 	state.TxValidation[pubKeyHex] = validationRecord
 	return tx, validated, err
 }
