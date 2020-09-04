@@ -52,7 +52,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			if app.LogError(err) != nil {
 				continue
 			}
-			cores := validation.GetLastDrandSubmitters(128, app.state) //get Active cores on network
+			cores := validation.GetLastCalSubmitters(128, app.state) //get Active cores on network
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
 			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by 2/3 of validators
 			app.Validators = validators.Validators
@@ -153,21 +153,20 @@ func (app *AnchorApplication) StakeIdentity() {
 	}
 }
 
-// BeaconMonitor : elects a leader to poll and gossip NIST. Called every minute by ABCI.commit
+// BeaconMonitor : elects a leader to poll DRAND. Called every minute by ABCI.commit
 func (app *AnchorApplication) BeaconMonitor() {
-	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
+	time.Sleep(30 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 {
-		if leader, leaders := app.ElectChainContributorAsLeaderNaive(1, []string{}); leader {
-			app.logger.Info(fmt.Sprintf("NIST: Elected as leader. Leaders: %v", leaders))
-			round, randomness, err := beacon.GetPublicRandomness()
-			chainpointFormat := fmt.Sprintf("%d:%s", round, randomness)
-			if app.LogError(err) != nil {
-				chainpointFormat = app.state.LatestTimeRecord // use the last "good" entropy beacon value known to this Core
-			}
-			_, err = app.rpc.BroadcastTx("DRAND", chainpointFormat, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
-			if app.LogError(err) != nil {
-				app.logger.Debug(fmt.Sprintf("Failed to gossip NIST beacon value of %s", chainpointFormat))
-			}
+		round, randomness, err := beacon.GetPublicRandomness()
+		chainpointFormat := fmt.Sprintf("%d:%s", round, randomness)
+		if app.LogError(err) != nil {
+			chainpointFormat = app.state.LatestTimeRecord // use the last "good" entropy beacon value known to this Core
+		} else {
+			app.state.LatestTimeRecord = chainpointFormat
+			app.aggregator.LatestTime = app.state.LatestTimeRecord
+		}
+		if app.LogError(err) != nil {
+			app.logger.Debug(fmt.Sprintf("Failed to gossip DRAND beacon value of %s", chainpointFormat))
 		}
 	}
 }

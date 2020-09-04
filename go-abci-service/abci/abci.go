@@ -339,9 +339,9 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
+		app.MonitorNewTx()
+		app.MonitorConfirmedTx()
 		app.FailedAnchorMonitor() //must be synchronous with chain operation in order to recover from failed anchors
-		go app.MonitorNewTx()
-		go app.MonitorConfirmedTx()
 	}
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
