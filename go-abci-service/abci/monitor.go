@@ -490,16 +490,15 @@ func (app *AnchorApplication) MonitorNewTx() {
 			app.logger.Info(fmt.Sprintf("New BTC Check: cannot marshal json"))
 			continue
 		}
-		app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(btcMonBytes)))
-		_, err = app.rpc.BroadcastTx("BTC-A", string(btcMonBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-		if app.LogError(err) != nil {
-			app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))
-			continue
-		}
-		delRes := app.redisClient.WithContext(context.Background()).SRem(NEW_BTC_TX_IDS_KEY, s)
-		if app.LogError(delRes.Err()) != nil {
-			continue
-		}
+		go func(monBytes []byte, res string){
+			app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(monBytes)))
+			_, err = app.rpc.BroadcastTx("BTC-A", string(monBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+			if app.LogError(err) != nil {
+				app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))
+			}
+			delRes := app.redisClient.WithContext(context.Background()).SRem(NEW_BTC_TX_IDS_KEY, res)
+			app.LogError(delRes.Err())
+		}(btcMonBytes, s)
 	}
 }
 
