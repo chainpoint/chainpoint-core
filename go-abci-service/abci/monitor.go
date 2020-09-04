@@ -157,7 +157,8 @@ func (app *AnchorApplication) StakeIdentity() {
 func (app *AnchorApplication) BeaconMonitor() {
 	time.Sleep(30 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 {
-		round, randomness, err := beacon.GetPublicRandomness()
+		//round, randomness, err := beacon.GetPublicRandomness()
+		round, randomness, err := beacon.GetCloudflareRandomness()
 		chainpointFormat := fmt.Sprintf("%d:%s", round, randomness)
 		if app.LogError(err) != nil {
 			chainpointFormat = app.state.LatestTimeRecord // use the last "good" entropy beacon value known to this Core

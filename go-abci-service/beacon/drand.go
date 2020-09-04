@@ -3,14 +3,40 @@ package beacon
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/drand/drand/key"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/drand/drand/client"
 	"github.com/drand/drand/client/grpc"
 )
+
+
+type Round struct {
+	Round             uint64    `json:"round"`
+	Randomness        string `json:"randomness"`
+	Signature         string `json:"signature"`
+	PreviousSignature string `json:"previous_signature"`
+}
+
+func GetCloudflareRandomness() (uint64, string, error) {
+	var httpClient = &http.Client{Timeout: 10 * time.Second}
+	resp, err := httpClient.Get("https://drand.cloudflare.com/public/latest")
+	if err != nil {
+		return 0, "", err
+	}
+	defer resp.Body.Close()
+	round := Round{}
+	err = json.NewDecoder(resp.Body).Decode(&round)
+	if err != nil {
+		return 0, "", err
+	}
+	return round.Round, round.Randomness, nil
+}
 
 func GetPublicRandomness() (uint64, string, error) {
 	certPath := ""
