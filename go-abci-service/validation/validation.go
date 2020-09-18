@@ -32,7 +32,7 @@ func NewTxValidation() types.TxValidation {
 		Bucket:      0.0,
 	}
 	permittedBtcRate := types.RateLimit{
-		AllowedRate: 1,
+		AllowedRate: 2,
 		PerBlocks:   60,
 		LastCheck:   0,
 		Bucket:      0.0,
@@ -184,6 +184,16 @@ func GetJWKChanges(coreID string, state *types.AnchorState) (int64, error) {
 	return validationRecord.JWKSubmissions, nil
 }
 
+//IsValidator : determines if a node is a validator by checking an external ID
+func IsValidator(ID string, state *types.AnchorState) (amValidator bool) {
+	for _, validator := range state.Validators {
+		if validator.Address.String() == ID {
+			return true
+		}
+	}
+	return false
+}
+
 func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error) {
 	tx, err := util.DecodeTxAndVerifySig(incoming, state.CoreKeys)
 	if err != nil {
@@ -225,7 +235,7 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		break
 	case "BTC-A":
 		RateLimitUpdate(state.Height, &validationRecord.BtcaAllowedRate)
-		if !IsHabitualViolator(validationRecord.BtcaAllowedRate) {
+		if !IsHabitualViolator(validationRecord.BtcaAllowedRate) || IsValidator(coreID, state) {
 			validated = true
 			UpdateAcceptTx(&validationRecord.BtcaAllowedRate)
 			validationRecord.LastBtcaTxHeight = state.Height

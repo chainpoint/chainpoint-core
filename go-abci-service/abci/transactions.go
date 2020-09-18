@@ -63,7 +63,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 			if amVal {
 				goodCandidate := false
 				if _, record, err := validation.GetValidationRecord(id, app.state); err != nil {
-					numValidators := len(app.Validators)
+					numValidators := len(app.state.Validators)
 					power, err := strconv.ParseInt(components[2], 10, 32)
 					if err != nil {
 						return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}

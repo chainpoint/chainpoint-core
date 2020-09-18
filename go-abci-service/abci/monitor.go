@@ -55,7 +55,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			cores := validation.GetLastCalSubmitters(128, app.state) //get Active cores on network
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
 			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by 2/3 of validators
-			app.Validators = validators.Validators
+			app.state.Validators = validators.Validators
 			app.lnClient.LocalSats = stakeAmt
 			app.state.LnStakePerVal = stakeAmt
 			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators)) //Total Stake Price includes the other 1/3 just in case
@@ -90,7 +90,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		if !amValidator {
 			app.logger.Info("This node is new to the network; beginning staking")
 			waitForValidators := false
-			for _, validator := range app.Validators {
+			for _, validator := range app.state.Validators {
 				valID := validator.Address.String()
 				if lnID, exists := app.state.LnUris[valID]; exists {
 					app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnID.Peer))

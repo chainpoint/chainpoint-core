@@ -3,6 +3,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"database/sql"
+	types3 "github.com/tendermint/tendermint/types"
 	"math/big"
 	"time"
 
@@ -90,6 +91,7 @@ type AnchorState struct {
 	CoreKeys          map[string]ecdsa.PublicKey `json:"-"`
 	LnUris            map[string]LnIdentity      `json:"lightning_identities"`
 	IDMap             map[string]string          `json:"-"`
+	Validators   	  []*types3.Validator		 `json:"-"`
 	ChainSynced       bool
 	JWKStaked         bool
 	LnStakePrice      int64 `json:"total_stake_price"`

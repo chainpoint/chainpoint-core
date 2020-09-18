@@ -76,7 +76,6 @@ type AnchorApplication struct {
 	// validator set
 	ValUpdates           []types2.ValidatorUpdate
 	valAddrToPubKeyMap   map[string]types2.PubKey
-	Validators           []*types3.Validator
 	PendingValidator     string
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string

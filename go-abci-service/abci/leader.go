@@ -35,7 +35,7 @@ func (app *AnchorApplication) ElectValidatorAsLeader(numLeaders int, blacklisted
 	}
 	blockHash := status.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineValidatorLeader(numLeaders, blacklistedIDs, status, app.Validators, blockHash, app.config.FilePV.GetAddress().String())
+	return determineValidatorLeader(numLeaders, blacklistedIDs, status, app.state.Validators, blockHash, app.config.FilePV.GetAddress().String())
 }
 
 // ElectChainContributedAsLeaderNaive : elects a node that's contributed to the chain without checking if its been active recently
@@ -262,7 +262,7 @@ func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
 	if app.LogError(err) != nil {
 		return false, err
 	}
-	for _, validator := range app.Validators {
+	for _, validator := range app.state.Validators {
 		if validator.Address.String() == status.ValidatorInfo.Address.String() {
 			return true, nil
 		}
@@ -272,7 +272,7 @@ func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
 
 //IsValidator : determines if a node is a validator by checking an external ID
 func (app *AnchorApplication) IsValidator(ID string) (amValidator bool, err error) {
-	for _, validator := range app.Validators {
+	for _, validator := range app.state.Validators {
 		if validator.Address.String() == ID {
 			return true, nil
 		}
