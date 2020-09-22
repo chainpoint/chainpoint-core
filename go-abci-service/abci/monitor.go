@@ -386,9 +386,9 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 		}
 		if app.state.Height-anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
 			if app.state.Height-anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) {
-				app.logger.Info(fmt.Sprintf("Anchor Failure (timeout), Resetting state for aggroot %s", anchor.AnchorBtcAggRoot))
+				app.logger.Info(fmt.Sprintf("Anchor Failure (timeout), Resetting state for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			} else {
-				app.logger.Info(fmt.Sprintf("Anchor Failure (BTC-E), Resetting state for aggroot %s", anchor.AnchorBtcAggRoot))
+				app.logger.Info(fmt.Sprintf("Anchor Failure (BTC-E), Resetting state for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			}
 			app.resetAnchor(anchor.BeginCalTxInt)
 			validation.IncrementFailedAnchor(app.state.LastElectedCoreID, &app.state)
