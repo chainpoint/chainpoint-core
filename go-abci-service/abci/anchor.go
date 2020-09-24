@@ -67,7 +67,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 
 	// Aggregate all txs in range into a new merkle tree in prep for BTC anchoring
 	treeData := app.calendar.AggregateAnchorTx(txLeaves)
-	app.logger.Info(fmt.Sprintf("Anchoring tx ranges %d to %d for aggroot: %s", startTxRange, endTxRange, treeData.AnchorBtcAggRoot))
+	app.logger.Info(fmt.Sprintf("Anchoring tx ranges %d to %d at Height %d, latestBtcaHeight %d, for aggroot: %s", startTxRange, endTxRange, app.state.Height, app.state.LatestBtcaHeight, treeData.AnchorBtcAggRoot))
 	app.logger.Info(fmt.Sprintf("treeData for Anchor: %v", treeData))
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
@@ -330,7 +330,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 
 // resetAnchor ensures that anchoring will begin again in the next block
 func (app *AnchorApplication) resetAnchor(startTxRange int64) {
-	app.logger.Debug(fmt.Sprintf("Anchor failure, restarting anchor epoch from tx %d", startTxRange))
+	app.logger.Info(fmt.Sprintf("Anchor failure, restarting anchor epoch from tx %d", startTxRange))
 	app.state.BeginCalTxInt = startTxRange
 	app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
 }
