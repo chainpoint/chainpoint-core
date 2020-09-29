@@ -69,6 +69,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	treeData := app.calendar.AggregateAnchorTx(txLeaves)
 	app.logger.Info(fmt.Sprintf("Anchoring tx ranges %d to %d at Height %d, latestBtcaHeight %d, for aggroot: %s", startTxRange, endTxRange, app.state.Height, app.state.LatestBtcaHeight, treeData.AnchorBtcAggRoot))
 	app.logger.Info(fmt.Sprintf("treeData for Anchor: %v", treeData))
+
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
 		app.state.LastElectedCoreID = leaderIDs[0]
@@ -251,21 +252,8 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
 func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
-	var anchoringCoreID string
 	var hash []byte
-	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
-	queryLine := fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID)
-	app.logger.Info("Anchor confirmation query: " + queryLine)
-	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
-	if app.LogError(err) == nil {
-		for _, tx := range txResult.Txs {
-			decoded, err := util.DecodeTx(tx.Tx)
-			if app.LogError(err) != nil {
-				continue
-			}
-			anchoringCoreID = decoded.CoreID
-		}
-	}
+	anchoringCoreID, err := app.getAnchoringCore(fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID))
 	if len(anchoringCoreID) == 0 {
 		app.logger.Error(fmt.Sprintf("Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
 	} else {
