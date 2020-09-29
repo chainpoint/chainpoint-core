@@ -396,10 +396,6 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			if app.LogError(delRes.Err()) != nil {
 				continue
 			}
-			delResult := app.redisClient.WithContext(context.Background()).Del(anchor.AnchorBtcAggRoot)
-			if app.LogError(delResult.Err()) != nil {
-				continue
-			}
 			app.logger.Info("Checking if we were leader and need to remove New BTC Check....")
 			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 			if app.LogError(results.Err()) != nil {
