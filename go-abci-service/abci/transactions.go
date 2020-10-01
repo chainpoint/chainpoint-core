@@ -224,6 +224,22 @@ func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]c
 	return Txs, nil
 }
 
+//getAnchoringCore : gets core to whom last anchor is attributed
+func (app *AnchorApplication) getAnchoringCore(queryLine string)(string, error){
+	app.logger.Info("Anchor confirmation query: " + queryLine)
+	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
+	if app.LogError(err) == nil {
+		for _, tx := range txResult.Txs {
+			decoded, err := util.DecodeTx(tx.Tx)
+			if app.LogError(err) != nil {
+				continue
+			}
+			return decoded.CoreID, nil
+		}
+	}
+	return "", err
+}
+
 // getAllJWKs gets all JWK TXs
 func (app *AnchorApplication) getAllJWKs() ([]types.Tx, error) {
 	Txs := []types.Tx{}

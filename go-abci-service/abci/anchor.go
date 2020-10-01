@@ -50,6 +50,17 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 	return errors.New("No hashes to aggregate")
 }
 
+func (app *AnchorApplication) GetTreeFromCalRange(startTxRange int64, endTxRange int64) (types.BtcAgg, error) {
+	// Get CAL transactions between the latest BTCA tx and the current latest tx
+	txLeaves, err := app.getCalTxRange(startTxRange, endTxRange)
+	if app.LogError(err) != nil {
+		return types.BtcAgg{}, err
+	}
+	// Aggregate all txs in range into a new merkle tree in prep for BTC anchoring
+	treeData := app.calendar.AggregateAnchorTx(txLeaves)
+	return treeData, nil
+}
+
 // AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
 	// elect leader to do the actual anchoring
@@ -59,16 +70,13 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	}
 	app.logger.Info(fmt.Sprintf("Anchor Leaders: %v", leaderIDs))
 
-	// Get CAL transactions between the latest BTCA tx and the current latest tx
-	txLeaves, err := app.getCalTxRange(startTxRange, endTxRange)
-	if app.LogError(err) != nil {
+	treeData, err := app.GetTreeFromCalRange(startTxRange, endTxRange)
+	if err != nil {
 		return err
 	}
-
-	// Aggregate all txs in range into a new merkle tree in prep for BTC anchoring
-	treeData := app.calendar.AggregateAnchorTx(txLeaves)
 	app.logger.Info(fmt.Sprintf("Anchoring tx ranges %d to %d at Height %d, latestBtcaHeight %d, for aggroot: %s", startTxRange, endTxRange, app.state.Height, app.state.LatestBtcaHeight, treeData.AnchorBtcAggRoot))
 	app.logger.Info(fmt.Sprintf("treeData for Anchor: %v", treeData))
+
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
 		app.state.LastElectedCoreID = leaderIDs[0]
@@ -97,18 +105,6 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		redisResult := app.redisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 		if app.LogError(redisResult.Err()) != nil {
 			return redisResult.Err()
-		}
-		treeDataJSON, err := json.Marshal(treeData)
-		if app.LogError(err) != nil {
-			app.logger.Info(fmt.Sprintf("Anchor TreeData marshal failure for aggroot: %s", treeData.AnchorBtcAggRoot))
-			return err
-		}
-		setResult := app.redisClient.WithContext(context.Background()).Set(treeData.AnchorBtcAggRoot, string(treeDataJSON), (6 * time.Hour))
-		if app.LogError(setResult.Err()) != nil {
-			app.logger.Info("Anchor TreeData save failure")
-			return setResult.Err()
-		} else {
-			app.logger.Info(fmt.Sprintf("Saved Anchor TreeData under root %s", treeData.AnchorBtcAggRoot))
 		}
 		app.state.EndCalTxInt = endTxRange            // Ensure we update our range of CAL txs for next anchor period
 		app.state.LatestBtcaHeight = app.state.Height // So no one will try to re-anchor while processing the btc tx
@@ -224,22 +220,17 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return redisResult.Err()
 	}
 
-	// Create agg state messages
-	getResult := app.redisClient.WithContext(context.Background()).Get(btcTxObj.AnchorBtcAggRoot)
-	var btcAgg types.BtcAgg
-	if err := json.Unmarshal([]byte(getResult.Val()), &btcAgg); err != nil {
-		app.LogError(getResult.Err())
-		app.LogError(err)
-		app.logger.Info(fmt.Sprintf("Anchor TreeData retrieval failure for aggroot: %s, result was %s", btcTxObj.AnchorBtcAggRoot, getResult.Val()))
+	btcAgg, err := app.GetTreeFromCalRange(btcTxObj.BeginCalTxInt, btcTxObj.EndCalTxInt)
+	if (app.LogError(err) != nil) {
 		return err
+	}
+	if (btcAgg.AnchorBtcAggRoot != btcTxObj.AnchorBtcAggRoot) {
+		app.logger.Info(fmt.Sprintf("Anchor TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btcTxObj.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
+		return errors.New("Anchor failure, AggRoot mismatch")
 	}
 	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
 	if app.LogError(err) != nil {
 		app.logger.Info(fmt.Sprintf("Anchor TreeData queue failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
-		return err
-	}
-	delResult := app.redisClient.WithContext(context.Background()).Del(btcTxObj.AnchorBtcAggRoot)
-	if app.LogError(delResult.Err()) != nil {
 		return err
 	}
 	app.logger.Info(fmt.Sprintf("Anchor Success for %s", btcTxObj.AnchorBtcAggRoot))
@@ -251,21 +242,8 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
 func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
-	var anchoringCoreID string
 	var hash []byte
-	// Get the CoreID that originally published the anchor TX using the btc tx ID we tagged it with
-	queryLine := fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID)
-	app.logger.Info("Anchor confirmation query: " + queryLine)
-	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
-	if app.LogError(err) == nil {
-		for _, tx := range txResult.Txs {
-			decoded, err := util.DecodeTx(tx.Tx)
-			if app.LogError(err) != nil {
-				continue
-			}
-			anchoringCoreID = decoded.CoreID
-		}
-	}
+	anchoringCoreID, err := app.getAnchoringCore(fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID))
 	if len(anchoringCoreID) == 0 {
 		app.logger.Error(fmt.Sprintf("Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
 	} else {
