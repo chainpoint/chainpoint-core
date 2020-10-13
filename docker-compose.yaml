@@ -46,7 +46,7 @@ services:
 
   # Lightning node
   lnd:
-    image: tierion/lnd:${NETWORK:-testnet}-0.9.2
+    image: tierion/lnd:${NETWORK:-testnet}-11.1
     user: ${USERID}:${GROUPID}
     restart: always
     entrypoint: './start-lnd.sh'
