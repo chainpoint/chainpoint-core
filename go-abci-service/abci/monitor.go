@@ -364,7 +364,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
 	block, err := app.lnClient.GetBlockByHeight(btcmsg.BtcTxHeight)
 	if app.LogError(err) != nil {
-		return nil // allow through if rpc call has an error
+		panic(err)
 	}
 	for _, t := range block.Transactions {
 		if t == btcmsg.BtcTxID {
