@@ -47,7 +47,8 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil  {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
-		app.CheckAnchor(btcTxObj) // for initial tests
+		err := app.CheckAnchor(btcTxObj) // for initial tests
+		app.LogError(err)
 /*		if matchErr := app.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}*/
