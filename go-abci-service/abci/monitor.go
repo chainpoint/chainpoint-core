@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"strconv"
@@ -359,18 +361,26 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	return nil
 }
 
-func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) bool {
-	block, err := app.lnClient.GetBlockByHeight(btcmsg.BtcTxHeight)
+func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
+	btcBodyBytes, _ := hex.DecodeString(btcmsg.BtcTxBody)
+	var msgTx wire.MsgTx
+	msgTx.DeserializeNoWitness(bytes.NewReader(btcBodyBytes))
+	b := txscript.NewScriptBuilder()
+	b.AddOp(txscript.OP_RETURN)
+	rootBytes, _ := hex.DecodeString(btcmsg.AnchorBtcAggRoot)
+	b.AddData(rootBytes)
+	outputScript, err := b.Script()
 	if app.LogError(err) != nil {
-		return false
+		return err
 	}
-	for _, t := range block.Transactions {
-		if t == btcmsg.BtcTxID {
-			app.logger.Info("BTC-A %s confirmed", t)
-			return true
+	for _, out :=  range msgTx.TxOut {
+		if bytes.Compare(out.PkScript, outputScript) == 0 && msgTx.TxHash().String() == btcmsg.BtcTxID {
+			app.logger.Info(fmt.Sprintf("BTC-A %s confirmed", btcmsg.BtcTxID))
+			return nil
 		}
+		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s\n%s != %s", btcmsg.BtcTxID, msgTx.TxHash().String(), out.PkScript, outputScript))
 	}
-	return false
+	return errors.New("unable to verify BTC-A")
 }
 
 func (app *AnchorApplication) FailedAnchorMonitor() {
@@ -520,7 +530,7 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 		}
 		block, tree, txIndex, err := app.GetBlockTree(tx)
 		if app.LogError(err) != nil {
-			return
+			continue
 		}
 		var btcmsg types.BtcMonMsg
 		btcmsg.BtcTxID = tx.TxID

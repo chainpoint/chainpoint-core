@@ -42,6 +42,15 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed for tx %+v", tx.CoreID, tx)))
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1} //CodeType for peer disconnection
 	}
+	if app.state.ChainSynced && tx.TxType == "BTC-A" {
+		var btcTxObj types.BtcTxMsg
+		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil  {
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		}
+		if matchErr := app.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		}
+	}
 	if tx.TxType == "FEE" {
 		//i, err := strconv.ParseInt(tx.Data, 10, 64)
 		if app.LogError(err) != nil {
