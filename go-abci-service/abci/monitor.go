@@ -362,32 +362,23 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 }
 
 func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
-	block, err := app.lnClient.GetBlockByHeight(btcmsg.BtcTxHeight)
+	btcBodyBytes, _ := hex.DecodeString(btcmsg.BtcTxBody)
+	var msgTx wire.MsgTx
+	msgTx.DeserializeNoWitness(bytes.NewReader(btcBodyBytes))
+	b := txscript.NewScriptBuilder()
+	b.AddOp(txscript.OP_RETURN)
+	rootBytes, _ := hex.DecodeString(btcmsg.AnchorBtcAggRoot)
+	b.AddData(rootBytes)
+	outputScript, err := b.Script()
 	if app.LogError(err) != nil {
-		panic(err)
+		return err
 	}
-	for _, t := range block.Transactions {
-		if t == btcmsg.BtcTxID {
-			btcBodyBytes, _ := hex.DecodeString(btcmsg.BtcTxBody)
-			var msgTx wire.MsgTx
-			msgTx.DeserializeNoWitness(bytes.NewReader(btcBodyBytes))
-			b := txscript.NewScriptBuilder()
-			b.AddOp(txscript.OP_RETURN)
-			rootBytes, _ := hex.DecodeString(btcmsg.AnchorBtcAggRoot)
-			b.AddData(rootBytes)
-			outputScript, err := b.Script()
-			if app.LogError(err) != nil {
-				return err
-			}
-			for _, out :=  range msgTx.TxOut {
-				if bytes.Compare(out.PkScript, outputScript) == 0 && msgTx.TxHash().String() == btcmsg.BtcTxID {
-					app.logger.Info(fmt.Sprintf("BTC-A %s confirmed", btcmsg.BtcTxID))
-					return nil
-				}
-				app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s\n%s != %s", btcmsg.BtcTxID, msgTx.TxHash().String(), out.PkScript, outputScript))
-			}
-			return errors.New("unable to verify BTC-A")
+	for _, out :=  range msgTx.TxOut {
+		if bytes.Compare(out.PkScript, outputScript) == 0 && msgTx.TxHash().String() == btcmsg.BtcTxID {
+			app.logger.Info(fmt.Sprintf("BTC-A %s confirmed", btcmsg.BtcTxID))
+			return nil
 		}
+		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s\n%s != %s", btcmsg.BtcTxID, msgTx.TxHash().String(), out.PkScript, outputScript))
 	}
 	return errors.New("unable to verify BTC-A")
 }
