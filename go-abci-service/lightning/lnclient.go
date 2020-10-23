@@ -47,6 +47,7 @@ type LnClient struct {
 	Logger         log.Logger
 	Testnet        bool
 	WalletAddress  string
+	WalletPass     string
 	FeeMultiplier  float64
 	LastFee        int64
 }
@@ -222,13 +223,13 @@ func (ln *LnClient) GetWalletClient() (walletrpc.WalletKitClient, func()) {
 	return walletrpc.NewWalletKitClient(conn), closeIt
 }
 
-func (ln *LnClient) Unlocker(pass string) error {
-	conn, closer := ln.GetWalletUnlockerClient()
+func (ln *LnClient) Unlocker() error {
+	conn, close := ln.GetWalletUnlockerClient()
 	if conn == nil {
 		return errors.New("unable to obtain client")
 	}
 	unlockReq := lnrpc.UnlockWalletRequest{
-		WalletPassword:       []byte(pass),
+		WalletPassword:       []byte(ln.WalletPass),
 		RecoveryWindow:       10000,
 		ChannelBackups:       nil,
 		XXX_NoUnkeyedLiteral: struct{}{},
@@ -239,7 +240,7 @@ func (ln *LnClient) Unlocker(pass string) error {
 	if ln.LoggerError(err) != nil {
 		return err
 	}
-	closer()
+	close()
 	return nil
 }
 

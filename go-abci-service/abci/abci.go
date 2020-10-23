@@ -221,6 +221,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Stake and transmit identity
 	go app.StakeIdentity()
 
+	// Ensure LND Wallet stays unlocked
+	go app.LNDMonitor()
+
 	//Migrations
 	/*	if _, exists := app.state.Migrations[1]; !exists && config.ChainId == "mainnet-chain-32" {
 			app.state.BeginCalTxInt = 3096

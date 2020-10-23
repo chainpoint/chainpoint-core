@@ -18,6 +18,7 @@ services:
     environment:
       PEERS: ${PEERS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
@@ -214,31 +215,6 @@ services:
   #      - ~/.chainpoint/core/.lnd:/root/.lnd
   #    tty: true
 
-  # Lightning Invoice Monitor
-  # Monitor and report on the state of LND invoices.
-  #
-  lnd-mon:
-    restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.lnd-mon
-    container_name: lnd-mon-core
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - base
-      - redis
-      - lnd
-    networks:
-      - chainpoint
-    environment:
-      NETWORK: ${NETWORK:-testnet}
-      NODE_ENV: ${NODE_ENV}
-      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
-      LND_SOCKET: ${LND_SOCKET}
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd
-    tty: true
 
   # Proof State
   # Encapsulates all persistent data storage for partial proof data.

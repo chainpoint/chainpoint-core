@@ -113,6 +113,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	//lightning settings
 	tlsCertPath := util.GetEnv("LN_TLS_CERT", "/root/.lnd/tls.cert")
 	macaroonPath := util.GetEnv("MACAROON_PATH", fmt.Sprintf("/root/.lnd/data/chain/bitcoin/%s/admin.macaroon", strings.ToLower(bitcoinNetwork)))
+	walletPass := util.GetEnv("HOT_WALLET_PASS", "")
 	lndSocket := util.GetEnv("LND_SOCKET", "lnd:10009")
 	feeMultiplier, _ := strconv.ParseFloat(util.GetEnv("BTC_FEE_MULTIPLIER", "2.2"), 64)
 	feeInterval, _ := strconv.Atoi(util.GetEnv("FEE_INTERVAL", "10"))
@@ -163,6 +164,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 			MinConfs:       3,
 			Testnet:        bitcoinNetwork == "testnet",
 			WalletAddress:  walletAddress,
+			WalletPass:     walletPass,
 			FeeMultiplier:  feeMultiplier,
 		},
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),

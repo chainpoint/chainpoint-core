@@ -27,6 +27,7 @@ services:
       SEEDS: ${SEEDS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
@@ -45,6 +46,7 @@ services:
     secrets:
       - ECDSA_PKPEM
       - HOT_WALLET_ADDRESS
+      - HOT_WALLET_PASS
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data
@@ -251,38 +253,6 @@ services:
   #      options:
   #        max-size: '1g'
   #        max-file: '5'
-
-  # Lightning Invoice Monitor
-  # Monitor and report on the state of LND invoices.
-  #
-  lnd-mon:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG:-latest}
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - redis
-    networks:
-      - chainpoint
-    secrets:
-      - HOT_WALLET_PASS
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
-      LND_SOCKET: ${LND_SOCKET}
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd:z
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
 
   # Proof State
   # Encapsulates all persistent data storage for partial proof data.

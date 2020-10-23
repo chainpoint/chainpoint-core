@@ -74,6 +74,14 @@ func (app *AnchorApplication) SyncMonitor() {
 	}
 }
 
+//LNDMonitor : maintains unlock of wallet while abci is running
+func (app *AnchorApplication) LNDMonitor() {
+	for {
+		app.LogError(app.lnClient.Unlocker())
+		time.Sleep(60 * time.Second)
+	}
+}
+
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
 func (app *AnchorApplication) StakeIdentity() {
