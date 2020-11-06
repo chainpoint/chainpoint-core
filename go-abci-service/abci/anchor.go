@@ -306,6 +306,24 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 	return nil
 }
 
+func (app *AnchorApplication) GetCalStateObjectsByAggIds(aggIds []string) (types.CalStateObject, error){
+/*	Add this back in later...we may be over-optimizing by using redis here
+	for _, aggId := range aggIds {
+		value, err := app.redisClient.WithContext(context.Background()).Get(fmt.Sprintf("CalState:%s", aggId)).Result()
+		if app.LogError(err) != nil {
+			continue
+		}
+
+	}*/
+	calState, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
+	return calState, app.LogError(err)
+}
+
+func (app *AnchorApplication) GetAggStateObjectsByProofIds(proofIds []string) (types.AggState, error){
+	aggState, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
+	return aggState, app.LogError(err)
+}
+
 // resetAnchor ensures that anchoring will begin again in the next block
 func (app *AnchorApplication) resetAnchor(startTxRange int64) {
 	app.logger.Info(fmt.Sprintf("Anchor failure, restarting anchor epoch from tx %d", startTxRange))

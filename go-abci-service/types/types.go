@@ -193,6 +193,40 @@ type ProofData struct {
 	Proof   []ProofLineItem `json:"proof"`
 }
 
+// CalState : cal state for proof gen
+type CalStateObject struct {
+	AggID    string          `json:"agg_id"`
+	CalId	 string			 `json:"cal_id"`
+	CalState string 	   	 `json:"cal_state"`
+}
+
+// AggState : agg state for proof gen
+type AggState struct {
+	ProofID  string          `json:"proof_id"`
+	Hash     string          `json:"hash"`
+	AggID    string          `json:"agg_id"`
+	AggState string 	   	 `json:"agg_state"`
+	AggRoot  string          `json:"agg_root"`
+}
+
+type AnchorBtcAggState struct {
+	CalId	 			string	`json:"cal_id"`
+	AnchorBtcAggId		string 	`json:"anchor_btc_agg_id"`
+	AnchorBtcAggState	string 	`json:"anchor_btc_agg_state"`
+}
+
+type AnchorBtcTxState struct {
+	AnchorBtcAggId		string 	`json:"anchor_btc_agg_id"`
+	BtcTxId				string  `json:"btctx_id"`
+	BtcTxState			string	`json:"btctx_state"`
+}
+
+type AnchorBtcHeadState struct {
+	BtcTxId				string  `json:"btctx_id"`
+	BtcHeadHeight		string  `json:"btchead_height"`
+	BtcHeadState		string	`json:"btchead_state"`
+}
+
 // BtcAgg : An object containing BTC anchoring aggregation data
 type BtcAgg struct {
 	AnchorBtcAggID   string         `json:"anchor_btc_agg_id"`
