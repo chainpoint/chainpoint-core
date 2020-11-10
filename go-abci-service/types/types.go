@@ -193,6 +193,11 @@ type ProofData struct {
 	Proof   []ProofLineItem `json:"proof"`
 }
 
+type ProofState struct {
+	ProofID string	`json:"proof_id"`
+	Proof   string	`json:"proof"`
+}
+
 // CalState : cal state for proof gen
 type CalStateObject struct {
 	AggID    string `json:"agg_id"`
