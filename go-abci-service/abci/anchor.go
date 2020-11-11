@@ -22,6 +22,9 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 
 	// Get agg objects
 	aggs := app.aggregator.AggregateAndReset()
+	for _, agg := range aggs {
+		app.LogError(app.pgClient.BulkInsertAggState(agg.AggStates))
+	}
 	app.logger.Debug(fmt.Sprintf("Aggregated %d roots: ", len(aggs)))
 	app.logger.Debug(fmt.Sprintf("Aggregation Tree: %#v", aggs))
 
@@ -180,7 +183,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	stateObj := types.BtcTxProofState{
 		AnchorBtcAggID: btcTxObj.AnchorBtcAggID,
 		BtcTxID:        btcTxObj.BtcTxID,
-		BtcTxState: types.BtcTxOpsState{
+		BtcTxState: types.OpsState{
 			Ops: []types.ProofLineItem{
 				{
 					Left: btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
@@ -304,24 +307,6 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		return err
 	}
 	return nil
-}
-
-func (app *AnchorApplication) GetCalStateObjectsByAggIds(aggIds []string) (types.CalStateObject, error){
-/*	Add this back in later...we may be over-optimizing by using redis here
-	for _, aggId := range aggIds {
-		value, err := app.redisClient.WithContext(context.Background()).Get(fmt.Sprintf("CalState:%s", aggId)).Result()
-		if app.LogError(err) != nil {
-			continue
-		}
-
-	}*/
-	calState, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
-	return calState, app.LogError(err)
-}
-
-func (app *AnchorApplication) GetAggStateObjectsByProofIds(proofIds []string) (types.AggState, error){
-	aggState, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
-	return aggState, app.LogError(err)
 }
 
 // resetAnchor ensures that anchoring will begin again in the next block

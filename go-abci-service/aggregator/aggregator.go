@@ -132,7 +132,8 @@ func (aggregator *Aggregator) StartAggregation() error {
 
 // ProcessAggregation creates merkle trees of received hashes a la https://github.com/chainpoint/chainpoint-services/blob/develop/node-aggregator-service/server.js#L66
 func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery, drand string) types.Aggregation {
-	var agg types.Aggregation
+	agg := types.Aggregation{}
+	aggStates := make([]types.AggState, 0)
 	hashSlice := make([][]byte, 0)               // byte array
 	hashStructSlice := make([]types.HashItem, 0) // keep record for building proof path
 
@@ -174,49 +175,39 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 	agg.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 
 	//Create proof paths
-	proofSlice := make([]types.ProofData, 0)
 	for i, unPackedHash := range hashStructSlice {
-		var proofData types.ProofData
-		proofData.ProofID = unPackedHash.ProofID
-		proofData.Hash = unPackedHash.Hash
 		proofs := tree.GetProof(i)
 		if drand != "" {
 			proofs = append([]merkletools.ProofStep{{Left: true, Value: []byte(fmt.Sprintf("drand:%s", drand))}}, proofs...)
 		}
-		proofData.Proof = make([]types.ProofLineItem, 0)
+		proofOps := make([]types.ProofLineItem, 0)
 		for _, p := range proofs {
 			if p.Left {
 				if strings.Contains(string(p.Value), "drand") {
-					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: string(p.Value)})
+					proofOps = append(proofOps, types.ProofLineItem{Left: string(p.Value)})
 				} else {
-					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: hex.EncodeToString(p.Value)})
+					proofOps = append(proofOps, types.ProofLineItem{Left: hex.EncodeToString(p.Value)})
 				}
 			} else {
-				proofData.Proof = append(proofData.Proof, types.ProofLineItem{Right: hex.EncodeToString(p.Value)})
+				proofOps = append(proofOps, types.ProofLineItem{Right: hex.EncodeToString(p.Value)})
 			}
-			proofData.Proof = append(proofData.Proof, types.ProofLineItem{Op: "sha-256"})
+			proofOps = append(proofOps, types.ProofLineItem{Op: "sha-256"})
 		}
-		proofSlice = append(proofSlice, proofData)
-	}
-	agg.ProofData = proofSlice
-	aggregator.Logger.Debug(fmt.Sprintf("Aggregated: %#v", agg))
-
-	//Publish to proof-state service
-	aggJSON, err := json.Marshal(agg)
-	if aggregator.RabbitmqURI != "" {
-		err = rabbitmq.Publish(aggregator.RabbitmqURI, proofStateQueueOut, msgType, aggJSON)
-
+		aggState := types.AggState{}
+		aggState.AggID = agg.AggID
+		aggState.AggRoot = agg.AggRoot
+		aggState.ProofID = unPackedHash.ProofID
+		aggState.Hash = unPackedHash.Hash
+		ops := types.OpsState{}
+		ops.Ops = proofOps
+		opsBytes, err := json.Marshal(ops)
 		if err != nil {
-			rabbitmq.LogError(err, "problem publishing aggJSON message to queue")
-			for _, msg := range msgStructSlice {
-				msg.Nack(false, true)
-			}
-		} else {
-			for _, msg := range msgStructSlice {
-				errAck := msg.Ack(false)
-				rabbitmq.LogError(errAck, "error acking queue item")
-			}
+			continue
 		}
+		aggState.AggState = string(opsBytes)
+		aggStates = append(aggStates, aggState)
 	}
+	aggregator.Logger.Debug(fmt.Sprintf("Aggregated: %#v", aggStates))
+	agg.AggStates = aggStates
 	return agg
 }

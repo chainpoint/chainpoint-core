@@ -177,7 +177,7 @@ type TxTm struct {
 type Aggregation struct {
 	AggID     string      `json:"agg_id"`
 	AggRoot   string      `json:"agg_root"`
-	ProofData []ProofData `json:"proofData"`
+	AggStates []AggState `json:"agg_states"`
 }
 
 // HashItem : An object contains the Core ID and value for a hash
@@ -273,13 +273,13 @@ type BtcMsgObj struct {
 
 // BtcTxProofState : An RMQ message object bound for proofstate service
 type BtcTxProofState struct {
-	AnchorBtcAggID string        `json:"anchor_btc_agg_id"`
-	BtcTxID        string        `json:"btctx_id"`
-	BtcTxState     BtcTxOpsState `json:"btctx_state"`
+	AnchorBtcAggID string   `json:"anchor_btc_agg_id"`
+	BtcTxID        string   `json:"btctx_id"`
+	BtcTxState     OpsState `json:"btctx_state"`
 }
 
-// BtcTxOpsState : An RMQ message generated as part of the monitoring proof object
-type BtcTxOpsState struct {
+// OpsState : An RMQ message generated as part of the monitoring proof object
+type OpsState struct {
 	Ops []ProofLineItem `json:"ops"`
 }
 

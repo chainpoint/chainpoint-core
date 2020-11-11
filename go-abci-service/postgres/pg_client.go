@@ -231,8 +231,25 @@ func (pg *Postgres) BulkInsertAggState (aggStates []types.AggState) error {
 		valuesArgs = append(valuesArgs, a.AggRoot)
 		i++
 	}
-
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (proof_id) DO NOTHING"
+	_, err := pg.DB.Exec(stmt, valuesArgs)
+	return err
+}
+
+// BulkInsertAggState : inserts aggregator state into postgres
+func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error {
+	insert := "INSERT INTO cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES "
+	values := []string{}
+	valuesArgs := make([]interface{}, 0)
+	i := 0
+	for _, c := range calStates{
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
+		valuesArgs = append(valuesArgs, c.AggID)
+		valuesArgs = append(valuesArgs, c.CalId)
+		valuesArgs = append(valuesArgs, c.CalState)
+		i++
+	}
+	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (agg_id) DO NOTHING"
 	_, err := pg.DB.Exec(stmt, valuesArgs)
 	return err
 }
