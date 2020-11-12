@@ -46,7 +46,13 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 			var tx types.TxTm
 			tx.Hash = result.Hash.Bytes()
 			tx.Data = result.Data.Bytes()
-			app.calendar.QueueCalStateMessage(tx, calAgg)
+			aggIds, calStates := app.calendar.QueueCalStateMessage(tx, calAgg)
+			proofIds, err := app.pgClient.GetProofIdsByAggIds(aggIds)
+			if app.LogError(err) != nil {
+				return err
+			}
+			app.LogError(app.pgClient.BulkInsertCalState(calStates))
+			//TODO: proof-gen cal_batch of proofIds
 			return nil
 		}
 	}

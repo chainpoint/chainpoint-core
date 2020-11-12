@@ -60,7 +60,7 @@ func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 	}
 	proofIds := make([]string, 0)
 	for rows.Next() {
-		proofid := ""
+		var proofid string
 		switch err := rows.Scan(&proofid); err {
 		case sql.ErrNoRows:
 			return []string{}, nil

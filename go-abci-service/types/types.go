@@ -285,13 +285,13 @@ type OpsState struct {
 
 // BtccStateObj :  An RMQ message object issued to generate proofs after BTCC confirmation
 type BtccStateObj struct {
-	BtcTxID       string       `json:"btctx_id"`
-	BtcHeadHeight int64        `json:"btchead_height"`
-	BtcHeadState  BtccOpsState `json:"btchead_state"`
+	BtcTxID       string         `json:"btctx_id"`
+	BtcHeadHeight int64          `json:"btchead_height"`
+	BtcHeadState  AnchorOpsState `json:"btchead_state"`
 }
 
-// BtccOpsState : Part of the RMQ message for btc anchoring post-confirmation
-type BtccOpsState struct {
+// AnchorOpsState : Part of the RMQ message for btc anchoring post-confirmation
+type AnchorOpsState struct {
 	Ops    []ProofLineItem `json:"ops"`
 	Anchor AnchorObj       `json:"anchor"`
 }
