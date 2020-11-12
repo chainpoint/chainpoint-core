@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"strings"
@@ -202,13 +201,9 @@ func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 	valuesArgs := make([]interface{}, 0)
 	i := 0
 	for _, p := range proofs {
-		jsonStr, err := json.Marshal(p.Proof)
-		if util.LoggerError(pg.Logger, err) != nil {
-			continue
-		}
 		values = append(values, fmt.Sprintf("($%d, $%d, clock_timestamp(), clock_timestamp())", i * 2 + 1, i * 2 + 2))
 		valuesArgs = append(valuesArgs, p.ProofID)
-		valuesArgs = append(valuesArgs, jsonStr)
+		valuesArgs = append(valuesArgs, p.Proof)
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (proof_id) DO UPDATE SET proof = EXCLUDED.proof"

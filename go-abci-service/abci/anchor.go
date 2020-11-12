@@ -52,11 +52,32 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 				return err
 			}
 			app.LogError(app.pgClient.BulkInsertCalState(calStates))
-			//TODO: proof-gen cal_batch of proofIds
+			app.LogError(app.GenerateCalBatch(proofIds))
 			return nil
 		}
 	}
 	return errors.New("No hashes to aggregate")
+}
+
+func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
+	aggStates, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
+	if err != nil {
+		return err
+	}
+	aggIds := []string{}
+	for _, aggState := range aggStates{
+		aggIds = append(aggIds, aggState.AggID)
+	}
+	calStates, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
+	if err != nil {
+		return err
+	}
+	calLookUp := make(map[string]string)
+	for _, calState := range calStates {
+		calLookUp[calState.AggID] = calState.CalState
+	}
+	//TODO: generate proofs/headers and perform bulk insert
+	return nil
 }
 
 func (app *AnchorApplication) GetTreeFromCalRange(startTxRange int64, endTxRange int64) (types.BtcAgg, error) {
