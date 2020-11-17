@@ -14,6 +14,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
+
 )
 
 // AnchorCalendar : Aggregate submitted hashes into a calendar transaction
@@ -76,8 +78,22 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 	for _, calState := range calStates {
 		calLookUp[calState.AggID] = calState.CalState
 	}
-	//TODO: generate proofs/headers and perform bulk insert
-	return nil
+	proofs := []types.ProofState{}
+	for _, aggStateRow := range aggStates {
+		proof := proof.Proof()
+		proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.AggState)
+		proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], app.config.BitcoinNetwork)
+		proofBytes, err := json.Marshal(proof)
+		if app.LogError(err) != nil {
+			continue
+		}
+		proofState := types.ProofState{
+			ProofID: proof["proof_id"].(string),
+			Proof:   string(proofBytes),
+		}
+		proofs = append(proofs, proofState)
+	}
+	return app.LogError(app.pgClient.BulkInsertProofs(proofs))
 }
 
 func (app *AnchorApplication) GetTreeFromCalRange(startTxRange int64, endTxRange int64) (types.BtcAgg, error) {
