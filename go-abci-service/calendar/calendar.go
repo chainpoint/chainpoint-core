@@ -12,8 +12,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
@@ -150,16 +148,22 @@ func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) type
 	return treeData
 }
 
-// QueueBtcaStateDataMessage notifies proof and btc tx services of BTC-A anchoring
-func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) error {
-	treeDataJSON, err := json.Marshal(anchorDataObj)
-	calendar.Logger.Info(fmt.Sprintf("queueing anchor TreeData state message for aggroot: %s", anchorDataObj.AnchorBtcAggRoot))
-	if util.LogError(err) != nil {
-		return err
+// PrepareBtcaStateData notifies proof and btc tx services of BTC-A anchoring
+func (calendar *Calendar) PrepareBtcaStateData(anchorDataObj types.BtcAgg) ([]types.AnchorBtcAggState) {
+	anchorObjects := []types.AnchorBtcAggState{}
+	for _, proofDataItem := range anchorDataObj.ProofData {
+		opsState := types.OpsState{Ops: proofDataItem.Proof}
+		opsBytes, err := json.Marshal(opsState)
+		if util.LoggerError(calendar.Logger, err) != nil {
+			continue
+		}
+		anchorObj := types.AnchorBtcAggState{
+			CalId:             proofDataItem.CalID,
+			AnchorBtcAggId:    anchorDataObj.AnchorBtcAggID,
+			AnchorBtcAggState: string(opsBytes),
+		}
+		anchorObjects = append(anchorObjects, anchorObj)
 	}
-	errBatch := rabbitmq.Publish(calendar.RabbitmqURI, "work.proofstate", "anchor_btc_agg_batch", treeDataJSON)
-	if errBatch != nil {
-		return errBatch
-	}
-	return nil
+	calendar.Logger.Info(fmt.Sprintf("saving anchor TreeData state message for aggroot: %s", anchorDataObj.AnchorBtcAggRoot))
+	return anchorObjects
 }

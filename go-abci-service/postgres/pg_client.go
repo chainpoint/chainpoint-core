@@ -231,7 +231,7 @@ func (pg *Postgres) BulkInsertAggState (aggStates []types.AggState) error {
 	return err
 }
 
-// BulkInsertAggState : inserts aggregator state into postgres
+// BulkInsertCalState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error {
 	insert := "INSERT INTO cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES "
 	values := []string{}
@@ -245,6 +245,24 @@ func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error 
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (agg_id) DO NOTHING"
+	_, err := pg.DB.Exec(stmt, valuesArgs)
+	return err
+}
+
+// BulkInsertCalState : inserts aggregator state into postgres
+func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) error {
+	insert := "INSERT INTO anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES "
+	values := []string{}
+	valuesArgs := make([]interface{}, 0)
+	i := 0
+	for _, a := range aggStates{
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
+		valuesArgs = append(valuesArgs, a.CalId)
+		valuesArgs = append(valuesArgs, a.AnchorBtcAggId)
+		valuesArgs = append(valuesArgs, a.AnchorBtcAggState)
+		i++
+	}
+	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (cal_id) DO NOTHING"
 	_, err := pg.DB.Exec(stmt, valuesArgs)
 	return err
 }

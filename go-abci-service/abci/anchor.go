@@ -53,8 +53,10 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 			if app.LogError(err) != nil {
 				return err
 			}
+			app.logger.Info("Generating Cal Batch")
 			app.LogError(app.pgClient.BulkInsertCalState(calStates))
 			app.LogError(app.GenerateCalBatch(proofIds))
+			app.logger.Info("Generating Cal Batch Complete")
 			return nil
 		}
 	}
@@ -274,9 +276,10 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		app.logger.Info(fmt.Sprintf("Anchor TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btcTxObj.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
 		return errors.New("Anchor failure, AggRoot mismatch")
 	}
-	err = app.calendar.QueueBtcaStateDataMessage(btcAgg)
+	anchorBTCAggStateObjects := app.calendar.PrepareBtcaStateData(btcAgg)
+	err = app.pgClient.BulkInsertBtcAggState(anchorBTCAggStateObjects)
 	if app.LogError(err) != nil {
-		app.logger.Info(fmt.Sprintf("Anchor TreeData queue failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
+		app.logger.Info(fmt.Sprintf("Anchor TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
 		return err
 	}
 	app.logger.Info(fmt.Sprintf("Anchor Success for %s", btcTxObj.AnchorBtcAggRoot))
