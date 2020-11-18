@@ -228,7 +228,7 @@ type AnchorBtcTxState struct {
 
 type AnchorBtcHeadState struct {
 	BtcTxId       string `json:"btctx_id"`
-	BtcHeadHeight string `json:"btchead_height"`
+	BtcHeadHeight int64  `json:"btchead_height"`
 	BtcHeadState  string `json:"btchead_state"`
 }
 

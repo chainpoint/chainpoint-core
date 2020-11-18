@@ -225,33 +225,31 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	}
 	app.state.LatestBtcTx = btcTxObj.BtcTxID // Update app state with txID so we can broadcast BTC-A
 	app.state.LatestBtcAggRoot = btcTxObj.AnchorBtcAggRoot
-	stateObj := types.BtcTxProofState{
-		AnchorBtcAggID: btcTxObj.AnchorBtcAggID,
-		BtcTxID:        btcTxObj.BtcTxID,
-		BtcTxState: types.OpsState{
-			Ops: []types.ProofLineItem{
-				{
-					Left: btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
-				},
-				{
-					Right: btcTxObj.BtcTxBody[strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)+len(btcTxObj.AnchorBtcAggRoot):],
-				},
-				{
-					Op: "sha-256-x2",
-				},
+	btcTxState := types.OpsState{
+		Ops: []types.ProofLineItem{
+			{
+				Left: btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
+			},
+			{
+				Right: btcTxObj.BtcTxBody[strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)+len(btcTxObj.AnchorBtcAggRoot):],
+			},
+			{
+				Op: "sha-256-x2",
 			},
 		},
 	}
+	btcTxStateJSON, err := json.Marshal(btcTxState)
+	stateObj := types.AnchorBtcTxState{
+		AnchorBtcAggId: btcTxObj.AnchorBtcAggID,
+		BtcTxId:        btcTxObj.BtcTxID,
+		BtcTxState:     string(btcTxStateJSON),
+	}
 	app.logger.Info(fmt.Sprintf("BtcTx State Obj: %#v", stateObj))
-	dataJSON, err := json.Marshal(stateObj)
+	err = app.pgClient.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
 	if app.LogError(err) != nil {
 		return err
 	}
-	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.proofstate", "btctx", dataJSON)
-	if err != nil {
-		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
-		return err
-	}
+
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
 	result := app.redisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 
@@ -326,32 +324,32 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		app.logger.Info("Restarting confirmation process")
 	}
 
-	var btccStateObj types.BtccStateObj
-	btccStateObj.BtcTxID = btcMonObj.BtcTxID
-	btccStateObj.BtcHeadHeight = btcMonObj.BtcHeadHeight
-	btccStateObj.BtcHeadState.Ops = make([]types.ProofLineItem, 0)
+	anchorOps := types.AnchorOpsState{}
+	anchorOps.Ops = make([]types.ProofLineItem, 0)
 	for _, p := range btcMonObj.Path {
 		if p.Left != "" {
-			btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Left: string(p.Left)})
+			anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Left: string(p.Left)})
 		}
 		if p.Right != "" {
-			btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Right: string(p.Right)})
+			anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Right: string(p.Right)})
 		}
-		btccStateObj.BtcHeadState.Ops = append(btccStateObj.BtcHeadState.Ops, types.ProofLineItem{Op: "sha-256-x2"})
+		anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Op: "sha-256-x2"})
 	}
 	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
 	uri := strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", baseURI, hash))
-	btccStateObj.BtcHeadState.Anchor = types.AnchorObj{
+	anchorOps.Anchor = types.AnchorObj{
 		AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
 		Uris:     []string{uri},
 	}
-	stateObjBytes, err := json.Marshal(btccStateObj)
-	app.logger.Info("Completed AnchorStateObj: %s", string(stateObjBytes))
-	err = rabbitmq.Publish(app.config.RabbitmqURI, "work.proofstate", "btcmon", stateObjBytes)
-	if err != nil {
-		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
-		return err
+	headState, err := json.Marshal(anchorOps)
+	headStateObj := types.AnchorBtcHeadState{
+		BtcTxId:       btcMonObj.BtcTxID,
+		BtcHeadHeight: btcMonObj.BtcHeadHeight,
+		BtcHeadState:  string(headState),
 	}
+	proofIds, err := app.pgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
+	app.LogError(app.pgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
+	// TODO: btc_batch generation
 	return nil
 }
 

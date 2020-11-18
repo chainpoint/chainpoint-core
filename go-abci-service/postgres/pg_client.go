@@ -74,6 +74,35 @@ func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 	return proofIds, nil
 }
 
+// GetProofIdsByBtcTxId : get proof ids from proof table, based on btctxId
+func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
+	stmt := `SELECT a.proof_id FROM agg_states a
+    INNER JOIN cal_states c ON c.agg_id = a.agg_id
+    INNER JOIN anchor_btc_agg_states aa ON aa.cal_id = c.cal_id
+    INNER JOIN btctx_states tx ON tx.anchor_btc_agg_id = aa.anchor_btc_agg_id
+    WHERE tx.btctx_id = $1`
+	rows, err := pg.DB.Query(stmt, btcTxId)
+	if err != nil {
+		return []string{}, err
+	}
+	proofIds := make([]string, 0)
+	for rows.Next() {
+		var proofid string
+		switch err := rows.Scan(&proofid); err {
+		case sql.ErrNoRows:
+			return []string{}, nil
+		case nil:
+			proofIds = append(proofIds, proofid)
+			break;
+		default:
+			util.LoggerError(pg.Logger, err)
+			return []string{}, err
+		}
+	}
+	return proofIds, nil
+}
+
+
 //GetCalStateObjectsByProofIds : Get calstate objects, given an array of aggIds
 func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
 	stmt := "SELECT agg_id, cal_id, cal_state FROM cal_states WHERE agg_id::TEXT = ANY($1);"
@@ -249,13 +278,13 @@ func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error 
 	return err
 }
 
-// BulkInsertCalState : inserts aggregator state into postgres
+// BulkInsertBtcAggState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) error {
 	insert := "INSERT INTO anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
 	i := 0
-	for _, a := range aggStates{
+	for _, a := range aggStates {
 		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
 		valuesArgs = append(valuesArgs, a.CalId)
 		valuesArgs = append(valuesArgs, a.AnchorBtcAggId)
@@ -263,6 +292,42 @@ func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) 
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (cal_id) DO NOTHING"
+	_, err := pg.DB.Exec(stmt, valuesArgs)
+	return err
+}
+
+// BulkInsertBtcTxState : inserts aggregator state into postgres
+func (pg *Postgres) BulkInsertBtcTxState (txStates []types.AnchorBtcTxState) error {
+	insert := "INSERT INTO btctx_states (anchor_btc_agg_id, btctx_id, btctx_state, created_at, updated_at) VALUES "
+	values := []string{}
+	valuesArgs := make([]interface{}, 0)
+	i := 0
+	for _, t := range txStates {
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
+		valuesArgs = append(valuesArgs, t.AnchorBtcAggId)
+		valuesArgs = append(valuesArgs, t.BtcTxId)
+		valuesArgs = append(valuesArgs, t.BtcTxState)
+		i++
+	}
+	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (anchor_btc_agg_id) DO UPDATE"
+	_, err := pg.DB.Exec(stmt, valuesArgs)
+	return err
+}
+
+// BulkInsertBtcHeadState : inserts head state into postgres
+func (pg *Postgres) BulkInsertBtcHeadState (headStates []types.AnchorBtcHeadState) error {
+	insert := "INSERT INTO btchead_states (btctx_id, btchead_height, btchead_state, created_at, updated_at) VALUES "
+	values := []string{}
+	valuesArgs := make([]interface{}, 0)
+	i := 0
+	for _, h := range headStates {
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
+		valuesArgs = append(valuesArgs, h.BtcTxId)
+		valuesArgs = append(valuesArgs, h.BtcHeadHeight)
+		valuesArgs = append(valuesArgs, h.BtcHeadState)
+		i++
+	}
+	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (btctx_id) DO UPDATE"
 	_, err := pg.DB.Exec(stmt, valuesArgs)
 	return err
 }
