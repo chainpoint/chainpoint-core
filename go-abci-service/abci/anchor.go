@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
@@ -83,8 +82,8 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 	proofs := []types.ProofState{}
 	for _, aggStateRow := range aggStates {
 		proof := proof.Proof()
-		proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.AggState)
-		proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], app.config.BitcoinNetwork)
+		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.AggState))
+		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], app.config.BitcoinNetwork))
 		proofBytes, err := json.Marshal(proof)
 		if app.LogError(err) != nil {
 			continue
@@ -287,6 +286,82 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	return nil
 }
 
+func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
+	aggStates, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
+	if err != nil {
+		return err
+	}
+	aggIds := []string{}
+	for _, aggState := range aggStates{
+		aggIds = append(aggIds, aggState.AggID)
+	}
+	calStates, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
+	if err != nil {
+		return err
+	}
+	calIds := []string{}
+	for _, calState := range calStates {
+		calIds = append(calIds, calState.CalId)
+	}
+
+	anchorBtcAggStates, err := app.pgClient.GetAnchorBTCAggStateObjectsByCalIds(calIds)
+	if err != nil {
+		return err
+	}
+	if len(anchorBtcAggStates) == 0 {
+		return errors.New("no anchorbtcggstate to retrieve")
+	}
+	anchorBTCAggIds := []string{}
+	for _, anchorBtcAggState := range anchorBtcAggStates {
+		anchorBTCAggIds = append(anchorBTCAggIds, anchorBtcAggState.AnchorBtcAggId)
+	}
+	btcTxState, err := app.pgClient.GetBTCTxStateObjectByAnchorBTCAggId(anchorBTCAggIds[0])
+	if err != nil {
+		return err
+	}
+	if len(btcTxState.BtcTxId) == 0 {
+		return errors.New(fmt.Sprintf("btcTxState cannot be located for %s", anchorBTCAggIds[0]))
+	}
+	btcHeadState, err := app.pgClient.GetBTCHeadStateObjectByBTCTxId(btcTxState.BtcTxId)
+
+	calLookUp := make(map[string]types.CalStateObject)
+	for _, calState := range calStates {
+		calLookUp[calState.AggID] = calState
+	}
+
+	anchorBtcAggStateLookup := make(map[string]types.AnchorBtcAggState)
+	for _, anchorAggState := range anchorBtcAggStates {
+		anchorBtcAggStateLookup[anchorAggState.CalId] = anchorAggState
+	}
+	proofs := []types.ProofState{}
+	for _, aggStateRow := range aggStates {
+		proof := proof.Proof()
+		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.AggState))
+		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID].CalState, app.config.BitcoinNetwork))
+
+		if calVal, exists := calLookUp[aggStateRow.AggID]; exists {
+			if _, exists2 := anchorBtcAggStateLookup[calVal.CalId]; !exists2 {
+				app.logger.Info("can't find anchorBTCAggState for", "CalId", calVal.CalId)
+				continue
+			}
+		}  else {
+			app.logger.Info("can't find calState for", "aggStateRow.AggID", aggStateRow.AggID)
+			continue
+		}
+		app.LogError(proof.AddBtcBranch(anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState, app.config.BitcoinNetwork))
+		proofBytes, err := json.Marshal(proof)
+		if app.LogError(err) != nil {
+			continue
+		}
+		proofState := types.ProofState{
+			ProofID: proof["proof_id"].(string),
+			Proof:   string(proofBytes),
+		}
+		proofs = append(proofs, proofState)
+	}
+	return app.LogError(app.pgClient.BulkInsertProofs(proofs))
+}
+
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
 func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
 	var hash []byte
@@ -348,6 +423,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		BtcHeadState:  string(headState),
 	}
 	proofIds, err := app.pgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
+	app.LogError(err)
 	app.LogError(app.pgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
 	// TODO: btc_batch generation
 	return nil

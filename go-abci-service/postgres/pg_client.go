@@ -176,51 +176,47 @@ func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 }
 
 //GetBTCTxStateObjectByAnchorBTCAggId: Get btc state objects, given an array of agg ids
-func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggIds []string) ([]types.AnchorBtcTxState, error) {
-	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM btctx_states WHERE agg_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, aggIds)
+func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
+	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM btctx_states WHERE agg_id::TEXT = $1;"
+	rows, err := pg.DB.Query(stmt, aggId)
 	if err != nil {
-		return []types.AnchorBtcTxState{}, err
+		return types.AnchorBtcTxState{}, err
 	}
-	aggStates := make([]types.AnchorBtcTxState, 0)
 	for rows.Next() {
 		var aggState types.AnchorBtcTxState
 		switch err := rows.Scan(&aggState.AnchorBtcAggId, &aggState.BtcTxId, &aggState.BtcTxState); err {
 		case sql.ErrNoRows:
-			return []types.AnchorBtcTxState{}, nil
+			return types.AnchorBtcTxState{}, nil
 		case nil:
-			aggStates = append(aggStates, aggState)
-			break
+			return aggState, nil
 		default:
 			util.LoggerError(pg.Logger, err)
-			return []types.AnchorBtcTxState{}, err
+			return types.AnchorBtcTxState{}, err
 		}
 	}
-	return aggStates, err
+	return types.AnchorBtcTxState{}, err
 }
 
 //GetBTCHeadStateObjectByBTCTxId: Get btc header state objects, given an array of btcTxIds
-func (pg *Postgres) GetBTCHeadStateObjectByBTCTxId(btcTxIds []string) ([]types.AnchorBtcHeadState, error) {
-	stmt := "SELECT btctx_id, btchead_height, btchead_state FROM btchead_states WHERE btctx_id = ANY($1);"
-	rows, err := pg.DB.Query(stmt, btcTxIds)
+func (pg *Postgres) GetBTCHeadStateObjectByBTCTxId(btcTxId string) (types.AnchorBtcHeadState, error) {
+	stmt := "SELECT btctx_id, btchead_height, btchead_state FROM btchead_states WHERE btctx_id = $1;"
+	rows, err := pg.DB.Query(stmt, btcTxId)
 	if err != nil {
-		return []types.AnchorBtcHeadState{}, err
+		return types.AnchorBtcHeadState{}, err
 	}
-	aggStates := make([]types.AnchorBtcHeadState, 0)
 	for rows.Next() {
 		var aggState types.AnchorBtcHeadState
 		switch err := rows.Scan(&aggState.BtcTxId, &aggState.BtcHeadHeight, &aggState.BtcHeadState); err {
 		case sql.ErrNoRows:
-			return []types.AnchorBtcHeadState{}, nil
+			return types.AnchorBtcHeadState{}, nil
 		case nil:
-			aggStates = append(aggStates, aggState)
-			break;
+			return aggState, nil
 		default:
 			util.LoggerError(pg.Logger, err)
-			return []types.AnchorBtcHeadState{}, err
+			return types.AnchorBtcHeadState{}, err
 		}
 	}
-	return aggStates, err
+	return types.AnchorBtcHeadState{}, err
 }
 
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
