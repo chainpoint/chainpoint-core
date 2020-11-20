@@ -20,7 +20,7 @@ func NewTxValidationMap() map[string]types.TxValidation {
 //NewTxValidation : initialize values for validation of tx
 func NewTxValidation() types.TxValidation {
 	permittedCalRate := types.RateLimit{
-		AllowedRate: 70,
+		AllowedRate: 80,
 		PerBlocks:   60,
 		LastCheck:   0,
 		Bucket:      0.0,
