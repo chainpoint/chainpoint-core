@@ -446,7 +446,7 @@ func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails
 		tree.AddLeaf(hexTx)
 	}
 	if txIndex == -1 {
-		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, errors.New("Transaction not found in block")
+		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("Transaction %s not found in block %d", btcTx.TxID, btcTx.BlockHeight))
 	}
 	tree.MakeBTCTree()
 	root := tree.GetMerkleRoot()
