@@ -328,6 +328,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 		if app.config.DoCal {
 			go app.AnchorCalendar(app.state.Height)
 		}
+		app.pgClient.PruneProofStateTables()
 	}
 
 	// Anchor every anchorInterval of blocks

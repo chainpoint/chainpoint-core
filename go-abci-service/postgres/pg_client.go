@@ -327,3 +327,17 @@ func (pg *Postgres) BulkInsertBtcHeadState (headStates []types.AnchorBtcHeadStat
 	_, err := pg.DB.Exec(stmt, valuesArgs)
 	return err
 }
+
+// PruneProofStateTables : prunes proof tables
+func (pg *Postgres) PruneProofStateTables() error {
+	tables := []string{"proofs", "agg_states", "cal_states", "anchor_btc_agg_states", "btctx_states", "btchead_states"}
+	var err error
+	for _, tabl := range tables {
+		go func(table string) {
+			pruneStmt := fmt.Sprintf("DELETE FROM %s WHERE created_at > NOW() - INTERVAL '24 HOURS'", table)
+			_, err = pg.DB.Exec(pruneStmt)
+			util.LoggerError(pg.Logger, err)
+		}(tabl)
+	}
+	return err
+}

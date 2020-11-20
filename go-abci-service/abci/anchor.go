@@ -425,7 +425,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 	proofIds, err := app.pgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
 	app.LogError(err)
 	app.LogError(app.pgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
-	// TODO: btc_batch generation
+	app.LogError(app.GenerateBtcBatch(proofIds))
 	return nil
 }
 
