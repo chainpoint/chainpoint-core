@@ -530,6 +530,9 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 		}
 		block, tree, txIndex, err := app.GetBlockTree(tx)
 		if app.LogError(err) != nil {
+			if strings.Contains(err.Error(), "not found in block") {
+				app.redisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
+			}
 			continue
 		}
 		var btcmsg types.BtcMonMsg
