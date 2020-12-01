@@ -85,6 +85,7 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.AggState))
 		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], app.config.BitcoinNetwork))
 		proofBytes, err := json.Marshal(proof)
+		app.logger.Info(fmt.Sprintf("Proof: %s", string(proofBytes)))
 		if app.LogError(err) != nil {
 			continue
 		}
