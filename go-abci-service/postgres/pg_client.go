@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	"github.com/lib/pq"
 	"strings"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -54,7 +55,7 @@ func NewPGFromURI(connStr string, logger log.Logger) (*Postgres, error) {
 func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	stmt := "SELECT proof_id FROM proofs WHERE agg_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, aggIds)
+	rows, err := pg.DB.Query(stmt, pq.Array(aggIds))
 	if err != nil {
 		return []string{}, err
 	}
@@ -109,7 +110,7 @@ func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	stmt := "SELECT agg_id, cal_id, cal_state FROM cal_states WHERE agg_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, aggIds)
+	rows, err := pg.DB.Query(stmt, pq.Array(aggIds))
 	if err != nil {
 		return []types.CalStateObject{}, err
 	}
@@ -134,7 +135,7 @@ func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStat
 func (pg *Postgres) GetAggStateObjectsByProofIds(proofIds []string) ([]types.AggState, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	stmt := "SELECT proof_id, hash, agg_id, agg_state, agg_root FROM agg_states WHERE proof_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, proofIds)
+	rows, err := pg.DB.Query(stmt, pq.Array(proofIds))
 	if err != nil {
 		return []types.AggState{}, err
 	}
@@ -159,7 +160,7 @@ func (pg *Postgres) GetAggStateObjectsByProofIds(proofIds []string) ([]types.Agg
 func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]types.AnchorBtcAggState, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM anchor_btc_agg_states WHERE cal_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, calIds)
+	rows, err := pg.DB.Query(stmt, pq.Array(calIds))
 	if err != nil {
 		return []types.AnchorBtcAggState{}, err
 	}
@@ -184,7 +185,7 @@ func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM btctx_states WHERE agg_id::TEXT = $1;"
-	rows, err := pg.DB.Query(stmt, aggId)
+	rows, err := pg.DB.Query(stmt, pq.Array(aggId))
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
 	}
