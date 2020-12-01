@@ -10,7 +10,8 @@ import (
 type P map[string]interface{}
 
 func Proof() P {
-	return P{}
+	proof := make(P)
+	return proof
 }
 
 func (proof *P) AddChainpointHeader(hash string, proofId string) error {
@@ -28,7 +29,7 @@ func (proof *P) AddChainpointHeader(hash string, proofId string) error {
 }
 
 func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) ([]P) {
-	var opsJsonArray []P
+	opsJsonArray := make([]P, 0)
 	for _, op := range ops {
 		var leftOrRight map[string]interface{}
 		var operation map[string]interface{}
@@ -44,7 +45,7 @@ func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) ([]P) {
 }
 
 func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, network string) error {
-	var calendarBranch map[string]interface{}
+	calendarBranch := make(map[string]interface{})
 	calendarBranch["label"] = "cal_anchor_branch"
 	aggStateOps := types.OpsState{}
 	if err := json.Unmarshal([]byte(aggState.AggState), & aggStateOps); err != nil {
@@ -57,12 +58,12 @@ func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, netw
 	ops := append(aggStateOps.Ops, calStateOps.Ops...)
 	opsJson := ConvertGoOpsToJsonMap(ops)
 
-	var calendarAnchor map[string]interface{}
+	calendarAnchor := make(map[string]interface{})
 	calendarAnchor["type"] = network
 	calendarAnchor["anchor_id"] = calStateOps.Anchor.AnchorID
 	calendarAnchor["uris"] = calStateOps.Anchor.Uris
 
-	var anchorOp map[string]interface{}
+	anchorOp := make(map[string]interface{})
 	anchorOp["anchors"] = []P{calendarAnchor}
 	opsJson = append(opsJson, anchorOp)
 
@@ -71,8 +72,8 @@ func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, netw
 	return nil
 }
 
-func (proof *P) AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState types.AnchorBtcTxState, btcHeadState types.AnchorBtcHeadState, network string) error {
-	var btcBranch map[string]interface{}
+func (proof *P)  AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState types.AnchorBtcTxState, btcHeadState types.AnchorBtcHeadState, network string) error {
+	btcBranch := make(map[string]interface{})
 	btcBranch["label"] = "btc_anchor_branch"
 	aggState := types.OpsState{}
 	if err := json.Unmarshal([]byte(btcAggState.AnchorBtcAggState), &aggState); err != nil {
@@ -89,12 +90,12 @@ func (proof *P) AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState typ
 	ops := append(append(aggState.Ops, txState.Ops...), headState.Ops...)
 	opsJson := ConvertGoOpsToJsonMap(ops)
 
-	var btcAnchor map[string]interface{}
+	btcAnchor := make(map[string]interface{})
 	btcAnchor["type"] = network
 	btcAnchor["anchor_id"] = headState.Anchor.AnchorID
 	btcAnchor["uris"] = headState.Anchor.Uris
 
-	var anchorOp map[string]interface{}
+	anchorOp := make(map[string]interface{})
 	anchorOp["anchors"] = []P{btcAnchor}
 	opsJson = append(opsJson, anchorOp)
 	btcBranch["ops"] = opsJson

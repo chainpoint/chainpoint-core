@@ -86,7 +86,7 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 	proofs := []types.ProofState{}
 	for _, aggStateRow := range aggStates {
 		proof := proof.Proof()
-		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.AggState))
+		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.ProofID))
 		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], app.config.BitcoinNetwork))
 		proofBytes, err := json.Marshal(proof)
 		app.logger.Info(fmt.Sprintf("Proof: %s", string(proofBytes)))
@@ -341,7 +341,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 	proofs := []types.ProofState{}
 	for _, aggStateRow := range aggStates {
 		proof := proof.Proof()
-		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.AggState))
+		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.ProofID))
 		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID].CalState, app.config.BitcoinNetwork))
 
 		if calVal, exists := calLookUp[aggStateRow.AggID]; exists {
