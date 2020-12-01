@@ -232,7 +232,7 @@ func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (proof_id) DO UPDATE SET proof = EXCLUDED.proof"
-	_, err := pg.DB.Exec(stmt, valuesArgs)
+	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }
 
@@ -252,7 +252,7 @@ func (pg *Postgres) BulkInsertAggState (aggStates []types.AggState) error {
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (proof_id) DO NOTHING"
-	_, err := pg.DB.Exec(stmt, valuesArgs)
+	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }
 
@@ -270,7 +270,7 @@ func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error 
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (agg_id) DO NOTHING"
-	_, err := pg.DB.Exec(stmt, valuesArgs)
+	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }
 
@@ -288,7 +288,7 @@ func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) 
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (cal_id) DO NOTHING"
-	_, err := pg.DB.Exec(stmt, valuesArgs)
+	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }
 
@@ -306,7 +306,7 @@ func (pg *Postgres) BulkInsertBtcTxState (txStates []types.AnchorBtcTxState) err
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (anchor_btc_agg_id) DO UPDATE"
-	_, err := pg.DB.Exec(stmt, valuesArgs)
+	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }
 
@@ -324,7 +324,7 @@ func (pg *Postgres) BulkInsertBtcHeadState (headStates []types.AnchorBtcHeadStat
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (btctx_id) DO UPDATE"
-	_, err := pg.DB.Exec(stmt, valuesArgs)
+	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }
 

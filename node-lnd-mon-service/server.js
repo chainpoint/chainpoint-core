@@ -25,14 +25,17 @@ async function ensureLndNodeClientWalletUnlockedAsync() {
   lndClient.setTls(LND_SOCKET, LND_CERTPATH)
   let unlocker = lndClient.unlocker()
   try {
-    await unlocker.unlockWalletAsync({ wallet_password: env.HOT_WALLET_PASS, recovery_window: 10000 })
-    logger.info('Wallet unlocked')
+    await unlocker.changePasswordAsync({
+      current_password: env.HOT_WALLET_PASS,
+      new_password: Buffer.from(env.HOT_WALLET_PASS, 'utf8')
+    })
+    logger.info('Password Changed')
   } catch (error) {
     if (error.code === 12) {
-      logger.info('Wallet already unlocked')
+      logger.info('Wallet already reset')
       return // already unlocked
     }
-    logger.error(`Unable to unlock wallet, retrying in 10 seconds...`)
+    logger.error(`Unable to reset wallet, retrying in 10 seconds...`)
   }
 }
 

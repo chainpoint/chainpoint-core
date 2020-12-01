@@ -77,7 +77,7 @@ func (app *AnchorApplication) SyncMonitor() {
 //LNDMonitor : maintains unlock of wallet while abci is running
 func (app *AnchorApplication) LNDMonitor() {
 	for {
-		app.LogError(app.lnClient.Unlocker())
+		app.lnClient.Unlocker()
 		time.Sleep(60 * time.Second)
 	}
 }
