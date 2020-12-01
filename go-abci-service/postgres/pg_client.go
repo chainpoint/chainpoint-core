@@ -221,6 +221,7 @@ func (pg *Postgres) GetBTCHeadStateObjectByBTCTxId(btcTxId string) (types.Anchor
 
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
 func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
+	pg.Logger.Info("BulkInsertProofs")
 	insert := "INSERT INTO proofs (proof_id, proof, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -238,6 +239,7 @@ func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 
 // BulkInsertAggState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertAggState (aggStates []types.AggState) error {
+	pg.Logger.Info("BulkInsertAggState")
 	insert := "INSERT INTO agg_states (proof_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -258,6 +260,7 @@ func (pg *Postgres) BulkInsertAggState (aggStates []types.AggState) error {
 
 // BulkInsertCalState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error {
+	pg.Logger.Info("BulkInsertCalState")
 	insert := "INSERT INTO cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -276,6 +279,7 @@ func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error 
 
 // BulkInsertBtcAggState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) error {
+	pg.Logger.Info("BulkInsertBtcAggState")
 	insert := "INSERT INTO anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -294,6 +298,7 @@ func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) 
 
 // BulkInsertBtcTxState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertBtcTxState (txStates []types.AnchorBtcTxState) error {
+	pg.Logger.Info("BulkInsertBtcTxState")
 	insert := "INSERT INTO btctx_states (anchor_btc_agg_id, btctx_id, btctx_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -312,6 +317,7 @@ func (pg *Postgres) BulkInsertBtcTxState (txStates []types.AnchorBtcTxState) err
 
 // BulkInsertBtcHeadState : inserts head state into postgres
 func (pg *Postgres) BulkInsertBtcHeadState (headStates []types.AnchorBtcHeadState) error {
+	pg.Logger.Info("BulkInsertBtcHeadState")
 	insert := "INSERT INTO btchead_states (btctx_id, btchead_height, btchead_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)

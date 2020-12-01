@@ -237,8 +237,11 @@ func (ln *LnClient) Unlocker() error {
 		XXX_sizecache:        0,
 	}
 	_, err := conn.UnlockWallet(context.Background(), &unlockReq)
-	if ln.LoggerError(err) != nil {
-		return err
+	if err != nil {
+		if strings.Contains(err.Error(), "unknown service lnrpc.WalletUnlocker") {
+			return nil
+		}
+		return ln.LoggerError(err)
 	}
 	close()
 	return nil
