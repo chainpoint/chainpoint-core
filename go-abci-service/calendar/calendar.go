@@ -66,8 +66,8 @@ func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.C
 	return treeDataObj
 }
 
-// QueueCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
-func (calendar *Calendar) QueueCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) ([]string, []types.CalStateObject) {
+// CreateCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
+func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) ([]string, []types.CalStateObject) {
 	calStates := make([]types.CalStateObject, 0)
 	aggIds := make([]string, 0)
 	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")

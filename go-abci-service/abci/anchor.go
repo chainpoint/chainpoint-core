@@ -47,8 +47,10 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 			var tx types.TxTm
 			tx.Hash = result.Hash.Bytes()
 			tx.Data = result.Data.Bytes()
-			aggIds, calStates := app.calendar.QueueCalStateMessage(tx, calAgg)
+			aggIds, calStates := app.calendar.CreateCalStateMessage(tx, calAgg)
+			app.logger.Info(fmt.Sprintf("Cal AggIds: %v\nCal States: %#v", len(aggIds), len(calStates)))
 			proofIds, err := app.pgClient.GetProofIdsByAggIds(aggIds)
+			app.logger.Info(fmt.Sprintf("ProofIds: %v", proofIds))
 			if app.LogError(err) != nil {
 				return err
 			}
@@ -64,6 +66,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 
 func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 	aggStates, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
+	app.logger.Info(fmt.Sprintf("%d aggStates: %#v", len(aggStates), aggStates))
 	if err != nil {
 		return err
 	}
@@ -72,6 +75,7 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 		aggIds = append(aggIds, aggState.AggID)
 	}
 	calStates, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
+	app.logger.Info(fmt.Sprintf("%d calStates: %#v", len(calStates), calStates))
 	if err != nil {
 		return err
 	}
