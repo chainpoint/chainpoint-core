@@ -54,7 +54,7 @@ func NewPGFromURI(connStr string, logger log.Logger) (*Postgres, error) {
 // GetProofIdsByAggIds : get proof ids from proof table, based on aggId
 func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
-	stmt := "SELECT proof_id FROM proofs WHERE agg_id::TEXT = ANY($1);"
+	stmt := "SELECT proof_id FROM agg_states WHERE agg_id::TEXT = ANY($1);"
 	rows, err := pg.DB.Query(stmt, pq.Array(aggIds))
 	if err != nil {
 		return []string{}, err
