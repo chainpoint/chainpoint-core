@@ -349,7 +349,7 @@ func (pg *Postgres) PruneProofStateTables() error {
 	var err error
 	for _, tabl := range tables {
 		go func(table string) {
-			pruneStmt := fmt.Sprintf("DELETE FROM %s WHERE created_at > NOW() - INTERVAL '24 HOURS'", table)
+			pruneStmt := fmt.Sprintf("DELETE FROM %s WHERE created_at < NOW() - INTERVAL '24 HOURS'", table)
 			_, err = pg.DB.Exec(pruneStmt)
 			util.LoggerError(pg.Logger, err)
 		}(tabl)
