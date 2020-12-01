@@ -241,6 +241,7 @@ func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 		i++
 	}
 	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (proof_id) DO UPDATE SET proof = EXCLUDED.proof"
+	pg.Logger.Info(fmt.Sprintf("INSERT INTO PROOFS: %s", stmt))
 	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }
