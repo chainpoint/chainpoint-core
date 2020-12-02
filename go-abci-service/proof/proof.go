@@ -35,9 +35,11 @@ func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) ([]P) {
 		operation := make(map[string]interface{})
 		if len(op.Left) > 0 {
 			leftOrRight["l"] = op.Left
-		} else if len(op.Right) > 0 {
+		}
+		if len(op.Right) > 0 {
 			leftOrRight["r"] = op.Right
-		} else {
+		}
+		if len(leftOrRight) == 0 {
 			continue
 		}
 		operation["op"] = op.Op
