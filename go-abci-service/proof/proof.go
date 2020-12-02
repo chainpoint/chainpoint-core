@@ -31,8 +31,8 @@ func (proof *P) AddChainpointHeader(hash string, proofId string) error {
 func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) ([]P) {
 	opsJsonArray := make([]P, 0)
 	for _, op := range ops {
-		var leftOrRight map[string]interface{}
-		var operation map[string]interface{}
+		leftOrRight := make(map[string]interface{})
+		operation := make(map[string]interface{})
 		if len(op.Left) > 0 {
 			leftOrRight["l"] = op.Left
 		} else {
