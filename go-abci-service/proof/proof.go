@@ -35,8 +35,10 @@ func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) ([]P) {
 		operation := make(map[string]interface{})
 		if len(op.Left) > 0 {
 			leftOrRight["l"] = op.Left
-		} else {
+		} else if len(op.Right) > 0 {
 			leftOrRight["r"] = op.Right
+		} else {
+			continue
 		}
 		operation["op"] = op.Op
 		opsJsonArray = append(opsJsonArray, leftOrRight, operation)
@@ -59,7 +61,11 @@ func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, netw
 	opsJson := ConvertGoOpsToJsonMap(ops)
 
 	calendarAnchor := make(map[string]interface{})
-	calendarAnchor["type"] = network
+	proofType := "cal"
+	if network == "testnet" {
+		proofType = "tcal"
+	}
+	calendarAnchor["type"] = proofType
 	calendarAnchor["anchor_id"] = calStateOps.Anchor.AnchorID
 	calendarAnchor["uris"] = calStateOps.Anchor.Uris
 
@@ -91,7 +97,11 @@ func (proof *P)  AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState ty
 	opsJson := ConvertGoOpsToJsonMap(ops)
 
 	btcAnchor := make(map[string]interface{})
-	btcAnchor["type"] = network
+	proofType := "btc"
+	if network == "testnet" {
+		proofType = "tbtc"
+	}
+	btcAnchor["type"] = proofType
 	btcAnchor["anchor_id"] = headState.Anchor.AnchorID
 	btcAnchor["uris"] = headState.Anchor.Uris
 
