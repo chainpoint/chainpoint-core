@@ -39,11 +39,13 @@ func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) ([]P) {
 		if len(op.Right) > 0 {
 			leftOrRight["r"] = op.Right
 		}
-		if len(leftOrRight) == 0 {
-			continue
+		if len(leftOrRight) > 0 {
+			opsJsonArray = append(opsJsonArray, leftOrRight)
 		}
-		operation["op"] = op.Op
-		opsJsonArray = append(opsJsonArray, leftOrRight, operation)
+		if len(op.Op) > 0 {
+			operation["op"] = op.Op
+			opsJsonArray = append(opsJsonArray, operation)
+		}
 	}
 	return opsJsonArray
 }
