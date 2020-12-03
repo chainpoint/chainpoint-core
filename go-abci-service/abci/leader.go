@@ -87,6 +87,7 @@ func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int, blac
 	keys := make([]string, 0, len(app.state.CoreKeys))
 	app.logger.Info("CoreKeys", "app.state.CoreKeys", len(app.state.CoreKeys))
 	cores := validation.GetLastCalSubmitters(128, app.state)
+	app.logger.Info("Core Cal Submitters", "cores", len(cores))
 	for k := range cores {
 		filtered := false
 		for _, id := range blacklistedIDs {
