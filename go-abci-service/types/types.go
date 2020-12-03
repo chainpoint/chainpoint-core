@@ -32,6 +32,7 @@ type AnchorConfig struct {
 	ChainId          string
 	DBType           string
 	BitcoinNetwork   string
+	ElectionMode     string
 	RabbitmqURI      string
 	TendermintConfig TendermintConfig
 	LightningConfig  lightning.LnClient

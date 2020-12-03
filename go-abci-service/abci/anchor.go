@@ -117,6 +117,9 @@ func (app *AnchorApplication) GetTreeFromCalRange(startTxRange int64, endTxRange
 // AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
 func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
 	// elect leader to do the actual anchoring
+	if app.config.ElectionMode == "test" {
+		app.state.LastErrorCoreID = ""
+	}
 	iAmLeader, leaderIDs := app.ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID})
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")

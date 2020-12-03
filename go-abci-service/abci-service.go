@@ -100,6 +100,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "20"))
 	anchorReward, _ := strconv.Atoi(util.GetEnv("ANCHOR_REWARD", "0"))
 	blockCIDRs := strings.Split(util.GetEnv("CIDR_BLOCKLIST", ""), ",")
+	electionMode := util.GetEnv("ELECTION", "reputation")
 
 	walletAddress := util.GetEnv("HOT_WALLET_ADDRESS", "")
 	if walletAddress == "" {
@@ -154,6 +155,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	return types.AnchorConfig{
 		DBType:           "goleveldb",
 		BitcoinNetwork:   bitcoinNetwork,
+		ElectionMode:	  electionMode,
 		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintConfig: tendermintRPC,
 		LightningConfig: lightning.LnClient{

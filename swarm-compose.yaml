@@ -31,6 +31,7 @@ services:
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
+      ELECTION: 'reputation'
       ANCHOR: 'true'
       NODE_MANAGEMENT: 'true'
       AGGREGATE: 'true'
