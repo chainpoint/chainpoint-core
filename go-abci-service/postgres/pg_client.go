@@ -319,8 +319,9 @@ func (pg *Postgres) BulkInsertBtcTxState (txStates []types.AnchorBtcTxState) err
 		valuesArgs = append(valuesArgs, t.BtcTxState)
 		i++
 	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (anchor_btc_agg_id) DO UPDATE"
+	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (anchor_btc_agg_id) DO UPDATE SET btctx_id = EXCLUDED.btctx_id, btctx_state = EXCLUDED.btctx_state"
 	_, err := pg.DB.Exec(stmt, valuesArgs...)
+	pg.Logger.Info(fmt.Sprintf("INSERT INTO BTCTX: %s", stmt))
 	return err
 }
 

@@ -369,6 +369,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 		}
 		proofs = append(proofs, proofState)
 	}
+	app.logger.Info(fmt.Sprintf("btc proofs: %#v", proofs))
 	return app.LogError(app.pgClient.BulkInsertProofs(proofs))
 }
 
@@ -433,7 +434,9 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		BtcHeadState:  string(headState),
 	}
 	proofIds, err := app.pgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
+	app.logger.Info(fmt.Sprintf("ProofIds: %#v", proofIds))
 	app.LogError(err)
+	app.logger.Info(fmt.Sprintf("BtcHeadState: %#v", headStateObj))
 	app.LogError(app.pgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
 	app.LogError(app.GenerateBtcBatch(proofIds))
 	return nil
