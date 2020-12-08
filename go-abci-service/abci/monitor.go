@@ -386,7 +386,7 @@ func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
 			app.logger.Info(fmt.Sprintf("BTC-A %s confirmed", btcmsg.BtcTxID))
 			return nil
 		}
-		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s\n%s != %s", btcmsg.BtcTxID, msgTx.TxHash().String(), out.PkScript, outputScript))
+		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s\n%s != %s", btcmsg.BtcTxID, msgTx.TxHash().String(), string(out.PkScript), string(outputScript)))
 	}
 	return errors.New("unable to verify BTC-A")
 }

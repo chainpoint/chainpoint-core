@@ -185,7 +185,7 @@ func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM btctx_states WHERE agg_id::TEXT = $1;"
-	rows, err := pg.DB.Query(stmt, pq.Array(aggId))
+	rows, err := pg.DB.Query(stmt, aggId)
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
 	}
@@ -339,7 +339,7 @@ func (pg *Postgres) BulkInsertBtcHeadState (headStates []types.AnchorBtcHeadStat
 		valuesArgs = append(valuesArgs, h.BtcHeadState)
 		i++
 	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (btctx_id) DO UPDATE"
+	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (btctx_id) DO UPDATE SET btchead_height = EXCLUDED.btchead_height, btchead_state = EXCLUDED.btchead_state"
 	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }
