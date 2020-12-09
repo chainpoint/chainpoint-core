@@ -308,6 +308,7 @@ func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) 
 // BulkInsertBtcTxState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertBtcTxState (txStates []types.AnchorBtcTxState) error {
 	pg.Logger.Info(util.GetCurrentFuncName())
+	pg.Logger.Info("AnchorBtcTxState: %#v", txStates)
 	insert := "INSERT INTO btctx_states (anchor_btc_agg_id, btctx_id, btctx_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
