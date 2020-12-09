@@ -131,7 +131,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		return err
 	}
 	app.logger.Info(fmt.Sprintf("Anchoring tx ranges %d to %d at Height %d, latestBtcaHeight %d, for aggroot: %s", startTxRange, endTxRange, app.state.Height, app.state.LatestBtcaHeight, treeData.AnchorBtcAggRoot))
-	app.logger.Info(fmt.Sprintf("treeData for Anchor: %v", treeData))
+	app.logger.Info(fmt.Sprintf("treeData for Anchor: %#v", treeData))
 
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
@@ -280,6 +280,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	}
 	if (btcAgg.AnchorBtcAggRoot != btcTxObj.AnchorBtcAggRoot) {
 		app.logger.Info(fmt.Sprintf("Anchor TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btcTxObj.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
+		app.logger.Info(fmt.Sprintf("treeData for Anchor comparison: %#v", btcAgg))
 		return errors.New("Anchor failure, AggRoot mismatch")
 	}
 	anchorBTCAggStateObjects := app.calendar.PrepareBtcaStateData(btcAgg)
