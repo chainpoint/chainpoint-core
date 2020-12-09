@@ -184,7 +184,7 @@ func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 //GetBTCTxStateObjectByAnchorBTCAggId: Get btc state objects, given an array of agg ids
 func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
-	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM btctx_states WHERE agg_id::TEXT = $1;"
+	stmt := "SELECT anchor_btc_agg_id, btctx_id, anchor_btc_agg_state FROM btctx_states WHERE agg_id::TEXT = $1;"
 	rows, err := pg.DB.Query(stmt, aggId)
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
