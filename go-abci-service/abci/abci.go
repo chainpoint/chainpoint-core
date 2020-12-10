@@ -331,14 +331,21 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 		app.pgClient.PruneProofStateTables()
 	}
 
-	// Anchor every anchorInterval of blocks
-	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
-		if app.state.ChainSynced {
-			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
-		} else {
-			app.state.EndCalTxInt = app.state.LatestCalTxInt
+	// Run AnchorCalendar and AnchorBTC one after another to prevent race conditions
+	go func() {
+		// Anchor new aggregated hashes into cal tx every block
+		if app.state.ChainSynced && app.config.DoCal {
+			app.AnchorCalendar(app.state.Height)
 		}
-	}
+		// Anchor every anchorInterval of blocks
+		if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
+			if app.state.ChainSynced {
+				app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
+			} else {
+				app.state.EndCalTxInt = app.state.LatestCalTxInt
+			}
+		}
+	}()
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
