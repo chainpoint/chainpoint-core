@@ -17,6 +17,7 @@ import (
 
 )
 
+// Anchor : Anchor aggregated hashes into the Calendar and the Calendar into BTC
 func (app *AnchorApplication) Anchor () error {
 	var err error
 	if app.state.ChainSynced && app.config.DoCal {
