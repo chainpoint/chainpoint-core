@@ -17,6 +17,22 @@ import (
 
 )
 
+func (app *AnchorApplication) Anchor () error {
+	var err error
+	if app.state.ChainSynced && app.config.DoCal {
+		err = app.AnchorCalendar(app.state.Height)
+	}
+	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
+		if app.state.ChainSynced {
+			err = app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
+		} else {
+			app.state.EndCalTxInt = app.state.LatestCalTxInt
+		}
+	}
+	app.pgClient.PruneProofStateTables()
+	return app.LogError(err)
+}
+
 // AnchorCalendar : Aggregate submitted hashes into a calendar transaction
 func (app *AnchorApplication) AnchorCalendar(height int64) error {
 	app.logger.Debug("starting scheduled aggregation")
