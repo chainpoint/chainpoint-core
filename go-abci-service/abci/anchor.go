@@ -399,6 +399,9 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 	if len(anchoringCoreID) == 0 {
 		app.logger.Error(fmt.Sprintf("Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
 	} else {
+		if app.config.ElectionMode == "test" {
+			anchoringCoreID = ""
+		}
 		app.logger.Info(fmt.Sprintf("Retrieved confirmation query for core %s", anchoringCoreID))
 	}
 
