@@ -106,6 +106,7 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 func (app *AnchorApplication) GetTreeFromCalRange(startTxRange int64, endTxRange int64) (types.BtcAgg, error) {
 	// Get CAL transactions between the latest BTCA tx and the current latest tx
 	txLeaves, err := app.getCalTxRange(startTxRange, endTxRange)
+	app.logger.Info(fmt.Sprintf("Retrieved %d CAL leaves from ranges %d to %d", len(txLeaves), startTxRange, endTxRange))
 	if app.LogError(err) != nil {
 		return types.BtcAgg{}, err
 	}
