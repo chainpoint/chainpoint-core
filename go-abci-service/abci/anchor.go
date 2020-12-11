@@ -20,15 +20,15 @@ import (
 // Anchor : Anchor aggregated hashes into the Calendar and the Calendar into BTC
 func (app *AnchorApplication) Anchor () error {
 	var err error
-	if app.state.ChainSynced && app.config.DoCal {
-		err = app.AnchorCalendar(app.state.Height)
-	}
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
 			err = app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
+	}
+	if app.state.ChainSynced && app.config.DoCal {
+		err = app.AnchorCalendar(app.state.Height)
 	}
 	app.pgClient.PruneProofStateTables()
 	return app.LogError(err)
