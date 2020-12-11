@@ -19,23 +19,28 @@ import (
 
 // Anchor : Anchor aggregated hashes into the Calendar and the Calendar into BTC
 func (app *AnchorApplication) Anchor () error {
+	var roots int
 	var err error
+	if app.state.ChainSynced && app.config.DoCal {
+		roots, err = app.AnchorCalendar(app.state.Height)
+	}
 	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
 		if app.state.ChainSynced {
-			err = app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
+			if roots > 0 && app.state.LatestCalTxInt - app.state.BeginCalTxInt > 1 {
+				err = app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt-1) // aggregate and anchor these tx ranges
+			} else {
+				err = app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
+			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
 		}
-	}
-	if app.state.ChainSynced && app.config.DoCal {
-		err = app.AnchorCalendar(app.state.Height)
 	}
 	app.pgClient.PruneProofStateTables()
 	return app.LogError(err)
 }
 
 // AnchorCalendar : Aggregate submitted hashes into a calendar transaction
-func (app *AnchorApplication) AnchorCalendar(height int64) error {
+func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 	app.logger.Debug("starting scheduled aggregation")
 
 	// Get agg objects
@@ -53,7 +58,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 		app.logger.Debug(fmt.Sprintf("Calendar Tree: %#v", calAgg))
 		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
-			return err
+			return 0, err
 		}
 		deadline := height + 2
 		for app.state.Height < deadline {
@@ -69,16 +74,16 @@ func (app *AnchorApplication) AnchorCalendar(height int64) error {
 			proofIds, err := app.pgClient.GetProofIdsByAggIds(aggIds)
 			app.logger.Info(fmt.Sprintf("ProofIds: %v", proofIds))
 			if app.LogError(err) != nil {
-				return err
+				return 0, err
 			}
 			app.logger.Info("Generating Cal Batch")
 			app.LogError(app.pgClient.BulkInsertCalState(calStates))
 			app.LogError(app.GenerateCalBatch(proofIds))
 			app.logger.Info("Generating Cal Batch Complete")
-			return nil
+			return len(aggs), nil
 		}
 	}
-	return errors.New("No hashes to aggregate")
+	return 0, errors.New("No hashes to aggregate")
 }
 
 func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
