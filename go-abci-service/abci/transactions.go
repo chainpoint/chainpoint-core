@@ -44,7 +44,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	}
 	if app.state.ChainSynced && tx.TxType == "BTC-A" {
 		var btcTxObj types.BtcTxMsg
-		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil  {
+		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
 		if matchErr := app.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
@@ -131,6 +131,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "CAL":
 		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt
+		app.state.CurrentCalInts++
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "BTC-E":
@@ -234,7 +235,7 @@ func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]c
 }
 
 //getAnchoringCore : gets core to whom last anchor is attributed
-func (app *AnchorApplication) getAnchoringCore(queryLine string)(string, error){
+func (app *AnchorApplication) getAnchoringCore(queryLine string) (string, error) {
 	app.logger.Info("Anchor confirmation query: " + queryLine)
 	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
 	if app.LogError(err) == nil {

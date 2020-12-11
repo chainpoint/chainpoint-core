@@ -11,33 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
-
 )
-
-// Anchor : Anchor aggregated hashes into the Calendar and the Calendar into BTC
-func (app *AnchorApplication) Anchor () error {
-	var roots int
-	var err error
-	if app.state.ChainSynced && app.config.DoCal {
-		roots, err = app.AnchorCalendar(app.state.Height)
-	}
-	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
-		if app.state.ChainSynced {
-			if roots > 0 && app.state.LatestCalTxInt - app.state.BeginCalTxInt > 1 {
-				err = app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt-1) // aggregate and anchor these tx ranges
-			} else {
-				err = app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt)
-			}
-		} else {
-			app.state.EndCalTxInt = app.state.LatestCalTxInt
-		}
-	}
-	app.pgClient.PruneProofStateTables()
-	return app.LogError(err)
-}
 
 // AnchorCalendar : Aggregate submitted hashes into a calendar transaction
 func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
@@ -94,7 +71,7 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 		return err
 	}
 	aggIds := []string{}
-	for _, aggState := range aggStates{
+	for _, aggState := range aggStates {
 		aggIds = append(aggIds, aggState.AggID)
 	}
 	calStates, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
@@ -298,10 +275,10 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	}
 
 	btcAgg, err := app.GetTreeFromCalRange(btcTxObj.BeginCalTxInt, btcTxObj.EndCalTxInt)
-	if (app.LogError(err) != nil) {
+	if app.LogError(err) != nil {
 		return err
 	}
-	if (btcAgg.AnchorBtcAggRoot != btcTxObj.AnchorBtcAggRoot) {
+	if btcAgg.AnchorBtcAggRoot != btcTxObj.AnchorBtcAggRoot {
 		app.logger.Info(fmt.Sprintf("Anchor TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btcTxObj.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
 		app.logger.Info(fmt.Sprintf("treeData for Anchor comparison: %#v", btcAgg))
 		return errors.New("Anchor failure, AggRoot mismatch")
@@ -326,7 +303,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 		return err
 	}
 	aggIds := []string{}
-	for _, aggState := range aggStates{
+	for _, aggState := range aggStates {
 		aggIds = append(aggIds, aggState.AggID)
 	}
 	calStates, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
@@ -378,7 +355,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 				app.logger.Info("can't find anchorBTCAggState for", "CalId", calVal.CalId)
 				continue
 			}
-		}  else {
+		} else {
 			app.logger.Info("can't find calState for", "aggStateRow.AggID", aggStateRow.AggID)
 			continue
 		}

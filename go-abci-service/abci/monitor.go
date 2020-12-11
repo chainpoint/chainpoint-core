@@ -381,7 +381,7 @@ func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
 	if app.LogError(err) != nil {
 		return err
 	}
-	for _, out :=  range msgTx.TxOut {
+	for _, out := range msgTx.TxOut {
 		if bytes.Compare(out.PkScript, outputScript) == 0 && msgTx.TxHash().String() == btcmsg.BtcTxID {
 			app.logger.Info(fmt.Sprintf("BTC-A %s confirmed", btcmsg.BtcTxID))
 			return nil
@@ -504,7 +504,7 @@ func (app *AnchorApplication) MonitorNewTx() {
 			app.logger.Info(fmt.Sprintf("New BTC Check: cannot marshal json"))
 			continue
 		}
-		go func(monBytes []byte, res string){
+		go func(monBytes []byte, res string) {
 			app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(monBytes)))
 			_, err = app.rpc.BroadcastTx("BTC-A", string(monBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 			if app.LogError(err) != nil {

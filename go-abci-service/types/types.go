@@ -76,6 +76,7 @@ type AnchorState struct {
 	BeginCalTxInt     int64                      `json:"begin_cal_int"`
 	EndCalTxInt       int64                      `json:"end_cal_int"`
 	LatestCalTxInt    int64                      `json:"latest_cal_int"`
+	CurrentCalInts    int64                      `json:"current_cal_ints"`
 	LatestBtcaTx      []byte                     `json:"latest_btca"`
 	LatestBtcaTxInt   int64                      `json:"latest_btca_int"`
 	LatestBtcaHeight  int64                      `json:"latest_btca_height"`
