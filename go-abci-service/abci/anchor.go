@@ -16,6 +16,26 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
+
+// Anchor: Anchor calendar and btc blockchains
+func (app *AnchorApplication) Anchor() {
+	// Run AnchorCalendar and AnchorBTC one after another
+	if app.state.ChainSynced && app.config.DoCal {
+		go app.AnchorCalendar(app.state.Height)
+	}
+	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
+		if app.state.ChainSynced {
+			// prevent current height, non-indexed cal roots from being anchored
+			if app.state.LatestCalTxInt-app.state.BeginCalTxInt > app.state.CurrentCalInts {
+				go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt-app.state.CurrentCalInts)
+			}
+		} else {
+			app.state.EndCalTxInt = app.state.LatestCalTxInt
+		}
+	}
+	app.state.CurrentCalInts = 0
+}
+
 // AnchorCalendar : Aggregate submitted hashes into a calendar transaction
 func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 	app.logger.Debug("starting scheduled aggregation")

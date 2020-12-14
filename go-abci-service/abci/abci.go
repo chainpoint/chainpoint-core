@@ -327,21 +327,8 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 		go app.FeeMonitor()
 	}
 
-	// Run AnchorCalendar and AnchorBTC one after another
-	if app.state.ChainSynced && app.config.DoCal {
-		go app.AnchorCalendar(app.state.Height)
-	}
-	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
-		if app.state.ChainSynced {
-			// prevent current height, non-indexed cal roots from being anchored
-			if app.state.LatestCalTxInt-app.state.BeginCalTxInt > app.state.CurrentCalInts {
-				go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt-app.state.CurrentCalInts)
-			}
-		} else {
-			app.state.EndCalTxInt = app.state.LatestCalTxInt
-		}
-	}
-	app.state.CurrentCalInts = 0
+	// Anchor blockchain
+	app.Anchor()
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
