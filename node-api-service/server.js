@@ -93,7 +93,7 @@ function setupRestifyConfigAndRoutes(server) {
   // retrieve information associated with an LSAT attached in the header
   server.get(
     { path: '/boltwall/invoice', version: '1.0.0' },
-    ...applyProductionMiddleware([throttle(5, 1)]),
+    ...applyProductionMiddleware([throttle(5, 2)]),
     hashes.boltwall
   )
 
@@ -101,7 +101,7 @@ function setupRestifyConfigAndRoutes(server) {
   // payments for hash submissions
   server.get(
     { path: '/boltwall/node', version: '1.0.0' },
-    ...applyProductionMiddleware([throttle(5, 1)]),
+    ...applyProductionMiddleware([throttle(5, 2)]),
     hashes.boltwall
   )
 
@@ -110,7 +110,7 @@ function setupRestifyConfigAndRoutes(server) {
   // paid then this will fail
   server.post(
     { path: '/hash', version: '1.0.0' },
-    ...applyProductionMiddleware([throttle(5, 1)]),
+    ...applyProductionMiddleware([throttle(5, 2)]),
     hashes.validatePostHashRequest,
     hashes.parsePostHashRequest,
     hashes.boltwall,
