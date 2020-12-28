@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,7 +25,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/tendermint/tendermint/libs/log"
-
+	"github.com/gorilla/mux"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -82,8 +83,19 @@ func main() {
 	}
 	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
-	// Wait forever
-	select {}
+	/* /hash, /proof, /calendar, /status, /peers, /gateways/public, /boltwall/invoice, /boltwall/node */
+	r := mux.NewRouter()
+	r.HandleFunc("/", app.HomeHandler)
+	r.HandleFunc("/hash", HashHandler)
+	r.HandleFunc("/proof", ProofHandler)
+	r.HandleFunc("/calendar", CalHandler)
+	r.HandleFunc("/status", StatusHandler)
+	r.HandleFunc("/peers", PeersHandler)
+	r.HandleFunc("/gateways/public", GatewaysHandler)
+	r.HandleFunc("/boltwall/invoice", BoltwallInvoiceHandler)
+	r.HandleFunc("/boltwall/node", BoltwallNodeHandler)
+	http.Handle("/", r)
+
 	return
 }
 
@@ -100,6 +112,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "20"))
 	anchorReward, _ := strconv.Atoi(util.GetEnv("ANCHOR_REWARD", "0"))
 	blockCIDRs := strings.Split(util.GetEnv("CIDR_BLOCKLIST", ""), ",")
+	hashPrice, _ := strconv.Atoi(util.GetEnv("SUBMIT_HASH_PRICE_SAT", "2"))
 
 	walletAddress := util.GetEnv("HOT_WALLET_ADDRESS", "")
 	if walletAddress == "" {
@@ -183,6 +196,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		AnchorReward:     anchorReward,
 		StakePerCore:     1000000,
 		FeeInterval:      int64(feeInterval),
+		HashPrice:        hashPrice,
 	}
 }
 

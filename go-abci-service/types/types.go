@@ -56,6 +56,7 @@ type AnchorConfig struct {
 	AnchorReward     int
 	StakePerCore     int64
 	FeeInterval      int64
+	HashPrice		 int
 }
 
 //EthConfig holds contract addresses and eth node URI
@@ -329,19 +330,24 @@ type Jwk struct {
 //CoreAPIStatus : status from Core's api service. Includes pubkey
 type CoreAPIStatus struct {
 	Version             string    `json:"version"`
-	Time                time.Time `json:"time"`
+	Time                string    `json:"time"`
 	BaseURI             string    `json:"base_uri"`
 	Jwk                 Jwk       `json:"jwk"`
 	Network             string    `json:"network"`
 	IdentityPubkey      string    `json:"identity_pubkey"`
 	LightningAddress    string    `json:"lightning_address"`
+	LightningBalance struct {
+		TotalBalance       string `json:"total_balance"`
+		ConfirmedBalance   string `json:"confirmed_balance"`
+		UnconfirmedBalance string `json:"unconfirmed_balance"`
+	} `json:"lightning_balance"`
 	PublicKey           string    `json:"public_key"`
 	Uris                []string  `json:"uris"`
 	Alias               string    `json:"alias"`
 	HashPriceSatoshis   int       `json:"hash_price_satoshis"`
 	TotalStakePrice     int       `json:"total_stake_price"`
 	ValidatorStakePrice int       `json:"validator_stake_price"`
-	ActiveChannelsCount int       `json:"active_channels_count"`
+	ActiveChannelsCount int       `json:"num_channels_count"`
 	NodeInfo            struct {
 		ProtocolVersion struct {
 			P2P   string `json:"p2p"`

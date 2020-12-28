@@ -285,6 +285,13 @@ func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
 	return resp, err
 }
 
+func (ln *LnClient) GetWalletBalance() (*lnrpc.WalletBalanceResponse, error) {
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	resp, err := client.WalletBalance(context.Background(), &lnrpc.WalletBalanceRequest{})
+	return resp, err
+}
+
 func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) {
 	client, closeFunc := ln.GetClient()
 	defer closeFunc()
