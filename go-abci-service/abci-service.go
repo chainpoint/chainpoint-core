@@ -119,7 +119,14 @@ func main() {
 	//r.Handle("/gateways/public", apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)))
 	//r.Handle("/boltwall/invoice", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallInvoiceHandler)))
 	//r.Handle("/boltwall/node", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallNodeHandler)))
-	http.ListenAndServe(":8080", r)
+
+	server := &http.Server{
+		Handler: r,
+		Addr:    ":8080",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	server.ListenAndServe()
 
 	return
 }
