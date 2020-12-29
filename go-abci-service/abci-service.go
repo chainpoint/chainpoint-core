@@ -23,6 +23,8 @@ import (
 
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
+	"gopkg.in/throttled/throttled.v2"
+	"gopkg.in/throttled/throttled.v2/store/memstore"
 
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/gorilla/mux"
@@ -84,17 +86,40 @@ func main() {
 	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
 	/* /hash, /proof, /calendar, /status, /peers, /gateways/public, /boltwall/invoice, /boltwall/node */
+	store, err := memstore.New(65536)
+	if err != nil {
+		util.LogError(err)
+		panic(err)
+	}
+
+	hashQuota := throttled.RateQuota{throttled.PerMin(3), 5}
+	apiQuota := throttled.RateQuota{throttled.PerSec(10), 50}
+	hashLimiter, err := throttled.NewGCRARateLimiter(store, hashQuota)
+	apiLimiter, err := throttled.NewGCRARateLimiter(store, apiQuota)
+	if err != nil {
+		util.LogError(err)
+		panic(err)	}
+
+	hashRateLimiter := throttled.HTTPRateLimiter{
+		RateLimiter: hashLimiter,
+		VaryBy:      &throttled.VaryBy{Path: true},
+	}
+	apiRateLimiter := throttled.HTTPRateLimiter{
+		RateLimiter: apiLimiter,
+		VaryBy:      &throttled.VaryBy{Path: true},
+	}
+
 	r := mux.NewRouter()
-	r.HandleFunc("/", app.HomeHandler)
-	r.HandleFunc("/hash", HashHandler)
-	r.HandleFunc("/proof", ProofHandler)
-	r.HandleFunc("/calendar", CalHandler)
-	r.HandleFunc("/status", StatusHandler)
-	r.HandleFunc("/peers", PeersHandler)
-	r.HandleFunc("/gateways/public", GatewaysHandler)
-	r.HandleFunc("/boltwall/invoice", BoltwallInvoiceHandler)
-	r.HandleFunc("/boltwall/node", BoltwallNodeHandler)
-	http.Handle("/", r)
+	r.Handle("/", apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)))
+	r.Handle("/hash", hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)))
+	//r.Handle("/proof", apiRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
+	//r.Handle("/calendar", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)))
+	r.Handle("/status", apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)))
+	//r.Handle("/peers", apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)))
+	//r.Handle("/gateways/public", apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)))
+	//r.Handle("/boltwall/invoice", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallInvoiceHandler)))
+	//r.Handle("/boltwall/node", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallNodeHandler)))
+	http.ListenAndServe(":8080", r)
 
 	return
 }

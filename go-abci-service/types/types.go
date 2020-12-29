@@ -3,11 +3,10 @@ package types
 import (
 	"crypto/ecdsa"
 	"database/sql"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	types3 "github.com/tendermint/tendermint/types"
 	"math/big"
-	"time"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
 	"github.com/tendermint/tendermint/privval"
 
@@ -345,39 +344,10 @@ type CoreAPIStatus struct {
 	Uris                []string  `json:"uris"`
 	Alias               string    `json:"alias"`
 	HashPriceSatoshis   int       `json:"hash_price_satoshis"`
-	TotalStakePrice     int       `json:"total_stake_price"`
-	ValidatorStakePrice int       `json:"validator_stake_price"`
+	TotalStakePrice     int64       `json:"total_stake_price"`
+	ValidatorStakePrice int64       `json:"validator_stake_price"`
 	ActiveChannelsCount int       `json:"num_channels_count"`
-	NodeInfo            struct {
-		ProtocolVersion struct {
-			P2P   string `json:"p2p"`
-			Block string `json:"block"`
-			App   string `json:"app"`
-		} `json:"protocol_version"`
-		ID         string `json:"id"`
-		ListenAddr string `json:"listen_addr"`
-		Network    string `json:"network"`
-		Version    string `json:"version"`
-		Channels   string `json:"channels"`
-		Moniker    string `json:"moniker"`
-		Other      struct {
-			TxIndex    string `json:"tx_index"`
-			RPCAddress string `json:"rpc_address"`
-		} `json:"other"`
-	} `json:"node_info"`
-	SyncInfo struct {
-		LatestBlockHash   string    `json:"latest_block_hash"`
-		LatestAppHash     string    `json:"latest_app_hash"`
-		LatestBlockHeight string    `json:"latest_block_height"`
-		LatestBlockTime   time.Time `json:"latest_block_time"`
-		CatchingUp        bool      `json:"catching_up"`
-	} `json:"sync_info"`
-	ValidatorInfo struct {
-		Address string `json:"address"`
-		PubKey  struct {
-			Type  string `json:"type"`
-			Value string `json:"value"`
-		} `json:"pub_key"`
-		VotingPower string `json:"voting_power"`
-	} `json:"validator_info"`
+	NodeInfo            p2p.DefaultNodeInfo  `json:"node_info"`
+	SyncInfo            coretypes.SyncInfo   `json:"sync_info"`
+	ValidatorInfo       coretypes.ValidatorInfo   `json:"validator_info"`
 }
