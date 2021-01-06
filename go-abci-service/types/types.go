@@ -31,6 +31,7 @@ type AnchorConfig struct {
 	ChainId          string
 	DBType           string
 	BitcoinNetwork   string
+	ElectionMode     string
 	RabbitmqURI      string
 	TendermintConfig TendermintConfig
 	LightningConfig  lightning.LnClient
@@ -75,6 +76,7 @@ type AnchorState struct {
 	BeginCalTxInt     int64                      `json:"begin_cal_int"`
 	EndCalTxInt       int64                      `json:"end_cal_int"`
 	LatestCalTxInt    int64                      `json:"latest_cal_int"`
+	CurrentCalInts    int64                      `json:"current_cal_ints"`
 	LatestBtcaTx      []byte                     `json:"latest_btca"`
 	LatestBtcaTxInt   int64                      `json:"latest_btca_int"`
 	LatestBtcaHeight  int64                      `json:"latest_btca_height"`
@@ -91,7 +93,7 @@ type AnchorState struct {
 	CoreKeys          map[string]ecdsa.PublicKey `json:"-"`
 	LnUris            map[string]LnIdentity      `json:"lightning_identities"`
 	IDMap             map[string]string          `json:"-"`
-	Validators   	  []*types3.Validator		 `json:"-"`
+	Validators        []*types3.Validator        `json:"-"`
 	ChainSynced       bool
 	JWKStaked         bool
 	LnStakePrice      int64 `json:"total_stake_price"`
@@ -177,7 +179,7 @@ type TxTm struct {
 type Aggregation struct {
 	AggID     string      `json:"agg_id"`
 	AggRoot   string      `json:"agg_root"`
-	ProofData []ProofData `json:"proofData"`
+	AggStates []AggState `json:"agg_states"`
 }
 
 // HashItem : An object contains the Core ID and value for a hash
@@ -191,6 +193,45 @@ type ProofData struct {
 	ProofID string          `json:"proof_id"`
 	Hash    string          `json:"hash"`
 	Proof   []ProofLineItem `json:"proof"`
+}
+
+type ProofState struct {
+	ProofID string	`json:"proof_id"`
+	Proof   string	`json:"proof"`
+}
+
+// CalState : cal state for proof gen
+type CalStateObject struct {
+	AggID    string `json:"agg_id"`
+	CalId    string `json:"cal_id"`
+	CalState string `json:"cal_state"`
+}
+
+// AggState : agg state for proof gen
+type AggState struct {
+	ProofID  string `json:"proof_id"`
+	Hash     string `json:"hash"`
+	AggID    string `json:"agg_id"`
+	AggState string `json:"agg_state"`
+	AggRoot  string `json:"agg_root"`
+}
+
+type AnchorBtcAggState struct {
+	CalId             string `json:"cal_id"`
+	AnchorBtcAggId    string `json:"anchor_btc_agg_id"`
+	AnchorBtcAggState string `json:"anchor_btc_agg_state"`
+}
+
+type AnchorBtcTxState struct {
+	AnchorBtcAggId string `json:"anchor_btc_agg_id"`
+	BtcTxId        string `json:"btctx_id"`
+	BtcTxState     string `json:"btctx_state"`
+}
+
+type AnchorBtcHeadState struct {
+	BtcTxId       string `json:"btctx_id"`
+	BtcHeadHeight int64  `json:"btchead_height"`
+	BtcHeadState  string `json:"btchead_state"`
 }
 
 // BtcAgg : An object containing BTC anchoring aggregation data
@@ -234,25 +275,25 @@ type BtcMsgObj struct {
 
 // BtcTxProofState : An RMQ message object bound for proofstate service
 type BtcTxProofState struct {
-	AnchorBtcAggID string        `json:"anchor_btc_agg_id"`
-	BtcTxID        string        `json:"btctx_id"`
-	BtcTxState     BtcTxOpsState `json:"btctx_state"`
+	AnchorBtcAggID string   `json:"anchor_btc_agg_id"`
+	BtcTxID        string   `json:"btctx_id"`
+	BtcTxState     OpsState `json:"btctx_state"`
 }
 
-// BtcTxOpsState : An RMQ message generated as part of the monitoring proof object
-type BtcTxOpsState struct {
+// OpsState : An RMQ message generated as part of the monitoring proof object
+type OpsState struct {
 	Ops []ProofLineItem `json:"ops"`
 }
 
 // BtccStateObj :  An RMQ message object issued to generate proofs after BTCC confirmation
 type BtccStateObj struct {
-	BtcTxID       string       `json:"btctx_id"`
-	BtcHeadHeight int64        `json:"btchead_height"`
-	BtcHeadState  BtccOpsState `json:"btchead_state"`
+	BtcTxID       string         `json:"btctx_id"`
+	BtcHeadHeight int64          `json:"btchead_height"`
+	BtcHeadState  AnchorOpsState `json:"btchead_state"`
 }
 
-// BtccOpsState : Part of the RMQ message for btc anchoring post-confirmation
-type BtccOpsState struct {
+// AnchorOpsState : Part of the RMQ message for btc anchoring post-confirmation
+type AnchorOpsState struct {
 	Ops    []ProofLineItem `json:"ops"`
 	Anchor AnchorObj       `json:"anchor"`
 }

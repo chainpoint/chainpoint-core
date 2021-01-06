@@ -74,6 +74,14 @@ func (app *AnchorApplication) SyncMonitor() {
 	}
 }
 
+//LNDMonitor : maintains unlock of wallet while abci is running
+func (app *AnchorApplication) LNDMonitor() {
+	for {
+		app.lnClient.Unlocker()
+		time.Sleep(60 * time.Second)
+	}
+}
+
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
 func (app *AnchorApplication) StakeIdentity() {
@@ -373,12 +381,12 @@ func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
 	if app.LogError(err) != nil {
 		return err
 	}
-	for _, out :=  range msgTx.TxOut {
+	for _, out := range msgTx.TxOut {
 		if bytes.Compare(out.PkScript, outputScript) == 0 && msgTx.TxHash().String() == btcmsg.BtcTxID {
 			app.logger.Info(fmt.Sprintf("BTC-A %s confirmed", btcmsg.BtcTxID))
 			return nil
 		}
-		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s\n%s != %s", btcmsg.BtcTxID, msgTx.TxHash().String(), out.PkScript, outputScript))
+		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s", btcmsg.BtcTxID, msgTx.TxHash().String()))
 	}
 	return errors.New("unable to verify BTC-A")
 }
@@ -496,7 +504,7 @@ func (app *AnchorApplication) MonitorNewTx() {
 			app.logger.Info(fmt.Sprintf("New BTC Check: cannot marshal json"))
 			continue
 		}
-		go func(monBytes []byte, res string){
+		go func(monBytes []byte, res string) {
 			app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(monBytes)))
 			_, err = app.rpc.BroadcastTx("BTC-A", string(monBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 			if app.LogError(err) != nil {

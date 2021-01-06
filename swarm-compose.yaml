@@ -28,9 +28,11 @@ services:
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
       SUBMIT_HASH_PRICE_SAT: ${SUBMIT_HASH_PRICE_SAT:-2}
       HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
+      ELECTION: 'reputation'
       ANCHOR: 'true'
       NODE_MANAGEMENT: 'true'
       AGGREGATE: 'true'
@@ -46,6 +48,7 @@ services:
     secrets:
       - ECDSA_PKPEM
       - HOT_WALLET_ADDRESS
+      - HOT_WALLET_PASS
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data
@@ -134,6 +137,38 @@ services:
         max-size: '1g'
         max-file: '5'
 
+  # Lightning Monitor
+  # Monitor and report on the state of LND invoices.
+  #
+  lnd-mon:
+    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG:-latest}
+    user: ${USERID}:${GROUPID}
+    depends_on:
+      - redis
+    networks:
+      - chainpoint
+    secrets:
+      - HOT_WALLET_PASS
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      NETWORK: ${NETWORK:-testnet}
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
+      LND_SOCKET: ${LND_SOCKET}
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 15
+        window: 90s
+    volumes:
+      - ~/.chainpoint/core/.lnd:/root/.lnd:z
+    tty: true
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '1g'
+        max-file: '5'
+
   # HTTP API
   # Restify Node public web API service.
   #
@@ -208,134 +243,6 @@ services:
       LND_TLS_CERT: ${LND_TLS_CERT}
     volumes:
       - ~/.chainpoint/core/.lnd:/root/.lnd:z
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
-  # Bitcoin Transmit
-  # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
-  #
-  #  btc-tx:
-  #    restart: always
-  #    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG:-latest}
-  #    build:
-  #      context: .
-  #      dockerfile: docker/Dockerfile.btc-tx
-  #    user: ${USERID}:${GROUPID}
-  #    container_name: btc-tx-core
-  #    depends_on:
-  #      - rabbitmq
-  #    networks:
-  #      - chainpoint
-  #    secrets:
-  #      - HOT_WALLET_ADDRESS
-  #    deploy:
-  #      restart_policy:
-  #        condition: any
-  #        delay: 5s
-  #        max_attempts: 15
-  #        window: 90s
-  #    environment:
-  #      NODE_ENV: ${NODE_ENV}
-  #      NETWORK: ${NETWORK:-testnet}
-  #      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-  #      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
-  #      LND_SOCKET: ${LND_SOCKET}
-  #    volumes:
-  #      - ~/.chainpoint/core/.lnd:/root/.lnd:z
-  #    tty: true
-  #    logging:
-  #      driver: 'json-file'
-  #      options:
-  #        max-size: '1g'
-  #        max-file: '5'
-
-  # Lightning Invoice Monitor
-  # Monitor and report on the state of LND invoices.
-  #
-  lnd-mon:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG:-latest}
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - redis
-    networks:
-      - chainpoint
-    secrets:
-      - HOT_WALLET_PASS
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
-      LND_SOCKET: ${LND_SOCKET}
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd:z
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
-  # Proof State
-  # Encapsulates all persistent data storage for partial proof data.
-  #
-  proof-state:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG:-latest}
-    user: ${USERID}:${GROUPID}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    depends_on:
-      - rabbitmq
-      - postgres
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
-  # Proof Generation
-  # Responsible for constructing, signing, and validating Chainpoint proofs
-  # for Calendar, Bitcoin, and Ethereum attestation levels.
-  #
-  proof-gen:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG:-latest}
-    user: ${USERID}:${GROUPID}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    depends_on:
-      - rabbitmq
-      - postgres
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
     tty: true
     logging:
       driver: 'json-file'

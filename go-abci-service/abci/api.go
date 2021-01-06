@@ -139,6 +139,6 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	//	Hash:    hashStr,
 	//}
 	// Add hash item to aggregator
-
+	app.aggregator.AddHashItem(types.HashItem{Hash:hash.Hash, ProofID: proofId})
 	respondJSON(w, http.StatusOK, hashResponse)
 }

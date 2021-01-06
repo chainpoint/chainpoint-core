@@ -220,6 +220,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Stake and transmit identity
 	go app.StakeIdentity()
 
+	// Ensure LND Wallet stays unlocked
+	go app.LNDMonitor()
+
 	//Migrations
 	/*	if _, exists := app.state.Migrations[1]; !exists && config.ChainId == "mainnet-chain-32" {
 			app.state.BeginCalTxInt = 3096
@@ -321,25 +324,17 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 	if app.state.ChainSynced {
 		go app.BeaconMonitor() // update time beacon using deterministic leader election
 		go app.FeeMonitor()
-		if app.config.DoCal {
-			go app.AnchorCalendar(app.state.Height)
-		}
 	}
 
-	// Anchor every anchorInterval of blocks
-	if app.config.DoAnchor && (app.state.Height-app.state.LatestBtcaHeight) > int64(app.config.AnchorInterval) {
-		if app.state.ChainSynced {
-			go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt) // aggregate and anchor these tx ranges
-		} else {
-			app.state.EndCalTxInt = app.state.LatestCalTxInt
-		}
-	}
+	// Anchor blockchain
+	app.Anchor()
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
 		app.MonitorNewTx()
 		app.MonitorConfirmedTx()
 		app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+		app.pgClient.PruneProofStateTables()
 	}
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }

@@ -100,7 +100,7 @@ async function createSwarmAndSecrets(valuePairs) {
     if (typeof lndWalletPass !== 'undefined' && typeof lndWalletSeed !== 'undefined') {
       try {
         await unlocker.initWalletAsync({
-          wallet_password: lndWalletPass,
+          wallet_password: Buffer.from(lndWalletPass, 'utf8'),
           cipher_seed_mnemonic: lndWalletSeed.split(' ')
         })
       } catch (err) {
@@ -117,7 +117,7 @@ async function createSwarmAndSecrets(valuePairs) {
       let seed = await unlocker.genSeedAsync({})
       console.log(JSON.stringify(seed))
       let init = await unlocker.initWalletAsync({
-        wallet_password: lndWalletPass,
+        wallet_password: Buffer.from(lndWalletPass, 'utf8'),
         cipher_seed_mnemonic: seed.cipher_seed_mnemonic
       })
       console.log(`Lightning wallet initialized: ${JSON.stringify(init)}`)
