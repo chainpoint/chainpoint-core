@@ -75,7 +75,6 @@ func TestHashResult(t *testing.T) {
 	allowLevel, _ := log.AllowLevel(strings.ToLower("DEBUG"))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 	aggregator := Aggregator{
-		RabbitmqURI: "",
 		Logger:      tmLogger,
 	}
 	agg := aggregator.ProcessAggregation(msgArray, "")

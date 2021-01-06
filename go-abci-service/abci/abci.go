@@ -193,7 +193,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			Logger:      *config.Logger,
 		},
 		aggregator: &aggregator.Aggregator{
-			RabbitmqURI: config.RabbitmqURI,
 			Logger:      *config.Logger,
 		},
 		pgClient:    pgClient,
