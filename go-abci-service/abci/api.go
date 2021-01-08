@@ -1,12 +1,14 @@
 package abci
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/blake2s"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
 	"strings"
@@ -170,4 +172,31 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	respondJSON(w, http.StatusOK, response)
+}
+
+func (app *AnchorApplication) CalHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	if _, exists := vars["txid"]; exists {
+		result, err := app.rpc.GetTxByHash(vars["txid"])
+		if app.LogError(err) != nil {
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
+		}
+		respondJSON(w, http.StatusOK, result)
+	}
+	respondJSON(w, http.StatusNotFound, map[string]interface{}{"error": "tx parameter required"})
+}
+
+func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	if _, exists := vars["txid"]; exists {
+		result, err := app.rpc.GetTxByHash(vars["txid"])
+		if app.LogError(err) != nil {
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		data := hex.EncodeToString(result.TxResult.Data) //TODO: check encoding on this
+		w.Write([]byte(data))
+	}
+	respondJSON(w, http.StatusNotFound, map[string]interface{}{"error": "tx parameter required"})
 }
