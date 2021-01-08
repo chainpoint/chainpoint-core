@@ -3,6 +3,7 @@ package abci
 import (
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/blake2s"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/google/uuid"
@@ -134,11 +135,39 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 			BtcHint: time.Now().Add(90 * time.Minute).Format(time.RFC3339),
 		},
 	}
-	//hashItem := types.HashItem{
-	//	ProofID: proofId,
-	//	Hash:    hashStr,
-	//}
+
 	// Add hash item to aggregator
 	app.aggregator.AddHashItem(types.HashItem{Hash:hash.Hash, ProofID: proofId})
 	respondJSON(w, http.StatusOK, hashResponse)
+}
+
+func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Request) {
+	proofidHeader := r.Header.Get("proofids")
+	if len(proofidHeader) == 0 {
+		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, at least one hash id required"})
+	}
+	proofids := strings.Split(strings.ReplaceAll(proofidHeader," ","") , ",")
+	if len(proofids) > 250 {
+		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, too many hash ids (250 max)"})
+	}
+	for _, id := range proofids {
+		_, err := uuid.Parse(id)
+		if app.LogError(err) != nil {
+			errStr := fmt.Sprintf("invalid request, bad proof_id: %s", id)
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": errStr})
+		}
+	}
+	proofStates, err := app.pgClient.GetProofsByProofIds(proofids)
+	if app.LogError(err) != nil {
+		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve proofs"})
+	}
+	response := make([]proof.P, 0)
+	for _, id := range proofids {
+		if val, exists := proofStates[id]; exists {
+			response = append(response, map[string]interface{}{"proof_id":id, "proof":val.Proof})
+		} else {
+			response = append(response, map[string]interface{}{"proof_id":id, "proof":nil})
+		}
+	}
+	respondJSON(w, http.StatusOK, response)
 }

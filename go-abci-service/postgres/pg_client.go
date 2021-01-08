@@ -76,6 +76,31 @@ func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 	return proofIds, nil
 }
 
+// GetProofsByProofIds : get proofs from proof table, based on id
+func (pg *Postgres) GetProofsByProofIds(proofIds []string) (map[string]types.ProofState, error) {
+	pg.Logger.Info(util.GetCurrentFuncName())
+	stmt := "SELECT proof_id, proof FROM proofs WHERE proof_id::TEXT = ANY($1);"
+	rows, err := pg.DB.Query(stmt, pq.Array(proofIds))
+	if err != nil {
+		return map[string]types.ProofState{}, err
+	}
+	proofs := make(map[string]types.ProofState)
+	for rows.Next() {
+		var proof types.ProofState
+		switch err := rows.Scan(&proof.ProofID, &proof.Proof); err {
+		case sql.ErrNoRows:
+			return map[string]types.ProofState{}, nil
+		case nil:
+			proofs[proof.ProofID] = proof
+			break;
+		default:
+			util.LoggerError(pg.Logger, err)
+			return map[string]types.ProofState{}, err
+		}
+	}
+	return proofs, nil
+}
+
 // GetProofIdsByBtcTxId : get proof ids from proof table, based on btctxId
 func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 	pg.Logger.Info(util.GetCurrentFuncName())
