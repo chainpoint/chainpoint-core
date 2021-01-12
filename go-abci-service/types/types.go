@@ -57,6 +57,8 @@ type AnchorConfig struct {
 	StakePerCore     int64
 	FeeInterval      int64
 	HashPrice		 int
+	UseAllowlist     bool
+	GatewayAllowlist []string
 }
 
 //EthConfig holds contract addresses and eth node URI

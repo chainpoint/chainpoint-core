@@ -200,3 +200,41 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 	}
 	respondJSON(w, http.StatusNotFound, map[string]interface{}{"error": "tx parameter required"})
 }
+
+func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request) {
+	peers := app.GetPeers()
+	peerList := []string{}
+	for _, peer := range peers {
+		var finalIp string
+		ip := peer.RemoteIP
+		if len(ip) == 0 {
+			continue
+		}
+		firstOctet := ip[0 : strings.Index(ip, ".")]
+		privateRanges := map[string]bool{
+			"10": true,
+			"172": true,
+			"192": true,
+		}
+		if _, exists := privateRanges[firstOctet]; exists {
+			listenAddr := peer.NodeInfo.ListenAddr
+			if strings.Contains(listenAddr, "//"){
+				finalIp = listenAddr[strings.LastIndex(listenAddr, "/") + 1 : strings.LastIndex(listenAddr, ":")]
+			}
+			finalIp = listenAddr[0 : strings.LastIndex(listenAddr, ":")]
+		} else {
+			finalIp = ip
+		}
+		peerList = append(peerList, finalIp)
+	}
+	respondJSON(w, http.StatusOK, peerList)
+}
+
+func (app *AnchorApplication) GatewaysHandler(w http.ResponseWriter, r *http.Request) {
+	if !app.config.UseAllowlist {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte{})
+	}
+	respondJSON(w, http.StatusOK, app.config.GatewayAllowlist)
+}
+

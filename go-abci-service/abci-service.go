@@ -116,8 +116,8 @@ func main() {
 	r.Handle("/calendar/{txid}", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)))
 	r.Handle("/calendar/{txid}/data", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)))
 	r.Handle("/status", apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)))
-	//r.Handle("/peers", apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)))
-	//r.Handle("/gateways/public", apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)))
+	r.Handle("/peers", apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)))
+	r.Handle("/gateways/public", apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)))
 	//r.Handle("/boltwall/invoice", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallInvoiceHandler)))
 	//r.Handle("/boltwall/node", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallNodeHandler)))
 
@@ -139,6 +139,8 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
 	nodeIPs := strings.Split(util.GetEnv("PRIVATE_NODE_IPS", ""), ",")
 	coreIPs := strings.Split(util.GetEnv("PRIVATE_CORE_IPS", ""), ",")
+	useAggregatorAllowlist, _ := strconv.ParseBool(util.GetEnv("AGGREGATOR_PUBLIC", "false"))
+	aggregatorAllowlist := strings.Split(util.GetEnv("AGGREGATOR_WHITELIST", ""), ",")
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
@@ -234,6 +236,8 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		StakePerCore:     1000000,
 		FeeInterval:      int64(feeInterval),
 		HashPrice:        hashPrice,
+		UseAllowlist:     useAggregatorAllowlist,
+		GatewayAllowlist: aggregatorAllowlist,
 	}
 }
 
