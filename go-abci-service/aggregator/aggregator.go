@@ -18,7 +18,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
 )
 
 const msgType = "aggregator"
@@ -153,7 +152,9 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []types.HashItem
 	tree.AddLeaves(hashSlice)
 	tree.MakeTree()
 	uuid, err := uuid.NewUUID()
-	rabbitmq.LogError(err, "can't generate uuid")
+	if util.LogError(err) != nil {
+		return types.Aggregation{}
+	}
 	agg.AggID = uuid.String()
 	agg.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 
