@@ -59,6 +59,9 @@ func (aggregator *Aggregator) AddHashItem(item types.HashItem) {
 }
 
 func (aggregator *Aggregator) HeadHashItem() (types.HashItem) {
+	if len(aggregator.HashItems) == 0 {
+		return types.HashItem{}
+	}
 	item := aggregator.HashItems[0]
 	aggregator.HashItems = aggregator.HashItems[1:]
 	return item
