@@ -43,7 +43,7 @@ const (
 	// The blocksize of BLAKE2s in bytes.
 	BlockSize = 64
 	// The hash size of BLAKE2s-256 in bytes.
-	Size = 5
+	Size = 32
 )
 
 var errKeySize = errors.New("blake2s: invalid key size")
