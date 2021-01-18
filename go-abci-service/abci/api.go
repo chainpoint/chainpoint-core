@@ -40,7 +40,7 @@ func (app *AnchorApplication) HomeHandler(w http.ResponseWriter, r *http.Request
 // respondJSON makes the response with payload as json format
 func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
 	response, err := json.Marshal(payload)
-	if err != nil {
+	if util.LogError(err) != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
@@ -102,6 +102,7 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	d.DisallowUnknownFields()
 	hash := Hash{}
 	err := d.Decode(&hash)
+	app.logger.Info(fmt.Sprintf("Received hash %s", hash.Hash))
 	if app.LogError(err) != nil || len(hash.Hash) == 0 {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid JSON body: missing hash"})
 	}
@@ -137,7 +138,6 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 			BtcHint: time.Now().Add(90 * time.Minute).Format(time.RFC3339),
 		},
 	}
-
 	// Add hash item to aggregator
 	app.aggregator.AddHashItem(types.HashItem{Hash:hash.Hash, ProofID: proofId})
 	respondJSON(w, http.StatusOK, hashResponse)
