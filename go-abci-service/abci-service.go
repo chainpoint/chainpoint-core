@@ -112,7 +112,7 @@ func main() {
 	r := mux.NewRouter()
 	r.Handle("/", apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)))
 	r.Handle("/hash", hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)))
-	r.Handle("/proof", apiRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
+	r.Handle("/proofs", apiRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
 	r.Handle("/calendar/{txid}", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)))
 	r.Handle("/calendar/{txid}/data", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)))
 	r.Handle("/status", apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)))
