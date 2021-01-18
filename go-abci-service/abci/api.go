@@ -21,7 +21,7 @@ type Hash struct {
 }
 
 type HashResponse struct {
-	Hash 			string 			`json:"hash`
+	Hash 			string 			`json:"hash"`
 	ProofId 		string 			`json:"proof_id"`
 	HashReceived 	string 			`json:"hash_received"`
 	ProcessingHints ProcessingHints `json:"processing_hints"`
