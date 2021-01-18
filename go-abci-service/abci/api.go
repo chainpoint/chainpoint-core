@@ -1,7 +1,7 @@
 package abci
 
 import (
-	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/blake2s"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
@@ -11,10 +11,10 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
-	"encoding/json"
-	)
+)
 
 type Hash struct {
 	Hash string `json:"hash`
@@ -81,9 +81,9 @@ func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Reque
 		Alias: info.Alias,
 		HashPriceSatoshis: app.config.HashPrice,
 	}
-	apiStatus.LightningBalance.UnconfirmedBalance = string(balance.UnconfirmedBalance)
-	apiStatus.LightningBalance.ConfirmedBalance = string(balance.ConfirmedBalance)
-	apiStatus.LightningBalance.TotalBalance = string(balance.TotalBalance)
+	apiStatus.LightningBalance.UnconfirmedBalance = strconv.FormatInt(balance.UnconfirmedBalance, 10)
+	apiStatus.LightningBalance.ConfirmedBalance = strconv.FormatInt(balance.ConfirmedBalance, 10)
+	apiStatus.LightningBalance.TotalBalance = strconv.FormatInt(balance.TotalBalance, 10)
 	apiStatus.TotalStakePrice = app.state.LnStakePrice
 	apiStatus.ValidatorStakePrice = app.state.LnStakePerVal
 	apiStatus.Jwk = app.JWK
@@ -180,8 +180,10 @@ func (app *AnchorApplication) CalHandler(w http.ResponseWriter, r *http.Request)
 		result, err := app.rpc.GetTxByHash(vars["txid"])
 		if app.LogError(err) != nil {
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
+			return
 		}
 		respondJSON(w, http.StatusOK, result)
+		return
 	}
 	respondJSON(w, http.StatusNotFound, map[string]interface{}{"error": "tx parameter required"})
 }
@@ -192,11 +194,17 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 		result, err := app.rpc.GetTxByHash(vars["txid"])
 		if app.LogError(err) != nil {
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
+			return
+		}
+		tx, err := util.DecodeTx(result.Tx)
+		if app.LogError(err) != nil {
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not decode tx"})
+			return
 		}
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		data := hex.EncodeToString(result.TxResult.Data) //TODO: check encoding on this
-		w.Write([]byte(data))
+		w.Write([]byte(tx.Data))
+		return
 	}
 	respondJSON(w, http.StatusNotFound, map[string]interface{}{"error": "tx parameter required"})
 }
