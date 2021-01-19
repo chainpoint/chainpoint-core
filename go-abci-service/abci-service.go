@@ -85,6 +85,8 @@ func main() {
 	}
 	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
+	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
+
 	/* /hash, /proof, /calendar, /status, /peers, /gateways/public, /boltwall/invoice, /boltwall/node */
 	store, err := memstore.New(65536)
 	if err != nil {
