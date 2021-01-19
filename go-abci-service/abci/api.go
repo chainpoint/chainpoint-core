@@ -155,7 +155,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, too many hash ids (250 max)"})
 	}
 	for _, id := range proofids {
-		_, err := uuid.Parse(id)
+		_, err := uuid.ParseUUID(id)
 		if app.LogError(err) != nil {
 			errStr := fmt.Sprintf("invalid request, bad proof_id: %s", id)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": errStr})
