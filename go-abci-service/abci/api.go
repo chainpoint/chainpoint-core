@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/blake2s"
@@ -124,6 +125,7 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute blake2s hash"})
 	}
 	node := blakeHash.Sum([]byte{0x01})
+	app.logger.Info(fmt.Sprintf("hashStr is %s, hash bytes are %s", hashStr, hex.EncodeToString(node)))
 	uuid := uuid.UUIDFromTimeNode(t, node)
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute uuid"})
