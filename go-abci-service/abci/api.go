@@ -116,9 +116,9 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 
 	// compute uuid using blake2s
 	t := time.Now()
-	unixTimeMS := string(t.UnixNano() / int64(time.Millisecond))
-	timeLength := string(len(unixTimeMS))
-	hashStr := strings.Join([]string{unixTimeMS, timeLength, hash.Hash, string(len(hash.Hash))}, ":")
+	unixTimeMS := strconv.FormatInt(t.UnixNano() / int64(time.Millisecond), 10)
+	timeLength := strconv.Itoa(len(unixTimeMS))
+	hashStr := strings.Join([]string{unixTimeMS, timeLength, hash.Hash, strconv.Itoa(len(hash.Hash))}, ":")
 	blakeHash, err := blake2s.New256WithPersonalization(nil, []byte("CHAINPNT"))
 	blakeHash.Write([]byte(hashStr))
 	if app.LogError(err) != nil {
