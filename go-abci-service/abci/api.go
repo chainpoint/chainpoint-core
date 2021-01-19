@@ -121,10 +121,12 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	hashStr := strings.Join([]string{unixTimeMS, timeLength, hash.Hash, strconv.Itoa(len(hash.Hash))}, ":")
 	blakeHash, err := blake2s.New256WithPersonalization(nil, []byte("CHAINPNT"))
 	blakeHash.Write([]byte(hashStr))
+	blakeHashSum := blakeHash.Sum([]byte{})
+	truncHashSum := blakeHashSum[len(blakeHashSum) - 5 :]
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute blake2s hash"})
 	}
-	node := blakeHash.Sum([]byte{0x01})
+	node := append([]byte{0x01}, truncHashSum...)
 	app.logger.Info(fmt.Sprintf("hashStr is %s, hash bytes are %s", hashStr, hex.EncodeToString(node)))
 	uuid := uuid.UUIDFromTimeNode(t, node)
 	if app.LogError(err) != nil {
