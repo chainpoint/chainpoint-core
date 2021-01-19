@@ -6,8 +6,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/blake2s"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/uuid"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
@@ -114,7 +114,8 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	// TODO: add LSAT/WHITELIST distinction here
 
 	// compute uuid using blake2s
-	unixTimeMS := string(time.Now().UnixNano() / int64(time.Millisecond))
+	t := time.Now()
+	unixTimeMS := string(t.UnixNano() / int64(time.Millisecond))
 	timeLength := string(len(unixTimeMS))
 	hashStr := strings.Join([]string{unixTimeMS, timeLength, hash.Hash, string(len(hash.Hash))}, ":")
 	blakeHash, err := blake2s.New256WithPersonalization(nil, []byte("CHAINPNT"))
@@ -122,9 +123,8 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute blake2s hash"})
 	}
-	node := append([]byte{0x01}, blakeHash.Sum([]byte{})...)
-	uuid.SetNodeID(node)
-	uuid, err := uuid.NewUUID()
+	node := blakeHash.Sum([]byte{0x01})
+	uuid := uuid.UUIDFromTimeNode(t, node)
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute uuid"})
 	}
