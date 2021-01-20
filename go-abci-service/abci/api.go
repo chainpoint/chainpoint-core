@@ -170,7 +170,11 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 	response := make([]proof.P, 0)
 	for _, id := range proofids {
 		if val, exists := proofStates[id]; exists {
-			response = append(response, map[string]interface{}{"proof_id":id, "proof":val.Proof})
+			var rawJSON map[string]interface{}
+			if err := json.Unmarshal([]byte(val.Proof), &rawJSON); err != nil {
+				response = append(response, map[string]interface{}{"proof_id":id, "proof":nil})
+			}
+			response = append(response, map[string]interface{}{"proof_id":id, "proof":rawJSON})
 		} else {
 			response = append(response, map[string]interface{}{"proof_id":id, "proof":nil})
 		}
