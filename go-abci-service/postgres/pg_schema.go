@@ -262,8 +262,7 @@ CREATE INDEX proofs_created_at ON public.proofs USING btree (created_at);
 
 func (pg *Postgres) SchemaExists () bool {
 	query := `SELECT to_regclass('proofs');`
-	var res string
-	rows, err := pg.DB.Query(query, &res)
+	rows, err := pg.DB.Query(query)
 	if util.LoggerError(pg.Logger, err) != nil {
 		return false
 	}
