@@ -130,6 +130,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		fmt.Println("Postgres not ready after 1 minute")
 		panic(err)
 	} else if pgClient != nil {
+		if !pgClient.SchemaExists() {
+			pgClient.CreateSchema()
+		} else {
+			fmt.Println("Schema exists")
+		}
 		fmt.Println("Connection to Postgres established")
 	}
 
