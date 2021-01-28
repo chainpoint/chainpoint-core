@@ -75,7 +75,7 @@ func TestHashResult(t *testing.T) {
 	allowLevel, _ := log.AllowLevel(strings.ToLower("DEBUG"))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 	aggregator := Aggregator{
-		Logger:      tmLogger,
+		Logger: tmLogger,
 	}
 	agg := aggregator.ProcessAggregation(msgArray, "")
 	if agg.AggRoot != "58f42246b9c6d303e33206d461e05f3e2292d8eddfce92b7434f1d8be9f0e2c1" {

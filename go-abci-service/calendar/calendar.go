@@ -80,7 +80,7 @@ func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types
 	for _, ops := range treeDataObj.ProofData {
 		anchorOps := types.AnchorOpsState{
 			Anchor: anchor,
-			Ops: ops.Proof,
+			Ops:    ops.Proof,
 		}
 		anchorBytes, err := json.Marshal(anchorOps)
 		if util.LoggerError(calendar.Logger, err) != nil {
@@ -149,7 +149,7 @@ func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) type
 }
 
 // PrepareBtcaStateData notifies proof and btc tx services of BTC-A anchoring
-func (calendar *Calendar) PrepareBtcaStateData(anchorDataObj types.BtcAgg) ([]types.AnchorBtcAggState) {
+func (calendar *Calendar) PrepareBtcaStateData(anchorDataObj types.BtcAgg) []types.AnchorBtcAggState {
 	anchorObjects := []types.AnchorBtcAggState{}
 	for _, proofDataItem := range anchorDataObj.ProofData {
 		opsState := types.OpsState{Ops: proofDataItem.Proof}

@@ -16,7 +16,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 )
 
-
 // Anchor: Anchor calendar and btc blockchains
 func (app *AnchorApplication) Anchor() {
 	// Run AnchorCalendar and AnchorBTC one after another

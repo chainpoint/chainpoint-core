@@ -63,15 +63,17 @@ func Sum256(data []byte) [Size]byte {
 // New256 returns a new hash.Hash computing the BLAKE2s-256 checksum. A non-nil
 // key turns the hash into a MAC. The key must between zero and 32 bytes long.
 func New256(key []byte) (hash.Hash, error) { return newDigest(Size, key, nil) }
-func New256WithPersonalization(key, personalization []byte) (hash.Hash, error) { return newDigest(Size, key, personalization) }
+func New256WithPersonalization(key, personalization []byte) (hash.Hash, error) {
+	return newDigest(Size, key, personalization)
+}
 
 func newDigest(hashSize int, key []byte, personalization []byte) (*digest, error) {
 	if len(key) > Size {
 		return nil, errKeySize
 	}
 	d := &digest{
-		size:   hashSize,
-		keyLen: len(key),
+		size:            hashSize,
+		keyLen:          len(key),
 		personalization: personalization,
 	}
 	copy(d.key[:], key)
@@ -135,10 +137,9 @@ func (d *digest) Reset() {
 	d.h[0] ^= uint32(d.size) | (uint32(d.keyLen) << 8) | (1 << 16) | (1 << 24)
 	if d.personalization != nil {
 		for i := uint(0); i < 8; i++ {
-			b := uint32(d.personalization[i]) << (8*uint(i%4))
+			b := uint32(d.personalization[i]) << (8 * uint(i%4))
 			d.h[6+i/4] ^= b
 		}
-
 
 	}
 	d.offset, d.c[0], d.c[1] = 0, 0, 0

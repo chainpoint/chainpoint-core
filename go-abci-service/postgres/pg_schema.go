@@ -260,7 +260,7 @@ CREATE INDEX proofs_created_at ON public.proofs USING btree (created_at);
 --
 `
 
-func (pg *Postgres) SchemaExists () bool {
+func (pg *Postgres) SchemaExists() bool {
 	query := `SELECT to_regclass('proofs');`
 	rows, err := pg.DB.Query(query)
 	if util.LoggerError(pg.Logger, err) != nil {
@@ -273,7 +273,7 @@ func (pg *Postgres) SchemaExists () bool {
 	return false
 }
 
-func (pg *Postgres) CreateSchema () {
+func (pg *Postgres) CreateSchema() {
 	tables := []string{chainpointSchema, aggStatesSchema, aggStatesSchema, btcAggStatesSchema, btcHeadStatesSchema, btcTxStatesSchema, calStatesSchema, proofsSchema, primaryKeys, createIndices}
 	for _, tabl := range tables {
 		go func(table string) {

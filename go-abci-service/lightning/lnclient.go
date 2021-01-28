@@ -3,11 +3,17 @@ package lightning
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/lightninglabs/aperture/lsat"
+	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -50,6 +56,17 @@ type LnClient struct {
 	WalletPass     string
 	FeeMultiplier  float64
 	LastFee        int64
+	HashPrice      int64
+	SessionSecret  string
+}
+
+type LSAT struct {
+	ID       lsat.TokenID
+	Preimage []byte
+	PayHash  []byte
+	Invoice  string
+	Value    int64
+	Macaroon macaroon.Macaroon
 }
 
 // BitcoinerFee : estimates fee from bitcoiner service
@@ -221,6 +238,17 @@ func (ln *LnClient) GetWalletClient() (walletrpc.WalletKitClient, func()) {
 		return nil, nil
 	}
 	return walletrpc.NewWalletKitClient(conn), closeIt
+}
+
+func (ln *LnClient) GetInvoiceClient() (invoicesrpc.InvoicesClient, func()) {
+	conn, err := ln.CreateConn()
+	closeIt := func() {
+		conn.Close()
+	}
+	if ln.LoggerError(err) != nil {
+		return nil, nil
+	}
+	return invoicesrpc.NewInvoicesClient(conn), closeIt
 }
 
 func (ln *LnClient) Unlocker() error {
@@ -642,4 +670,64 @@ func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCo
 	resp, err := client.SendCoins(context.Background(), &sendCoinsReq)
 	ln.LoggerError(err)
 	return *resp, err
+}
+
+func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
+	preimage := make([]byte, 32)
+	rand.Read(preimage)
+	hash := sha256.Sum256(preimage)
+	invoice, closeInvFunc := ln.GetInvoiceClient()
+	defer closeInvFunc()
+	addInvoiceReq, err := invoice.AddHoldInvoice(context.Background(), &invoicesrpc.AddHoldInvoiceRequest{
+		Memo:                 fmt.Sprintf("HODL invoice payment from Chainpoint Core %s", ln.ServerHostPort),
+		Hash:                 hash[:],
+		Value:                ln.HashPrice,
+		ValueMsat:            0,
+		DescriptionHash:      nil,
+		Expiry:               0,
+		FallbackAddr:         "",
+		CltvExpiry:           0,
+		RouteHints:           nil,
+		Private:              false,
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	})
+	if util.LoggerError(ln.Logger, err) != nil {
+		return LSAT{}, err
+	}
+	tID, err := lsat.MakeIDFromString(hex.EncodeToString(preimage))
+	if util.LoggerError(ln.Logger, err) != nil {
+		return LSAT{}, err
+	}
+	identifier := lsat.Identifier{
+		Version:     0,
+		PaymentHash: hash,
+		TokenID:     tID,
+	}
+	secBytes, err := hex.DecodeString(ln.SessionSecret)
+	if util.LoggerError(ln.Logger, err) != nil {
+		return LSAT{}, err
+	}
+	var buf bytes.Buffer
+	lsat.EncodeIdentifier(&buf, &identifier)
+	mac, err := macaroon.New(secBytes, buf.Bytes(), ip, macaroon.V2)
+	if util.LoggerError(ln.Logger, err) != nil {
+		return LSAT{}, err
+	}
+	return LSAT{
+		ID:       tID,
+		Preimage: preimage,
+		PayHash:  hash[:],
+		Invoice:  addInvoiceReq.PaymentRequest,
+		Value:    ln.HashPrice,
+		Macaroon: *mac,
+	}, nil
+}
+
+func (lsat *LSAT) ToChallenge() string {
+	mac, _ := lsat.Macaroon.MarshalBinary()
+	macStr := base64.StdEncoding.EncodeToString(mac)
+	challenge := fmt.Sprintf("macaroon=%s invoice=%s", macStr, lsat.Invoice)
+	return challenge
 }

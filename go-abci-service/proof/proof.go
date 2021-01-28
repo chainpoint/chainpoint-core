@@ -28,7 +28,7 @@ func (proof *P) AddChainpointHeader(hash string, proofId string) error {
 	return nil
 }
 
-func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) ([]P) {
+func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) []P {
 	opsJsonArray := make([]P, 0)
 	for _, op := range ops {
 		leftOrRight := make(map[string]interface{})
@@ -54,7 +54,7 @@ func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, netw
 	calendarBranch := make(map[string]interface{})
 	calendarBranch["label"] = "cal_anchor_branch"
 	aggStateOps := types.OpsState{}
-	if err := json.Unmarshal([]byte(aggState.AggState), & aggStateOps); err != nil {
+	if err := json.Unmarshal([]byte(aggState.AggState), &aggStateOps); err != nil {
 		return err
 	}
 	calStateOps := types.AnchorOpsState{}
@@ -82,7 +82,7 @@ func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, netw
 	return nil
 }
 
-func (proof *P)  AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState types.AnchorBtcTxState, btcHeadState types.AnchorBtcHeadState, network string) error {
+func (proof *P) AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState types.AnchorBtcTxState, btcHeadState types.AnchorBtcHeadState, network string) error {
 	btcBranch := make(map[string]interface{})
 	btcBranch["label"] = "btc_anchor_branch"
 	aggState := types.OpsState{}

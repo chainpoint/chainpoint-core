@@ -198,7 +198,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			Logger:      *config.Logger,
 		},
 		aggregator: &aggregator.Aggregator{
-			Logger:      *config.Logger,
+			Logger: *config.Logger,
 		},
 		pgClient:    pgClient,
 		redisClient: redisClient,

@@ -26,7 +26,7 @@ const proofStateQueueOut = "work.proofstate"
 
 // Aggregator : object includes rabbitURI and Logger
 type Aggregator struct {
-	HashItems	 []types.HashItem
+	HashItems    []types.HashItem
 	Logger       log.Logger
 	LatestTime   string
 	Aggregations []types.Aggregation
@@ -58,7 +58,7 @@ func (aggregator *Aggregator) AddHashItem(item types.HashItem) {
 	aggregator.HashItems = append(aggregator.HashItems, item)
 }
 
-func (aggregator *Aggregator) HeadHashItem() (types.HashItem) {
+func (aggregator *Aggregator) HeadHashItem() types.HashItem {
 	if len(aggregator.HashItems) == 0 {
 		return types.HashItem{}
 	}
@@ -127,7 +127,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []types.HashItem, drand string) types.Aggregation {
 	aggStates := make([]types.AggState, 0)
 	var agg types.Aggregation
-	hashSlice := make([][]byte, 0)               // byte array
+	hashSlice := make([][]byte, 0) // byte array
 
 	for _, msgHash := range msgStructSlice {
 		//decode hash to bytes and concatenate onto nist bytes

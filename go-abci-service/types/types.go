@@ -56,7 +56,7 @@ type AnchorConfig struct {
 	AnchorReward     int
 	StakePerCore     int64
 	FeeInterval      int64
-	HashPrice		 int
+	HashPrice        int
 	UseAllowlist     bool
 	GatewayAllowlist []string
 }
@@ -179,8 +179,8 @@ type TxTm struct {
 
 // Aggregation : An object containing all the relevant data for an aggregation event
 type Aggregation struct {
-	AggID     string      `json:"agg_id"`
-	AggRoot   string      `json:"agg_root"`
+	AggID     string     `json:"agg_id"`
+	AggRoot   string     `json:"agg_root"`
 	AggStates []AggState `json:"agg_states"`
 }
 
@@ -198,8 +198,8 @@ type ProofData struct {
 }
 
 type ProofState struct {
-	ProofID string	`json:"proof_id"`
-	Proof   string	`json:"proof"`
+	ProofID string `json:"proof_id"`
+	Proof   string `json:"proof"`
 }
 
 // CalState : cal state for proof gen
@@ -371,26 +371,26 @@ type Jwk struct {
 
 //CoreAPIStatus : status from Core's api service. Includes pubkey
 type CoreAPIStatus struct {
-	Version             string    `json:"version"`
-	Time                string    `json:"time"`
-	BaseURI             string    `json:"base_uri"`
-	Jwk                 Jwk       `json:"jwk"`
-	Network             string    `json:"network"`
-	IdentityPubkey      string    `json:"identity_pubkey"`
-	LightningAddress    string    `json:"lightning_address"`
+	Version          string `json:"version"`
+	Time             string `json:"time"`
+	BaseURI          string `json:"base_uri"`
+	Jwk              Jwk    `json:"jwk"`
+	Network          string `json:"network"`
+	IdentityPubkey   string `json:"identity_pubkey"`
+	LightningAddress string `json:"lightning_address"`
 	LightningBalance struct {
 		TotalBalance       string `json:"total_balance"`
 		ConfirmedBalance   string `json:"confirmed_balance"`
 		UnconfirmedBalance string `json:"unconfirmed_balance"`
 	} `json:"lightning_balance"`
-	PublicKey           string    `json:"public_key"`
-	Uris                []string  `json:"uris"`
-	Alias               string    `json:"alias"`
-	HashPriceSatoshis   int       `json:"hash_price_satoshis"`
-	TotalStakePrice     int64       `json:"total_stake_price"`
-	ValidatorStakePrice int64       `json:"validator_stake_price"`
-	ActiveChannelsCount int       `json:"num_channels_count"`
-	NodeInfo            p2p.DefaultNodeInfo  `json:"node_info"`
-	SyncInfo            coretypes.SyncInfo   `json:"sync_info"`
-	ValidatorInfo       coretypes.ValidatorInfo   `json:"validator_info"`
+	PublicKey           string                  `json:"public_key"`
+	Uris                []string                `json:"uris"`
+	Alias               string                  `json:"alias"`
+	HashPriceSatoshis   int                     `json:"hash_price_satoshis"`
+	TotalStakePrice     int64                   `json:"total_stake_price"`
+	ValidatorStakePrice int64                   `json:"validator_stake_price"`
+	ActiveChannelsCount int                     `json:"num_channels_count"`
+	NodeInfo            p2p.DefaultNodeInfo     `json:"node_info"`
+	SyncInfo            coretypes.SyncInfo      `json:"sync_info"`
+	ValidatorInfo       coretypes.ValidatorInfo `json:"validator_info"`
 }

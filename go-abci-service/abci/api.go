@@ -7,8 +7,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/blake2s"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/uuid"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/uuid"
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
@@ -22,9 +22,9 @@ type Hash struct {
 }
 
 type HashResponse struct {
-	Hash 			string 			`json:"hash"`
-	ProofId 		string 			`json:"proof_id"`
-	HashReceived 	string 			`json:"hash_received"`
+	Hash            string          `json:"hash"`
+	ProofId         string          `json:"proof_id"`
+	HashReceived    string          `json:"hash_received"`
 	ProcessingHints ProcessingHints `json:"processing_hints"`
 }
 
@@ -71,16 +71,16 @@ func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	apiStatus := types.CoreAPIStatus{
-		Version: "0.0.2",
-		Time: time.Now().UTC().Format("2006-01-02T15:04:05.999Z07:00"),
-		BaseURI: util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0"),
-		Network: app.config.BitcoinNetwork,
-		IdentityPubkey: info.IdentityPubkey,
-		LightningAddress: app.config.LightningConfig.WalletAddress,
-		Uris: info.Uris,
-		ActiveChannelsCount:  int(info.NumActiveChannels),
-		Alias: info.Alias,
-		HashPriceSatoshis: app.config.HashPrice,
+		Version:             "0.0.2",
+		Time:                time.Now().UTC().Format("2006-01-02T15:04:05.999Z07:00"),
+		BaseURI:             util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0"),
+		Network:             app.config.BitcoinNetwork,
+		IdentityPubkey:      info.IdentityPubkey,
+		LightningAddress:    app.config.LightningConfig.WalletAddress,
+		Uris:                info.Uris,
+		ActiveChannelsCount: int(info.NumActiveChannels),
+		Alias:               info.Alias,
+		HashPriceSatoshis:   app.config.HashPrice,
 	}
 	apiStatus.LightningBalance.UnconfirmedBalance = strconv.FormatInt(balance.UnconfirmedBalance, 10)
 	apiStatus.LightningBalance.ConfirmedBalance = strconv.FormatInt(balance.ConfirmedBalance, 10)
@@ -116,13 +116,13 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 
 	// compute uuid using blake2s
 	t := time.Now()
-	unixTimeMS := strconv.FormatInt(t.UnixNano() / int64(time.Millisecond), 10)
+	unixTimeMS := strconv.FormatInt(t.UnixNano()/int64(time.Millisecond), 10)
 	timeLength := strconv.Itoa(len(unixTimeMS))
 	hashStr := strings.Join([]string{unixTimeMS, timeLength, hash.Hash, strconv.Itoa(len(hash.Hash))}, ":")
 	blakeHash, err := blake2s.New256WithPersonalization(nil, []byte("CHAINPNT"))
 	blakeHash.Write([]byte(hashStr))
 	blakeHashSum := blakeHash.Sum([]byte{})
-	truncHashSum := blakeHashSum[len(blakeHashSum) - 5 :]
+	truncHashSum := blakeHashSum[len(blakeHashSum)-5:]
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute blake2s hash"})
 	}
@@ -134,16 +134,16 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	}
 	proofId := uuid.String()
 	hashResponse := HashResponse{
-		Hash:            hash.Hash,
-		ProofId:         proofId,
-		HashReceived:    time.Now().Format(time.RFC3339),
+		Hash:         hash.Hash,
+		ProofId:      proofId,
+		HashReceived: time.Now().Format(time.RFC3339),
 		ProcessingHints: ProcessingHints{
 			CalHint: time.Now().Add(140 * time.Second).Format(time.RFC3339),
 			BtcHint: time.Now().Add(90 * time.Minute).Format(time.RFC3339),
 		},
 	}
 	// Add hash item to aggregator
-	app.aggregator.AddHashItem(types.HashItem{Hash:hash.Hash, ProofID: proofId})
+	app.aggregator.AddHashItem(types.HashItem{Hash: hash.Hash, ProofID: proofId})
 	respondJSON(w, http.StatusOK, hashResponse)
 }
 
@@ -152,7 +152,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 	if len(proofidHeader) == 0 {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, at least one hash id required"})
 	}
-	proofids := strings.Split(strings.ReplaceAll(proofidHeader," ","") , ",")
+	proofids := strings.Split(strings.ReplaceAll(proofidHeader, " ", ""), ",")
 	if len(proofids) > 250 {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, too many hash ids (250 max)"})
 	}
@@ -172,11 +172,11 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 		if val, exists := proofStates[id]; exists {
 			var rawJSON map[string]interface{}
 			if err := json.Unmarshal([]byte(val.Proof), &rawJSON); err != nil {
-				response = append(response, map[string]interface{}{"proof_id":id, "proof":nil})
+				response = append(response, map[string]interface{}{"proof_id": id, "proof": nil})
 			}
-			response = append(response, map[string]interface{}{"proof_id":id, "proof":rawJSON})
+			response = append(response, map[string]interface{}{"proof_id": id, "proof": rawJSON})
 		} else {
-			response = append(response, map[string]interface{}{"proof_id":id, "proof":nil})
+			response = append(response, map[string]interface{}{"proof_id": id, "proof": nil})
 		}
 	}
 	respondJSON(w, http.StatusOK, response)
@@ -226,18 +226,18 @@ func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request
 		if len(ip) == 0 {
 			continue
 		}
-		firstOctet := ip[0 : strings.Index(ip, ".")]
+		firstOctet := ip[0:strings.Index(ip, ".")]
 		privateRanges := map[string]bool{
-			"10": true,
+			"10":  true,
 			"172": true,
 			"192": true,
 		}
 		if _, exists := privateRanges[firstOctet]; exists {
 			listenAddr := peer.NodeInfo.ListenAddr
-			if strings.Contains(listenAddr, "//"){
-				finalIp = listenAddr[strings.LastIndex(listenAddr, "/") + 1 : strings.LastIndex(listenAddr, ":")]
+			if strings.Contains(listenAddr, "//") {
+				finalIp = listenAddr[strings.LastIndex(listenAddr, "/")+1 : strings.LastIndex(listenAddr, ":")]
 			}
-			finalIp = listenAddr[0 : strings.LastIndex(listenAddr, ":")]
+			finalIp = listenAddr[0:strings.LastIndex(listenAddr, ":")]
 		} else {
 			finalIp = ip
 		}
@@ -253,4 +253,3 @@ func (app *AnchorApplication) GatewaysHandler(w http.ResponseWriter, r *http.Req
 	}
 	respondJSON(w, http.StatusOK, app.config.GatewayAllowlist)
 }
-

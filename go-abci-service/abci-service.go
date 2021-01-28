@@ -26,13 +26,13 @@ import (
 	"gopkg.in/throttled/throttled.v2"
 	"gopkg.in/throttled/throttled.v2/store/memstore"
 
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/gorilla/mux"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/gorilla/mux"
 	cfg "github.com/tendermint/tendermint/config"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
+	"github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmtime "github.com/tendermint/tendermint/types/time"
 )
@@ -100,7 +100,8 @@ func main() {
 	apiLimiter, err := throttled.NewGCRARateLimiter(store, apiQuota)
 	if err != nil {
 		util.LogError(err)
-		panic(err)	}
+		panic(err)
+	}
 
 	hashRateLimiter := throttled.HTTPRateLimiter{
 		RateLimiter: hashLimiter,
@@ -124,8 +125,8 @@ func main() {
 	//r.Handle("/boltwall/node", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallNodeHandler)))
 
 	server := &http.Server{
-		Handler: r,
-		Addr:    ":8080",
+		Handler:      r,
+		Addr:         ":8080",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
@@ -168,6 +169,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	lndSocket := util.GetEnv("LND_SOCKET", "lnd:10009")
 	feeMultiplier, _ := strconv.ParseFloat(util.GetEnv("BTC_FEE_MULTIPLIER", "2.2"), 64)
 	feeInterval, _ := strconv.Atoi(util.GetEnv("FEE_INTERVAL", "10"))
+	sessionSecret := util.GetEnv("SESSION_SECRET", "")
 
 	//testMode := util.GetEnv("NETWORK", "testnet")
 	tendermintRPC := types.TendermintConfig{
@@ -205,7 +207,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	return types.AnchorConfig{
 		DBType:           "goleveldb",
 		BitcoinNetwork:   bitcoinNetwork,
-		ElectionMode:	  electionMode,
+		ElectionMode:     electionMode,
 		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintConfig: tendermintRPC,
 		LightningConfig: lightning.LnClient{
@@ -218,6 +220,8 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 			WalletAddress:  walletAddress,
 			WalletPass:     walletPass,
 			FeeMultiplier:  feeMultiplier,
+			HashPrice:      int64(hashPrice),
+			SessionSecret:  sessionSecret,
 		},
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,

@@ -67,7 +67,7 @@ func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 			return []string{}, nil
 		case nil:
 			proofIds = append(proofIds, proofid)
-			break;
+			break
 		default:
 			util.LoggerError(pg.Logger, err)
 			return []string{}, err
@@ -92,7 +92,7 @@ func (pg *Postgres) GetProofsByProofIds(proofIds []string) (map[string]types.Pro
 			return map[string]types.ProofState{}, nil
 		case nil:
 			proofs[proof.ProofID] = proof
-			break;
+			break
 		default:
 			util.LoggerError(pg.Logger, err)
 			return map[string]types.ProofState{}, err
@@ -121,7 +121,7 @@ func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 			return []string{}, nil
 		case nil:
 			proofIds = append(proofIds, proofid)
-			break;
+			break
 		default:
 			util.LoggerError(pg.Logger, err)
 			return []string{}, err
@@ -129,7 +129,6 @@ func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 	}
 	return proofIds, nil
 }
-
 
 //GetCalStateObjectsByProofIds : Get calstate objects, given an array of aggIds
 func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
@@ -147,7 +146,7 @@ func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStat
 			return []types.CalStateObject{}, nil
 		case nil:
 			calStates = append(calStates, calState)
-			break;
+			break
 		default:
 			util.LoggerError(pg.Logger, err)
 			return []types.CalStateObject{}, err
@@ -164,7 +163,7 @@ func (pg *Postgres) GetAggStateObjectsByProofIds(proofIds []string) ([]types.Agg
 	if err != nil {
 		return []types.AggState{}, err
 	}
-	aggStates := make ([]types.AggState, 0)
+	aggStates := make([]types.AggState, 0)
 	for rows.Next() {
 		var aggState types.AggState
 		switch err := rows.Scan(&aggState.ProofID, &aggState.Hash, &aggState.AggID, &aggState.AggState, &aggState.AggRoot); err {
@@ -172,7 +171,7 @@ func (pg *Postgres) GetAggStateObjectsByProofIds(proofIds []string) ([]types.Agg
 			return []types.AggState{}, nil
 		case nil:
 			aggStates = append(aggStates, aggState)
-			break;
+			break
 		default:
 			util.LoggerError(pg.Logger, err)
 			return []types.AggState{}, err
@@ -260,7 +259,7 @@ func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 	valuesArgs := make([]interface{}, 0)
 	i := 0
 	for _, p := range proofs {
-		values = append(values, fmt.Sprintf("($%d, $%d, clock_timestamp(), clock_timestamp())", i * 2 + 1, i * 2 + 2))
+		values = append(values, fmt.Sprintf("($%d, $%d, clock_timestamp(), clock_timestamp())", i*2+1, i*2+2))
 		valuesArgs = append(valuesArgs, p.ProofID)
 		valuesArgs = append(valuesArgs, p.Proof)
 		i++
@@ -272,14 +271,14 @@ func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 }
 
 // BulkInsertAggState : inserts aggregator state into postgres
-func (pg *Postgres) BulkInsertAggState (aggStates []types.AggState) error {
+func (pg *Postgres) BulkInsertAggState(aggStates []types.AggState) error {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	insert := "INSERT INTO agg_states (proof_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
 	i := 0
-	for _, a := range aggStates{
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 5 + 1, i * 5 + 2, i * 5 + 3, i * 5 + 4, i * 5 + 5))
+	for _, a := range aggStates {
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*5+1, i*5+2, i*5+3, i*5+4, i*5+5))
 		valuesArgs = append(valuesArgs, a.ProofID)
 		valuesArgs = append(valuesArgs, a.Hash)
 		valuesArgs = append(valuesArgs, a.AggID)
@@ -293,14 +292,14 @@ func (pg *Postgres) BulkInsertAggState (aggStates []types.AggState) error {
 }
 
 // BulkInsertCalState : inserts aggregator state into postgres
-func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error {
+func (pg *Postgres) BulkInsertCalState(calStates []types.CalStateObject) error {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	insert := "INSERT INTO cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
 	i := 0
-	for _, c := range calStates{
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
+	for _, c := range calStates {
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
 		valuesArgs = append(valuesArgs, c.AggID)
 		valuesArgs = append(valuesArgs, c.CalId)
 		valuesArgs = append(valuesArgs, c.CalState)
@@ -312,14 +311,14 @@ func (pg *Postgres) BulkInsertCalState (calStates []types.CalStateObject) error 
 }
 
 // BulkInsertBtcAggState : inserts aggregator state into postgres
-func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) error {
+func (pg *Postgres) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) error {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	insert := "INSERT INTO anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
 	i := 0
 	for _, a := range aggStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
 		valuesArgs = append(valuesArgs, a.CalId)
 		valuesArgs = append(valuesArgs, a.AnchorBtcAggId)
 		valuesArgs = append(valuesArgs, a.AnchorBtcAggState)
@@ -331,14 +330,14 @@ func (pg *Postgres) BulkInsertBtcAggState (aggStates []types.AnchorBtcAggState) 
 }
 
 // BulkInsertBtcTxState : inserts aggregator state into postgres
-func (pg *Postgres) BulkInsertBtcTxState (txStates []types.AnchorBtcTxState) error {
+func (pg *Postgres) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) error {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	insert := "INSERT INTO btctx_states (anchor_btc_agg_id, btctx_id, btctx_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
 	i := 0
 	for _, t := range txStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
 		valuesArgs = append(valuesArgs, t.AnchorBtcAggId)
 		valuesArgs = append(valuesArgs, t.BtcTxId)
 		valuesArgs = append(valuesArgs, t.BtcTxState)
@@ -351,14 +350,14 @@ func (pg *Postgres) BulkInsertBtcTxState (txStates []types.AnchorBtcTxState) err
 }
 
 // BulkInsertBtcHeadState : inserts head state into postgres
-func (pg *Postgres) BulkInsertBtcHeadState (headStates []types.AnchorBtcHeadState) error {
+func (pg *Postgres) BulkInsertBtcHeadState(headStates []types.AnchorBtcHeadState) error {
 	pg.Logger.Info(util.GetCurrentFuncName())
 	insert := "INSERT INTO btchead_states (btctx_id, btchead_height, btchead_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
 	i := 0
 	for _, h := range headStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i * 3 + 1, i * 3 + 2, i * 3 + 3))
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
 		valuesArgs = append(valuesArgs, h.BtcTxId)
 		valuesArgs = append(valuesArgs, h.BtcHeadHeight)
 		valuesArgs = append(valuesArgs, h.BtcHeadState)

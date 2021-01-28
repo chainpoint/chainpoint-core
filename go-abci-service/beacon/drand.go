@@ -15,9 +15,8 @@ import (
 	"github.com/drand/drand/client/grpc"
 )
 
-
 type Round struct {
-	Round             uint64    `json:"round"`
+	Round             uint64 `json:"round"`
 	Randomness        string `json:"randomness"`
 	Signature         string `json:"signature"`
 	PreviousSignature string `json:"previous_signature"`
