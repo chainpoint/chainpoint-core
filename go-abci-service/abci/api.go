@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/blake2s"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/uuid"
 	"github.com/gorilla/mux"
+	lnrpc2 "github.com/lightningnetwork/lnd/lnrpc"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -49,6 +51,53 @@ func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	w.Write([]byte(response))
+}
+
+func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request){
+	authorization := r.Header.Get("Authorization")
+	if len(authorization) == 0 {
+		lsat, err := app.lnClient.GenerateHodlLSAT(util.GetClientIP(r))
+		if app.LogError(err) != nil {
+			errorMessage := map[string]interface{}{"error": "Could not generate LSAT"}
+			respondJSON(w, http.StatusInternalServerError, errorMessage)
+		}
+		w.Header().Set("www-authenticate", lsat.ToChallenge())
+		errorMessage := map[string]interface{}{"error": "Could not generate LSAT"}
+		respondJSON(w, http.StatusPaymentRequired, errorMessage)
+		return
+	} else {
+		lsat, err := lightning.FromChallence(&r.Header)
+		if app.LogError(err) != nil {
+			errorMessage := map[string]interface{}{"error": "Invalid LSAT provided in Authorization header"}
+			respondJSON(w, http.StatusInternalServerError, errorMessage)
+			return
+		}
+		invoice, err := app.lnClient.LookupInvoice(lsat.PayHash)
+		if app.LogError(err) != nil {
+			errorMessage := map[string]interface{}{"error": fmt.Sprintf("No matching invoice found for payhash %s", lsat.PayHash)}
+			respondJSON(w, http.StatusNotFound, errorMessage)
+			return
+		}
+		switch invoice.State {
+		case lnrpc2.Invoice_SETTLED:
+			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice has already been settled. Try again with a different LSAT"}
+			respondJSON(w, http.StatusUnauthorized, errorMessage)
+			return
+		case lnrpc2.Invoice_OPEN:
+
+			return
+		case lnrpc2.Invoice_CANCELED:
+
+			return
+		default:
+			errorMessage := map[string]interface{}{"error": "Could not check invoice state. Contact core administrator"}
+			respondJSON(w, http.StatusUnauthorized, errorMessage)
+			return
+		}
+		w.Header().Set("authorization", lsat.ToToken())
+		return
+	}
+
 }
 
 func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Request) {

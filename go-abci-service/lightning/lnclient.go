@@ -3,6 +3,7 @@ package lightning
 import (
 	"bytes"
 	"context"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
 	"encoding/hex"
 	"encoding/json"
@@ -660,4 +661,15 @@ func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCo
 	ln.LoggerError(err)
 	return *resp, err
 }
+
+func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
+	lightning, close := ln.GetClient()
+	defer close()
+	invoice, err := lightning.LookupInvoice(context.Background(), &lnrpc.PaymentHash{RHash:payhash})
+	if util.LoggerError(ln.Logger, err) != nil {
+		return lnrpc.Invoice{}, err
+	}
+	return *invoice, nil
+}
+
 

@@ -285,6 +285,14 @@ func EncodeTx(outgoing types.Tx) string {
 	return base64.StdEncoding.EncodeToString(txJSON)
 }
 
+func GetClientIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-FORWARDED-FOR")
+	if forwarded != "" {
+		return forwarded
+	}
+	return r.RemoteAddr
+}
+
 // DecodeIP: decode tendermint's arcane remote_ip format
 func DecodeIP(remote_ip string) string {
 	data, err := base64.StdEncoding.DecodeString(remote_ip)

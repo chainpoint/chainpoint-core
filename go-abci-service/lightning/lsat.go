@@ -85,8 +85,11 @@ func (lsat *LSAT) ToChallenge() string {
 	return challenge
 }
 
-func (lsat *LSAT) SetLsatPreimageFromId() {
-
+func (lsat *LSAT) ToToken() string {
+	mac, _ := lsat.Macaroon.MarshalBinary()
+	macStr := base64.StdEncoding.EncodeToString(mac)
+	token := fmt.Sprintf("LSAT %s:%s", macStr, base64.StdEncoding.EncodeToString(lsat.Preimage))
+	return token
 }
 
 func FromChallence(header *http.Header) (LSAT, error) {
@@ -135,12 +138,13 @@ func FromChallence(header *http.Header) (LSAT, error) {
 				"decode of preimage into TokenID failed: %v", err)
 		}
 
+		hash := sha256.Sum256(preimage)
 		// All done, we don't need to extract anything from the
 		// macaroon since the preimage was presented separately.
 		return LSAT{
 			ID:       tID,
 			Preimage: preimage[:],
-			PayHash:  nil,
+			PayHash:  hash[:],
 			Invoice:  "",
 			Value:    0,
 			Macaroon: *mac,
@@ -187,11 +191,12 @@ func FromChallence(header *http.Header) (LSAT, error) {
 		return LSAT{}, fmt.Errorf("hex "+
 			"decode of preimage into TokenID failed: %v", err)
 	}
+	hash := sha256.Sum256(preimage)
 
 	return LSAT{
 		ID:       tID,
 		Preimage: preimage[:],
-		PayHash:  nil,
+		PayHash:  hash[:],
 		Invoice:  "",
 		Value:    0,
 		Macaroon: *mac,
