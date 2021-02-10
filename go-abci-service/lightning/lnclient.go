@@ -671,5 +671,3 @@ func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
 	}
 	return *invoice, nil
 }
-
-
