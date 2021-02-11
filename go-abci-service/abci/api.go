@@ -61,12 +61,15 @@ func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request
 			errorMessage := map[string]interface{}{"error": "Could not generate LSAT"}
 			respondJSON(w, http.StatusInternalServerError, errorMessage)
 		}
-		w.Header().Set("www-authenticate", lsat.ToChallenge())
+		challenge := lsat.ToChallenge()
+		app.logger.Info(fmt.Sprintf("LSAT toChallenge: %s", challenge))
+		w.Header().Set("www-authenticate", challenge)
 		errorMessage := map[string]interface{}{"error": "Could not generate LSAT"}
 		respondJSON(w, http.StatusPaymentRequired, errorMessage)
 		return true
 	} else {
 		lsat, err := lightning.FromChallence(&r.Header)
+		app.logger.Info(fmt.Sprintf("LSAT fromChallenge: %#v", lsat))
 		if app.LogError(err) != nil {
 			errorMessage := map[string]interface{}{"error": "Invalid LSAT provided in Authorization header"}
 			respondJSON(w, http.StatusInternalServerError, errorMessage)
@@ -85,12 +88,14 @@ func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request
 			return true
 		case lnrpc2.Invoice_OPEN:
 			lsat.Invoice = invoice.PaymentRequest
-			w.Header().Set("www-authenticate", lsat.ToChallenge())
+			challenge := lsat.ToChallenge()
+			app.logger.Info(fmt.Sprintf("LSAT toChallenge Invoice Open: %s", challenge))
+			w.Header().Set("www-authenticate", challenge)
 			errorMessage := map[string]interface{}{"message": "Payment Required"}
 			respondJSON(w, http.StatusPaymentRequired, errorMessage)
 			return true
 		case lnrpc2.Invoice_CANCELED:
-			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice has already been settled. Try again with a different LSAT"}
+			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice has been cancelled. Try again with a different LSAT"}
 			respondJSON(w, http.StatusUnauthorized, errorMessage)
 			return true
 		default:
@@ -98,7 +103,9 @@ func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request
 			respondJSON(w, http.StatusUnauthorized, errorMessage)
 			return true
 		}
-		w.Header().Set("authorization", lsat.ToToken())
+		token := lsat.ToToken()
+		app.logger.Info(fmt.Sprintf("LSAT toToken: %s", token))
+		w.Header().Set("authorization", token)
 		return false // don't exit top level handler
 	}
 
@@ -149,10 +156,14 @@ func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Reque
 
 func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request) {
 	ip := util.GetClientIP(r)
+	app.logger.Info(fmt.Sprintf("Client IP: %s", ip))
 	if !(app.config.UseAllowlist && util.ArrayContains(app.config.GatewayAllowlist, ip)){
 		if app.respondLSAT(w, r){
+			//TODO lsat validation
 			return
 		}
+	} else {
+		app.logger.Info("IP allowed access without LSAT")
 	}
 	contentType := r.Header.Get("Content-type")
 	if contentType != "application/json" {
@@ -170,8 +181,6 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	if app.LogError(err) != nil || !match {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid JSON body: bad hash submitted"})
 	}
-
-	// TODO: add LSAT/WHITELIST distinction here
 
 	// compute uuid using blake2s
 	t := time.Now()
