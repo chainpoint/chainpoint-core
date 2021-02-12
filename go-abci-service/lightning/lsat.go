@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
 	"gopkg.in/macaroon.v2"
 	"math/rand"
@@ -46,11 +45,11 @@ func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 		XXX_unrecognized:     nil,
 		XXX_sizecache:        0,
 	})
-	if util.LoggerError(ln.Logger, err) != nil {
+	if ln.LoggerError(err) != nil {
 		return LSAT{}, err
 	}
 	tID, err := MakeIDFromString(hex.EncodeToString(preimage))
-	if util.LoggerError(ln.Logger, err) != nil {
+	if ln.LoggerError(err) != nil {
 		return LSAT{}, err
 	}
 	identifier := Identifier{
@@ -59,13 +58,13 @@ func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 		TokenID:     tID,
 	}
 	secBytes, err := hex.DecodeString(ln.SessionSecret)
-	if util.LoggerError(ln.Logger, err) != nil {
+	if ln.LoggerError(err) != nil {
 		return LSAT{}, err
 	}
 	var buf bytes.Buffer
 	EncodeIdentifier(&buf, &identifier)
 	mac, err := macaroon.New(secBytes, buf.Bytes(), ip, macaroon.V2)
-	if util.LoggerError(ln.Logger, err) != nil {
+	if ln.LoggerError(err) != nil {
 		return LSAT{}, err
 	}
 	return LSAT{
