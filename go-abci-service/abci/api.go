@@ -296,9 +296,11 @@ func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request
 		}
 		firstOctet := ip[0:strings.Index(ip, ".")]
 		privateRanges := map[string]bool{
+			"0":   true,
 			"10":  true,
 			"172": true,
 			"192": true,
+			"127": true,
 		}
 		if _, exists := privateRanges[firstOctet]; exists {
 			listenAddr := peer.NodeInfo.ListenAddr
@@ -310,6 +312,10 @@ func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request
 			finalIp = ip
 		}
 		peerList = append(peerList, finalIp)
+	}
+	if strings.Contains(app.config.CoreURI, "//") {
+		selfIp := app.config.CoreURI[strings.LastIndex(app.config.CoreURI, "/")+1 : strings.LastIndex(app.config.CoreURI, ":")]
+		peerList = append(peerList, selfIp)
 	}
 	respondJSON(w, http.StatusOK, peerList)
 }

@@ -184,6 +184,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	postgresDb := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
 	apiURI := util.GetEnv("API_URI", "http://api:8080")
+	coreURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0")
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "info")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
@@ -244,6 +245,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		HashPrice:        hashPrice,
 		UseAllowlist:     useAggregatorAllowlist,
 		GatewayAllowlist: aggregatorAllowlist,
+		CoreURI:		  coreURI,
 	}
 }
 
