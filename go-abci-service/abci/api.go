@@ -313,8 +313,8 @@ func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request
 		}
 		peerList = append(peerList, finalIp)
 	}
-	if strings.Contains(app.config.CoreURI, "//") {
-		selfIp := app.config.CoreURI[strings.LastIndex(app.config.CoreURI, "/")+1 : strings.LastIndex(app.config.CoreURI, ":")]
+	if len(app.config.CoreURI) != 0 {
+		selfIp := strings.ReplaceAll(app.config.CoreURI, "http://", "")
 		peerList = append(peerList, selfIp)
 	}
 	respondJSON(w, http.StatusOK, peerList)
