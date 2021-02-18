@@ -197,6 +197,6 @@ func FromChallence(header *http.Header) (LSAT, error) {
 		Preimage: preimage[:],
 		PayHash:  hash[:],
 		Invoice:  "",
-		Value:    0,
+		Value:    2,
 		Macaroon: *mac,
 	}, nil}

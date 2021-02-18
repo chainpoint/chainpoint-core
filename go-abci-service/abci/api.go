@@ -317,6 +317,7 @@ func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request
 		selfIp := strings.ReplaceAll(app.config.CoreURI, "http://", "")
 		peerList = append(peerList, selfIp)
 	}
+	peerList = util.UniquifyStrings(peerList)
 	respondJSON(w, http.StatusOK, peerList)
 }
 
