@@ -80,7 +80,7 @@ func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 func (lsat *LSAT) ToChallenge() string {
 	mac, _ := lsat.Macaroon.MarshalBinary()
 	macStr := base64.StdEncoding.EncodeToString(mac)
-	challenge := fmt.Sprintf("LSAT macaroon=%s invoice=%s", macStr, lsat.Invoice)
+	challenge := fmt.Sprintf("LSAT macaroon=\"%s\", invoice=\"%s\"", macStr, lsat.Invoice)
 	return challenge
 }
 
