@@ -91,7 +91,7 @@ func (lsat *LSAT) ToToken() string {
 	return token
 }
 
-func FromChallence(header *http.Header) (LSAT, error) {
+func FromHeader(header *http.Header) (LSAT, error) {
 	var authHeader string
 	authRegex  := regexp.MustCompile("LSAT (.*?):([a-f0-9]{64})")
 	HeaderMacaroonMD := "Grpc-Metadata-Macaroon"

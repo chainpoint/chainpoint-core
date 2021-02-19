@@ -60,15 +60,16 @@ func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request
 		if app.LogError(err) != nil {
 			errorMessage := map[string]interface{}{"error": "Could not generate LSAT"}
 			respondJSON(w, http.StatusInternalServerError, errorMessage)
+			return true
 		}
 		challenge := lsat.ToChallenge()
 		app.logger.Info(fmt.Sprintf("LSAT toChallenge: %s", challenge))
 		w.Header().Set("www-authenticate", challenge)
-		errorMessage := map[string]interface{}{"error": "Could not generate LSAT"}
+		errorMessage := map[string]interface{}{"error": "message: payment required"}
 		respondJSON(w, http.StatusPaymentRequired, errorMessage)
 		return true
 	} else {
-		lsat, err := lightning.FromChallence(&r.Header)
+		lsat, err := lightning.FromHeader(&r.Header)
 		app.logger.Info(fmt.Sprintf("LSAT fromChallenge: %#v", lsat))
 		if app.LogError(err) != nil {
 			errorMessage := map[string]interface{}{"error": "Invalid LSAT provided in Authorization header"}
