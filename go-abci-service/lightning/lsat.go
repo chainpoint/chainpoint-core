@@ -63,7 +63,7 @@ func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 	}
 	var buf bytes.Buffer
 	EncodeIdentifier(&buf, &identifier)
-	mac, err := macaroon.New(secBytes, buf.Bytes(), ip, macaroon.V2)
+	mac, err := macaroon.New(secBytes, buf.Bytes(), "lsat", macaroon.LatestVersion)
 	if ln.LoggerError(err) != nil {
 		return LSAT{}, err
 	}
