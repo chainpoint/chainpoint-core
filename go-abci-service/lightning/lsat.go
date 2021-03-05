@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
 	"gopkg.in/macaroon.v2"
-	"math/rand"
+	"crypto/rand"
 	"net/http"
 	"regexp"
 )
@@ -25,8 +25,10 @@ type LSAT struct {
 }
 
 func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
-	preimage := make([]byte, 32)
-	rand.Read(preimage)
+	preimage, err := GenerateRandomBytes(32)
+	if ln.LoggerError(err) != nil {
+		return LSAT{}, err
+	}
 	hash := sha256.Sum256(preimage)
 	invoice, closeInvFunc := ln.GetInvoiceClient()
 	defer closeInvFunc()
@@ -200,3 +202,19 @@ func FromHeader(header *http.Header) (LSAT, error) {
 		Value:    2,
 		Macaroon: *mac,
 	}, nil}
+
+
+// GenerateRandomBytes returns securely generated random bytes.
+// It will return an error if the system's secure random
+// number generator fails to function correctly, in which
+// case the caller should not continue.
+func GenerateRandomBytes(n int) ([]byte, error) {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	// Note that err == nil only if we read len(b) bytes.
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
