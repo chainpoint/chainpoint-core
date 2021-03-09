@@ -3,6 +3,7 @@ package lightning
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -10,9 +11,8 @@ import (
 	"fmt"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
 	"gopkg.in/macaroon.v2"
-	"crypto/rand"
 	"net/http"
-	"regexp"
+	"strings"
 )
 
 type LSAT struct {
@@ -95,7 +95,6 @@ func (lsat *LSAT) ToToken() string {
 
 func FromHeader(header *http.Header) (LSAT, error) {
 	var authHeader string
-	authRegex  := regexp.MustCompile("LSAT (.*?):([a-f0-9]{64})")
 	HeaderMacaroonMD := "Grpc-Metadata-Macaroon"
 	HeaderMacaroon := "Macaroon"
 	switch {
@@ -104,19 +103,21 @@ func FromHeader(header *http.Header) (LSAT, error) {
 	case header.Get("Authorization") != "":
 		// Parse the content of the header field and check that it is in
 		// the correct format.
+		var macBase64 string
+		var preimageHex string
 		authHeader = header.Get("Authorization")
-		if !authRegex.MatchString(authHeader) {
+		lsatAuth := strings.Split(authHeader, "LSAT")
+		if len(lsatAuth) != 2 {
 			return LSAT{}, fmt.Errorf("invalid "+
 				"auth header format: %s", authHeader)
 		}
-		matches := authRegex.FindStringSubmatch(authHeader)
-		if len(matches) != 3 {
-			return LSAT{}, fmt.Errorf("invalid "+
-				"auth header format: %s", authHeader)
+		content := strings.Split(lsatAuth[1], ":")
+		if len(content) == 2 && content[0] != ""{
+			macBase64 = content[0]
 		}
-
-		// Decode the content of the two parts of the header value.
-		macBase64, preimageHex := matches[1], matches[2]
+		if len(content) == 2 && content[1] != ""{
+			preimageHex = content[1]
+		}
 		macBytes, err := base64.StdEncoding.DecodeString(macBase64)
 		if err != nil {
 			return LSAT{}, fmt.Errorf("base64 "+
@@ -124,9 +125,21 @@ func FromHeader(header *http.Header) (LSAT, error) {
 		}
 		mac := &macaroon.Macaroon{}
 		err = mac.UnmarshalBinary(macBytes)
+		buf := bytes.NewReader(mac.Id())
+		id, err := DecodeIdentifier(buf)
 		if err != nil {
 			return LSAT{}, fmt.Errorf("unable to "+
 				"unmarshal macaroon: %v", err)
+		}
+		if preimageHex == "" {
+			return LSAT{
+				ID:       id.TokenID,
+				Preimage: nil,
+				PayHash:  id.PaymentHash[:],
+				Invoice:  "",
+				Value:    2,
+				Macaroon: *mac,
+			}, nil
 		}
 		preimage, err := hex.DecodeString(preimageHex)
 		if err != nil {
@@ -147,7 +160,7 @@ func FromHeader(header *http.Header) (LSAT, error) {
 			Preimage: preimage[:],
 			PayHash:  hash[:],
 			Invoice:  "",
-			Value:    0,
+			Value:    2,
 			Macaroon: *mac,
 		}, nil
 
