@@ -106,7 +106,7 @@ func FromHeader(header *http.Header) (LSAT, error) {
 		var macBase64 string
 		var preimageHex string
 		authHeader = header.Get("Authorization")
-		lsatAuth := strings.Split(authHeader, "LSAT")
+		lsatAuth := strings.Split(authHeader, " ")
 		if len(lsatAuth) != 2 {
 			return LSAT{}, fmt.Errorf("invalid "+
 				"auth header format: %s", authHeader)
@@ -121,7 +121,7 @@ func FromHeader(header *http.Header) (LSAT, error) {
 		macBytes, err := base64.StdEncoding.DecodeString(macBase64)
 		if err != nil {
 			return LSAT{}, fmt.Errorf("base64 "+
-				"decode of macaroon failed: %v", err)
+				"decode of macaroon failed: %v\nrequest: %s", err, authHeader)
 		}
 		mac := &macaroon.Macaroon{}
 		err = mac.UnmarshalBinary(macBytes)
