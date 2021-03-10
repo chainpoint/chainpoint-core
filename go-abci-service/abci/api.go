@@ -99,8 +99,10 @@ func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request
 			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice has been cancelled. Try again with a different LSAT"}
 			respondJSON(w, http.StatusUnauthorized, errorMessage)
 			return true
+		case lnrpc2.Invoice_ACCEPTED:
+			break
 		default:
-			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice has expired or been canceled. Try again with a different LSAT"}
+			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice in an unknown state"}
 			respondJSON(w, http.StatusUnauthorized, errorMessage)
 			return true
 		}
