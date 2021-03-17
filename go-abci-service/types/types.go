@@ -254,6 +254,7 @@ type BtcProofData struct {
 type AnchorRange struct {
 	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
 	CalBlockHeight   int64  `json:"cal_block_height"`
+	BtcBlockHeight	 int64  `json:"btc_block_height"`
 	BeginCalTxInt    int64  `json:"begin_cal_int"`
 	EndCalTxInt      int64  `json:"end_cal_int"`
 }

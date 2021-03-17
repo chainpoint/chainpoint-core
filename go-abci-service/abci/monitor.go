@@ -392,6 +392,11 @@ func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
 }
 
 func (app *AnchorApplication) FailedAnchorMonitor() {
+	status, err := app.lnClient.GetInfo()
+	if app.LogError(err) != nil {
+		return
+	}
+	btcHeight := int64(status.BlockHeight)
 	results := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
@@ -402,14 +407,13 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			app.logger.Error("cannot unmarshal json for Failed BTC check")
 			continue
 		}
-		if app.state.Height-anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
-			if app.state.Height-anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) {
+		if btcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
+			if btcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout) {
 				app.logger.Info(fmt.Sprintf("Anchor Failure (timeout), Resetting state for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			} else {
 				app.logger.Info(fmt.Sprintf("Anchor Failure (BTC-E), Resetting state for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			}
-			app.resetAnchor(anchor.BeginCalTxInt)
-			validation.IncrementFailedAnchor(app.state.LastElectedCoreID, &app.state)
+			//TODO: redo transaction
 			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			if app.LogError(delRes.Err()) != nil {
 				continue

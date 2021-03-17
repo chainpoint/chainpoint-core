@@ -169,10 +169,17 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 				}
 			}
 		}
+
+		status, err := app.lnClient.GetInfo()
+		if app.LogError(err) != nil {
+			return err
+		}
+
 		// begin monitoring for anchor
 		failedAnchorCheck := types.AnchorRange{
 			AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
 			CalBlockHeight:   app.state.Height,
+			BtcBlockHeight:   int64(status.BlockHeight),
 			BeginCalTxInt:    startTxRange,
 			EndCalTxInt:      endTxRange,
 		}
@@ -181,6 +188,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if app.LogError(redisResult.Err()) != nil {
 			return redisResult.Err()
 		}
+		app.state.BeginCalTxInt = endTxRange
 		app.state.EndCalTxInt = endTxRange            // Ensure we update our range of CAL txs for next anchor period
 		app.state.LatestBtcaHeight = app.state.Height // So no one will try to re-anchor while processing the btc tx
 		return nil

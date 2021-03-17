@@ -152,7 +152,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		app.state.LatestBtcaHeight = app.state.Height + 1
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
-		app.state.BeginCalTxInt = btca.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
+		// Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
 		tags = append(tags, kv.Pair{Key: []byte("BTCTX"), Value: []byte(btca.BtcTxID)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
