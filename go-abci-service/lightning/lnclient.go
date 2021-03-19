@@ -669,3 +669,29 @@ func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
 	}
 	return *invoice, nil
 }
+
+func (ln *LnClient) ReplaceByFee(txid []byte, txstr string, output int, newfee int) (walletrpc.BumpFeeResponse, error) {
+	wallet, close := ln.GetWalletClient()
+	defer close()
+	outpoint := lnrpc.OutPoint{
+		TxidBytes:            txid,
+		TxidStr:              txstr,
+		OutputIndex:          uint32(output),
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+	rbfReq := walletrpc.BumpFeeRequest{
+		Outpoint:             &outpoint,
+		TargetConf:           0,
+		SatPerByte:           uint32(newfee),
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+	resp, err := wallet.BumpFee(context.Background(), &rbfReq)
+	if ln.LoggerError(err) != nil {
+		return walletrpc.BumpFeeResponse{}, err
+	}
+	return *resp, nil
+}
