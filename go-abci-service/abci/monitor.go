@@ -401,27 +401,76 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 	if app.LogError(results.Err()) != nil {
 		return
 	}
+	//iterate through pending tx looking for timeouts
 	for _, s := range results.Val() {
 		var anchor types.AnchorRange
 		if app.LogError(json.Unmarshal([]byte(s), &anchor)) != nil {
 			app.logger.Error("cannot unmarshal json for Failed BTC check")
 			continue
 		}
-		if btcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
-			if btcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout) {
-				app.logger.Info(fmt.Sprintf("Anchor Failure (timeout), Resetting state for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
-			} else {
-				app.logger.Info(fmt.Sprintf("Anchor Failure (BTC-E), Resetting state for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
-			}
-			//TODO: redo transaction
-			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-			if app.LogError(delRes.Err()) != nil {
-				continue
-			}
-			app.logger.Info("Checking if we were leader and need to remove New BTC Check....")
+		if btcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout) {
+			app.logger.Info(fmt.Sprintf("Anchor Delay for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 			if app.LogError(results.Err()) != nil {
 				continue
+			}
+			for _, a := range results.Val() {
+				var tx types.BtcTxMsg
+				if app.LogError(json.Unmarshal([]byte(a), &tx)) != nil {
+					app.logger.Error("cannot unmarshal json for New BTC check")
+					continue
+				}
+				if tx.AnchorBtcAggRoot == anchor.AnchorBtcAggRoot {
+					app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
+					txRawBytes, err := hex.DecodeString(tx.BtcTxBody)
+					if app.LogError(err) != nil {
+						continue
+					}
+					newFee := app.state.LatestBtcFee * 4 / 1000 // + some margin
+					_, err = app.lnClient.ReplaceByFee(txRawBytes, tx.BtcTxID, 1, int(newFee))
+					if app.LogError(err) != nil {
+						continue
+					}
+					//Remove old anchor check
+					app.RemoveBtcCheck(tx.AnchorBtcAggRoot, false)
+					//Add new anchor check
+					anchor.BtcBlockHeight = btcHeight + 1 // give ourselves extra time
+					failedAnchorJSON, _ := json.Marshal(anchor)
+					redisResult := app.redisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+					if app.LogError(redisResult.Err()) != nil {
+						continue
+					}
+					break
+				}
+			}
+		}
+	}
+}
+
+//RemoveBtcCheck : remove all checks in case of btc tx failure
+func (app *AnchorApplication) RemoveBtcCheck(errRoot string, removeMonitoring bool) error {
+	results := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
+	if app.LogError(results.Err()) != nil {
+		return results.Err()
+	}
+	for _, s := range results.Val() {
+		var anchor types.AnchorRange
+		if app.LogError(json.Unmarshal([]byte(s), &anchor)) != nil {
+			app.logger.Error("cannot unmarshal json for Failed BTC check")
+			continue
+		}
+		if anchor.AnchorBtcAggRoot != errRoot {
+			continue
+		}
+		delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+		if app.LogError(delRes.Err()) != nil {
+			return delRes.Err()
+		}
+		if removeMonitoring {
+			app.logger.Info("Checking if we were leader and need to remove New BTC Check....")
+			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
+			if app.LogError(results.Err()) != nil {
+				return results.Err()
 			}
 			for _, a := range results.Val() {
 				var tx types.BtcTxMsg
@@ -435,11 +484,12 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 					if app.LogError(delRes.Err()) != nil {
 						continue
 					}
-					break
+					return nil //we've succeeded at removing everything associated with this root
 				}
 			}
 		}
 	}
+	return nil
 }
 
 func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {

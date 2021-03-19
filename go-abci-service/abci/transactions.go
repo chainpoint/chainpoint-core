@@ -137,6 +137,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "BTC-E":
 		app.state.LatestErrRoot = tx.Data
 		app.state.LastErrorCoreID = tx.CoreID
+		go app.RemoveBtcCheck(tx.Data, true)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 	case "BTC-A":
 		var btca types.BtcTxMsg
