@@ -391,6 +391,7 @@ func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
 	return errors.New("unable to verify BTC-A")
 }
 
+//FailedAnchorMonitor: ensures transactions reach btc chain within certain time limit
 func (app *AnchorApplication) FailedAnchorMonitor() {
 	status, err := app.lnClient.GetInfo()
 	if app.LogError(err) != nil {
@@ -524,6 +525,7 @@ func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails
 	return block, tree, txIndex, nil
 }
 
+//MonitorNewTx: issues BTC-A upon new transaction confirmation. TODO: fold into FailedAnchorMonitor
 func (app *AnchorApplication) MonitorNewTx() {
 	app.logger.Info("Starting New BTC Check")
 	results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
