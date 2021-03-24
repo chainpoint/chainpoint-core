@@ -289,17 +289,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	result := app.redisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 
 	// end monitoring for failed anchor
-	failedAnchorCheck := types.AnchorRange{
-		AnchorBtcAggRoot: btcTxObj.AnchorBtcAggRoot,
-		CalBlockHeight:   btcTxObj.CalBlockHeight,
-		BeginCalTxInt:    btcTxObj.BeginCalTxInt,
-		EndCalTxInt:      btcTxObj.EndCalTxInt,
-	}
-	failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
-	redisResult := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
-	if app.LogError(redisResult.Err()) != nil {
-		return redisResult.Err()
-	}
+	app.RemoveBtcCheck(btcTxObj.AnchorBtcAggRoot, false, false)
 
 	btcAgg, err := app.GetTreeFromCalRange(btcTxObj.BeginCalTxInt, btcTxObj.EndCalTxInt)
 	if app.LogError(err) != nil {

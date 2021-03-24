@@ -432,7 +432,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 						continue
 					}
 					//Remove old anchor check
-					app.RemoveBtcCheck(tx.AnchorBtcAggRoot, false)
+					app.RemoveBtcCheck(tx.AnchorBtcAggRoot, false, false)
 					//Add new anchor check
 					anchor.BtcBlockHeight = btcHeight + 1 // give ourselves extra time
 					failedAnchorJSON, _ := json.Marshal(anchor)
@@ -448,7 +448,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 }
 
 //RemoveBtcCheck : remove all checks in case of btc tx failure
-func (app *AnchorApplication) RemoveBtcCheck(errRoot string, removeMonitoring bool) error {
+func (app *AnchorApplication) RemoveBtcCheck(aggRoot string, removeNewBtcMonitoring bool, resetAnchor bool) error {
 	results := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return results.Err()
@@ -459,14 +459,17 @@ func (app *AnchorApplication) RemoveBtcCheck(errRoot string, removeMonitoring bo
 			app.logger.Error("cannot unmarshal json for Failed BTC check")
 			continue
 		}
-		if anchor.AnchorBtcAggRoot != errRoot {
+		if anchor.AnchorBtcAggRoot != aggRoot {
 			continue
+		}
+		if resetAnchor {
+			app.resetAnchor(anchor.BeginCalTxInt)
 		}
 		delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			return delRes.Err()
 		}
-		if removeMonitoring {
+		if removeNewBtcMonitoring {
 			app.logger.Info("Checking if we were leader and need to remove New BTC Check....")
 			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 			if app.LogError(results.Err()) != nil {
