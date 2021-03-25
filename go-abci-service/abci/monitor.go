@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/lightningnetwork/lnd/lnrpc"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ import (
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
 const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
-const STATIC_FEE_AMT = 60000 // 12500 // 60k amounts to 240 sat/vbyte
+const STATIC_FEE_AMT = 25000 // 12500 // 60k amounts to 240 sat/vbyte
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -199,7 +200,7 @@ func (app *AnchorApplication) FeeMonitor() {
 				}
 				if err != nil || app.lnClient.Testnet {
 					app.logger.Info("falling back to static FEE")
-					fee = int64(app.lnClient.FeeMultiplier * float64(STATIC_FEE_AMT))
+					fee = int64(app.lnClient.FeeMultiplier * float64(fee))
 				}
 			}
 			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
@@ -409,7 +410,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			app.logger.Error("cannot unmarshal json for Failed BTC check")
 			continue
 		}
-		if btcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout) {
+		if btcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout) || app.config.ElectionMode == "test" {
 			app.logger.Info(fmt.Sprintf("Anchor Delay for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 			if app.LogError(results.Err()) != nil {
@@ -427,7 +428,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 					if app.LogError(err) != nil {
 						continue
 					}
-					newFee := app.state.LatestBtcFee * 4 / 1000 // + some margin
+					newFee := math.Round(float64(app.state.LatestBtcFee * 4 / 1000) * app.lnClient.FeeMultiplier)
 					_, err = app.lnClient.ReplaceByFee(txRawBytes, tx.BtcTxID, 1, int(newFee))
 					if app.LogError(err) != nil {
 						continue
