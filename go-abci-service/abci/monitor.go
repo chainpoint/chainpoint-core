@@ -416,6 +416,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			if app.LogError(results.Err()) != nil {
 				continue
 			}
+			found := false
 			for _, a := range results.Val() {
 				var tx types.BtcTxMsg
 				if app.LogError(json.Unmarshal([]byte(a), &tx)) != nil {
@@ -423,6 +424,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 					continue
 				}
 				if tx.AnchorBtcAggRoot == anchor.AnchorBtcAggRoot {
+					found = true
 					app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 					newFee := math.Round(float64(app.state.LatestBtcFee * 4 / 1000) * app.lnClient.FeeMultiplier)
 					_, err = app.lnClient.ReplaceByFee(tx.BtcTxID, 1, int(newFee))
@@ -440,6 +442,9 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 					}
 					break
 				}
+			}
+			if !found {
+				app.RemoveBtcCheck(anchor.AnchorBtcAggRoot, false, false)
 			}
 		}
 	}
