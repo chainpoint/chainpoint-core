@@ -19,6 +19,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -284,6 +285,10 @@ func EncodeTx(outgoing types.Tx) string {
 	return base64.StdEncoding.EncodeToString(txJSON)
 }
 
+func GetClientIP(r *http.Request) string {
+	return r.RemoteAddr
+}
+
 // DecodeIP: decode tendermint's arcane remote_ip format
 func DecodeIP(remote_ip string) string {
 	data, err := base64.StdEncoding.DecodeString(remote_ip)
@@ -530,4 +535,19 @@ func ReadLines(path string) ([]string, error) {
 		lines = append(lines, strings.TrimSpace(scanner.Text()))
 	}
 	return lines, scanner.Err()
+}
+
+// GetCurrentFuncName : get name of function being called
+func GetCurrentFuncName() string {
+	pc, _, _, _ := runtime.Caller(1)
+	return fmt.Sprintf("%s", runtime.FuncForPC(pc).Name())
+}
+
+func ArrayContains(arr []string, item string) bool {
+	for _, v := range arr {
+		if v == item {
+			return true
+		}
+	}
+	return false
 }

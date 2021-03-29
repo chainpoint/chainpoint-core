@@ -223,15 +223,15 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		validated = true
 		validationRecord.CalValidationSuccess++
 		validationRecord.LastCalTxHeight = state.Height
-/*		RateLimitUpdate(state.Height, &validationRecord.CalAllowedRate)
-		if !IsHabitualViolator(validationRecord.CalAllowedRate) {
-			validated = true
-			UpdateAcceptTx(&validationRecord.CalAllowedRate)
-			validationRecord.CalValidationSuccess++
-			validationRecord.LastCalTxHeight = state.Height
-		} else {
-			validationRecord.CalValidationFailures++
-		}*/
+		/*		RateLimitUpdate(state.Height, &validationRecord.CalAllowedRate)
+				if !IsHabitualViolator(validationRecord.CalAllowedRate) {
+					validated = true
+					UpdateAcceptTx(&validationRecord.CalAllowedRate)
+					validationRecord.CalValidationSuccess++
+					validationRecord.LastCalTxHeight = state.Height
+				} else {
+					validationRecord.CalValidationFailures++
+				}*/
 		break
 	case "BTC-E":
 		validated = true

@@ -2,46 +2,10 @@ steps:
 - name: 'gcr.io/cloud-builders/git'
   args: ['submodule', 'update', '--init', '--recursive']
 - name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.node-base', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:latest', '.' ]
-  id: 'node-base'
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.api', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service:latest', '.' ]
-  waitFor: ['node-base']
-  id: 'node-api'
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.api-test', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service-test:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service-test:latest', '.' ]
-  waitFor: ['node-api']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.lnd-mon', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-lnd-mon-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-lnd-mon-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.btc-tx', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-tx-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-tx-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.proof-gen', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-gen-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-gen-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
-  args: [ 'build', '-f', 'docker/Dockerfile.proof-state', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:latest', '.' ]
-  waitFor: ['node-base']
-- name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.abci', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:latest', '.' ]
   waitFor: ['node-base']
 timeout: 1000s
 images:
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-base:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service-test:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-api-service-test:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-lnd-mon-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-lnd-mon-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-tx-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-btc-tx-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-gen-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-gen-service:$COMMIT_SHA'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:latest'
-- 'gcr.io/chainpoint-registry/$REPO_NAME/node-proof-state-service:$COMMIT_SHA'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:latest'
 - 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:$COMMIT_SHA'
 options:

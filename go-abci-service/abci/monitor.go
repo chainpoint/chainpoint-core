@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/lightningnetwork/lnd/lnrpc"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -33,7 +34,11 @@ import (
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
 const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
+<<<<<<< HEAD
 const STATIC_FEE_AMT = 12500 // 12500 // 50k amounts to 200 sat/vbyte
+=======
+const STATIC_FEE_AMT = 30000 // 12500 // 60k amounts to 240 sat/vbyte
+>>>>>>> 0cd5b05a616e571c86f9b1348a60f3fd6a0e9de4
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -71,6 +76,14 @@ func (app *AnchorApplication) SyncMonitor() {
 		} else {
 			app.state.ChainSynced = true
 		}
+	}
+}
+
+//LNDMonitor : maintains unlock of wallet while abci is running
+func (app *AnchorApplication) LNDMonitor() {
+	for {
+		app.lnClient.Unlocker()
+		time.Sleep(60 * time.Second)
 	}
 }
 
@@ -191,7 +204,7 @@ func (app *AnchorApplication) FeeMonitor() {
 				}
 				if err != nil || app.lnClient.Testnet {
 					app.logger.Info("falling back to static FEE")
-					fee = int64(app.lnClient.FeeMultiplier * float64(STATIC_FEE_AMT))
+					fee = int64(app.lnClient.FeeMultiplier * float64(fee))
 				}
 			}
 			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
@@ -373,20 +386,79 @@ func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
 	if app.LogError(err) != nil {
 		return err
 	}
-	for _, out :=  range msgTx.TxOut {
+	for _, out := range msgTx.TxOut {
 		if bytes.Compare(out.PkScript, outputScript) == 0 && msgTx.TxHash().String() == btcmsg.BtcTxID {
 			app.logger.Info(fmt.Sprintf("BTC-A %s confirmed", btcmsg.BtcTxID))
 			return nil
 		}
-		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s\n%s != %s", btcmsg.BtcTxID, msgTx.TxHash().String(), out.PkScript, outputScript))
+		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s", btcmsg.BtcTxID, msgTx.TxHash().String()))
 	}
 	return errors.New("unable to verify BTC-A")
 }
 
+//FailedAnchorMonitor: ensures transactions reach btc chain within certain time limit
 func (app *AnchorApplication) FailedAnchorMonitor() {
+	status, err := app.lnClient.GetInfo()
+	if app.LogError(err) != nil {
+		return
+	}
+	btcHeight := int64(status.BlockHeight)
 	results := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
+	}
+	//iterate through pending tx looking for timeouts
+	for _, s := range results.Val() {
+		var anchor types.AnchorRange
+		if app.LogError(json.Unmarshal([]byte(s), &anchor)) != nil {
+			app.logger.Error("cannot unmarshal json for Failed BTC check")
+			continue
+		}
+		if btcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout) || app.config.ElectionMode == "test" {
+			app.logger.Info(fmt.Sprintf("Anchor Delay for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
+			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
+			if app.LogError(results.Err()) != nil {
+				continue
+			}
+			found := false
+			for _, a := range results.Val() {
+				var tx types.BtcTxMsg
+				if app.LogError(json.Unmarshal([]byte(a), &tx)) != nil {
+					app.logger.Error("cannot unmarshal json for New BTC check")
+					continue
+				}
+				if tx.AnchorBtcAggRoot == anchor.AnchorBtcAggRoot {
+					found = true
+					app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
+					newFee := math.Round(float64(app.state.LatestBtcFee * 4 / 1000) * app.lnClient.FeeMultiplier)
+					_, err = app.lnClient.ReplaceByFee(tx.BtcTxID, 1, int(newFee))
+					if app.LogError(err) != nil {
+						continue
+					}
+					//Remove old anchor check
+					app.RemoveBtcCheck(tx.AnchorBtcAggRoot, false, false)
+					//Add new anchor check
+					anchor.BtcBlockHeight = btcHeight + 1 // give ourselves extra time
+					failedAnchorJSON, _ := json.Marshal(anchor)
+					redisResult := app.redisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+					if app.LogError(redisResult.Err()) != nil {
+						continue
+					}
+					break
+				}
+			}
+			if !found {
+				app.RemoveBtcCheck(anchor.AnchorBtcAggRoot, false, false)
+			}
+		}
+	}
+}
+
+//RemoveBtcCheck : remove all checks in case of btc tx failure
+func (app *AnchorApplication) RemoveBtcCheck(aggRoot string, removeNewBtcMonitoring bool, resetAnchor bool) error {
+	results := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
+	if app.LogError(results.Err()) != nil {
+		return results.Err()
 	}
 	for _, s := range results.Val() {
 		var anchor types.AnchorRange
@@ -394,22 +466,21 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			app.logger.Error("cannot unmarshal json for Failed BTC check")
 			continue
 		}
-		if app.state.Height-anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) || app.state.LatestErrRoot == anchor.AnchorBtcAggRoot {
-			if app.state.Height-anchor.CalBlockHeight >= int64(app.config.AnchorTimeout) {
-				app.logger.Info(fmt.Sprintf("Anchor Failure (timeout), Resetting state for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
-			} else {
-				app.logger.Info(fmt.Sprintf("Anchor Failure (BTC-E), Resetting state for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
-			}
+		if anchor.AnchorBtcAggRoot != aggRoot {
+			continue
+		}
+		if resetAnchor {
 			app.resetAnchor(anchor.BeginCalTxInt)
-			validation.IncrementFailedAnchor(app.state.LastElectedCoreID, &app.state)
-			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-			if app.LogError(delRes.Err()) != nil {
-				continue
-			}
+		}
+		delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+		if app.LogError(delRes.Err()) != nil {
+			return delRes.Err()
+		}
+		if removeNewBtcMonitoring {
 			app.logger.Info("Checking if we were leader and need to remove New BTC Check....")
 			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 			if app.LogError(results.Err()) != nil {
-				continue
+				return results.Err()
 			}
 			for _, a := range results.Val() {
 				var tx types.BtcTxMsg
@@ -423,11 +494,12 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 					if app.LogError(delRes.Err()) != nil {
 						continue
 					}
-					break
+					return nil //we've succeeded at removing everything associated with this root
 				}
 			}
 		}
 	}
+	return nil
 }
 
 func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
@@ -459,6 +531,7 @@ func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails
 	return block, tree, txIndex, nil
 }
 
+//MonitorNewTx: issues BTC-A upon new transaction confirmation. TODO: fold into FailedAnchorMonitor
 func (app *AnchorApplication) MonitorNewTx() {
 	app.logger.Info("Starting New BTC Check")
 	results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
@@ -496,7 +569,7 @@ func (app *AnchorApplication) MonitorNewTx() {
 			app.logger.Info(fmt.Sprintf("New BTC Check: cannot marshal json"))
 			continue
 		}
-		go func(monBytes []byte, res string){
+		go func(monBytes []byte, res string) {
 			app.logger.Info(fmt.Sprintf("New BTC Check: sending BTC-A %s", string(monBytes)))
 			_, err = app.rpc.BroadcastTx("BTC-A", string(monBytes), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 			if app.LogError(err) != nil {

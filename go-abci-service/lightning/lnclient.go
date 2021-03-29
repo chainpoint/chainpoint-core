@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
+	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
 	"net/http"
 	"time"
 
@@ -47,9 +48,14 @@ type LnClient struct {
 	Logger         log.Logger
 	Testnet        bool
 	WalletAddress  string
+	WalletPass     string
 	FeeMultiplier  float64
 	LastFee        int64
+	HashPrice      int64
+	SessionSecret  string
 }
+
+
 
 // BitcoinerFee : estimates fee from bitcoiner service
 type BitcoinerFee struct {
@@ -222,13 +228,24 @@ func (ln *LnClient) GetWalletClient() (walletrpc.WalletKitClient, func()) {
 	return walletrpc.NewWalletKitClient(conn), closeIt
 }
 
-func (ln *LnClient) Unlocker(pass string) error {
-	conn, closer := ln.GetWalletUnlockerClient()
+func (ln *LnClient) GetInvoiceClient() (invoicesrpc.InvoicesClient, func()) {
+	conn, err := ln.CreateConn()
+	closeIt := func() {
+		conn.Close()
+	}
+	if ln.LoggerError(err) != nil {
+		return nil, nil
+	}
+	return invoicesrpc.NewInvoicesClient(conn), closeIt
+}
+
+func (ln *LnClient) Unlocker() error {
+	conn, close := ln.GetWalletUnlockerClient()
 	if conn == nil {
 		return errors.New("unable to obtain client")
 	}
 	unlockReq := lnrpc.UnlockWalletRequest{
-		WalletPassword:       []byte(pass),
+		WalletPassword:       []byte(ln.WalletPass),
 		RecoveryWindow:       10000,
 		ChannelBackups:       nil,
 		XXX_NoUnkeyedLiteral: struct{}{},
@@ -236,10 +253,13 @@ func (ln *LnClient) Unlocker(pass string) error {
 		XXX_sizecache:        0,
 	}
 	_, err := conn.UnlockWallet(context.Background(), &unlockReq)
-	if ln.LoggerError(err) != nil {
-		return err
+	if err != nil {
+		if strings.Contains(err.Error(), "unknown service lnrpc.WalletUnlocker") {
+			return nil
+		}
+		return ln.LoggerError(err)
 	}
-	closer()
+	close()
 	return nil
 }
 
@@ -282,6 +302,13 @@ func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
 	client, closeFunc := ln.GetClient()
 	defer closeFunc()
 	resp, err := client.GetInfo(context.Background(), &lnrpc.GetInfoRequest{})
+	return resp, err
+}
+
+func (ln *LnClient) GetWalletBalance() (*lnrpc.WalletBalanceResponse, error) {
+	client, closeFunc := ln.GetClient()
+	defer closeFunc()
+	resp, err := client.WalletBalance(context.Background(), &lnrpc.WalletBalanceRequest{})
 	return resp, err
 }
 
@@ -631,4 +658,39 @@ func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCo
 	resp, err := client.SendCoins(context.Background(), &sendCoinsReq)
 	ln.LoggerError(err)
 	return *resp, err
+}
+
+func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
+	lightning, close := ln.GetClient()
+	defer close()
+	invoice, err := lightning.LookupInvoice(context.Background(), &lnrpc.PaymentHash{RHash:payhash})
+	if ln.LoggerError(err) != nil {
+		return lnrpc.Invoice{}, err
+	}
+	return *invoice, nil
+}
+
+func (ln *LnClient) ReplaceByFee(txstr string, output int, newfee int) (walletrpc.BumpFeeResponse, error) {
+	wallet, close := ln.GetWalletClient()
+	defer close()
+	outpoint := lnrpc.OutPoint{
+		TxidStr:              txstr,
+		OutputIndex:          uint32(output),
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+	rbfReq := walletrpc.BumpFeeRequest{
+		Outpoint:             &outpoint,
+		TargetConf:           0,
+		SatPerByte:           uint32(newfee),
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+	resp, err := wallet.BumpFee(context.Background(), &rbfReq)
+	if ln.LoggerError(err) != nil {
+		return walletrpc.BumpFeeResponse{}, err
+	}
+	return *resp, nil
 }

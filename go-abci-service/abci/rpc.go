@@ -2,6 +2,7 @@ package abci
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -96,6 +97,19 @@ func (rpc *RPC) GetTxByInt(txInt int64) (core_types.ResultTxSearch, error) {
 	txResult, err := rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", txInt), false, 1, 1, "")
 	if rpc.LogError(err) != nil {
 		return core_types.ResultTxSearch{}, err
+	}
+	return *txResult, err
+}
+
+//GetTxByHash : Retrieves a tx by its unique string ID (txid)
+func (rpc *RPC) GetTxByHash(txid string) (core_types.ResultTx, error) {
+	hash, err := hex.DecodeString(txid)
+	if rpc.LogError(err) != nil {
+		return core_types.ResultTx{}, err
+	}
+	txResult, err := rpc.client.Tx(hash, false)
+	if rpc.LogError(err) != nil {
+		return core_types.ResultTx{}, err
 	}
 	return *txResult, err
 }

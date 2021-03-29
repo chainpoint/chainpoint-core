@@ -17,19 +17,23 @@ services:
   abci:
     image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/go-abci-service:${DOCKER_TAG:-latest}
     depends_on:
-      - rabbitmq
-      - api
+      - postgres
     user: ${USERID}:${GROUPID}
     environment:
       SET_OPTION_KEY: ''
       SET_OPTION_VAL: ''
       PEERS: ${PEERS}
       SEEDS: ${SEEDS}
+      AGGREGATOR_WHITELIST: ${AGGREGATOR_WHITELIST}
+      AGGREGATOR_PUBLIC: 'false'
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      SUBMIT_HASH_PRICE_SAT: ${SUBMIT_HASH_PRICE_SAT:-2}
       HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
+      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
+      ELECTION: 'reputation'
       ANCHOR: 'true'
       NODE_MANAGEMENT: 'true'
       AGGREGATE: 'true'
@@ -41,10 +45,15 @@ services:
       ANCHOR_TIMEOUT: '30'
       LN_STAKE: '100000'
       ANCHOR_REWARD: '0'
-      BTC_FEE_MULTIPLIER: '2.2'
+      BTC_FEE_MULTIPLIER: '2.5'
+      SESSION_SECRET: DOCKER-SECRET->SESSION_SECRET
+      LND_MACAROON: ${LND_MACAROON}
+      LND_TLS_CERT: ${LND_TLS_CERT}
     secrets:
       - ECDSA_PKPEM
       - HOT_WALLET_ADDRESS
+      - HOT_WALLET_PASS
+      - SESSION_SECRET
     volumes:
       - ~/.chainpoint/core/config/node_1:/tendermint/config
       - ~/.chainpoint/core/config/node_1/data:/tendermint/data
@@ -54,15 +63,16 @@ services:
         published: 26656
         protocol: tcp
         mode: host
+      - target: 26657
+        published: 26657
+        protocol: tcp
+        mode: host
+      - target: 8080
+        published: 80
+        protocol: tcp
+        mode: host
     deploy:
       mode: global
-      labels:
-        - 'traefik.enable=true'
-        - 'traefik.rpc.port=26657'
-        - 'traefik.rpc.frontend.entryPoints=rpc'
-        - 'traefik.rpc.frontend.rule=PathPrefix:/'
-        - 'traefik.docker.network=chainpoint-core_chainpoint'
-        - 'traefik.backend.loadbalancer.swarm=true'
       placement:
         constraints: [node.role==manager]
       restart_policy:
@@ -133,248 +143,6 @@ services:
         max-size: '1g'
         max-file: '5'
 
-  # HTTP API
-  # Restify Node public web API service.
-  #
-  # Note : You don't access this directly, but through
-  # the nginx-proxy load balancer. This service cannot be
-  # given an explicit container_name since it needs
-  # to be scalable with 'docker-compose scale api=5'
-  #
-  # The VIRTUAL_HOST env var is used by the nginx-proxy
-  # to rebuild its reverse proxy host config and must be
-  # passed in by the HTTP client:
-  #
-  # Start With:
-  # docker-compose up -d --build nginx-proxy
-  #
-  # curl -i http://127.0.0.1/
-  #
-  # PORTS : 8080
-  #
-  api:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-api-service:${DOCKER_TAG:-latest}
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - redis
-      - rabbitmq
-      - postgres
-    networks:
-      - chainpoint
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 2G
-      mode: replicated
-      replicas: 1
-      labels:
-        - 'traefik.enable=true'
-        - 'traefik.port=8080'
-        - 'traefik.frontend.entryPoints=http'
-        - 'traefik.frontend.rule=PathPrefix:/'
-        - 'traefik.docker.network=chainpoint-core_chainpoint'
-        - 'traefik.backend.loadbalancer.swarm=true'
-      update_config:
-        parallelism: 1
-        delay: 1s
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    secrets:
-      - ECDSA_PKPEM
-      - HOT_WALLET_PASS
-      - HOT_WALLET_ADDRESS
-      - SESSION_SECRET
-    environment:
-      AGGREGATOR_WHITELIST: ${AGGREGATOR_WHITELIST}
-      AGGREGATOR_PUBLIC: 'false'
-      NODE_ENV: ${NODE_ENV}
-      SUBMIT_HASH_PRICE_SAT: ${SUBMIT_HASH_PRICE_SAT:-2}
-      NETWORK: ${NETWORK:-testnet}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-      LND_SOCKET: ${LND_SOCKET}
-      ECDSA_PKPEM: DOCKER-SECRET->ECDSA_PKPEM
-      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
-      SESSION_SECRET: DOCKER-SECRET->SESSION_SECRET
-      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
-      VIRTUAL_HOST: api.local
-      TENDERMINT_URI: http://abci:26657
-      UV_THREADPOOL_SIZE: 128
-      LND_MACAROON: ${LND_MACAROON}
-      LND_TLS_CERT: ${LND_TLS_CERT}
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd:z
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
-  # Bitcoin Transmit
-  # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
-  #
-  #  btc-tx:
-  #    restart: always
-  #    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG:-latest}
-  #    build:
-  #      context: .
-  #      dockerfile: docker/Dockerfile.btc-tx
-  #    user: ${USERID}:${GROUPID}
-  #    container_name: btc-tx-core
-  #    depends_on:
-  #      - rabbitmq
-  #    networks:
-  #      - chainpoint
-  #    secrets:
-  #      - HOT_WALLET_ADDRESS
-  #    deploy:
-  #      restart_policy:
-  #        condition: any
-  #        delay: 5s
-  #        max_attempts: 15
-  #        window: 90s
-  #    environment:
-  #      NODE_ENV: ${NODE_ENV}
-  #      NETWORK: ${NETWORK:-testnet}
-  #      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-  #      HOT_WALLET_ADDRESS: DOCKER-SECRET->HOT_WALLET_ADDRESS
-  #      LND_SOCKET: ${LND_SOCKET}
-  #    volumes:
-  #      - ~/.chainpoint/core/.lnd:/root/.lnd:z
-  #    tty: true
-  #    logging:
-  #      driver: 'json-file'
-  #      options:
-  #        max-size: '1g'
-  #        max-file: '5'
-
-  # Lightning Invoice Monitor
-  # Monitor and report on the state of LND invoices.
-  #
-  lnd-mon:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG:-latest}
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - redis
-    networks:
-      - chainpoint
-    secrets:
-      - HOT_WALLET_PASS
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      HOT_WALLET_PASS: DOCKER-SECRET->HOT_WALLET_PASS
-      LND_SOCKET: ${LND_SOCKET}
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd:z
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
-  # Proof State
-  # Encapsulates all persistent data storage for partial proof data.
-  #
-  proof-state:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG:-latest}
-    user: ${USERID}:${GROUPID}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    depends_on:
-      - rabbitmq
-      - postgres
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
-  # Proof Generation
-  # Responsible for constructing, signing, and validating Chainpoint proofs
-  # for Calendar, Bitcoin, and Ethereum attestation levels.
-  #
-  proof-gen:
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG:-latest}
-    user: ${USERID}:${GROUPID}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    depends_on:
-      - rabbitmq
-      - postgres
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-    tty: true
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
-  # RabbitMQ
-  #
-  # Admin Page (username:pass)
-  # http://127.0.0.1:15673/ (rabbitmq:rabbitmq)
-  #
-  # LOCAL PORTS:
-  # amqp : 5673 (+1 over default)
-  # http : 15673 (+1 over default)
-  #
-  rabbitmq:
-    image: rabbitmq:3.6.11-management-alpine
-    hostname: rabbitmq
-    user: ${USERID}:${GROUPID}
-    ports:
-      - '5672'
-      - '15672'
-    environment:
-      RABBITMQ_DEFAULT_USER: chainpoint
-      RABBITMQ_DEFAULT_PASS: chainpoint
-    deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    networks:
-      - chainpoint
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
   # Redis
   #
   redis:
@@ -426,45 +194,6 @@ services:
     networks:
       - chainpoint
     deploy:
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 15
-        window: 90s
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '1g'
-        max-file: '5'
-
-  traefik:
-    image: traefik:v1.7.16
-    command: --configfile="/data/traefik.toml"
-    networks:
-      - chainpoint
-    ports:
-      - target: 8080
-        published: 80
-        protocol: tcp
-        mode: host
-      - target: 8443
-        published: 443
-        protocol: tcp
-        mode: hosts
-      - target: 9000
-        published: 9000
-        protocol: tcp
-        mode: host
-      - target: 26657
-        published: 26657
-        protocol: tcp
-        mode: host
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ~/.chainpoint/core/data/traefik:/data
-    deploy:
-      placement:
-        constraints: [node.role==manager]
       restart_policy:
         condition: any
         delay: 5s

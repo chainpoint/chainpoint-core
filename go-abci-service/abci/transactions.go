@@ -44,7 +44,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	}
 	if app.state.ChainSynced && tx.TxType == "BTC-A" {
 		var btcTxObj types.BtcTxMsg
-		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil  {
+		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
 		if matchErr := app.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
@@ -131,11 +131,13 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	case "CAL":
 		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt
+		app.state.CurrentCalInts++
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "BTC-E":
 		app.state.LatestErrRoot = tx.Data
 		app.state.LastErrorCoreID = tx.CoreID
+		go app.RemoveBtcCheck(tx.Data, true, true)
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 	case "BTC-A":
 		var btca types.BtcTxMsg
@@ -151,7 +153,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		app.state.LatestBtcaHeight = app.state.Height + 1
 		tags = app.incrementTxInt(tags)
 		app.state.LatestBtcaTxInt = app.state.TxInt
-		app.state.BeginCalTxInt = btca.EndCalTxInt // Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
+		// Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
 		tags = append(tags, kv.Pair{Key: []byte("BTCTX"), Value: []byte(btca.BtcTxID)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
@@ -234,7 +236,7 @@ func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]c
 }
 
 //getAnchoringCore : gets core to whom last anchor is attributed
-func (app *AnchorApplication) getAnchoringCore(queryLine string)(string, error){
+func (app *AnchorApplication) getAnchoringCore(queryLine string) (string, error) {
 	app.logger.Info("Anchor confirmation query: " + queryLine)
 	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
 	if app.LogError(err) == nil {
