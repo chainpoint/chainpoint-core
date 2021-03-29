@@ -160,6 +160,10 @@ func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Reque
 func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request) {
 	ip := util.GetClientIP(r)
 	app.logger.Info(fmt.Sprintf("Client IP: %s", ip))
+	ipStrs := strings.Split(ip, ":")
+	if len(ipStrs) == 2 {
+		ip = ipStrs[0]
+	}
 	if !(app.config.UseAllowlist && util.ArrayContains(app.config.GatewayAllowlist, ip)){
 		if app.respondLSAT(w, r){
 			//TODO lsat validation
