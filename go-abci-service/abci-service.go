@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -22,14 +23,16 @@ import (
 
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
-
-	"github.com/tendermint/tendermint/libs/log"
+	"gopkg.in/throttled/throttled.v2"
+	"gopkg.in/throttled/throttled.v2/store/memstore"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/gorilla/mux"
 	cfg "github.com/tendermint/tendermint/config"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
+	"github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmtime "github.com/tendermint/tendermint/types/time"
 )
@@ -82,8 +85,53 @@ func main() {
 	}
 	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
-	// Wait forever
-	select {}
+	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
+
+	/* /hash, /proof, /calendar, /status, /peers, /gateways/public, /boltwall/invoice, /boltwall/node */
+	store, err := memstore.New(65536)
+	if err != nil {
+		util.LogError(err)
+		panic(err)
+	}
+
+	hashQuota := throttled.RateQuota{throttled.PerMin(3), 5}
+	apiQuota := throttled.RateQuota{throttled.PerSec(10), 50}
+	hashLimiter, err := throttled.NewGCRARateLimiter(store, hashQuota)
+	apiLimiter, err := throttled.NewGCRARateLimiter(store, apiQuota)
+	if err != nil {
+		util.LogError(err)
+		panic(err)
+	}
+
+	hashRateLimiter := throttled.HTTPRateLimiter{
+		RateLimiter: hashLimiter,
+		VaryBy:      &throttled.VaryBy{Path: true},
+	}
+	apiRateLimiter := throttled.HTTPRateLimiter{
+		RateLimiter: apiLimiter,
+		VaryBy:      &throttled.VaryBy{Path: true},
+	}
+
+	r := mux.NewRouter()
+	r.Handle("/", apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)))
+	r.Handle("/hash", hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)))
+	r.Handle("/proofs", apiRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
+	r.Handle("/calendar/{txid}", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)))
+	r.Handle("/calendar/{txid}/data", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)))
+	r.Handle("/status", apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)))
+	r.Handle("/peers", apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)))
+	r.Handle("/gateways/public", apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)))
+	//r.Handle("/boltwall/invoice", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallInvoiceHandler)))
+	//r.Handle("/boltwall/node", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallNodeHandler)))
+
+	server := &http.Server{
+		Handler:      r,
+		Addr:         ":8080",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	server.ListenAndServe()
+
 	return
 }
 
@@ -94,12 +142,16 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
 	nodeIPs := strings.Split(util.GetEnv("PRIVATE_NODE_IPS", ""), ",")
 	coreIPs := strings.Split(util.GetEnv("PRIVATE_CORE_IPS", ""), ",")
+	useAggregatorAllowlist, _ := strconv.ParseBool(util.GetEnv("AGGREGATOR_PUBLIC", "false"))
+	aggregatorAllowlist := strings.Split(util.GetEnv("AGGREGATOR_WHITELIST", ""), ",")
 	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
 	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
 	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
 	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "20"))
 	anchorReward, _ := strconv.Atoi(util.GetEnv("ANCHOR_REWARD", "0"))
 	blockCIDRs := strings.Split(util.GetEnv("CIDR_BLOCKLIST", ""), ",")
+	hashPrice, _ := strconv.Atoi(util.GetEnv("SUBMIT_HASH_PRICE_SAT", "2"))
+	electionMode := util.GetEnv("ELECTION", "reputation")
 
 	walletAddress := util.GetEnv("HOT_WALLET_ADDRESS", "")
 	if walletAddress == "" {
@@ -113,9 +165,11 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	//lightning settings
 	tlsCertPath := util.GetEnv("LN_TLS_CERT", "/root/.lnd/tls.cert")
 	macaroonPath := util.GetEnv("MACAROON_PATH", fmt.Sprintf("/root/.lnd/data/chain/bitcoin/%s/admin.macaroon", strings.ToLower(bitcoinNetwork)))
+	walletPass := util.GetEnv("HOT_WALLET_PASS", "")
 	lndSocket := util.GetEnv("LND_SOCKET", "lnd:10009")
 	feeMultiplier, _ := strconv.ParseFloat(util.GetEnv("BTC_FEE_MULTIPLIER", "2.2"), 64)
 	feeInterval, _ := strconv.Atoi(util.GetEnv("FEE_INTERVAL", "10"))
+	sessionSecret := util.GetEnv("SESSION_SECRET", "")
 
 	//testMode := util.GetEnv("NETWORK", "testnet")
 	tendermintRPC := types.TendermintConfig{
@@ -130,6 +184,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	postgresDb := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
 	apiURI := util.GetEnv("API_URI", "http://api:8080")
+	coreURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0")
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "info")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
@@ -153,6 +208,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	return types.AnchorConfig{
 		DBType:           "goleveldb",
 		BitcoinNetwork:   bitcoinNetwork,
+		ElectionMode:     electionMode,
 		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintConfig: tendermintRPC,
 		LightningConfig: lightning.LnClient{
@@ -163,7 +219,10 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 			MinConfs:       3,
 			Testnet:        bitcoinNetwork == "testnet",
 			WalletAddress:  walletAddress,
+			WalletPass:     walletPass,
 			FeeMultiplier:  feeMultiplier,
+			HashPrice:      int64(hashPrice),
+			SessionSecret:  sessionSecret,
 		},
 		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,
@@ -183,6 +242,10 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		AnchorReward:     anchorReward,
 		StakePerCore:     1000000,
 		FeeInterval:      int64(feeInterval),
+		HashPrice:        hashPrice,
+		UseAllowlist:     useAggregatorAllowlist,
+		GatewayAllowlist: aggregatorAllowlist,
+		CoreURI:		  coreURI,
 	}
 }
 

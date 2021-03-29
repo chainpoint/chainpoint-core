@@ -138,6 +138,14 @@
   revision = "31079b6807923eb23992c421b114992b95131b55"
 
 [[projects]]
+  digest = "1:d2d266008e5eace1340e63cfb4ecdfc4033839a47c8dea720c4d9f2b938671cd"
+  name = "github.com/chainpoint/tendermint"
+  packages = ["abci/example/code"]
+  pruneopts = ""
+  revision = "af992361055b5541c1bd388994e386652e4d7254"
+  version = "v0.33.0"
+
+[[projects]]
   digest = "1:988feb3d21be75c16b9d45d824d64534e346664ebbcae38eee5e0085415dc242"
   name = "github.com/coreos/bbolt"
   packages = ["."]
@@ -323,6 +331,14 @@
   pruneopts = ""
   revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
   version = "v1.1.1"
+
+[[projects]]
+  digest = "1:20e3b61797cba6a42b110320b703a0b86e2771f324411e75557c2acbc819b1b5"
+  name = "github.com/gorilla/mux"
+  packages = ["."]
+  pruneopts = ""
+  revision = "98cb6bf42e086f6af920b965c38cacc07402d51b"
+  version = "v1.8.0"
 
 [[projects]]
   digest = "1:5122b0b5a933bd0e16b887aa7844933c8a09fb5ba9b5f5651253cb5336c6462a"
@@ -539,12 +555,15 @@
     "channeldb",
     "channeldb/migration12",
     "channeldb/migration_01_to_11",
+    "clock",
     "feature",
     "htlcswitch/hop",
     "input",
+    "invoices",
     "keychain",
     "lncfg",
     "lnrpc",
+    "lnrpc/invoicesrpc",
     "lnrpc/signrpc",
     "lnrpc/walletrpc",
     "lntypes",
@@ -554,6 +573,7 @@
     "lnwallet/chanvalidate",
     "lnwire",
     "macaroons",
+    "netann",
     "queue",
     "record",
     "routing/route",
@@ -1203,6 +1223,17 @@
   version = "v2.1.0"
 
 [[projects]]
+  digest = "1:7d897a9344f0392e5b211b2b4bf4f2995fa42c4ffe2c3a48efbf9c600173fd2e"
+  name = "gopkg.in/throttled/throttled.v2"
+  packages = [
+    ".",
+    "store/memstore",
+  ]
+  pruneopts = ""
+  revision = "b5675e93f9d999b22f92d859a5bf2138d3641af4"
+  version = "v2.0.3"
+
+[[projects]]
   digest = "1:43eca683d801087f3acacfd036474638bc5e293ff6078758d710d99c40ec3f7c"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -1226,19 +1257,23 @@
     "github.com/btcsuite/btcd/txscript",
     "github.com/btcsuite/btcd/wire",
     "github.com/btcsuite/btcutil",
+    "github.com/chainpoint/tendermint/abci/example/code",
     "github.com/drand/drand/client",
     "github.com/drand/drand/client/grpc",
     "github.com/drand/drand/key",
     "github.com/ethereum/go-ethereum/common",
     "github.com/go-redis/redis",
     "github.com/google/uuid",
+    "github.com/gorilla/mux",
     "github.com/knq/pemutil",
     "github.com/lestrrat-go/jwx/jwk",
     "github.com/lib/pq",
     "github.com/lightningnetwork/lnd/lncfg",
     "github.com/lightningnetwork/lnd/lnrpc",
+    "github.com/lightningnetwork/lnd/lnrpc/invoicesrpc",
     "github.com/lightningnetwork/lnd/lnrpc/signrpc",
     "github.com/lightningnetwork/lnd/lnrpc/walletrpc",
+    "github.com/lightningnetwork/lnd/lntypes",
     "github.com/lightningnetwork/lnd/macaroons",
     "github.com/spf13/viper",
     "github.com/streadway/amqp",
@@ -1264,6 +1299,8 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/credentials",
     "gopkg.in/macaroon.v2",
+    "gopkg.in/throttled/throttled.v2",
+    "gopkg.in/throttled/throttled.v2/store/memstore",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

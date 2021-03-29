@@ -18,6 +18,7 @@ services:
     environment:
       PEERS: ${PEERS}
       CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
+      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
       TENDERMINT_HOST: 127.0.0.1
       TENDERMINT_PORT: 26657
       NETWORK: ${NETWORK:-testnet}
@@ -186,102 +187,6 @@ services:
       - ./node-api-service/lib/endpoints:/home/node/app/lib/endpoints/
       - ./node-api-service/server.js:/home/node/app/server.js
       - ./node-api-service/test:/home/node/app/test
-    tty: true
-
-  # Bitcoin Transmit
-  # Send Calendar Block Merkle roots to be embedded in a BTC transaction.
-  #
-  #  btc-tx:
-  #    restart: always
-  #    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-btc-tx-service:${DOCKER_TAG}
-  #    build:
-  #      context: .
-  #      dockerfile: docker/Dockerfile.btc-tx
-  #    container_name: btc-tx-core
-  #    user: ${USERID}:${GROUPID}
-  #    depends_on:
-  #      - base
-  #      - rabbitmq
-  #    networks:
-  #      - chainpoint
-  #    environment:
-  #      NODE_ENV: ${NODE_ENV}
-  #      NETWORK: ${NETWORK:-testnet}
-  #      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-  #      HOT_WALLET_ADDRESS: ${HOT_WALLET_ADDRESS}
-  #      LND_SOCKET: ${LND_SOCKET}
-  #    volumes:
-  #      - ~/.chainpoint/core/.lnd:/root/.lnd
-  #    tty: true
-
-  # Lightning Invoice Monitor
-  # Monitor and report on the state of LND invoices.
-  #
-  lnd-mon:
-    restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-lnd-mon-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.lnd-mon
-    container_name: lnd-mon-core
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - base
-      - redis
-      - lnd
-    networks:
-      - chainpoint
-    environment:
-      NETWORK: ${NETWORK:-testnet}
-      NODE_ENV: ${NODE_ENV}
-      HOT_WALLET_PASS: ${HOT_WALLET_PASS}
-      LND_SOCKET: ${LND_SOCKET}
-    volumes:
-      - ~/.chainpoint/core/.lnd:/root/.lnd
-    tty: true
-
-  # Proof State
-  # Encapsulates all persistent data storage for partial proof data.
-  #
-  proof-state:
-    restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-state-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.proof-state
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - base
-      - rabbitmq
-      - postgres
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
-      CHAINPOINT_CORE_BASE_URI: ${CHAINPOINT_CORE_BASE_URI}
-    tty: true
-
-  # Proof Generation
-  # Responsible for constructing, signing, and validating Chainpoint proofs
-  # for Calendar, Bitcoin, and Ethereum attestation levels.
-  #
-  proof-gen:
-    restart: always
-    image: gcr.io/chainpoint-registry/github_chainpoint_chainpoint-core/node-proof-gen-service:${DOCKER_TAG}
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.proof-gen
-    user: ${USERID}:${GROUPID}
-    depends_on:
-      - base
-      - rabbitmq
-      - postgres
-    networks:
-      - chainpoint
-    environment:
-      NODE_ENV: ${NODE_ENV}
-      NETWORK: ${NETWORK:-testnet}
     tty: true
 
   # RabbitMQ

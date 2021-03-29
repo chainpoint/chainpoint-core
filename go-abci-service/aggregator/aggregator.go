@@ -18,8 +18,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
-	"github.com/streadway/amqp"
 )
 
 const msgType = "aggregator"
@@ -28,7 +26,7 @@ const proofStateQueueOut = "work.proofstate"
 
 // Aggregator : object includes rabbitURI and Logger
 type Aggregator struct {
-	RabbitmqURI  string
+	HashItems    []types.HashItem
 	Logger       log.Logger
 	LatestTime   string
 	Aggregations []types.Aggregation
@@ -56,56 +54,54 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 	return aggregations
 }
 
+func (aggregator *Aggregator) AddHashItem(item types.HashItem) {
+	aggregator.HashItems = append(aggregator.HashItems, item)
+}
+
+func (aggregator *Aggregator) HeadHashItem() types.HashItem {
+	if len(aggregator.HashItems) == 0 {
+		return types.HashItem{}
+	}
+	item := aggregator.HashItems[0]
+	aggregator.HashItems = aggregator.HashItems[1:]
+	return item
+}
+
 // ReceiveCalRMQ : Continually consume the calendar work queue and
 // process any resulting messages from the tx and monitor services
 func (aggregator *Aggregator) StartAggregation() error {
-	var session rabbitmq.Session
-	var err error
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "25000"))
 	aggregator.Logger.Info(fmt.Sprintf("Starting aggregation with %d threads and %d batch size", aggThreads, hashBatchSize))
-	connected := false
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggregator.Aggregations = make([]types.Aggregation, 0)
 	for {
 		aggregator.RestartMutex.Lock()
 		aggregator.TempStop = make(chan struct{})
-		if !connected {
-			session, err = rabbitmq.ConnectAndConsume(aggregator.RabbitmqURI, aggQueueIn)
-			if rabbitmq.LogError(err, "RabbitMQ connection failed") != nil {
-				rabbitmq.LogError(err, "failed to dial for work.in queue")
-				time.Sleep(5 * time.Second)
-				aggregator.RestartMutex.Unlock()
-				continue
-			}
-			connected = true
-		}
 		consume := true
 		// Spin up {aggThreads} number of threads to process incoming hashes from the API
 		for i := 0; i < aggThreads; i++ {
 			aggregator.WaitGroup.Add(1)
 			go func() {
-				msgStructSlice := make([]amqp.Delivery, 0)
+				msgStructSlice := make([]types.HashItem, 0)
 				defer aggregator.WaitGroup.Done()
-				for connected && consume {
+				for consume {
 					select {
 					case <-aggregator.TempStop:
 						consume = false
 						break
-					case err = <-session.Notify:
-						connected = false
-						break
-					case hash := <-session.Msgs:
-						if len(hash.Body) > 0 {
+					default:
+						hash := aggregator.HeadHashItem()
+						if len(hash.Hash) > 0 {
 							msgStructSlice = append(msgStructSlice, hash)
-							aggregator.Logger.Info(fmt.Sprintf("Hash: %s", string(hash.Body)))
+							aggregator.Logger.Info(fmt.Sprintf("Hash: %s", string(hash.Hash)))
 							//create new agg roots under heavy load
 							if len(msgStructSlice) > hashBatchSize {
 								if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestTime); agg.AggRoot != "" {
 									aggregator.AggMutex.Lock()
 									aggregator.Aggregations = append(aggregator.Aggregations, agg)
 									aggregator.AggMutex.Unlock()
-									msgStructSlice = make([]amqp.Delivery, 0)
+									msgStructSlice = make([]types.HashItem, 0)
 								}
 							}
 						}
@@ -122,30 +118,20 @@ func (aggregator *Aggregator) StartAggregation() error {
 		}
 		aggregator.WaitGroup.Wait()
 		aggregator.Logger.Info("aggregation threads stopped")
-		if !connected {
-			session.End()
-		}
 		aggregator.RestartMutex.Unlock()
 		time.Sleep(5 * time.Second)
 	}
 }
 
 // ProcessAggregation creates merkle trees of received hashes a la https://github.com/chainpoint/chainpoint-services/blob/develop/node-aggregator-service/server.js#L66
-func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery, drand string) types.Aggregation {
+func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []types.HashItem, drand string) types.Aggregation {
+	aggStates := make([]types.AggState, 0)
 	var agg types.Aggregation
-	hashSlice := make([][]byte, 0)               // byte array
-	hashStructSlice := make([]types.HashItem, 0) // keep record for building proof path
+	hashSlice := make([][]byte, 0) // byte array
 
 	for _, msgHash := range msgStructSlice {
-		unPackedHashItem := types.HashItem{}
-		if err := json.Unmarshal(msgHash.Body, &unPackedHashItem); err != nil || len(msgHash.Body) == 0 {
-			util.LogError(err)
-			continue
-		}
-		hashStructSlice = append(hashStructSlice, unPackedHashItem)
-
 		//decode hash to bytes and concatenate onto nist bytes
-		hashBytes, _ := hex.DecodeString(unPackedHashItem.Hash)
+		hashBytes, _ := hex.DecodeString(msgHash.Hash)
 
 		//Create checksum
 		var newHash [32]byte
@@ -169,13 +155,14 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 	tree.AddLeaves(hashSlice)
 	tree.MakeTree()
 	uuid, err := uuid.NewUUID()
-	rabbitmq.LogError(err, "can't generate uuid")
+	if util.LogError(err) != nil {
+		return types.Aggregation{}
+	}
 	agg.AggID = uuid.String()
 	agg.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 
 	//Create proof paths
-	proofSlice := make([]types.ProofData, 0)
-	for i, unPackedHash := range hashStructSlice {
+	for i, unPackedHash := range msgStructSlice {
 		var proofData types.ProofData
 		proofData.ProofID = unPackedHash.ProofID
 		proofData.Hash = unPackedHash.Hash
@@ -183,40 +170,34 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []amqp.Delivery,
 		if drand != "" {
 			proofs = append([]merkletools.ProofStep{{Left: true, Value: []byte(fmt.Sprintf("drand:%s", drand))}}, proofs...)
 		}
-		proofData.Proof = make([]types.ProofLineItem, 0)
+		proofOps := make([]types.ProofLineItem, 0)
 		for _, p := range proofs {
 			if p.Left {
 				if strings.Contains(string(p.Value), "drand") {
-					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: string(p.Value)})
+					proofOps = append(proofOps, types.ProofLineItem{Left: string(p.Value)})
 				} else {
-					proofData.Proof = append(proofData.Proof, types.ProofLineItem{Left: hex.EncodeToString(p.Value)})
+					proofOps = append(proofOps, types.ProofLineItem{Left: hex.EncodeToString(p.Value)})
 				}
 			} else {
-				proofData.Proof = append(proofData.Proof, types.ProofLineItem{Right: hex.EncodeToString(p.Value)})
+				proofOps = append(proofOps, types.ProofLineItem{Right: hex.EncodeToString(p.Value)})
 			}
-			proofData.Proof = append(proofData.Proof, types.ProofLineItem{Op: "sha-256"})
+			proofOps = append(proofOps, types.ProofLineItem{Op: "sha-256"})
 		}
-		proofSlice = append(proofSlice, proofData)
-	}
-	agg.ProofData = proofSlice
-	aggregator.Logger.Debug(fmt.Sprintf("Aggregated: %#v", agg))
-
-	//Publish to proof-state service
-	aggJSON, err := json.Marshal(agg)
-	if aggregator.RabbitmqURI != "" {
-		err = rabbitmq.Publish(aggregator.RabbitmqURI, proofStateQueueOut, msgType, aggJSON)
-
+		aggState := types.AggState{}
+		aggState.AggID = agg.AggID
+		aggState.AggRoot = agg.AggRoot
+		aggState.ProofID = unPackedHash.ProofID
+		aggState.Hash = unPackedHash.Hash
+		ops := types.OpsState{}
+		ops.Ops = proofOps
+		opsBytes, err := json.Marshal(ops)
 		if err != nil {
-			rabbitmq.LogError(err, "problem publishing aggJSON message to queue")
-			for _, msg := range msgStructSlice {
-				msg.Nack(false, true)
-			}
-		} else {
-			for _, msg := range msgStructSlice {
-				errAck := msg.Ack(false)
-				rabbitmq.LogError(errAck, "error acking queue item")
-			}
+			continue
 		}
+		aggState.AggState = string(opsBytes)
+		aggStates = append(aggStates, aggState)
 	}
+	aggregator.Logger.Debug(fmt.Sprintf("Aggregated: %#v", aggStates))
+	agg.AggStates = aggStates
 	return agg
 }

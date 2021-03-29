@@ -12,8 +12,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/rabbitmq"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
@@ -68,23 +66,35 @@ func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.C
 	return treeDataObj
 }
 
-// QueueCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
-func (calendar *Calendar) QueueCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) {
-	var calState types.CalState
+// CreateCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
+func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) ([]string, []types.CalStateObject) {
+	calStates := make([]types.CalStateObject, 0)
+	aggIds := make([]string, 0)
 	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
 	uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, tx.Hash)
 	anchor := types.AnchorObj{
 		AnchorID: hex.EncodeToString(tx.Hash),
 		Uris:     []string{uri},
 	}
-	calState.Anchor = anchor
-	calState.ProofData = treeDataObj.ProofData
-	calState.CalID = hex.EncodeToString(tx.Hash)
-	calStateJSON, _ := json.Marshal(calState)
-	err := rabbitmq.Publish(calendar.RabbitmqURI, "work.proofstate", "cal_batch", calStateJSON)
-	if err != nil {
-		rabbitmq.LogError(err, "rmq dial failure, is rmq connected?")
+	calID := hex.EncodeToString(tx.Hash)
+	for _, ops := range treeDataObj.ProofData {
+		anchorOps := types.AnchorOpsState{
+			Anchor: anchor,
+			Ops:    ops.Proof,
+		}
+		anchorBytes, err := json.Marshal(anchorOps)
+		if util.LoggerError(calendar.Logger, err) != nil {
+			continue
+		}
+		calState := types.CalStateObject{
+			AggID:    ops.AggID,
+			CalId:    calID,
+			CalState: string(anchorBytes),
+		}
+		aggIds = append(aggIds, ops.AggID)
+		calStates = append(calStates, calState)
 	}
+	return aggIds, calStates
 }
 
 // AggregateAnchorTx takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop
@@ -138,16 +148,22 @@ func (calendar *Calendar) AggregateAnchorTx(txLeaves []core_types.ResultTx) type
 	return treeData
 }
 
-// QueueBtcaStateDataMessage notifies proof and btc tx services of BTC-A anchoring
-func (calendar *Calendar) QueueBtcaStateDataMessage(anchorDataObj types.BtcAgg) error {
-	treeDataJSON, err := json.Marshal(anchorDataObj)
-	calendar.Logger.Info(fmt.Sprintf("queueing anchor TreeData state message for aggroot: %s", anchorDataObj.AnchorBtcAggRoot))
-	if util.LogError(err) != nil {
-		return err
+// PrepareBtcaStateData notifies proof and btc tx services of BTC-A anchoring
+func (calendar *Calendar) PrepareBtcaStateData(anchorDataObj types.BtcAgg) []types.AnchorBtcAggState {
+	anchorObjects := []types.AnchorBtcAggState{}
+	for _, proofDataItem := range anchorDataObj.ProofData {
+		opsState := types.OpsState{Ops: proofDataItem.Proof}
+		opsBytes, err := json.Marshal(opsState)
+		if util.LoggerError(calendar.Logger, err) != nil {
+			continue
+		}
+		anchorObj := types.AnchorBtcAggState{
+			CalId:             proofDataItem.CalID,
+			AnchorBtcAggId:    anchorDataObj.AnchorBtcAggID,
+			AnchorBtcAggState: string(opsBytes),
+		}
+		anchorObjects = append(anchorObjects, anchorObj)
 	}
-	errBatch := rabbitmq.Publish(calendar.RabbitmqURI, "work.proofstate", "anchor_btc_agg_batch", treeDataJSON)
-	if errBatch != nil {
-		return errBatch
-	}
-	return nil
+	calendar.Logger.Info(fmt.Sprintf("saving anchor TreeData state message for aggroot: %s", anchorDataObj.AnchorBtcAggRoot))
+	return anchorObjects
 }

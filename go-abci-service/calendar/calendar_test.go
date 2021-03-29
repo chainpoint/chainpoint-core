@@ -203,7 +203,7 @@ func TestQueueCalStateMessage(t *testing.T) {
 			{Left: "89b4f6c13d489cd5e5bd557234cf00d4daeedc2dd50a1f18e525296e5abd1399", Right: "", Op: ""},
 			{Left: "", Right: "", Op: "sha-256"}}}}}
 
-	cal.QueueCalStateMessage(txTm, calAggregation)
+	cal.CreateCalStateMessage(txTm, calAggregation)
 
 	session, err := rabbitmq.ConnectAndConsume(rabbitTestURI, "work.proofstate")
 	for m := range session.Msgs {
@@ -227,8 +227,8 @@ func TestQueueBtcaStateDataMessage(t *testing.T) {
 		AnchorBtcAggID:   "blah",
 		AnchorBtcAggRoot: "hurr",
 	}
-	err := cal.QueueBtcaStateDataMessage(btcAgg)
-	assert.Equal(nil, err, "output of QueueBtcaStateDataMessage should be nil")
+	err := cal.PrepareBtcaStateData(btcAgg)
+	assert.Equal(nil, err, "output of PrepareBtcaStateData should be nil")
 	// Test that object is in proofstate queue
 	session, err := rabbitmq.ConnectAndConsume(rabbitTestURI, "work.proofstate")
 	for m := range session.Msgs {

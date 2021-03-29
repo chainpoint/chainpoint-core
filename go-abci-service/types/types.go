@@ -3,11 +3,10 @@ package types
 import (
 	"crypto/ecdsa"
 	"database/sql"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	types3 "github.com/tendermint/tendermint/types"
 	"math/big"
-	"time"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 
 	"github.com/tendermint/tendermint/privval"
 
@@ -32,6 +31,7 @@ type AnchorConfig struct {
 	ChainId          string
 	DBType           string
 	BitcoinNetwork   string
+	ElectionMode     string
 	RabbitmqURI      string
 	TendermintConfig TendermintConfig
 	LightningConfig  lightning.LnClient
@@ -56,6 +56,10 @@ type AnchorConfig struct {
 	AnchorReward     int
 	StakePerCore     int64
 	FeeInterval      int64
+	HashPrice        int
+	UseAllowlist     bool
+	GatewayAllowlist []string
+	CoreURI          string
 }
 
 //EthConfig holds contract addresses and eth node URI
@@ -75,6 +79,7 @@ type AnchorState struct {
 	BeginCalTxInt     int64                      `json:"begin_cal_int"`
 	EndCalTxInt       int64                      `json:"end_cal_int"`
 	LatestCalTxInt    int64                      `json:"latest_cal_int"`
+	CurrentCalInts    int64                      `json:"current_cal_ints"`
 	LatestBtcaTx      []byte                     `json:"latest_btca"`
 	LatestBtcaTxInt   int64                      `json:"latest_btca_int"`
 	LatestBtcaHeight  int64                      `json:"latest_btca_height"`
@@ -91,7 +96,7 @@ type AnchorState struct {
 	CoreKeys          map[string]ecdsa.PublicKey `json:"-"`
 	LnUris            map[string]LnIdentity      `json:"lightning_identities"`
 	IDMap             map[string]string          `json:"-"`
-	Validators   	  []*types3.Validator		 `json:"-"`
+	Validators        []*types3.Validator        `json:"-"`
 	ChainSynced       bool
 	JWKStaked         bool
 	LnStakePrice      int64 `json:"total_stake_price"`
@@ -175,9 +180,9 @@ type TxTm struct {
 
 // Aggregation : An object containing all the relevant data for an aggregation event
 type Aggregation struct {
-	AggID     string      `json:"agg_id"`
-	AggRoot   string      `json:"agg_root"`
-	ProofData []ProofData `json:"proofData"`
+	AggID     string     `json:"agg_id"`
+	AggRoot   string     `json:"agg_root"`
+	AggStates []AggState `json:"agg_states"`
 }
 
 // HashItem : An object contains the Core ID and value for a hash
@@ -191,6 +196,45 @@ type ProofData struct {
 	ProofID string          `json:"proof_id"`
 	Hash    string          `json:"hash"`
 	Proof   []ProofLineItem `json:"proof"`
+}
+
+type ProofState struct {
+	ProofID string `json:"proof_id"`
+	Proof   string `json:"proof"`
+}
+
+// CalState : cal state for proof gen
+type CalStateObject struct {
+	AggID    string `json:"agg_id"`
+	CalId    string `json:"cal_id"`
+	CalState string `json:"cal_state"`
+}
+
+// AggState : agg state for proof gen
+type AggState struct {
+	ProofID  string `json:"proof_id"`
+	Hash     string `json:"hash"`
+	AggID    string `json:"agg_id"`
+	AggState string `json:"agg_state"`
+	AggRoot  string `json:"agg_root"`
+}
+
+type AnchorBtcAggState struct {
+	CalId             string `json:"cal_id"`
+	AnchorBtcAggId    string `json:"anchor_btc_agg_id"`
+	AnchorBtcAggState string `json:"anchor_btc_agg_state"`
+}
+
+type AnchorBtcTxState struct {
+	AnchorBtcAggId string `json:"anchor_btc_agg_id"`
+	BtcTxId        string `json:"btctx_id"`
+	BtcTxState     string `json:"btctx_state"`
+}
+
+type AnchorBtcHeadState struct {
+	BtcTxId       string `json:"btctx_id"`
+	BtcHeadHeight int64  `json:"btchead_height"`
+	BtcHeadState  string `json:"btchead_state"`
 }
 
 // BtcAgg : An object containing BTC anchoring aggregation data
@@ -210,6 +254,7 @@ type BtcProofData struct {
 type AnchorRange struct {
 	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
 	CalBlockHeight   int64  `json:"cal_block_height"`
+	BtcBlockHeight	 int64  `json:"btc_block_height"`
 	BeginCalTxInt    int64  `json:"begin_cal_int"`
 	EndCalTxInt      int64  `json:"end_cal_int"`
 }
@@ -234,25 +279,25 @@ type BtcMsgObj struct {
 
 // BtcTxProofState : An RMQ message object bound for proofstate service
 type BtcTxProofState struct {
-	AnchorBtcAggID string        `json:"anchor_btc_agg_id"`
-	BtcTxID        string        `json:"btctx_id"`
-	BtcTxState     BtcTxOpsState `json:"btctx_state"`
+	AnchorBtcAggID string   `json:"anchor_btc_agg_id"`
+	BtcTxID        string   `json:"btctx_id"`
+	BtcTxState     OpsState `json:"btctx_state"`
 }
 
-// BtcTxOpsState : An RMQ message generated as part of the monitoring proof object
-type BtcTxOpsState struct {
+// OpsState : An RMQ message generated as part of the monitoring proof object
+type OpsState struct {
 	Ops []ProofLineItem `json:"ops"`
 }
 
 // BtccStateObj :  An RMQ message object issued to generate proofs after BTCC confirmation
 type BtccStateObj struct {
-	BtcTxID       string       `json:"btctx_id"`
-	BtcHeadHeight int64        `json:"btchead_height"`
-	BtcHeadState  BtccOpsState `json:"btchead_state"`
+	BtcTxID       string         `json:"btctx_id"`
+	BtcHeadHeight int64          `json:"btchead_height"`
+	BtcHeadState  AnchorOpsState `json:"btchead_state"`
 }
 
-// BtccOpsState : Part of the RMQ message for btc anchoring post-confirmation
-type BtccOpsState struct {
+// AnchorOpsState : Part of the RMQ message for btc anchoring post-confirmation
+type AnchorOpsState struct {
 	Ops    []ProofLineItem `json:"ops"`
 	Anchor AnchorObj       `json:"anchor"`
 }
@@ -328,50 +373,26 @@ type Jwk struct {
 
 //CoreAPIStatus : status from Core's api service. Includes pubkey
 type CoreAPIStatus struct {
-	Version             string    `json:"version"`
-	Time                time.Time `json:"time"`
-	BaseURI             string    `json:"base_uri"`
-	Jwk                 Jwk       `json:"jwk"`
-	Network             string    `json:"network"`
-	IdentityPubkey      string    `json:"identity_pubkey"`
-	LightningAddress    string    `json:"lightning_address"`
-	PublicKey           string    `json:"public_key"`
-	Uris                []string  `json:"uris"`
-	Alias               string    `json:"alias"`
-	HashPriceSatoshis   int       `json:"hash_price_satoshis"`
-	TotalStakePrice     int       `json:"total_stake_price"`
-	ValidatorStakePrice int       `json:"validator_stake_price"`
-	ActiveChannelsCount int       `json:"active_channels_count"`
-	NodeInfo            struct {
-		ProtocolVersion struct {
-			P2P   string `json:"p2p"`
-			Block string `json:"block"`
-			App   string `json:"app"`
-		} `json:"protocol_version"`
-		ID         string `json:"id"`
-		ListenAddr string `json:"listen_addr"`
-		Network    string `json:"network"`
-		Version    string `json:"version"`
-		Channels   string `json:"channels"`
-		Moniker    string `json:"moniker"`
-		Other      struct {
-			TxIndex    string `json:"tx_index"`
-			RPCAddress string `json:"rpc_address"`
-		} `json:"other"`
-	} `json:"node_info"`
-	SyncInfo struct {
-		LatestBlockHash   string    `json:"latest_block_hash"`
-		LatestAppHash     string    `json:"latest_app_hash"`
-		LatestBlockHeight string    `json:"latest_block_height"`
-		LatestBlockTime   time.Time `json:"latest_block_time"`
-		CatchingUp        bool      `json:"catching_up"`
-	} `json:"sync_info"`
-	ValidatorInfo struct {
-		Address string `json:"address"`
-		PubKey  struct {
-			Type  string `json:"type"`
-			Value string `json:"value"`
-		} `json:"pub_key"`
-		VotingPower string `json:"voting_power"`
-	} `json:"validator_info"`
+	Version          string `json:"version"`
+	Time             string `json:"time"`
+	BaseURI          string `json:"base_uri"`
+	Jwk              Jwk    `json:"jwk"`
+	Network          string `json:"network"`
+	IdentityPubkey   string `json:"identity_pubkey"`
+	LightningAddress string `json:"lightning_address"`
+	LightningBalance struct {
+		TotalBalance       string `json:"total_balance"`
+		ConfirmedBalance   string `json:"confirmed_balance"`
+		UnconfirmedBalance string `json:"unconfirmed_balance"`
+	} `json:"lightning_balance"`
+	PublicKey           string                  `json:"public_key"`
+	Uris                []string                `json:"uris"`
+	Alias               string                  `json:"alias"`
+	HashPriceSatoshis   int                     `json:"hash_price_satoshis"`
+	TotalStakePrice     int64                   `json:"total_stake_price"`
+	ValidatorStakePrice int64                   `json:"validator_stake_price"`
+	ActiveChannelsCount int                     `json:"num_channels_count"`
+	NodeInfo            p2p.DefaultNodeInfo     `json:"node_info"`
+	SyncInfo            coretypes.SyncInfo      `json:"sync_info"`
+	ValidatorInfo       coretypes.ValidatorInfo `json:"validator_info"`
 }
