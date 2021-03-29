@@ -178,16 +178,9 @@ We encourage anyone interested in contributing to fork this repo and submit a pu
 
 ### Documentation
 
-READMEs for each Core micro-service are available:
+A description of the Chainpoint Network is available in the [chainpoint-start](https://github.com/chainpoint/chainpoint-start) repository.
 
-| Service                  | Description                                                                                                           | Readme                                                                                                 |
-| :----------------------- | :-------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
-| go-abci-service          | Runs the Tendermint blockchain service and coordinates all Core activity                                              | [README](https://github.com/chainpoint/chainpoint-core/blob/master/go-abci-service/README.md)          |
-| node-api-service         | Web API for interacting with Chainpoint-Gateways                                                                      | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-api-service/README.md)         |
-| node-btc-mon-service     | Monitors the above Bitcoin TX for 6 confirmations and informs go-abci-service when complete                           | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-btc-mon-service/README.md)     |
-| node-lnd-mon-service     | Monitors the lnd invoices for payment status                                                                          | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-lnd-mon-service/README.md)     |
-| node-proof-gen-service   | Generates cryptographic proofs showing how Chainpoint-Gatewat data is included in the Chainpoint Calendar and Bitcoin | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-gen-service/README.md)   |
-| node-proof-state-service | Stores proofs in PostgreSQL                                                                                           | [README](https://github.com/chainpoint/chainpoint-core/blob/master/node-proof-state-service/README.md) |
+The README for the Core application in this repo is available [here](https://github.com/chainpoint/chainpoint-core/blob/master/go-abci-service/README.md).
 
 ## License
 
