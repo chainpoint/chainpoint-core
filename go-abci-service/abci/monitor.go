@@ -416,7 +416,9 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			app.logger.Error("cannot unmarshal json for Failed BTC check")
 			continue
 		}
+		app.logger.Info(fmt.Sprintf("Checking root %s at %d for failure", anchor.AnchorBtcAggRoot, anchor.BtcBlockHeight))
 		if anchor.AnchorBtcAggRoot == app.state.LastErrorCoreID {
+			app.logger.Info(fmt.Sprintf("BTC-E for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			if app.LogError(delRes.Err()) != nil {
 				continue
