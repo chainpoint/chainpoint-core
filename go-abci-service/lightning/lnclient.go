@@ -248,6 +248,7 @@ func (ln *LnClient) GetInvoiceClient() (invoicesrpc.InvoicesClient, func()) {
 
 func (ln *LnClient) Unlocker() error {
 	conn, close := ln.GetWalletUnlockerClient()
+	defer close()
 	if conn == nil {
 		return errors.New("unable to obtain client")
 	}
@@ -266,7 +267,6 @@ func (ln *LnClient) Unlocker() error {
 		}
 		return ln.LoggerError(err)
 	}
-	close()
 	return nil
 }
 

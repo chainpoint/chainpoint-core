@@ -92,6 +92,7 @@ type AnchorState struct {
 	LastElectedCoreID string                     `json:"last_elected_core_id"`
 	LastAnchorCoreID  string                     `json:"last_anchor_core_id"`
 	LastErrorCoreID   string                     `json:"last_error_core_id"`
+	BtcHeight		  int64						 `json:"btc_height"`
 	TxValidation      map[string]TxValidation    `json:"tx_validation"`
 	CoreKeys          map[string]ecdsa.PublicKey `json:"-"`
 	LnUris            map[string]LnIdentity      `json:"lightning_identities"`

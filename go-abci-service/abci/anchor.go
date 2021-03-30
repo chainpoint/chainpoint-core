@@ -170,16 +170,11 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 			}
 		}
 
-		status, err := app.lnClient.GetInfo()
-		if app.LogError(err) != nil {
-			return err
-		}
-
 		// begin monitoring for anchor
 		failedAnchorCheck := types.AnchorRange{
 			AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
 			CalBlockHeight:   app.state.Height,
-			BtcBlockHeight:   int64(status.BlockHeight),
+			BtcBlockHeight:   int64(app.state.BtcHeight),
 			BeginCalTxInt:    startTxRange,
 			EndCalTxInt:      endTxRange,
 		}
