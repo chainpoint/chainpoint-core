@@ -279,7 +279,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		BtcTxId:        btcTxObj.BtcTxID,
 		BtcTxState:     string(btcTxStateJSON),
 	}
-	app.logger.Info(fmt.Sprintf("BtcTx State Obj: %#v", stateObj))
+	app.logger.Info(fmt.Sprintf("BTC-A BtcTx State Obj: %#v", stateObj))
 	err = app.pgClient.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
 	if app.LogError(err) != nil {
 		return err
@@ -287,6 +287,9 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
 	result := app.redisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	if app.LogError(result.Err()) != nil {
+		return err
+	}
 
 	// end monitoring for failed anchor
 	app.RemoveBtcCheck(btcTxObj.AnchorBtcAggRoot, false, false)
@@ -296,8 +299,8 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 	if btcAgg.AnchorBtcAggRoot != btcTxObj.AnchorBtcAggRoot {
-		app.logger.Info(fmt.Sprintf("Anchor TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btcTxObj.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
-		app.logger.Info(fmt.Sprintf("treeData for Anchor comparison: %#v", btcAgg))
+		app.logger.Info(fmt.Sprintf("BTC-A Anchor TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btcTxObj.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
+		app.logger.Info(fmt.Sprintf("BTC-A treeData for Anchor comparison: %#v", btcAgg))
 		return errors.New("Anchor failure, AggRoot mismatch")
 	}
 	anchorBTCAggStateObjects := app.calendar.PrepareBtcaStateData(btcAgg)
@@ -306,7 +309,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		app.logger.Info(fmt.Sprintf("Anchor TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
 		return err
 	}
-	app.logger.Info(fmt.Sprintf("Anchor Success for %s", btcTxObj.AnchorBtcAggRoot))
+	app.logger.Info(fmt.Sprintf("BTC-A Anchor Success for %s", btcTxObj.AnchorBtcAggRoot))
 	if app.LogError(result.Err()) != nil {
 		return err
 	}

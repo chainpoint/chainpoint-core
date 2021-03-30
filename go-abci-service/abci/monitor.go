@@ -432,7 +432,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 						continue
 					}
 					//Remove old anchor check
-					app.RemoveBtcCheck(tx.AnchorBtcAggRoot, false, false)
+					go app.RemoveBtcCheck(tx.AnchorBtcAggRoot, false, false)
 					//Add new anchor check
 					anchor.BtcBlockHeight = btcHeight + 1 // give ourselves extra time
 					failedAnchorJSON, _ := json.Marshal(anchor)
