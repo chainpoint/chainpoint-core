@@ -83,7 +83,7 @@ func (app *AnchorApplication) LNDMonitor() {
 		if app.LogError(err) == nil {
 			if app.state.BtcHeight != int64(status.BlockHeight) {
 				app.state.BtcHeight = int64(status.BlockHeight)
-				app.logger.Info("New BTC Block %d", app.state.BtcHeight)
+				app.logger.Info(fmt.Sprintf("New BTC Block %d", app.state.BtcHeight))
 			}
 		}
 		time.Sleep(60 * time.Second)
