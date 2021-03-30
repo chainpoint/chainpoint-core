@@ -331,15 +331,16 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 		go app.FeeMonitor()
 	}
 
-	// Anchor blockchain
-	app.Anchor()
-
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
-		app.MonitorNewTx()
-		app.MonitorConfirmedTx()
-		app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
-		app.pgClient.PruneProofStateTables()
+		go func() {
+			// Anchor blockchain
+			app.Anchor()
+			app.MonitorNewTx()
+			app.MonitorConfirmedTx()
+			app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+			app.pgClient.PruneProofStateTables()
+		}()
 	}
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
