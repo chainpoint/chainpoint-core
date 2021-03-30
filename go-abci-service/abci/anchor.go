@@ -292,7 +292,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	}
 
 	// end monitoring for failed anchor
-	app.RemoveBtcCheck(btcTxObj.AnchorBtcAggRoot, false, false)
+	app.LogError(app.RemoveBtcCheck(btcTxObj.AnchorBtcAggRoot, false, false))
 
 	btcAgg, err := app.GetTreeFromCalRange(btcTxObj.BeginCalTxInt, btcTxObj.EndCalTxInt)
 	if app.LogError(err) != nil {
