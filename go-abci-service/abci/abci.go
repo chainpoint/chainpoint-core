@@ -375,12 +375,14 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 			}
 			_, ipNet, _ := net.ParseCIDR(blockCIDR)
 			if ipNet.Contains(ip) {
+				app.logger.Info(fmt.Sprintf("ip %s unauthorized", ipStr))
 				resQuery.Code = code.CodeTypeUnauthorized
 				return
 			}
 		}
 		for _, blockIP := range app.config.IPBlockList {
 			if strings.Contains(blockIP, ipStr) {
+				app.logger.Info(fmt.Sprintf("ip %s unauthorized", ipStr))
 				resQuery.Code = code.CodeTypeUnauthorized
 				return
 			}
@@ -400,16 +402,19 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 		}
 		anchorRatio, _ := validation.GetAnchorSuccessRatio(coreID, &app.state)
 		if anchorRatio < 0.3 && app.state.Height-validationRecord.LastBtcaTxHeight > 10000 {
+			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
 		}
 		calRatio, _ := validation.GetCalSuccessRatio(coreID, &app.state)
 		if calRatio < 0.3 && app.state.Height-validationRecord.LastCalTxHeight > 10000 {
+			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
 		}
 		JWKChanges, _ := validation.GetJWKChanges(coreID, &app.state)
 		if JWKChanges > 3 {
+			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
 		}
