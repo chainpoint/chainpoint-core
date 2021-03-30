@@ -395,7 +395,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 			return
 		}
 		app.logger.Info(fmt.Sprintf("Looking up peer info for id %s", base))
-		_, validationRecord, err := validation.GetValidationRecord(coreID, app.state)
+/*		_, validationRecord, err := validation.GetValidationRecord(coreID, app.state)
 		if app.LogError(err) != nil {
 			app.logger.Info(fmt.Sprintf("validation record does not exist for %s", base))
 			return
@@ -411,7 +411,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
 			resQuery.Code = code.CodeTypeUnauthorized
 			return
-		}
+		}*/
 		JWKChanges, _ := validation.GetJWKChanges(coreID, &app.state)
 		if JWKChanges > 3 {
 			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
