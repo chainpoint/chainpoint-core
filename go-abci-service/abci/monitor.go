@@ -424,7 +424,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			app.resetAnchor(anchor.BeginCalTxInt)
 			continue
 		}
-		if (anchor.BtcBlockHeight != 0 && app.state.BtcHeight-anchor.BtcBlockHeight >= int64(app.config.AnchorTimeout)) || app.config.ElectionMode == "test" {
+		if (anchor.BtcBlockHeight != 0 && app.state.BtcHeight-anchor.BtcBlockHeight >= int64(3)) || app.config.ElectionMode == "test" {
 			app.logger.Info(fmt.Sprintf("Anchor Delay for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 			if app.LogError(results.Err()) != nil {
@@ -449,7 +449,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 						continue
 					}
 					//Add new anchor check
-					anchor.BtcBlockHeight = app.state.BtcHeight + 1 // give ourselves extra time
+					anchor.BtcBlockHeight = app.state.BtcHeight  // give ourselves extra time
 					failedAnchorJSON, _ := json.Marshal(anchor)
 					redisResult := app.redisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 					if app.LogError(redisResult.Err()) != nil {
