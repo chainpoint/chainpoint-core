@@ -53,7 +53,7 @@ func NewPGFromURI(connStr string, logger log.Logger) (*Postgres, error) {
 
 // GetProofIdsByAggIds : get proof ids from proof table, based on aggId
 func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT proof_id FROM agg_states WHERE agg_id::TEXT = ANY($1);"
 	rows, err := pg.DB.Query(stmt, pq.Array(aggIds))
 	if err != nil {
@@ -78,7 +78,7 @@ func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 
 // GetProofsByProofIds : get proofs from proof table, based on id
 func (pg *Postgres) GetProofsByProofIds(proofIds []string) (map[string]types.ProofState, error) {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT proof_id, proof FROM proofs WHERE proof_id::TEXT = ANY($1);"
 	rows, err := pg.DB.Query(stmt, pq.Array(proofIds))
 	if err != nil {
@@ -103,7 +103,7 @@ func (pg *Postgres) GetProofsByProofIds(proofIds []string) (map[string]types.Pro
 
 // GetProofIdsByBtcTxId : get proof ids from proof table, based on btctxId
 func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := `SELECT a.proof_id FROM agg_states a
     INNER JOIN cal_states c ON c.agg_id = a.agg_id
     INNER JOIN anchor_btc_agg_states aa ON aa.cal_id = c.cal_id
@@ -132,7 +132,7 @@ func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 
 //GetCalStateObjectsByProofIds : Get calstate objects, given an array of aggIds
 func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT agg_id, cal_id, cal_state FROM cal_states WHERE agg_id::TEXT = ANY($1);"
 	rows, err := pg.DB.Query(stmt, pq.Array(aggIds))
 	if err != nil {
@@ -157,7 +157,7 @@ func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStat
 
 //GetAggStateObjectsByProofIds : Get aggstate objects, given an array of proofIds
 func (pg *Postgres) GetAggStateObjectsByProofIds(proofIds []string) ([]types.AggState, error) {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT proof_id, hash, agg_id, agg_state, agg_root FROM agg_states WHERE proof_id::TEXT = ANY($1);"
 	rows, err := pg.DB.Query(stmt, pq.Array(proofIds))
 	if err != nil {
@@ -182,7 +182,7 @@ func (pg *Postgres) GetAggStateObjectsByProofIds(proofIds []string) ([]types.Agg
 
 //GetAnchorBTCAggStateObjectsByCalIds: Get anchor state objects, given an array of calIds
 func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]types.AnchorBtcAggState, error) {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM anchor_btc_agg_states WHERE cal_id::TEXT = ANY($1);"
 	rows, err := pg.DB.Query(stmt, pq.Array(calIds))
 	if err != nil {
@@ -207,7 +207,7 @@ func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 
 //GetBTCTxStateObjectByAnchorBTCAggId: Get btc state objects, given an array of agg ids
 func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT anchor_btc_agg_id, btctx_id, btctx_state FROM btctx_states WHERE anchor_btc_agg_id::TEXT = $1;"
 	rows, err := pg.DB.Query(stmt, aggId)
 	if err != nil {
@@ -230,7 +230,7 @@ func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 
 //GetBTCHeadStateObjectByBTCTxId: Get btc header state objects, given an array of btcTxIds
 func (pg *Postgres) GetBTCHeadStateObjectByBTCTxId(btcTxId string) (types.AnchorBtcHeadState, error) {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT btctx_id, btchead_height, btchead_state FROM btchead_states WHERE btctx_id = $1;"
 	rows, err := pg.DB.Query(stmt, btcTxId)
 	if err != nil {
@@ -253,7 +253,7 @@ func (pg *Postgres) GetBTCHeadStateObjectByBTCTxId(btcTxId string) (types.Anchor
 
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
 func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO proofs (proof_id, proof, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -272,7 +272,7 @@ func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 
 // BulkInsertAggState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertAggState(aggStates []types.AggState) error {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO agg_states (proof_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -293,7 +293,7 @@ func (pg *Postgres) BulkInsertAggState(aggStates []types.AggState) error {
 
 // BulkInsertCalState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertCalState(calStates []types.CalStateObject) error {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -312,7 +312,7 @@ func (pg *Postgres) BulkInsertCalState(calStates []types.CalStateObject) error {
 
 // BulkInsertBtcAggState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) error {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -331,7 +331,7 @@ func (pg *Postgres) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) e
 
 // BulkInsertBtcTxState : inserts aggregator state into postgres
 func (pg *Postgres) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) error {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO btctx_states (anchor_btc_agg_id, btctx_id, btctx_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)
@@ -351,7 +351,7 @@ func (pg *Postgres) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) erro
 
 // BulkInsertBtcHeadState : inserts head state into postgres
 func (pg *Postgres) BulkInsertBtcHeadState(headStates []types.AnchorBtcHeadState) error {
-	pg.Logger.Info(util.GetCurrentFuncName())
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO btchead_states (btctx_id, btchead_height, btchead_state, created_at, updated_at) VALUES "
 	values := []string{}
 	valuesArgs := make([]interface{}, 0)

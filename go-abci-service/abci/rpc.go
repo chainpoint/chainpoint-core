@@ -33,7 +33,7 @@ func NewRPCClient(tendermintRPC types.TendermintConfig, logger log.Logger) (rpc 
 //LogError : log rpc errors
 func (rpc *RPC) LogError(err error) error {
 	if err != nil {
-		rpc.logger.Error(fmt.Sprintf("Error: %s", err.Error()))
+		rpc.logger.Error(fmt.Sprintf("Error in %s: %s", util.GetCurrentFuncName(2), err.Error()))
 	}
 	return err
 }
@@ -117,7 +117,7 @@ func (rpc *RPC) GetTxByHash(txid string) (core_types.ResultTx, error) {
 // GetAbciInfo retrieves custom ABCI status struct detailing the state of our application
 func (rpc *RPC) GetAbciInfo() (types.AnchorState, error) {
 	resp, err := rpc.client.ABCIInfo()
-	if err != nil {
+	if rpc.LogError(err) != nil {
 		return types.AnchorState{}, err
 	}
 	var anchorState types.AnchorState
@@ -128,7 +128,7 @@ func (rpc *RPC) GetAbciInfo() (types.AnchorState, error) {
 //GetValidators : retrieves list of validators at a particular block height
 func (rpc *RPC) GetValidators(height int64) (core_types.ResultValidators, error) {
 	resp, err := rpc.client.Validators(&height, 1, 300)
-	if err != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultValidators{}, err
 	}
 	return *resp, nil
@@ -137,7 +137,7 @@ func (rpc *RPC) GetValidators(height int64) (core_types.ResultValidators, error)
 //GetGenesis : retrieves genesis file for initialization
 func (rpc *RPC) GetGenesis() (core_types.ResultGenesis, error) {
 	resp, err := rpc.client.Genesis()
-	if err != nil {
+	if rpc.LogError(err) != nil {
 		return core_types.ResultGenesis{}, err
 	}
 	return *resp, nil

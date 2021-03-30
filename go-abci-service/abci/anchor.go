@@ -83,7 +83,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 }
 
 func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
-	app.logger.Info(util.GetCurrentFuncName())
+	app.logger.Info(util.GetCurrentFuncName(1))
 	aggStates, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
 	app.logger.Info(fmt.Sprintf("%d aggStates: %#v", len(aggStates), aggStates))
 	if err != nil {
@@ -314,7 +314,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 }
 
 func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
-	app.logger.Info(util.GetCurrentFuncName())
+	app.logger.Info(util.GetCurrentFuncName(1))
 	aggStates, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
 	if err != nil {
 		return err

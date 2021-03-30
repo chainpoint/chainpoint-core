@@ -538,8 +538,8 @@ func ReadLines(path string) ([]string, error) {
 }
 
 // GetCurrentFuncName : get name of function being called
-func GetCurrentFuncName() string {
-	pc, _, _, _ := runtime.Caller(1)
+func GetCurrentFuncName(numCallStack int) string {
+	pc, _, _, _ := runtime.Caller(numCallStack)
 	return fmt.Sprintf("%s", runtime.FuncForPC(pc).Name())
 }
 
