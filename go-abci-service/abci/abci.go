@@ -425,7 +425,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 
 func (app *AnchorApplication) LogError(err error) error {
 	if err != nil {
-		app.logger.Error(fmt.Sprintf("Error: %s", err.Error()))
+		app.logger.Error(fmt.Sprintf("Error in %s: %s", util.GetCurrentFuncName(2), err.Error()))
 	}
 	return err
 }

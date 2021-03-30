@@ -50,7 +50,7 @@ func LogError(err error) error {
 // LoggerError : Log error if it exists using a logger
 func LoggerError(logger log.Logger, err error) error {
 	if err != nil {
-		logger.Error(fmt.Sprintf("Error: %s", err.Error()))
+		logger.Error(fmt.Sprintf("Error in %s: %s", GetCurrentFuncName(2), err.Error()))
 	}
 	return err
 }
