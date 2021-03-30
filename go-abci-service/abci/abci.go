@@ -336,12 +336,10 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
-		go func() {
-			app.MonitorNewTx()
-			app.MonitorConfirmedTx()
-			app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
-			app.pgClient.PruneProofStateTables()
-		}()
+		app.MonitorNewTx()
+		app.MonitorConfirmedTx()
+		app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+		go app.pgClient.PruneProofStateTables()
 	}
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
