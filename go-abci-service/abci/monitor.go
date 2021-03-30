@@ -592,16 +592,12 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 		return
 	}
 	for _, s := range results.Val() {
-		app.logger.Info(fmt.Sprintf("Checking btc tx %s", s))
+		app.logger.Info(fmt.Sprintf("Checking confirmed btc tx %s", s))
 		var tx types.TxID
 		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
-			return
+			continue
 		}
-		info, err := app.lnClient.GetInfo()
-		if app.LogError(err) != nil {
-			return
-		}
-		confirmCount := info.BlockHeight - uint32(tx.BlockHeight) + 1
+		confirmCount := app.state.BtcHeight - tx.BlockHeight + 1
 		if confirmCount < 6 {
 			app.logger.Info(fmt.Sprintf("btc tx %s at %d confirmations", s, confirmCount))
 			continue

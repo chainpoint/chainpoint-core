@@ -391,6 +391,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
 func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
+	app.logger.Info(fmt.Sprintf("Consuming BTC-C for %s", btcMonObj.BtcTxID))
 	var hash []byte
 	anchoringCoreID, err := app.getAnchoringCore(fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID))
 	if len(anchoringCoreID) == 0 {
