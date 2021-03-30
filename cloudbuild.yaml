@@ -3,7 +3,6 @@ steps:
   args: ['submodule', 'update', '--init', '--recursive']
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', '-f', 'docker/Dockerfile.abci', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:$COMMIT_SHA', '-t', 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:latest', '.' ]
-  waitFor: ['node-base']
 timeout: 1000s
 images:
 - 'gcr.io/chainpoint-registry/$REPO_NAME/go-abci-service:latest'
