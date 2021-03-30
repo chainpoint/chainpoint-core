@@ -432,7 +432,10 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 						continue
 					}
 					//Remove old anchor check
-					go app.RemoveBtcCheck(tx.AnchorBtcAggRoot, false, false)
+					delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+					if app.LogError(delRes.Err()) != nil {
+						continue
+					}
 					//Add new anchor check
 					anchor.BtcBlockHeight = btcHeight + 1 // give ourselves extra time
 					failedAnchorJSON, _ := json.Marshal(anchor)
