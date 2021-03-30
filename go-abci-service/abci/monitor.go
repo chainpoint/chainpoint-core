@@ -34,11 +34,7 @@ import (
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
 const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
-<<<<<<< HEAD
-const STATIC_FEE_AMT = 12500 // 12500 // 50k amounts to 200 sat/vbyte
-=======
-const STATIC_FEE_AMT = 30000 // 12500 // 60k amounts to 240 sat/vbyte
->>>>>>> 0cd5b05a616e571c86f9b1348a60f3fd6a0e9de4
+const STATIC_FEE_AMT = 35000 // 12500 // 60k amounts to 240 sat/vbyte
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
