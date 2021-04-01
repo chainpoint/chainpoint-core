@@ -147,6 +147,8 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		if app.state.ChainSynced {
 			go app.ConsumeBtcTxMsg([]byte(tx.Data))
 			app.logger.Info(fmt.Sprintf("BTC-A Anchor Data: %s", tx.Data))
+		} else {
+			app.state.BeginCalTxInt = btca.EndCalTxInt
 		}
 		app.state.LatestBtcaTx = rawTx
 		app.state.LatestBtcaHeight = app.state.Height + 1
