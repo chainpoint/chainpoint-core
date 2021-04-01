@@ -94,7 +94,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 						hash := aggregator.HeadHashItem()
 						if len(hash.Hash) > 0 {
 							msgStructSlice = append(msgStructSlice, hash)
-							aggregator.Logger.Info(fmt.Sprintf("Hash: %s", string(hash.Hash)))
+							//aggregator.Logger.Info(fmt.Sprintf("Hash: %s", hash.Hash))
 							//create new agg roots under heavy load
 							if len(msgStructSlice) > hashBatchSize {
 								if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestTime); agg.AggRoot != "" {

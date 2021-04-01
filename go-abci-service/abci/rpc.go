@@ -68,7 +68,7 @@ func (rpc *RPC) BroadcastTxCommit(txType string, data string, version int64, tim
 	return *result, nil
 }
 
-// GetStatus retrieves status of our node. Can't use RPC because remote_ip has buggy encoding.
+// GetStatus retrieves status of our node.
 func (rpc *RPC) GetStatus() (core_types.ResultStatus, error) {
 	if rpc == nil {
 		return core_types.ResultStatus{}, errors.New("rpc failure")
@@ -80,7 +80,7 @@ func (rpc *RPC) GetStatus() (core_types.ResultStatus, error) {
 	return *status, err
 }
 
-// GetNetInfo retrieves known peer information. Can't use RPC because remote_ip has buggy encoding.
+// GetNetInfo retrieves known peer information.
 func (rpc *RPC) GetNetInfo() (core_types.ResultNetInfo, error) {
 	if rpc == nil {
 		return core_types.ResultNetInfo{}, errors.New("rpc failure")

@@ -47,7 +47,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			continue
 		}
 		if app.ID == "" {
-			app.ID = string(status.ValidatorInfo.Address.String())
+			app.ID = status.ValidatorInfo.Address.String()
 			app.logger.Info("Core ID set ", "ID", app.ID)
 		}
 		if app.state.Height != 0 && app.state.ChainSynced {
@@ -63,9 +63,6 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.state.LnStakePerVal = stakeAmt
 			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators)) //Total Stake Price includes the other 1/3 just in case
 			//app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
-		}
-		if app.LogError(err) != nil {
-			continue
 		}
 		if status.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
