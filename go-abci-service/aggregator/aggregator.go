@@ -32,7 +32,7 @@ type Aggregator struct {
 	Aggregations []types.Aggregation
 	AggMutex     sync.Mutex
 	RestartMutex sync.Mutex
-	QueueMutex   sync.Mutex
+	//QueueMutex   sync.Mutex
 	TempStop     chan struct{}
 	WaitGroup    sync.WaitGroup
 }
@@ -56,19 +56,15 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 }
 
 func (aggregator *Aggregator) AddHashItem(item types.HashItem) {
-	aggregator.QueueMutex.Lock()
 	aggregator.HashItems = append(aggregator.HashItems, item)
-	aggregator.QueueMutex.Unlock()
 }
 
 func (aggregator *Aggregator) HeadHashItem() types.HashItem {
-	aggregator.QueueMutex.Lock()
 	if len(aggregator.HashItems) == 0 {
 		return types.HashItem{}
 	}
 	item := aggregator.HashItems[0]
 	aggregator.HashItems = aggregator.HashItems[1:]
-	aggregator.QueueMutex.Unlock()
 	return item
 }
 
