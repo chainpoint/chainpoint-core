@@ -18,18 +18,16 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
+	"github.com/enriquebris/goconcurrentqueue"
 )
 
-const msgType = "aggregator"
-const aggQueueIn = "work.agg"
-const proofStateQueueOut = "work.proofstate"
 
 // Aggregator : object includes rabbitURI and Logger
 type Aggregator struct {
-	HashItems    []types.HashItem
+	HashItems    goconcurrentqueue.Queue //In
 	Logger       log.Logger
 	LatestTime   string
-	Aggregations []types.Aggregation
+	Aggregations goconcurrentqueue.Queue //Out
 	AggMutex     sync.Mutex
 	RestartMutex sync.Mutex
 	QueueMutex   sync.Mutex
@@ -45,10 +43,20 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 	}()
 	close(aggregator.TempStop)
 	aggregator.RestartMutex.Lock()
-	aggregations := make([]types.Aggregation, len(aggregator.Aggregations))
-	if len(aggregator.Aggregations) > 0 {
-		copy(aggregations, aggregator.Aggregations)
-		aggregator.Aggregations = make([]types.Aggregation, 0)
+	queueLen := aggregator.Aggregations.GetLen()
+	aggregations := make([]types.Aggregation, 0)
+	if aggregator.Aggregations.GetLen() > 0 {
+		for i := 0; i < queueLen; i++ {
+			item, err := aggregator.Aggregations.Dequeue()
+			if err != nil {
+				return aggregations
+			}
+			value, ok := item.(types.Aggregation)
+			if !ok {
+				return aggregations
+			}
+			aggregations = append(aggregations, value)
+		}
 	}
 	aggregator.Logger.Info(fmt.Sprintf("Retrieved aggregation tree of %d items and resetting", len(aggregations)))
 	aggregator.RestartMutex.Unlock()
@@ -56,18 +64,19 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 }
 
 func (aggregator *Aggregator) AddHashItem(item types.HashItem) {
-	aggregator.HashItems = append(aggregator.HashItems, item)
+	util.LogError(aggregator.HashItems.Enqueue(item))
 }
 
 func (aggregator *Aggregator) HeadHashItem() types.HashItem {
-	aggregator.QueueMutex.Lock()
-	if len(aggregator.HashItems) == 0 {
+	item, err := aggregator.HashItems.Dequeue()
+	if err != nil {
 		return types.HashItem{}
 	}
-	item := aggregator.HashItems[0]
-	aggregator.HashItems = aggregator.HashItems[1:]
-	aggregator.QueueMutex.Unlock()
-	return item
+	value, ok := item.(types.HashItem)
+	if !ok {
+		return types.HashItem{}
+	}
+	return value
 }
 
 // ReceiveCalRMQ : Continually consume the calendar work queue and
@@ -76,8 +85,9 @@ func (aggregator *Aggregator) StartAggregation() error {
 	aggThreads, _ := strconv.Atoi(util.GetEnv("AGGREGATION_THREADS", "4"))
 	hashBatchSize, _ := strconv.Atoi(util.GetEnv("HASHES_PER_MERKLE_TREE", "25000"))
 	aggregator.Logger.Info(fmt.Sprintf("Starting aggregation with %d threads and %d batch size", aggThreads, hashBatchSize))
+	aggregator.HashItems = goconcurrentqueue.NewFIFO()
 	//Consume queue in goroutines with output slice guarded by mutex
-	aggregator.Aggregations = make([]types.Aggregation, 0)
+	aggregator.Aggregations = goconcurrentqueue.NewFIFO()
 	for {
 		aggregator.RestartMutex.Lock()
 		aggregator.TempStop = make(chan struct{})
@@ -101,9 +111,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 							//create new agg roots under heavy load
 							if len(msgStructSlice) > hashBatchSize {
 								if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestTime); agg.AggRoot != "" {
-									aggregator.AggMutex.Lock()
-									aggregator.Aggregations = append(aggregator.Aggregations, agg)
-									aggregator.AggMutex.Unlock()
+									aggregator.Aggregations.Enqueue(agg)
 									msgStructSlice = make([]types.HashItem, 0)
 								}
 							}
@@ -112,9 +120,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 				}
 				if len(msgStructSlice) > 0 {
 					if agg := aggregator.ProcessAggregation(msgStructSlice, aggregator.LatestTime); agg.AggRoot != "" {
-						aggregator.AggMutex.Lock()
-						aggregator.Aggregations = append(aggregator.Aggregations, agg)
-						aggregator.AggMutex.Unlock()
+						aggregator.Aggregations.Enqueue(agg)
 					}
 				}
 			}()

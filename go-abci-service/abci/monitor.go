@@ -34,7 +34,7 @@ import (
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 const NEW_BTC_TX_IDS_KEY = "BTC_Mon:NewBTCTxIds"
 const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
-const STATIC_FEE_AMT = 35000 // 12500 // 60k amounts to 240 sat/vbyte
+const STATIC_FEE_AMT = 40000 // 12500 // 60k amounts to 240 sat/vbyte
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -196,15 +196,15 @@ func (app *AnchorApplication) FeeMonitor() {
 			var fee int64
 			fee, err := app.lnClient.GetLndFeeEstimate()
 			app.lnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
-			if err != nil || fee <= STATIC_FEE_AMT {
-				app.logger.Info("Attempting to use third party FEE....")
+			if app.LogError(err) != nil || fee <= STATIC_FEE_AMT {
 				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
+				app.lnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", fee))
 				if fee < STATIC_FEE_AMT {
 					fee = STATIC_FEE_AMT
 				}
-				if err != nil || app.lnClient.Testnet {
-					app.logger.Info("falling back to static FEE")
+				if app.LogError(err) != nil || app.lnClient.Testnet {
 					fee = int64(app.lnClient.FeeMultiplier * float64(fee))
+					app.lnClient.Logger.Info(fmt.Sprintf("Static FEE: %d", fee))
 				}
 			}
 			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
