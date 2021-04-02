@@ -48,7 +48,7 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 	if aggregator.Aggregations.GetLen() > 0 {
 		for i := 0; i < queueLen; i++ {
 			item, err := aggregator.Aggregations.Dequeue()
-			if err != nil {
+			if util.LogError(err) != nil {
 				return aggregations
 			}
 			value, ok := item.(types.Aggregation)
@@ -69,7 +69,7 @@ func (aggregator *Aggregator) AddHashItem(item types.HashItem) {
 
 func (aggregator *Aggregator) HeadHashItem() types.HashItem {
 	item, err := aggregator.HashItems.Dequeue()
-	if err != nil {
+	if util.LogError(err) != nil {
 		return types.HashItem{}
 	}
 	value, ok := item.(types.HashItem)

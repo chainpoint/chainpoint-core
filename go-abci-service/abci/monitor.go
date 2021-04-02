@@ -429,6 +429,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			if app.LogError(results.Err()) != nil {
 				continue
 			}
+			found := false
 			for _, a := range results.Val() {
 				var tx types.BtcTxMsg
 				if app.LogError(json.Unmarshal([]byte(a), &tx)) != nil {
@@ -436,6 +437,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 					continue
 				}
 				if tx.AnchorBtcAggRoot == anchor.AnchorBtcAggRoot {
+					found = true
 					app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 					newFee := math.Round(float64(app.state.LatestBtcFee * 4 / 1000) * app.lnClient.FeeMultiplier)
 					_, err := app.lnClient.ReplaceByFee(tx.BtcTxID, 1, int(newFee))
@@ -455,6 +457,13 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 						continue
 					}
 					break
+				}
+			}
+			if !found {
+				app.logger.Info(fmt.Sprintf("Anchor Delay for aggroot %s, not found, deleting", anchor.AnchorBtcAggRoot))
+				delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+				if app.LogError(delRes.Err()) != nil {
+					continue
 				}
 			}
 		}
