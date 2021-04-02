@@ -56,7 +56,9 @@ func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
 }
 
 func (aggregator *Aggregator) AddHashItem(item types.HashItem) {
+	aggregator.QueueMutex.Lock()
 	aggregator.HashItems = append(aggregator.HashItems, item)
+	aggregator.QueueMutex.Unlock()
 }
 
 func (aggregator *Aggregator) HeadHashItem() types.HashItem {
