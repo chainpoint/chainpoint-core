@@ -69,7 +69,7 @@ func (aggregator *Aggregator) AddHashItem(item types.HashItem) {
 
 func (aggregator *Aggregator) HeadHashItem() types.HashItem {
 	item, err := aggregator.HashItems.Dequeue()
-	if util.LogError(err) != nil {
+	if err != nil {
 		return types.HashItem{}
 	}
 	value, ok := item.(types.HashItem)
