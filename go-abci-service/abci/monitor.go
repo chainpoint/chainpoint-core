@@ -59,7 +59,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
 			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by 2/3 of validators
 			app.state.Validators = validators.Validators
-			app.lnClient.LocalSats = stakeAmt
+			app.LnClient.LocalSats = stakeAmt
 			app.state.LnStakePerVal = stakeAmt
 			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators)) //Total Stake Price includes the other 1/3 just in case
 			//app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
@@ -75,8 +75,8 @@ func (app *AnchorApplication) SyncMonitor() {
 //LNDMonitor : maintains unlock of wallet while abci is running
 func (app *AnchorApplication) LNDMonitor() {
 	for {
-		app.lnClient.Unlocker()
-		status, err := app.lnClient.GetInfo()
+		app.LnClient.Unlocker()
+		status, err := app.LnClient.GetInfo()
 		if app.LogError(err) == nil {
 			if app.state.BtcHeight != int64(status.BlockHeight) {
 				app.state.BtcHeight = int64(status.BlockHeight)
@@ -109,14 +109,14 @@ func (app *AnchorApplication) StakeIdentity() {
 				valID := validator.Address.String()
 				if lnID, exists := app.state.LnUris[valID]; exists {
 					app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnID.Peer))
-					peerExists, err := app.lnClient.PeerExists(lnID.Peer)
+					peerExists, err := app.LnClient.PeerExists(lnID.Peer)
 					app.LogError(err)
-					if peerExists || app.LogError(app.lnClient.AddPeer(lnID.Peer)) == nil {
-						chanExists, err := app.lnClient.ChannelExists(lnID.Peer, app.lnClient.LocalSats)
+					if peerExists || app.LogError(app.LnClient.AddPeer(lnID.Peer)) == nil {
+						chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.LnClient.LocalSats)
 						app.LogError(err)
 						if !chanExists {
-							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", app.lnClient.LocalSats, lnID.Peer))
-							_, err := app.lnClient.CreateChannel(lnID.Peer, app.lnClient.LocalSats)
+							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", app.LnClient.LocalSats, lnID.Peer))
+							_, err := app.LnClient.CreateChannel(lnID.Peer, app.LnClient.LocalSats)
 							app.LogError(err)
 						} else {
 							app.logger.Info(fmt.Sprintf("Lightning Channel %s exists, skipping...", lnID.Peer))
@@ -132,7 +132,7 @@ func (app *AnchorApplication) StakeIdentity() {
 				app.logger.Info("Validator Lightning identities not all declared yet, waiting...")
 				continue
 			}
-			deadline := time.Now().Add(time.Duration(10*(app.lnClient.MinConfs+1)) * time.Minute) // allow btc channel to open
+			deadline := time.Now().Add(time.Duration(10*(app.LnClient.MinConfs+1)) * time.Minute) // allow btc channel to open
 			for !time.Now().After(deadline) {
 				app.logger.Info("Sleeping to allow validator Lightning channels to open...")
 				time.Sleep(time.Duration(1) * time.Minute)
@@ -146,14 +146,14 @@ func (app *AnchorApplication) StakeIdentity() {
 			continue
 		}
 		//Create ln identity struct
-		resp, err := app.lnClient.GetInfo()
+		resp, err := app.LnClient.GetInfo()
 		if app.LogError(err) != nil || len(resp.Uris) == 0 {
 			continue
 		}
 		uri := resp.Uris[0]
 		lnID := types.LnIdentity{
 			Peer:            uri,
-			RequiredChanAmt: app.lnClient.LocalSats,
+			RequiredChanAmt: app.LnClient.LocalSats,
 		}
 		lnIDBytes, err := json.Marshal(lnID)
 		if app.LogError(err) != nil {
@@ -194,17 +194,17 @@ func (app *AnchorApplication) FeeMonitor() {
 		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}); leader {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
-			fee, err := app.lnClient.GetLndFeeEstimate()
-			app.lnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
+			fee, err := app.LnClient.GetLndFeeEstimate()
+			app.LnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
 			if app.LogError(err) != nil || fee <= STATIC_FEE_AMT {
-				fee, err = app.lnClient.GetThirdPartyFeeEstimate()
-				app.lnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", fee))
+				fee, err = app.LnClient.GetThirdPartyFeeEstimate()
+				app.LnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", fee))
 				if fee < STATIC_FEE_AMT {
 					fee = STATIC_FEE_AMT
 				}
-				if app.LogError(err) != nil || app.lnClient.Testnet {
-					fee = int64(app.lnClient.FeeMultiplier * float64(fee))
-					app.lnClient.Logger.Info(fmt.Sprintf("Static FEE: %d", fee))
+				if app.LogError(err) != nil || app.LnClient.Testnet {
+					fee = int64(app.LnClient.FeeMultiplier * float64(fee))
+					app.LnClient.Logger.Info(fmt.Sprintf("Static FEE: %d", fee))
 				}
 			}
 			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
@@ -223,7 +223,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 	for {
 		var keys []string
 		var err error
-		keys, cursor, err = app.redisClient.Scan(cursor, "CoreID:*", 10).Result()
+		keys, cursor, err = app.RedisClient.Scan(cursor, "CoreID:*", 10).Result()
 		if err != nil {
 			return err
 		}
@@ -243,7 +243,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 		} else {
 			continue
 		}
-		b64Str, err := app.redisClient.Get(k).Result()
+		b64Str, err := app.RedisClient.Get(k).Result()
 		if app.LogError(err) != nil {
 			continue
 		}
@@ -311,7 +311,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return true
 		}
 		app.logger.Info("JWK Identity: Checking Channel Funding")
-		chanExists, err := app.lnClient.ChannelExists(lnID.Peer, app.lnClient.LocalSats)
+		chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.LnClient.LocalSats)
 		if app.LogError(err) == nil && chanExists {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true
@@ -345,11 +345,11 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	if app.LogError(err) == nil {
 		app.state.CoreKeys[tx.CoreID] = *pubKey
 		pubKeyBytes = elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
-		util.LoggerError(app.logger, app.redisClient.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
+		util.LoggerError(app.logger, app.RedisClient.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
 	}
-	value, err := app.redisClient.Get(key).Result()
+	value, err := app.RedisClient.Get(key).Result()
 	if app.LogError(err) == redis.Nil || value != string(jsonJwk) {
-		err = app.redisClient.Set(key, value, 0).Err()
+		err = app.RedisClient.Set(key, value, 0).Err()
 		if app.LogError(err) != nil {
 			return err
 		}
@@ -402,7 +402,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 		app.logger.Info("BTC Height record is 0, waiting for update from btc chain...")
 		return
 	}
-	checkResults := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
+	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(checkResults.Err()) != nil {
 		return
 	}
@@ -416,7 +416,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 		app.logger.Info(fmt.Sprintf("Checking root %s at %d for failure", anchor.AnchorBtcAggRoot, anchor.BtcBlockHeight))
 		if anchor.AnchorBtcAggRoot == app.state.LastErrorCoreID {
 			app.logger.Info(fmt.Sprintf("BTC-E for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
-			delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+			delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			if app.LogError(delRes.Err()) != nil {
 				continue
 			}
@@ -425,7 +425,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 		}
 		if (anchor.BtcBlockHeight != 0 && app.state.BtcHeight-anchor.BtcBlockHeight >= int64(3)) || app.config.ElectionMode == "test" {
 			app.logger.Info(fmt.Sprintf("Anchor Delay for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
-			results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
+			results := app.RedisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 			if app.LogError(results.Err()) != nil {
 				continue
 			}
@@ -438,20 +438,20 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 				}
 				if tx.AnchorBtcAggRoot == anchor.AnchorBtcAggRoot {
 					app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-					newFee := math.Round(float64(app.state.LatestBtcFee * 4 / 1000) * app.lnClient.FeeMultiplier)
-					_, err := app.lnClient.ReplaceByFee(tx.BtcTxID, 1, int(newFee))
+					newFee := math.Round(float64(app.state.LatestBtcFee * 4 / 1000) * app.LnClient.FeeMultiplier)
+					_, err := app.LnClient.ReplaceByFee(tx.BtcTxID, 1, int(newFee))
 					if app.LogError(err) != nil {
 						continue
 					}
 					//Remove old anchor check
-					delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+					delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 					if app.LogError(delRes.Err()) != nil {
 						continue
 					}
 					//Add new anchor check
 					anchor.BtcBlockHeight = app.state.BtcHeight  // give ourselves extra time
 					failedAnchorJSON, _ := json.Marshal(anchor)
-					redisResult := app.redisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+					redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 					if app.LogError(redisResult.Err()) != nil {
 						continue
 					}
@@ -461,7 +461,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			}
 			if !found {
 				app.logger.Info(fmt.Sprintf("Anchor Delay for aggroot %s, not found, deleting", anchor.AnchorBtcAggRoot))
-				delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+				delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 				if app.LogError(delRes.Err()) != nil {
 					continue
 				}
@@ -472,7 +472,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 
 //FindAndRemoveBtcCheck : remove all checks in case of btc tx failure
 func (app *AnchorApplication) FindAndRemoveBtcCheck(aggRoot string) error {
-	checkResults := app.redisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
+	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(checkResults.Err()) != nil {
 		return checkResults.Err()
 	}
@@ -485,7 +485,7 @@ func (app *AnchorApplication) FindAndRemoveBtcCheck(aggRoot string) error {
 		if anchor.AnchorBtcAggRoot != aggRoot {
 			continue
 		}
-		delRes := app.redisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+		delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			return delRes.Err()
 		}
@@ -494,7 +494,7 @@ func (app *AnchorApplication) FindAndRemoveBtcCheck(aggRoot string) error {
 }
 
 func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
-	block, err := app.lnClient.GetBlockByHeight(btcTx.BlockHeight)
+	block, err := app.LnClient.GetBlockByHeight(btcTx.BlockHeight)
 	if app.LogError(err) != nil {
 		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
 	}
@@ -525,7 +525,7 @@ func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails
 //MonitorNewTx: issues BTC-A upon new transaction confirmation. TODO: fold into FailedAnchorMonitor
 func (app *AnchorApplication) MonitorNewTx() {
 	app.logger.Info("Starting New BTC Check")
-	results := app.redisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
+	results := app.RedisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
 	app.logger.Info(fmt.Sprintf("New BTC Check: Starting count for %d txns", len(results.Val())))
 	if app.LogError(results.Err()) != nil {
 		return
@@ -537,7 +537,7 @@ func (app *AnchorApplication) MonitorNewTx() {
 			continue
 		}
 		txBytes, _ := hex.DecodeString(tx.BtcTxID)
-		txDetails, err := app.lnClient.GetTransaction(txBytes)
+		txDetails, err := app.LnClient.GetTransaction(txBytes)
 		if app.LogError(err) != nil {
 			app.logger.Info("New BTC Check: Cannot find transaction")
 			continue
@@ -566,14 +566,14 @@ func (app *AnchorApplication) MonitorNewTx() {
 			if app.LogError(err) != nil {
 				app.logger.Info(fmt.Sprintf("New BTC Check: failed sending BTC-A"))
 			}
-			delRes := app.redisClient.WithContext(context.Background()).SRem(NEW_BTC_TX_IDS_KEY, res)
+			delRes := app.RedisClient.WithContext(context.Background()).SRem(NEW_BTC_TX_IDS_KEY, res)
 			app.LogError(delRes.Err())
 		}(btcMonBytes, s)
 	}
 }
 
 func (app *AnchorApplication) MonitorConfirmedTx() {
-	results := app.redisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
+	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
 	}
@@ -591,7 +591,7 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 		block, tree, txIndex, err := app.GetBlockTree(tx)
 		if app.LogError(err) != nil {
 			if strings.Contains(err.Error(), "not found in block") {
-				app.redisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
+				app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 			}
 			continue
 		}
@@ -611,7 +611,7 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 		btcmsg.Path = jsproofs
 		go app.ConsumeBtcMonMsg(btcmsg)
 		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
-		delRes := app.redisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
+		delRes := app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			continue
 		}

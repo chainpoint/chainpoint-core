@@ -193,7 +193,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		app.state.LatestBtcFee = i
 		app.state.LastBtcFeeHeight = app.state.Height
-		app.lnClient.LastFee = app.state.LatestBtcFee
+		app.LnClient.LastFee = app.state.LatestBtcFee
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "JWK":

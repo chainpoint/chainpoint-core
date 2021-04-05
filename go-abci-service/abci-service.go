@@ -73,6 +73,8 @@ func main() {
 	// Wait forever, shutdown gracefully upon
 	tmos.TrapSignal(*config.Logger, func() {
 		if n.IsRunning() {
+			app.PgClient.DB.Close()
+			app.RedisClient.Close()
 			logger.Info("Shutting down Core...")
 			n.Stop()
 		}
