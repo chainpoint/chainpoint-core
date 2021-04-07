@@ -330,7 +330,6 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 		go app.BeaconMonitor() // update time beacon using deterministic leader election
 		go app.FeeMonitor()
 	}
-
 	// Anchor blockchain
 	app.Anchor()
 

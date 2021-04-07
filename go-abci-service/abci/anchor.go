@@ -68,7 +68,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			aggIds, calStates := app.calendar.CreateCalStateMessage(tx, calAgg)
 			app.logger.Info(fmt.Sprintf("Cal AggIds: %v\nCal States: %#v", len(aggIds), len(calStates)))
 			proofIds, err := app.PgClient.GetProofIdsByAggIds(aggIds)
-			app.logger.Info(fmt.Sprintf("ProofIds: %v", proofIds))
+			app.logger.Info(fmt.Sprintf("Cal ProofIds: %v", proofIds))
 			if app.LogError(err) != nil {
 				return 0, err
 			}
@@ -405,15 +405,15 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 
 	deadline := time.Now().Add(time.Duration(5) * time.Minute)
 	for !time.Now().After(deadline) {
-		if btcMonObj.BtcHeadRoot == string(app.state.LatestBtccTx) {
-			return errors.New(fmt.Sprintf("Already seen BTC-C confirmation for root %s", btcMonObj.BtcHeadRoot))
-		}
-		// Broadcast the confirmation message with metadata
-		amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
-		if amLeader {
-			result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
-			app.LogError(err)
-			app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
+		//only start BTC-C leader election process if someone else hasn't
+		if btcMonObj.BtcHeadRoot != string(app.state.LatestBtccTx) {
+			// Broadcast the confirmation message with metadata
+			amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
+			if amLeader {
+				result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
+				app.LogError(err)
+				app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
+			}
 		}
 		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
 		btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
@@ -427,7 +427,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		if len(hash) > 0 {
 			break
 		}
-		app.logger.Info("Restarting confirmation process")
+		app.logger.Info(fmt.Sprintf("Restarting confirmation process for %s", btcMonObj.BtcTxID))
 	}
 
 	anchorOps := types.AnchorOpsState{}
@@ -454,7 +454,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		BtcHeadState:  string(headState),
 	}
 	proofIds, err := app.PgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
-	app.logger.Info(fmt.Sprintf("ProofIds: %#v", proofIds))
+	app.logger.Info(fmt.Sprintf("BTC ProofIds: %#v", proofIds))
 	app.LogError(err)
 	app.logger.Info(fmt.Sprintf("BtcHeadState: %#v", headStateObj))
 	app.LogError(app.PgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
