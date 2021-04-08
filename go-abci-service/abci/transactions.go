@@ -147,6 +147,8 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		if app.state.ChainSynced {
 			go app.ConsumeBtcTxMsg([]byte(tx.Data))
 			app.logger.Info(fmt.Sprintf("BTC-A Anchor Data: %s", tx.Data))
+		} else {
+			app.state.BeginCalTxInt = btca.EndCalTxInt
 		}
 		app.state.LatestBtcaTx = rawTx
 		app.state.LatestBtcaHeight = app.state.Height + 1
@@ -191,7 +193,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		app.state.LatestBtcFee = i
 		app.state.LastBtcFeeHeight = app.state.Height
-		app.lnClient.LastFee = app.state.LatestBtcFee
+		app.LnClient.LastFee = app.state.LatestBtcFee
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
 	case "JWK":

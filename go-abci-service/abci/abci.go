@@ -85,9 +85,9 @@ type AnchorApplication struct {
 	logger               log.Logger
 	calendar             *calendar.Calendar
 	aggregator           *aggregator.Aggregator
-	pgClient             *postgres.Postgres
-	redisClient          *redis.Client
-	lnClient             *lightning.LnClient
+	PgClient             *postgres.Postgres
+	RedisClient          *redis.Client
+	LnClient             *lightning.LnClient
 	rpc                  *RPC
 	ID                   string
 	JWK                  types.Jwk
@@ -200,9 +200,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
 		},
-		pgClient:    pgClient,
-		redisClient: redisClient,
-		lnClient:    &config.LightningConfig,
+		PgClient:    pgClient,
+		RedisClient: redisClient,
+		LnClient:    &config.LightningConfig,
 		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
 		JWK:         jwkType,
 	}
@@ -330,16 +330,17 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 		go app.BeaconMonitor() // update time beacon using deterministic leader election
 		go app.FeeMonitor()
 	}
-
 	// Anchor blockchain
 	app.Anchor()
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
-		app.MonitorNewTx()
-		app.MonitorConfirmedTx()
-		app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
-		go app.pgClient.PruneProofStateTables()
+		go func() {
+			app.MonitorNewTx()
+			app.MonitorConfirmedTx()
+			app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+		}()
+		go app.PgClient.PruneProofStateTables()
 	}
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }

@@ -42,7 +42,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 	// Get agg objects
 	aggs := app.aggregator.AggregateAndReset()
 	for _, agg := range aggs {
-		app.LogError(app.pgClient.BulkInsertAggState(agg.AggStates))
+		app.LogError(app.PgClient.BulkInsertAggState(agg.AggStates))
 	}
 	app.logger.Debug(fmt.Sprintf("Aggregated %d roots: ", len(aggs)))
 	app.logger.Debug(fmt.Sprintf("Aggregation Tree: %#v", aggs))
@@ -67,13 +67,13 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			tx.Data = result.Data.Bytes()
 			aggIds, calStates := app.calendar.CreateCalStateMessage(tx, calAgg)
 			app.logger.Info(fmt.Sprintf("Cal AggIds: %v\nCal States: %#v", len(aggIds), len(calStates)))
-			proofIds, err := app.pgClient.GetProofIdsByAggIds(aggIds)
-			app.logger.Info(fmt.Sprintf("ProofIds: %v", proofIds))
+			proofIds, err := app.PgClient.GetProofIdsByAggIds(aggIds)
+			app.logger.Info(fmt.Sprintf("Cal ProofIds: %v", proofIds))
 			if app.LogError(err) != nil {
 				return 0, err
 			}
 			app.logger.Info("Generating Cal Batch")
-			app.LogError(app.pgClient.BulkInsertCalState(calStates))
+			app.LogError(app.PgClient.BulkInsertCalState(calStates))
 			app.LogError(app.GenerateCalBatch(proofIds))
 			app.logger.Info("Generating Cal Batch Complete")
 			return len(aggs), nil
@@ -84,7 +84,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 
 func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 	app.logger.Info(util.GetCurrentFuncName(1))
-	aggStates, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
+	aggStates, err := app.PgClient.GetAggStateObjectsByProofIds(proofIds)
 	app.logger.Info(fmt.Sprintf("%d aggStates: %#v", len(aggStates), aggStates))
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 	for _, aggState := range aggStates {
 		aggIds = append(aggIds, aggState.AggID)
 	}
-	calStates, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
+	calStates, err := app.PgClient.GetCalStateObjectsByAggIds(aggIds)
 	app.logger.Info(fmt.Sprintf("%d calStates: %#v", len(calStates), calStates))
 	if err != nil {
 		return err
@@ -118,7 +118,7 @@ func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
 		}
 		proofs = append(proofs, proofState)
 	}
-	return app.LogError(app.pgClient.BulkInsertProofs(proofs))
+	return app.LogError(app.PgClient.BulkInsertProofs(proofs))
 }
 
 func (app *AnchorApplication) GetTreeFromCalRange(startTxRange int64, endTxRange int64) (types.BtcAgg, error) {
@@ -179,7 +179,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 			EndCalTxInt:      endTxRange,
 		}
 		failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
-		redisResult := app.redisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+		redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 		if app.LogError(redisResult.Err()) != nil {
 			return redisResult.Err()
 		}
@@ -197,7 +197,7 @@ func (app *AnchorApplication) SendBtcTx(anchorDataObj types.BtcAgg, height int64
 	if util.LogError(err) != nil {
 		return err
 	}
-	txid, rawtx, err := app.lnClient.SendOpReturn(hexRoot)
+	txid, rawtx, err := app.LnClient.SendOpReturn(hexRoot)
 	if util.LogError(err) != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (app *AnchorApplication) SendBtcTx(anchorDataObj types.BtcAgg, height int64
 	if util.LogError(err) != nil {
 		return err
 	}
-	result := app.redisClient.WithContext(context.Background()).SAdd(NEW_BTC_TX_IDS_KEY, string(btcJSON))
+	result := app.RedisClient.WithContext(context.Background()).SAdd(NEW_BTC_TX_IDS_KEY, string(btcJSON))
 	if util.LogError(result.Err()) != nil {
 		return result.Err()
 	}
@@ -237,7 +237,7 @@ func (app *AnchorApplication) AnchorReward(CoreID string) error {
 		if len(status.LightningAddress) == 0 {
 			return errors.New("Reward not sent; Can't obtain status for peer")
 		}
-		resp, err := app.lnClient.SendCoins(status.LightningAddress, int64(app.config.AnchorReward), int32(app.lnClient.MinConfs))
+		resp, err := app.LnClient.SendCoins(status.LightningAddress, int64(app.config.AnchorReward), int32(app.LnClient.MinConfs))
 		if app.LogError(err) != nil {
 			return err
 		}
@@ -275,13 +275,13 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		BtcTxState:     string(btcTxStateJSON),
 	}
 	app.logger.Info(fmt.Sprintf("BTC-A BtcTx State Obj: %#v", stateObj))
-	err = app.pgClient.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
+	err = app.PgClient.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
 	if app.LogError(err) != nil {
 		return err
 	}
 
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
-	result := app.redisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	result := app.RedisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
@@ -299,7 +299,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return errors.New("Anchor failure, AggRoot mismatch")
 	}
 	anchorBTCAggStateObjects := app.calendar.PrepareBtcaStateData(btcAgg)
-	err = app.pgClient.BulkInsertBtcAggState(anchorBTCAggStateObjects)
+	err = app.PgClient.BulkInsertBtcAggState(anchorBTCAggStateObjects)
 	if app.LogError(err) != nil {
 		app.logger.Info(fmt.Sprintf("Anchor TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
 		return err
@@ -313,7 +313,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 
 func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 	app.logger.Info(util.GetCurrentFuncName(1))
-	aggStates, err := app.pgClient.GetAggStateObjectsByProofIds(proofIds)
+	aggStates, err := app.PgClient.GetAggStateObjectsByProofIds(proofIds)
 	if err != nil {
 		return err
 	}
@@ -321,7 +321,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 	for _, aggState := range aggStates {
 		aggIds = append(aggIds, aggState.AggID)
 	}
-	calStates, err := app.pgClient.GetCalStateObjectsByAggIds(aggIds)
+	calStates, err := app.PgClient.GetCalStateObjectsByAggIds(aggIds)
 	if err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 		calIds = append(calIds, calState.CalId)
 	}
 
-	anchorBtcAggStates, err := app.pgClient.GetAnchorBTCAggStateObjectsByCalIds(calIds)
+	anchorBtcAggStates, err := app.PgClient.GetAnchorBTCAggStateObjectsByCalIds(calIds)
 	if err != nil {
 		return err
 	}
@@ -341,14 +341,14 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 	for _, anchorBtcAggState := range anchorBtcAggStates {
 		anchorBTCAggIds = append(anchorBTCAggIds, anchorBtcAggState.AnchorBtcAggId)
 	}
-	btcTxState, err := app.pgClient.GetBTCTxStateObjectByAnchorBTCAggId(anchorBTCAggIds[0])
+	btcTxState, err := app.PgClient.GetBTCTxStateObjectByAnchorBTCAggId(anchorBTCAggIds[0])
 	if err != nil {
 		return err
 	}
 	if len(btcTxState.BtcTxId) == 0 {
 		return errors.New(fmt.Sprintf("btcTxState cannot be located for %s", anchorBTCAggIds[0]))
 	}
-	btcHeadState, err := app.pgClient.GetBTCHeadStateObjectByBTCTxId(btcTxState.BtcTxId)
+	btcHeadState, err := app.PgClient.GetBTCHeadStateObjectByBTCTxId(btcTxState.BtcTxId)
 
 	calLookUp := make(map[string]types.CalStateObject)
 	for _, calState := range calStates {
@@ -386,7 +386,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 		proofs = append(proofs, proofState)
 	}
 	app.logger.Info(fmt.Sprintf("btc proofs: %#v", proofs))
-	return app.LogError(app.pgClient.BulkInsertProofs(proofs))
+	return app.LogError(app.PgClient.BulkInsertProofs(proofs))
 }
 
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
@@ -405,15 +405,15 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 
 	deadline := time.Now().Add(time.Duration(5) * time.Minute)
 	for !time.Now().After(deadline) {
-		if btcMonObj.BtcHeadRoot == string(app.state.LatestBtccTx) {
-			return errors.New(fmt.Sprintf("Already seen BTC-C confirmation for root %s", btcMonObj.BtcHeadRoot))
-		}
-		// Broadcast the confirmation message with metadata
-		amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
-		if amLeader {
-			result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
-			app.LogError(err)
-			app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
+		//only start BTC-C leader election process if someone else hasn't
+		if btcMonObj.BtcHeadRoot != string(app.state.LatestBtccTx) {
+			// Broadcast the confirmation message with metadata
+			amLeader, _ := app.ElectValidatorAsLeader(1, []string{anchoringCoreID})
+			if amLeader {
+				result, err := app.rpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
+				app.LogError(err)
+				app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
+			}
 		}
 		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
 		btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
@@ -427,7 +427,7 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		if len(hash) > 0 {
 			break
 		}
-		app.logger.Info("Restarting confirmation process")
+		app.logger.Info(fmt.Sprintf("Restarting confirmation process for %s", btcMonObj.BtcTxID))
 	}
 
 	anchorOps := types.AnchorOpsState{}
@@ -453,11 +453,11 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 		BtcHeadHeight: btcMonObj.BtcHeadHeight,
 		BtcHeadState:  string(headState),
 	}
-	proofIds, err := app.pgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
-	app.logger.Info(fmt.Sprintf("ProofIds: %#v", proofIds))
+	proofIds, err := app.PgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
+	app.logger.Info(fmt.Sprintf("BTC ProofIds: %#v", proofIds))
 	app.LogError(err)
 	app.logger.Info(fmt.Sprintf("BtcHeadState: %#v", headStateObj))
-	app.LogError(app.pgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
+	app.LogError(app.PgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
 	app.LogError(app.GenerateBtcBatch(proofIds))
 	return nil
 }

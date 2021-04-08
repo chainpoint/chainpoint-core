@@ -56,7 +56,7 @@ func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
 func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request) bool {
 	authorization := r.Header.Get("Authorization")
 	if len(authorization) == 0 {
-		lsat, err := app.lnClient.GenerateHodlLSAT(util.GetClientIP(r))
+		lsat, err := app.LnClient.GenerateHodlLSAT(util.GetClientIP(r))
 		if app.LogError(err) != nil {
 			errorMessage := map[string]interface{}{"error": "Could not generate LSAT"}
 			respondJSON(w, http.StatusInternalServerError, errorMessage)
@@ -76,7 +76,7 @@ func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request
 			respondJSON(w, http.StatusInternalServerError, errorMessage)
 			return true
 		}
-		invoice, err := app.lnClient.LookupInvoice(lsat.PayHash)
+		invoice, err := app.LnClient.LookupInvoice(lsat.PayHash)
 		if app.LogError(err) != nil {
 			errorMessage := map[string]interface{}{"error": fmt.Sprintf("No matching invoice found for payhash %s", lsat.PayHash)}
 			respondJSON(w, http.StatusNotFound, errorMessage)
@@ -121,13 +121,13 @@ func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Reque
 		respondJSON(w, http.StatusInternalServerError, errorMessage)
 		return
 	}
-	info, err := app.lnClient.GetInfo()
+	info, err := app.LnClient.GetInfo()
 	if app.LogError(err) != nil {
 		errorMessage := map[string]interface{}{"error": "Could not query for status"}
 		respondJSON(w, http.StatusInternalServerError, errorMessage)
 		return
 	}
-	balance, err := app.lnClient.GetWalletBalance()
+	balance, err := app.LnClient.GetWalletBalance()
 	if app.LogError(err) != nil {
 		errorMessage := map[string]interface{}{"error": "Could not query for balance"}
 		respondJSON(w, http.StatusInternalServerError, errorMessage)
@@ -238,7 +238,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": errStr})
 		}
 	}
-	proofStates, err := app.pgClient.GetProofsByProofIds(proofids)
+	proofStates, err := app.PgClient.GetProofsByProofIds(proofids)
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve proofs"})
 	}
