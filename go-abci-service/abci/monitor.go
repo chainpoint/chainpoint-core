@@ -41,13 +41,19 @@ func (app *AnchorApplication) SyncMonitor() {
 	for {
 		time.Sleep(30 * time.Second) // allow chain time to initialize
 		//app.logger.Info("Syncing Chain status and validators")
-		status, err := app.rpc.GetStatus()
+		var err error
+		app.state.TMState, err = app.rpc.GetStatus()
+		if app.LogError(err) != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		app.state.TMNetInfo, err = app.rpc.GetNetInfo()
 		if app.LogError(err) != nil {
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		if app.ID == "" {
-			app.ID = status.ValidatorInfo.Address.String()
+			app.ID = app.state.TMState.ValidatorInfo.Address.String()
 			app.logger.Info("Core ID set ", "ID", app.ID)
 		}
 		if app.state.Height != 0 && app.state.ChainSynced {
@@ -64,7 +70,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators)) //Total Stake Price includes the other 1/3 just in case
 			//app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
 		}
-		if status.SyncInfo.CatchingUp {
+		if app.state.TMState.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
 		} else {
 			app.state.ChainSynced = true

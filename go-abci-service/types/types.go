@@ -98,6 +98,8 @@ type AnchorState struct {
 	LnUris            map[string]LnIdentity      `json:"lightning_identities"`
 	IDMap             map[string]string          `json:"-"`
 	Validators        []*types3.Validator        `json:"-"`
+	TMState           coretypes.ResultStatus     `json:"-"`
+	TMNetInfo	      coretypes.ResultNetInfo    `json:"-"`
 	ChainSynced       bool
 	JWKStaked         bool
 	LnStakePrice      int64 `json:"total_stake_price"`

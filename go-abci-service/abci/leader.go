@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 	"sort"
@@ -14,36 +15,30 @@ import (
 
 // ElectPeerAsLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
 func (app *AnchorApplication) ElectPeerAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
-	status, err := app.rpc.GetStatus()
-	if app.LogError(err) != nil {
+	if app.ID == "" {
 		return false, []string{}
 	}
-	netInfo, err := app.rpc.GetNetInfo()
-	if app.LogError(err) != nil {
-		return false, []string{}
-	}
-	blockHash := status.SyncInfo.LatestBlockHash.String()
+	blockHash := app.state.TMState.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineLeader(numLeaders, blacklistedIDs, status, netInfo, blockHash)
+	return determineLeader(numLeaders, blacklistedIDs, app.state.TMState, app.state.TMNetInfo, blockHash)
 }
 
 // ElectValidatorAsLeader : elect a slice of validators as a leader and return whether we're the leader
 func (app *AnchorApplication) ElectValidatorAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
-	status, err := app.rpc.GetStatus()
-	if app.LogError(err) != nil {
+	if app.ID == "" {
 		return false, []string{}
 	}
-	blockHash := status.SyncInfo.LatestBlockHash.String()
+	blockHash := app.state.TMState.SyncInfo.LatestBlockHash.String()
 	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineValidatorLeader(numLeaders, blacklistedIDs, status, app.state.Validators, blockHash, app.config.FilePV.GetAddress().String())
+	return determineValidatorLeader(numLeaders, blacklistedIDs, app.state.TMState, app.state.Validators, blockHash, app.config.FilePV.GetAddress().String())
 }
 
 // ElectChainContributedAsLeaderNaive : elects a node that's contributed to the chain without checking if its been active recently
 func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
-	status, err := app.rpc.GetStatus()
-	if app.LogError(err) != nil {
+	if app.ID == "" {
 		return false, []string{}
 	}
+	status := app.state.TMState
 	keys := make([]string, 0, len(app.state.CoreKeys))
 	for k := range app.state.CoreKeys {
 		filtered := false
@@ -80,10 +75,10 @@ func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int,
 
 // ElectChainContributedAsLeader : elects a node that's contributed to the chain while checking if it's submitted a NIST value recently
 func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
-	status, err := app.rpc.GetStatus()
-	if app.LogError(err) != nil {
+	if app.ID == "" {
 		return false, []string{}
 	}
+	status := app.state.TMState
 	keys := make([]string, 0, len(app.state.CoreKeys))
 	app.logger.Info("CoreKeys", "app.state.CoreKeys", len(app.state.CoreKeys))
 	cores := validation.GetLastCalSubmitters(128, app.state)
@@ -180,19 +175,11 @@ func GetSortedValidatorList(validators []*types.Validator) []types.Validator {
 
 // GetPeers : get list of all peers
 func (app *AnchorApplication) GetPeers() []core_types.Peer {
-	var status core_types.ResultStatus
-	var netInfo core_types.ResultNetInfo
-	var err error
-	var err2 error
-
-	status, err = app.rpc.GetStatus()
-	netInfo, err2 = app.rpc.GetNetInfo()
-
-	if app.LogError(err) != nil || util.LogError(err2) != nil {
+	if app.ID == "" {
 		return []core_types.Peer{}
 	}
 
-	peers := GetSortedPeerList(status, netInfo)
+	peers := GetSortedPeerList(app.state.TMState, app.state.TMNetInfo)
 	return peers
 }
 
@@ -260,10 +247,10 @@ func determineLeader(numLeaders int, blacklistedIDs []string, status core_types.
 
 // AmValidator : determines if this node is a validator, without needing to load an ID from elsewhere
 func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
-	status, err := app.rpc.GetStatus()
-	if app.LogError(err) != nil {
-		return false, err
+	if app.ID == "" {
+		return false, errors.New("status unintialized")
 	}
+	status := app.state.TMState
 	for _, validator := range app.state.Validators {
 		if validator.Address.String() == status.ValidatorInfo.Address.String() {
 			return true, nil
