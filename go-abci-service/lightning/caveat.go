@@ -91,4 +91,3 @@ func HasCaveat(m *macaroon.Macaroon, cond string) (string, bool) {
 	}
 	return *value, true
 }
-

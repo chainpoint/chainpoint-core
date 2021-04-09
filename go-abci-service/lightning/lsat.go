@@ -112,10 +112,10 @@ func FromHeader(header *http.Header) (LSAT, error) {
 				"auth header format: %s", authHeader)
 		}
 		content := strings.Split(lsatAuth[1], ":")
-		if len(content) == 2 && content[0] != ""{
+		if len(content) == 2 && content[0] != "" {
 			macBase64 = content[0]
 		}
-		if len(content) == 2 && content[1] != ""{
+		if len(content) == 2 && content[1] != "" {
 			preimageHex = content[1]
 		}
 		macBytes, err := base64.StdEncoding.DecodeString(macBase64)
@@ -214,8 +214,8 @@ func FromHeader(header *http.Header) (LSAT, error) {
 		Invoice:  "",
 		Value:    2,
 		Macaroon: *mac,
-	}, nil}
-
+	}, nil
+}
 
 // GenerateRandomBytes returns securely generated random bytes.
 // It will return an error if the system's secure random

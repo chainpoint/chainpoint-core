@@ -56,8 +56,6 @@ type LnClient struct {
 	SessionSecret  string
 }
 
-
-
 // BitcoinerFee : estimates fee from bitcoiner service
 type BitcoinerFee struct {
 	Timestamp int `json:"timestamp"`
@@ -670,7 +668,7 @@ func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCo
 func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
 	lightning, close := ln.GetClient()
 	defer close()
-	invoice, err := lightning.LookupInvoice(context.Background(), &lnrpc.PaymentHash{RHash:payhash})
+	invoice, err := lightning.LookupInvoice(context.Background(), &lnrpc.PaymentHash{RHash: payhash})
 	if ln.LoggerError(err) != nil {
 		return lnrpc.Invoice{}, err
 	}

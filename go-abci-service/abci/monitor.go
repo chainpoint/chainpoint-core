@@ -445,7 +445,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 				if tx.AnchorBtcAggRoot == anchor.AnchorBtcAggRoot {
 					found = true
 					app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-					newFee := math.Round(float64(app.state.LatestBtcFee * 4 / 1000) * app.LnClient.FeeMultiplier)
+					newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.LnClient.FeeMultiplier)
 					_, err := app.LnClient.ReplaceByFee(tx.BtcTxID, 1, int(newFee))
 					if app.LogError(err) != nil {
 						continue
@@ -456,7 +456,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 						continue
 					}
 					//Add new anchor check
-					anchor.BtcBlockHeight = app.state.BtcHeight  // give ourselves extra time
+					anchor.BtcBlockHeight = app.state.BtcHeight // give ourselves extra time
 					failedAnchorJSON, _ := json.Marshal(anchor)
 					redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 					if app.LogError(redisResult.Err()) != nil {

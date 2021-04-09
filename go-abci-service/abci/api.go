@@ -164,8 +164,8 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	if len(ipStrs) == 2 {
 		ip = ipStrs[0]
 	}
-	if !(app.config.UseAllowlist && util.ArrayContains(app.config.GatewayAllowlist, ip)){
-		if app.respondLSAT(w, r){
+	if !(app.config.UseAllowlist && util.ArrayContains(app.config.GatewayAllowlist, ip)) {
+		if app.respondLSAT(w, r) {
 			//TODO lsat validation
 			return
 		}

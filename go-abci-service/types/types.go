@@ -92,14 +92,14 @@ type AnchorState struct {
 	LastElectedCoreID string                     `json:"last_elected_core_id"`
 	LastAnchorCoreID  string                     `json:"last_anchor_core_id"`
 	LastErrorCoreID   string                     `json:"last_error_core_id"`
-	BtcHeight		  int64						 `json:"btc_height"`
+	BtcHeight         int64                      `json:"btc_height"`
 	TxValidation      map[string]TxValidation    `json:"tx_validation"`
 	CoreKeys          map[string]ecdsa.PublicKey `json:"-"`
 	LnUris            map[string]LnIdentity      `json:"lightning_identities"`
 	IDMap             map[string]string          `json:"-"`
 	Validators        []*types3.Validator        `json:"-"`
 	TMState           coretypes.ResultStatus     `json:"-"`
-	TMNetInfo	      coretypes.ResultNetInfo    `json:"-"`
+	TMNetInfo         coretypes.ResultNetInfo    `json:"-"`
 	ChainSynced       bool
 	JWKStaked         bool
 	LnStakePrice      int64 `json:"total_stake_price"`
@@ -257,7 +257,7 @@ type BtcProofData struct {
 type AnchorRange struct {
 	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
 	CalBlockHeight   int64  `json:"cal_block_height"`
-	BtcBlockHeight	 int64  `json:"btc_block_height"`
+	BtcBlockHeight   int64  `json:"btc_block_height"`
 	BeginCalTxInt    int64  `json:"begin_cal_int"`
 	EndCalTxInt      int64  `json:"end_cal_int"`
 }
