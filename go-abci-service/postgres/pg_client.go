@@ -59,6 +59,7 @@ func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
+	defer rows.Close()
 	proofIds := make([]string, 0)
 	for rows.Next() {
 		var proofid string
@@ -84,6 +85,7 @@ func (pg *Postgres) GetProofsByProofIds(proofIds []string) (map[string]types.Pro
 	if err != nil {
 		return map[string]types.ProofState{}, err
 	}
+	defer rows.Close()
 	proofs := make(map[string]types.ProofState)
 	for rows.Next() {
 		var proof types.ProofState
@@ -113,6 +115,7 @@ func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
+	defer rows.Close()
 	proofIds := make([]string, 0)
 	for rows.Next() {
 		var proofid string
@@ -138,6 +141,7 @@ func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStat
 	if err != nil {
 		return []types.CalStateObject{}, err
 	}
+	defer rows.Close()
 	calStates := make([]types.CalStateObject, 0)
 	for rows.Next() {
 		var calState types.CalStateObject
@@ -163,6 +167,7 @@ func (pg *Postgres) GetAggStateObjectsByProofIds(proofIds []string) ([]types.Agg
 	if err != nil {
 		return []types.AggState{}, err
 	}
+	defer rows.Close()
 	aggStates := make([]types.AggState, 0)
 	for rows.Next() {
 		var aggState types.AggState
@@ -188,6 +193,7 @@ func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 	if err != nil {
 		return []types.AnchorBtcAggState{}, err
 	}
+	defer rows.Close()
 	aggStates := make([]types.AnchorBtcAggState, 0)
 	for rows.Next() {
 		var aggState types.AnchorBtcAggState
@@ -213,6 +219,7 @@ func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var aggState types.AnchorBtcTxState
 		switch err := rows.Scan(&aggState.AnchorBtcAggId, &aggState.BtcTxId, &aggState.BtcTxState); err {
@@ -236,6 +243,7 @@ func (pg *Postgres) GetBTCHeadStateObjectByBTCTxId(btcTxId string) (types.Anchor
 	if err != nil {
 		return types.AnchorBtcHeadState{}, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var aggState types.AnchorBtcHeadState
 		switch err := rows.Scan(&aggState.BtcTxId, &aggState.BtcHeadHeight, &aggState.BtcHeadState); err {
@@ -375,7 +383,7 @@ func (pg *Postgres) PruneProofStateTables() error {
 	for _, tabl := range tables {
 		go func(table string) {
 			pruneStmt := fmt.Sprintf("DELETE FROM %s WHERE created_at < NOW() - INTERVAL '24 HOURS'", table)
-			_, err = pg.DB.Exec(pruneStmt)
+			_, err := pg.DB.Exec(pruneStmt)
 			util.LoggerError(pg.Logger, err)
 		}(tabl)
 	}
