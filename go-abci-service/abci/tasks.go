@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	fee2 "github.com/chainpoint/chainpoint-core/go-abci-service/fee"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"math"
@@ -203,7 +204,7 @@ func (app *AnchorApplication) FeeMonitor() {
 			fee, err := app.LnClient.GetLndFeeEstimate()
 			app.LnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
 			if app.LogError(err) != nil || fee <= STATIC_FEE_AMT {
-				fee, err = app.LnClient.GetThirdPartyFeeEstimate()
+				fee, err = fee2.GetThirdPartyFeeEstimate()
 				app.LnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", fee))
 				if fee < STATIC_FEE_AMT {
 					fee = STATIC_FEE_AMT

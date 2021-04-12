@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
@@ -255,27 +253,9 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	}
 	app.state.LatestBtcTx = btcTxObj.BtcTxID // Update app state with txID so we can broadcast BTC-A
 	app.state.LatestBtcAggRoot = btcTxObj.AnchorBtcAggRoot
-	btcTxState := types.OpsState{
-		Ops: []types.ProofLineItem{
-			{
-				Left: btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
-			},
-			{
-				Right: btcTxObj.BtcTxBody[strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)+len(btcTxObj.AnchorBtcAggRoot):],
-			},
-			{
-				Op: "sha-256-x2",
-			},
-		},
-	}
-	btcTxStateJSON, err := json.Marshal(btcTxState)
-	stateObj := types.AnchorBtcTxState{
-		AnchorBtcAggId: btcTxObj.AnchorBtcAggID,
-		BtcTxId:        btcTxObj.BtcTxID,
-		BtcTxState:     string(btcTxStateJSON),
-	}
+	stateObj := app.calendar.GenerateAnchorBtcTxState(btcTxObj)
 	app.logger.Info(fmt.Sprintf("BTC-A BtcTx State Obj: %#v", stateObj))
-	err = app.PgClient.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
+	err := app.PgClient.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
 	if app.LogError(err) != nil {
 		return err
 	}
@@ -285,7 +265,6 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
-
 	// end monitoring for failed anchor
 	app.FindAndRemoveBtcCheck(btcTxObj.AnchorBtcAggRoot)
 
@@ -360,6 +339,7 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
 		anchorBtcAggStateLookup[anchorAggState.CalId] = anchorAggState
 	}
 	proofs := []types.ProofState{}
+	//associate calendar merkle tree aggregations with corresponding btc merkle tree, then generate final proof
 	for _, aggStateRow := range aggStates {
 		proof := proof.Proof()
 		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.ProofID))
@@ -416,43 +396,13 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 			}
 		}
 		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
-		btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
-		txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25, "")
-		if app.LogError(err) == nil {
-			for _, tx := range txResult.Txs {
-				hash = tx.Hash
-				app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
-			}
-		}
+		hash = app.GetBTCCTx(btcMonObj)
 		if len(hash) > 0 {
 			break
 		}
 		app.logger.Info(fmt.Sprintf("Restarting confirmation process for %s", btcMonObj.BtcTxID))
 	}
-
-	anchorOps := types.AnchorOpsState{}
-	anchorOps.Ops = make([]types.ProofLineItem, 0)
-	for _, p := range btcMonObj.Path {
-		if p.Left != "" {
-			anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Left: string(p.Left)})
-		}
-		if p.Right != "" {
-			anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Right: string(p.Right)})
-		}
-		anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Op: "sha-256-x2"})
-	}
-	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
-	uri := strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", baseURI, hash))
-	anchorOps.Anchor = types.AnchorObj{
-		AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
-		Uris:     []string{uri},
-	}
-	headState, err := json.Marshal(anchorOps)
-	headStateObj := types.AnchorBtcHeadState{
-		BtcTxId:       btcMonObj.BtcTxID,
-		BtcHeadHeight: btcMonObj.BtcHeadHeight,
-		BtcHeadState:  string(headState),
-	}
+	headStateObj := app.calendar.GenerateHeadStateObject(hash, btcMonObj)
 	proofIds, err := app.PgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
 	app.logger.Info(fmt.Sprintf("BTC ProofIds: %#v", proofIds))
 	app.LogError(err)

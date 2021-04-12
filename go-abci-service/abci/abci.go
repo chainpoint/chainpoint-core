@@ -194,7 +194,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		NodeRewardSignatures: make([]string, 0),
 		CoreRewardSignatures: make([]string, 0),
 		calendar: &calendar.Calendar{
-			RabbitmqURI: config.RabbitmqURI,
 			Logger:      *config.Logger,
 		},
 		aggregator: &aggregator.Aggregator{
