@@ -66,9 +66,8 @@ func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.C
 }
 
 // CreateCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
-func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) ([]string, []types.CalStateObject) {
+func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) ([]types.CalStateObject) {
 	calStates := make([]types.CalStateObject, 0)
-	aggIds := make([]string, 0)
 	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
 	uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, tx.Hash)
 	anchor := types.AnchorObj{
@@ -90,10 +89,9 @@ func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types
 			CalId:    calID,
 			CalState: string(anchorBytes),
 		}
-		aggIds = append(aggIds, ops.AggID)
 		calStates = append(calStates, calState)
 	}
-	return aggIds, calStates
+	return calStates
 }
 
 // AggregateAnchorTx takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop

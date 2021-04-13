@@ -39,7 +39,9 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 
 	// Get agg objects
 	aggs := app.aggregator.AggregateAndReset()
+	aggStates := make([]types.AggState, 0)
 	for _, agg := range aggs {
+		aggStates = append(aggStates, agg.AggStates...)
 		app.LogError(app.PgClient.BulkInsertAggState(agg.AggStates))
 	}
 	app.logger.Debug(fmt.Sprintf("Aggregated %d roots: ", len(aggs)))
@@ -63,16 +65,11 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			var tx types.TxTm
 			tx.Hash = result.Hash.Bytes()
 			tx.Data = result.Data.Bytes()
-			aggIds, calStates := app.calendar.CreateCalStateMessage(tx, calAgg)
-			app.logger.Info(fmt.Sprintf("Cal AggIds: %v\nCal States: %#v", len(aggIds), len(calStates)))
-			proofIds, err := app.PgClient.GetProofIdsByAggIds(aggIds)
-			app.logger.Info(fmt.Sprintf("Cal ProofIds: %v", proofIds))
-			if app.LogError(err) != nil {
-				return 0, err
-			}
+			calStates := app.calendar.CreateCalStateMessage(tx, calAgg)
+			app.logger.Info(fmt.Sprintf("Cal States: %#v", len(calStates)))
 			app.logger.Info("Generating Cal Batch")
 			app.LogError(app.PgClient.BulkInsertCalState(calStates))
-			app.LogError(app.GenerateCalBatch(proofIds))
+			app.LogError(app.GenerateCalBatch(aggStates, calStates))
 			app.logger.Info("Generating Cal Batch Complete")
 			return len(aggs), nil
 		}
@@ -80,22 +77,8 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 	return 0, errors.New("No hashes to aggregate")
 }
 
-func (app *AnchorApplication) GenerateCalBatch(proofIds []string) error {
+func (app *AnchorApplication) GenerateCalBatch(aggStates []types.AggState, calStates []types.CalStateObject) error {
 	app.logger.Info(util.GetCurrentFuncName(1))
-	aggStates, err := app.PgClient.GetAggStateObjectsByProofIds(proofIds)
-	app.logger.Info(fmt.Sprintf("%d aggStates: %#v", len(aggStates), aggStates))
-	if err != nil {
-		return err
-	}
-	aggIds := []string{}
-	for _, aggState := range aggStates {
-		aggIds = append(aggIds, aggState.AggID)
-	}
-	calStates, err := app.PgClient.GetCalStateObjectsByAggIds(aggIds)
-	app.logger.Info(fmt.Sprintf("%d calStates: %#v", len(calStates), calStates))
-	if err != nil {
-		return err
-	}
 	calLookUp := make(map[string]string)
 	for _, calState := range calStates {
 		calLookUp[calState.AggID] = calState.CalState
@@ -290,85 +273,6 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 	return nil
 }
 
-func (app *AnchorApplication) GenerateBtcBatch(proofIds []string) error {
-	app.logger.Info(util.GetCurrentFuncName(1))
-	aggStates, err := app.PgClient.GetAggStateObjectsByProofIds(proofIds)
-	if err != nil {
-		return err
-	}
-	aggIds := []string{}
-	for _, aggState := range aggStates {
-		aggIds = append(aggIds, aggState.AggID)
-	}
-	calStates, err := app.PgClient.GetCalStateObjectsByAggIds(aggIds)
-	if err != nil {
-		return err
-	}
-	calIds := []string{}
-	for _, calState := range calStates {
-		calIds = append(calIds, calState.CalId)
-	}
-
-	anchorBtcAggStates, err := app.PgClient.GetAnchorBTCAggStateObjectsByCalIds(calIds)
-	if err != nil {
-		return err
-	}
-	if len(anchorBtcAggStates) == 0 {
-		return errors.New("no anchorbtcggstate to retrieve")
-	}
-	anchorBTCAggIds := []string{}
-	for _, anchorBtcAggState := range anchorBtcAggStates {
-		anchorBTCAggIds = append(anchorBTCAggIds, anchorBtcAggState.AnchorBtcAggId)
-	}
-	btcTxState, err := app.PgClient.GetBTCTxStateObjectByAnchorBTCAggId(anchorBTCAggIds[0])
-	if err != nil {
-		return err
-	}
-	if len(btcTxState.BtcTxId) == 0 {
-		return errors.New(fmt.Sprintf("btcTxState cannot be located for %s", anchorBTCAggIds[0]))
-	}
-	btcHeadState, err := app.PgClient.GetBTCHeadStateObjectByBTCTxId(btcTxState.BtcTxId)
-
-	calLookUp := make(map[string]types.CalStateObject)
-	for _, calState := range calStates {
-		calLookUp[calState.AggID] = calState
-	}
-
-	anchorBtcAggStateLookup := make(map[string]types.AnchorBtcAggState)
-	for _, anchorAggState := range anchorBtcAggStates {
-		anchorBtcAggStateLookup[anchorAggState.CalId] = anchorAggState
-	}
-	proofs := []types.ProofState{}
-	//associate calendar merkle tree aggregations with corresponding btc merkle tree, then generate final proof
-	for _, aggStateRow := range aggStates {
-		proof := proof.Proof()
-		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.ProofID))
-		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID].CalState, app.config.BitcoinNetwork))
-
-		if calVal, exists := calLookUp[aggStateRow.AggID]; exists {
-			if _, exists2 := anchorBtcAggStateLookup[calVal.CalId]; !exists2 {
-				app.logger.Info("can't find anchorBTCAggState for", "CalId", calVal.CalId)
-				continue
-			}
-		} else {
-			app.logger.Info("can't find calState for", "aggStateRow.AggID", aggStateRow.AggID)
-			continue
-		}
-		app.LogError(proof.AddBtcBranch(anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState, app.config.BitcoinNetwork))
-		proofBytes, err := json.Marshal(proof)
-		if app.LogError(err) != nil {
-			continue
-		}
-		proofState := types.ProofState{
-			ProofID: proof["proof_id"].(string),
-			Proof:   string(proofBytes),
-		}
-		proofs = append(proofs, proofState)
-	}
-	app.logger.Info(fmt.Sprintf("btc proofs: %#v", proofs))
-	return app.LogError(app.PgClient.BulkInsertProofs(proofs))
-}
-
 // ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
 func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
 	app.logger.Info(fmt.Sprintf("Consuming BTC-C for %s", btcMonObj.BtcTxID))
@@ -408,8 +312,86 @@ func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error 
 	app.LogError(err)
 	app.logger.Info(fmt.Sprintf("BtcHeadState: %#v", headStateObj))
 	app.LogError(app.PgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
-	app.LogError(app.GenerateBtcBatch(proofIds))
+	app.LogError(app.GenerateBtcBatch(proofIds, headStateObj))
 	return nil
+}
+
+func (app *AnchorApplication) GenerateBtcBatch(proofIds []string, btcHeadState types.AnchorBtcHeadState) error {
+	app.logger.Info(util.GetCurrentFuncName(1))
+	aggStates, err := app.PgClient.GetAggStateObjectsByProofIds(proofIds)
+	if err != nil {
+		return err
+	}
+	aggIds := []string{}
+	for _, aggState := range aggStates {
+		aggIds = append(aggIds, aggState.AggID)
+	}
+	calStates, err := app.PgClient.GetCalStateObjectsByAggIds(aggIds)
+	if err != nil {
+		return err
+	}
+	calIds := []string{}
+	for _, calState := range calStates {
+		calIds = append(calIds, calState.CalId)
+	}
+
+	anchorBtcAggStates, err := app.PgClient.GetAnchorBTCAggStateObjectsByCalIds(calIds)
+	if err != nil {
+		return err
+	}
+	if len(anchorBtcAggStates) == 0 {
+		return errors.New("no anchorbtcggstate to retrieve")
+	}
+	anchorBTCAggIds := []string{}
+	for _, anchorBtcAggState := range anchorBtcAggStates {
+		anchorBTCAggIds = append(anchorBTCAggIds, anchorBtcAggState.AnchorBtcAggId)
+	}
+	btcTxState, err := app.PgClient.GetBTCTxStateObjectByAnchorBTCAggId(anchorBTCAggIds[0])
+	if err != nil {
+		return err
+	}
+	if len(btcTxState.BtcTxId) == 0 {
+		return errors.New(fmt.Sprintf("btcTxState cannot be located for %s", anchorBTCAggIds[0]))
+	}
+
+	calLookUp := make(map[string]types.CalStateObject)
+	for _, calState := range calStates {
+		calLookUp[calState.AggID] = calState
+	}
+
+	anchorBtcAggStateLookup := make(map[string]types.AnchorBtcAggState)
+	for _, anchorAggState := range anchorBtcAggStates {
+		anchorBtcAggStateLookup[anchorAggState.CalId] = anchorAggState
+	}
+	proofs := []types.ProofState{}
+	//associate calendar merkle tree aggregations with corresponding btc merkle tree, then generate final proof
+	for _, aggStateRow := range aggStates {
+		proof := proof.Proof()
+		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.ProofID))
+		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID].CalState, app.config.BitcoinNetwork))
+
+		if calVal, exists := calLookUp[aggStateRow.AggID]; exists {
+			if _, exists2 := anchorBtcAggStateLookup[calVal.CalId]; !exists2 {
+				app.logger.Info("can't find anchorBTCAggState for", "CalId", calVal.CalId)
+				continue
+			}
+		} else {
+			app.logger.Info("can't find calState for", "aggStateRow.AggID", aggStateRow.AggID)
+			continue
+		}
+		app.LogError(proof.AddBtcBranch(anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState, app.config.BitcoinNetwork))
+		proofBytes, err := json.Marshal(proof)
+		if app.LogError(err) != nil {
+			continue
+		}
+		proofState := types.ProofState{
+			ProofID: proof["proof_id"].(string),
+			Proof:   string(proofBytes),
+		}
+		proofs = append(proofs, proofState)
+	}
+	app.logger.Info(fmt.Sprintf("btc proofs: %#v", proofs))
+	return app.LogError(app.PgClient.BulkInsertProofs(proofs))
 }
 
 // resetAnchor ensures that anchoring will begin again in the next block
