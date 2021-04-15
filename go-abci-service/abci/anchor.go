@@ -372,11 +372,11 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string, btcHeadState t
 
 		if calVal, exists := calLookUp[aggStateRow.AggID]; exists {
 			if _, exists2 := anchorBtcAggStateLookup[calVal.CalId]; !exists2 {
-				app.logger.Info("can't find anchorBTCAggState for", "CalId", calVal.CalId)
+				app.logger.Error("Error: can't find anchorBTCAggState for", "CalId", calVal.CalId)
 				continue
 			}
 		} else {
-			app.logger.Info("can't find calState for", "aggStateRow.AggID", aggStateRow.AggID)
+			app.logger.Error("Error: can't find calState for", "aggStateRow.AggID", aggStateRow.AggID)
 			continue
 		}
 		app.LogError(proof.AddBtcBranch(anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState, app.config.BitcoinNetwork))
