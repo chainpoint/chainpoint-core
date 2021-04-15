@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/tendermint/tendermint/libs/log"
@@ -18,7 +19,6 @@ import (
 )
 
 type Calendar struct {
-	RabbitmqURI string
 	Logger      log.Logger
 }
 
@@ -27,7 +27,6 @@ func NewCalendar(rmqUri string) *Calendar {
 	allowLevel, _ := log.AllowLevel(strings.ToLower("ERROR"))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 	calendar := Calendar{
-		RabbitmqURI: rmqUri,
 		Logger:      tmLogger,
 	}
 	return &calendar
@@ -67,9 +66,8 @@ func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.C
 }
 
 // CreateCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
-func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) ([]string, []types.CalStateObject) {
+func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) ([]types.CalStateObject) {
 	calStates := make([]types.CalStateObject, 0)
-	aggIds := make([]string, 0)
 	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
 	uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, tx.Hash)
 	anchor := types.AnchorObj{
@@ -91,10 +89,9 @@ func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types
 			CalId:    calID,
 			CalState: string(anchorBytes),
 		}
-		aggIds = append(aggIds, ops.AggID)
 		calStates = append(calStates, calState)
 	}
-	return aggIds, calStates
+	return calStates
 }
 
 // AggregateAnchorTx takes in cal transactions and creates a merkleroot and proof path. Called by the anchor loop
@@ -166,4 +163,56 @@ func (calendar *Calendar) PrepareBtcaStateData(anchorDataObj types.BtcAgg) []typ
 	}
 	calendar.Logger.Info(fmt.Sprintf("saving anchor TreeData state message for aggroot: %s", anchorDataObj.AnchorBtcAggRoot))
 	return anchorObjects
+}
+
+// GenerateHeadStateObject: Assembles anchor operations into object ready for insertion into postgres
+func (calendar *Calendar) GenerateHeadStateObject(hash []byte, btcMonObj types.BtcMonMsg) (types.AnchorBtcHeadState) {
+	anchorOps := types.AnchorOpsState{}
+	anchorOps.Ops = make([]types.ProofLineItem, 0)
+	for _, p := range btcMonObj.Path {
+		if p.Left != "" {
+			anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Left: string(p.Left)})
+		}
+		if p.Right != "" {
+			anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Right: string(p.Right)})
+		}
+		anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Op: "sha-256-x2"})
+	}
+	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
+	uri := strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", baseURI, hash))
+	anchorOps.Anchor = types.AnchorObj{
+		AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
+		Uris:     []string{uri},
+	}
+	headState, _ := json.Marshal(anchorOps)
+	headStateObj := types.AnchorBtcHeadState{
+		BtcTxId:       btcMonObj.BtcTxID,
+		BtcHeadHeight: btcMonObj.BtcHeadHeight,
+		BtcHeadState:  string(headState),
+	}
+	return headStateObj
+}
+
+//GenerateAnchorBtcTxState : gather btc anchor info into form ready for postgres
+func (calendar *Calendar) GenerateAnchorBtcTxState(btcTxObj types.BtcTxMsg) (stateObj types.AnchorBtcTxState){
+	btcTxState := types.OpsState{
+		Ops: []types.ProofLineItem{
+			{
+				Left: btcTxObj.BtcTxBody[:strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)],
+			},
+			{
+				Right: btcTxObj.BtcTxBody[strings.Index(btcTxObj.BtcTxBody, btcTxObj.AnchorBtcAggRoot)+len(btcTxObj.AnchorBtcAggRoot):],
+			},
+			{
+				Op: "sha-256-x2",
+			},
+		},
+	}
+	btcTxStateJSON, _ := json.Marshal(btcTxState)
+	stateObj = types.AnchorBtcTxState{
+		AnchorBtcAggId: btcTxObj.AnchorBtcAggID,
+		BtcTxId:        btcTxObj.BtcTxID,
+		BtcTxState:     string(btcTxStateJSON),
+	}
+	return stateObj
 }

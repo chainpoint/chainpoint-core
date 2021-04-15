@@ -194,7 +194,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		NodeRewardSignatures: make([]string, 0),
 		CoreRewardSignatures: make([]string, 0),
 		calendar: &calendar.Calendar{
-			RabbitmqURI: config.RabbitmqURI,
 			Logger:      *config.Logger,
 		},
 		aggregator: &aggregator.Aggregator{
@@ -395,23 +394,23 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 			return
 		}
 		app.logger.Info(fmt.Sprintf("Looking up peer info for id %s", base))
-/*		_, validationRecord, err := validation.GetValidationRecord(coreID, app.state)
-		if app.LogError(err) != nil {
-			app.logger.Info(fmt.Sprintf("validation record does not exist for %s", base))
-			return
-		}
-		anchorRatio, _ := validation.GetAnchorSuccessRatio(coreID, &app.state)
-		if anchorRatio < 0.3 && app.state.Height-validationRecord.LastBtcaTxHeight > 10000 {
-			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
-			resQuery.Code = code.CodeTypeUnauthorized
-			return
-		}
-		calRatio, _ := validation.GetCalSuccessRatio(coreID, &app.state)
-		if calRatio < 0.3 && app.state.Height-validationRecord.LastCalTxHeight > 10000 {
-			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
-			resQuery.Code = code.CodeTypeUnauthorized
-			return
-		}*/
+		/*		_, validationRecord, err := validation.GetValidationRecord(coreID, app.state)
+				if app.LogError(err) != nil {
+					app.logger.Info(fmt.Sprintf("validation record does not exist for %s", base))
+					return
+				}
+				anchorRatio, _ := validation.GetAnchorSuccessRatio(coreID, &app.state)
+				if anchorRatio < 0.3 && app.state.Height-validationRecord.LastBtcaTxHeight > 10000 {
+					app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
+					resQuery.Code = code.CodeTypeUnauthorized
+					return
+				}
+				calRatio, _ := validation.GetCalSuccessRatio(coreID, &app.state)
+				if calRatio < 0.3 && app.state.Height-validationRecord.LastCalTxHeight > 10000 {
+					app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
+					resQuery.Code = code.CodeTypeUnauthorized
+					return
+				}*/
 		JWKChanges, _ := validation.GetJWKChanges(coreID, &app.state)
 		if JWKChanges > 3 {
 			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))

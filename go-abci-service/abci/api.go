@@ -115,12 +115,7 @@ func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request
 }
 
 func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Request) {
-	status, err := app.rpc.GetStatus()
-	if app.LogError(err) != nil {
-		errorMessage := map[string]interface{}{"error": "Could not query for status"}
-		respondJSON(w, http.StatusInternalServerError, errorMessage)
-		return
-	}
+	status := app.state.TMState
 	info, err := app.LnClient.GetInfo()
 	if app.LogError(err) != nil {
 		errorMessage := map[string]interface{}{"error": "Could not query for status"}
@@ -164,8 +159,8 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	if len(ipStrs) == 2 {
 		ip = ipStrs[0]
 	}
-	if !(app.config.UseAllowlist && util.ArrayContains(app.config.GatewayAllowlist, ip)){
-		if app.respondLSAT(w, r){
+	if !(app.config.UseAllowlist && util.ArrayContains(app.config.GatewayAllowlist, ip)) {
+		if app.respondLSAT(w, r) {
 			//TODO lsat validation
 			return
 		}

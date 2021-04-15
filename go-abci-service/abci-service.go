@@ -247,7 +247,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		HashPrice:        hashPrice,
 		UseAllowlist:     useAggregatorAllowlist,
 		GatewayAllowlist: aggregatorAllowlist,
-		CoreURI:		  coreURI,
+		CoreURI:          coreURI,
 	}
 }
 

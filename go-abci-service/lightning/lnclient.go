@@ -4,15 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
-	"net/http"
 	"runtime"
-	"time"
-
 	/*	"github.com/btcsuite/btcd/chaincfg"
 		"github.com/btcsuite/btcwallet/wallet/txrules"
 		"github.com/btcsuite/btcwallet/wallet/txsizes"*/
@@ -54,134 +50,6 @@ type LnClient struct {
 	LastFee        int64
 	HashPrice      int64
 	SessionSecret  string
-}
-
-
-
-// BitcoinerFee : estimates fee from bitcoiner service
-type BitcoinerFee struct {
-	Timestamp int `json:"timestamp"`
-	Estimates struct {
-		Num30 struct {
-			SatPerVbyte float64 `json:"sat_per_vbyte"`
-			Total       struct {
-				P2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2wpkh"`
-				P2ShP2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2sh-p2wpkh"`
-				P2Pkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2pkh"`
-			} `json:"total"`
-		} `json:"30"`
-		Num60 struct {
-			SatPerVbyte float64 `json:"sat_per_vbyte"`
-			Total       struct {
-				P2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2wpkh"`
-				P2ShP2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2sh-p2wpkh"`
-				P2Pkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2pkh"`
-			} `json:"total"`
-		} `json:"60"`
-		Num120 struct {
-			SatPerVbyte float64 `json:"sat_per_vbyte"`
-			Total       struct {
-				P2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2wpkh"`
-				P2ShP2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2sh-p2wpkh"`
-				P2Pkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2pkh"`
-			} `json:"total"`
-		} `json:"120"`
-		Num180 struct {
-			SatPerVbyte float64 `json:"sat_per_vbyte"`
-			Total       struct {
-				P2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2wpkh"`
-				P2ShP2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2sh-p2wpkh"`
-				P2Pkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2pkh"`
-			} `json:"total"`
-		} `json:"180"`
-		Num360 struct {
-			SatPerVbyte float64 `json:"sat_per_vbyte"`
-			Total       struct {
-				P2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2wpkh"`
-				P2ShP2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2sh-p2wpkh"`
-				P2Pkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2pkh"`
-			} `json:"total"`
-		} `json:"360"`
-		Num720 struct {
-			SatPerVbyte float64 `json:"sat_per_vbyte"`
-			Total       struct {
-				P2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2wpkh"`
-				P2ShP2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2sh-p2wpkh"`
-				P2Pkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2pkh"`
-			} `json:"total"`
-		} `json:"720"`
-		Num1440 struct {
-			SatPerVbyte float64 `json:"sat_per_vbyte"`
-			Total       struct {
-				P2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2wpkh"`
-				P2ShP2Wpkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2sh-p2wpkh"`
-				P2Pkh struct {
-					Usd     float64 `json:"usd"`
-					Satoshi float64 `json:"satoshi"`
-				} `json:"p2pkh"`
-			} `json:"total"`
-		} `json:"1440"`
-	} `json:"estimates"`
 }
 
 var (
@@ -578,22 +446,6 @@ func (ln *LnClient) feeSatByteToWeight() int64 {
 	return int64(ln.LastFee * 1000 / blockchain.WitnessScaleFactor)
 }
 
-// GetThirdPartyFeeEstimate : get sat/vbyte fee and convert to sat/kw
-func (ln *LnClient) GetThirdPartyFeeEstimate() (int64, error) {
-	var httpClient = &http.Client{Timeout: 10 * time.Second}
-	resp, err := httpClient.Get("https://bitcoiner.live/api/fees/estimates/latest")
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-	fee := BitcoinerFee{}
-	err = json.NewDecoder(resp.Body).Decode(&fee)
-	if err != nil {
-		return 0, err
-	}
-	return int64(int64(fee.Estimates.Num30.SatPerVbyte) * 1000 / blockchain.WitnessScaleFactor), nil
-}
-
 func (ln *LnClient) GetLndFeeEstimate() (int64, error) {
 	wallet, closeFunc := ln.GetWalletClient()
 	defer closeFunc()
@@ -670,7 +522,7 @@ func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCo
 func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
 	lightning, close := ln.GetClient()
 	defer close()
-	invoice, err := lightning.LookupInvoice(context.Background(), &lnrpc.PaymentHash{RHash:payhash})
+	invoice, err := lightning.LookupInvoice(context.Background(), &lnrpc.PaymentHash{RHash: payhash})
 	if ln.LoggerError(err) != nil {
 		return lnrpc.Invoice{}, err
 	}

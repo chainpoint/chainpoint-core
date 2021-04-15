@@ -21,7 +21,6 @@ import (
 	"github.com/enriquebris/goconcurrentqueue"
 )
 
-
 // Aggregator : object includes rabbitURI and Logger
 type Aggregator struct {
 	HashItems    goconcurrentqueue.Queue //In
