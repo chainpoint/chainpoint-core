@@ -218,14 +218,14 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		go app.SyncMonitor() //make sure we're synced before enabling anchoring
 	}
 
+	// Ensure LND Wallet stays unlocked
+	go app.LNDMonitor()
+
 	// Load JWK into local mapping from redis
 	app.LoadIdentity()
 
 	// Stake and transmit identity
 	go app.StakeIdentity()
-
-	// Ensure LND Wallet stays unlocked
-	go app.LNDMonitor()
 
 	//Migrations
 	/*	if _, exists := app.state.Migrations[1]; !exists && config.ChainId == "mainnet-chain-32" {
@@ -356,7 +356,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	return types2.ResponseCommit{Data: appHash}
 }
 
-// Query : Custom ABCI query method. TODO: implement
+// Query : Custom ABCI query method.
 func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery types2.ResponseQuery) {
 	urlPath := reqQuery.Path
 	base := path.Base(urlPath)

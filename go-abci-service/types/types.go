@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"database/sql"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+	lnrpc2 "github.com/lightningnetwork/lnd/lnrpc"
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	types3 "github.com/tendermint/tendermint/types"
 	"math/big"
@@ -100,6 +101,7 @@ type AnchorState struct {
 	Validators        []*types3.Validator        `json:"-"`
 	TMState           coretypes.ResultStatus     `json:"-"`
 	TMNetInfo         coretypes.ResultNetInfo    `json:"-"`
+	LNState           lnrpc2.GetInfoResponse     `json:"-"`
 	ChainSynced       bool
 	JWKStaked         bool
 	LnStakePrice      int64 `json:"total_stake_price"`

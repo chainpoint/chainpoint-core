@@ -16,6 +16,34 @@ import (
 	"time"
 )
 
+func (app *AnchorApplication) SendIdentity() error {
+	jwkJson, err := json.Marshal(app.JWK)
+	if app.LogError(err) != nil {
+		return err
+	}
+	//Create ln identity struct
+	resp, err := app.LnClient.GetInfo()
+	if app.LogError(err) != nil || len(resp.Uris) == 0 {
+		return err
+	}
+	uri := resp.Uris[0]
+	lnID := types.LnIdentity{
+		Peer:            uri,
+		RequiredChanAmt: app.LnClient.LocalSats,
+	}
+	lnIDBytes, err := json.Marshal(lnID)
+	if app.LogError(err) != nil {
+		return err
+	}
+	app.logger.Info("Sending JWK...", "JWK", string(jwkJson))
+	//Declare our identity to the network
+	_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
+	if app.LogError(err) != nil {
+		return err
+	}
+	return nil
+}
+
 //LoadIdentity : load public keys derived from JWTs from redis
 func (app *AnchorApplication) LoadIdentity() error {
 	var cursor uint64
@@ -165,6 +193,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	lnID := types.LnIdentity{}
 	app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID))
 	if lightning.IsLnUri(lnID.Peer) {
+		app.logger.Info(fmt.Sprintf("Setting Core ID %s URI to %s", tx.CoreID, lnID.Peer))
 		app.state.LnUris[tx.CoreID] = lnID
 	}
 	if jwkType.Kid != "" && app.JWK.Kid != "" && jwkType.Kid == app.JWK.Kid {

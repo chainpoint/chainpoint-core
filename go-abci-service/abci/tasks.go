@@ -77,10 +77,11 @@ func (app *AnchorApplication) SyncMonitor() {
 func (app *AnchorApplication) LNDMonitor() {
 	for {
 		app.LnClient.Unlocker()
-		status, err := app.LnClient.GetInfo()
+		state, err := app.LnClient.GetInfo()
 		if app.LogError(err) == nil {
-			if app.state.BtcHeight != int64(status.BlockHeight) {
-				app.state.BtcHeight = int64(status.BlockHeight)
+			app.state.LNState = *state
+			if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
+				app.state.BtcHeight = int64(app.state.LNState.BlockHeight)
 				app.logger.Info(fmt.Sprintf("New BTC Block %d", app.state.BtcHeight))
 			}
 		}
@@ -91,6 +92,19 @@ func (app *AnchorApplication) LNDMonitor() {
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
 func (app *AnchorApplication) StakeIdentity() {
+	// wait for syncMonitor
+	for app.ID == "" || len(app.state.LNState.Uris) == 0 {
+		app.logger.Info("StakeIdentity state loading...")
+		time.Sleep(30 * time.Second)
+	}
+	// resend JWK if info has changed
+	if lnUri, exists := app.state.LnUris[app.ID]; exists {
+		if lnUri.Peer != app.state.LNState.Uris[0] {
+			app.logger.Info(fmt.Sprintf("Stored Peer URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
+			app.state.JWKStaked = false
+		}
+	}
+
 	for !app.state.JWKStaked {
 		app.logger.Info("Beginning Lightning staking loop")
 		time.Sleep(60 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
@@ -142,28 +156,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.logger.Info("This node is a validator, skipping Lightning staking")
 			app.state.AmValidator = true
 		}
-		jwkJson, err := json.Marshal(app.JWK)
-		if app.LogError(err) != nil {
-			continue
-		}
-		//Create ln identity struct
-		resp, err := app.LnClient.GetInfo()
-		if app.LogError(err) != nil || len(resp.Uris) == 0 {
-			continue
-		}
-		uri := resp.Uris[0]
-		lnID := types.LnIdentity{
-			Peer:            uri,
-			RequiredChanAmt: app.LnClient.LocalSats,
-		}
-		lnIDBytes, err := json.Marshal(lnID)
-		if app.LogError(err) != nil {
-			continue
-		}
-		app.logger.Info("Sending JWK...", "JWK", string(jwkJson))
-		//Declare our identity to the network
-		_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
-		if app.LogError(err) != nil {
+		if app.SendIdentity() != nil {
 			continue
 		}
 	}
