@@ -109,10 +109,12 @@ func (app *AnchorApplication) StakeIdentity() {
 		app.logger.Info("Beginning Lightning staking loop")
 		time.Sleep(60 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
 		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
+			app.logger.Info("Chain not synced, restarting staking loop...")
 			continue
 		}
 		amValidator, err := app.AmValidator()
 		if app.LogError(err) != nil {
+			app.logger.Info("Cannot determin validators, restarting staking loop...")
 			continue
 		}
 
@@ -157,6 +159,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.state.AmValidator = true
 		}
 		if app.SendIdentity() != nil {
+			app.logger.Info("Sending JWK Identity failed, restarting staking loop...")
 			continue
 		}
 	}
@@ -276,10 +279,11 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 					found = true
 					app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 					newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.LnClient.FeeMultiplier)
-					_, err := app.LnClient.ReplaceByFee(tx.BtcTxID, 0, int(newFee))
+					_, err := app.LnClient.ReplaceByFee(tx.BtcTxBody, false, int(newFee))
 					if app.LogError(err) != nil {
 						continue
 					}
+					app.logger.Info("RBF Success for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 					//Remove old anchor check
 					delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 					if app.LogError(delRes.Err()) != nil {
