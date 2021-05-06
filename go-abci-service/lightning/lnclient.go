@@ -570,8 +570,10 @@ func (ln *LnClient) ReplaceByFee(txRaw string, OPRETURNIndex bool, newfee int) (
 			}
 		}
 	}
+	txIdHash := (msgTx).TxHash()
+	txIdBytes := txIdHash.CloneBytes()
 	outpoint := lnrpc.OutPoint{
-		TxidBytes:            msgTx.TxHash().CloneBytes(),
+		TxidBytes:            txIdBytes,
 		OutputIndex:          outputIndex,
 		XXX_NoUnkeyedLiteral: struct{}{},
 		XXX_unrecognized:     nil,
