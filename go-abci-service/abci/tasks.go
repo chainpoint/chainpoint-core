@@ -386,6 +386,7 @@ func (app *AnchorApplication) MonitorNewTx() {
 			app.logger.Info("New BTC Check: No transactions found")
 			continue
 		}
+		app.logger.Info(fmt.Sprintf("Retrieved New Transaction %+v", txDetails.GetTransactions()))
 		txData := txDetails.Transactions[0]
 		if txData.NumConfirmations < 1 {
 			app.logger.Info(fmt.Sprintf("New BTC Check: %s not yet confirmed", tx.BtcTxID))
