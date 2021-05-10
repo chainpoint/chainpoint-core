@@ -185,8 +185,9 @@ func (app *AnchorApplication) SendBtcTx(anchorDataObj types.BtcAgg, height int64
 	msgBtcMon := types.BtcTxMsg{
 		AnchorBtcAggID:   anchorDataObj.AnchorBtcAggID,
 		AnchorBtcAggRoot: anchorDataObj.AnchorBtcAggRoot,
-		BtcTxBody:        rawtx,
 		BtcTxID:          txid,
+		BtcTxBody:        rawtx,
+		BtcTxHeight:	  0,
 		CalBlockHeight:   height,
 		BeginCalTxInt:    start,
 		EndCalTxInt:      end,

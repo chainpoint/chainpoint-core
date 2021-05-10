@@ -73,14 +73,19 @@ func (app *AnchorApplication) SyncMonitor() {
 	}
 }
 
-//LNDMonitor : maintains unlock of wallet while abci is running
+//LNDMonitor : maintains unlock of wallet while abci is running, updates height, runs confirmation loop
 func (app *AnchorApplication) LNDMonitor() {
 	for {
 		app.LnClient.Unlocker()
 		state, err := app.LnClient.GetInfo()
 		if app.LogError(err) == nil {
 			app.state.LNState = *state
+			//U
 			if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
+				currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
+				if app.state.ChainSynced && currBlockHeightInt64 != 0 {
+					app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
+				}
 				app.state.BtcHeight = int64(app.state.LNState.BlockHeight)
 				app.logger.Info(fmt.Sprintf("New BTC Block %d", app.state.BtcHeight))
 			}
@@ -333,35 +338,6 @@ func (app *AnchorApplication) FindAndRemoveBtcCheck(aggRoot string) error {
 	return nil
 }
 
-func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
-	block, err := app.LnClient.GetBlockByHeight(btcTx.BlockHeight)
-	if app.LogError(err) != nil {
-		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
-	}
-	var tree merkletools.MerkleTree
-	txIndex := -1
-	for i, t := range block.Transactions {
-		if t == btcTx.TxID {
-			txIndex = i
-		}
-		tx := util.ReverseTxHex(t)
-		hexTx, _ := hex.DecodeString(tx)
-		tree.AddLeaf(hexTx)
-	}
-	if txIndex == -1 {
-		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("Transaction %s not found in block %d", btcTx.TxID, btcTx.BlockHeight))
-	}
-	tree.MakeBTCTree()
-	root := tree.GetMerkleRoot()
-	reversedRoot := util.ReverseTxHex(hex.EncodeToString(root))
-	reversedRootBytes, _ := hex.DecodeString(reversedRoot)
-	reversedMerkleRoot, _ := hex.DecodeString(util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot)))
-	if !bytes.Equal(reversedRootBytes, reversedMerkleRoot) {
-		return block, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
-	}
-	return block, tree, txIndex, nil
-}
-
 //MonitorNewTx: issues BTC-A upon new transaction confirmation. TODO: fold into FailedAnchorMonitor
 func (app *AnchorApplication) MonitorNewTx() {
 	app.logger.Info("Starting New BTC Check")
@@ -387,15 +363,6 @@ func (app *AnchorApplication) MonitorNewTx() {
 			continue
 		}
 		app.logger.Info(fmt.Sprintf("Retrieved New Transaction %+v", txDetails.GetTransactions()))
-		txData := txDetails.Transactions[0]
-		if txData.NumConfirmations < 1 {
-			app.logger.Info(fmt.Sprintf("New BTC Check: %s not yet confirmed", tx.BtcTxID))
-			continue
-		} else {
-			app.logger.Info(fmt.Sprintf("New BTC Check: %s has been confirmed", tx.BtcTxID))
-		}
-		app.logger.Info(fmt.Sprintf("New BTC Check: block height is %d", int64(txData.BlockHeight)))
-		tx.BtcTxHeight = int64(txData.BlockHeight)
 		btcMonBytes, err := json.Marshal(tx)
 		if app.LogError(err) != nil {
 			app.logger.Info(fmt.Sprintf("New BTC Check: cannot marshal json"))
@@ -413,6 +380,7 @@ func (app *AnchorApplication) MonitorNewTx() {
 	}
 }
 
+// MonitorConfirmedTx : Begins anchor confirmation process when a Tx is 6 btc blocks deep
 func (app *AnchorApplication) MonitorConfirmedTx() {
 	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
@@ -422,6 +390,10 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 		app.logger.Info(fmt.Sprintf("Checking confirmed btc tx %s", s))
 		var tx types.TxID
 		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
+			continue
+		}
+		if tx.BlockHeight == 0 {
+			app.logger.Info(fmt.Sprintf("btc tx %s not yet in block", s))
 			continue
 		}
 		confirmCount := app.state.BtcHeight - tx.BlockHeight + 1
@@ -455,6 +427,73 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 		delRes := app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			continue
+		}
+	}
+}
+
+// GetBlockTree : constructs block merkel tree with transaction as index
+func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
+	block, err := app.LnClient.GetBlockByHeight(btcTx.BlockHeight)
+	if app.LogError(err) != nil {
+		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
+	}
+	var tree merkletools.MerkleTree
+	txIndex := -1
+	for i, t := range block.Transactions {
+		if t == btcTx.TxID {
+			txIndex = i
+		}
+		tx := util.ReverseTxHex(t)
+		hexTx, _ := hex.DecodeString(tx)
+		tree.AddLeaf(hexTx)
+	}
+	if txIndex == -1 {
+		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("Transaction %s not found in block %d", btcTx.TxID, btcTx.BlockHeight))
+	}
+	tree.MakeBTCTree()
+	root := tree.GetMerkleRoot()
+	reversedRoot := util.ReverseTxHex(hex.EncodeToString(root))
+	reversedRootBytes, _ := hex.DecodeString(reversedRoot)
+	reversedMerkleRoot, _ := hex.DecodeString(util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot)))
+	if !bytes.Equal(reversedRootBytes, reversedMerkleRoot) {
+		return block, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
+	}
+	return block, tree, txIndex, nil
+}
+
+// MonitorBlocksForConfirmation : since LND can't retrieve confirmed Txs, search block by block
+func (app *AnchorApplication) MonitorBlocksForConfirmation(startHeight int64, endHeight int64) {
+	confirmationTxs := make([]types.TxID, 0)
+	txsIdStrings := make([]string, 0)
+	txsStrings := make([]string, 0)
+	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
+	for _, s := range results.Val() {
+		var tx types.TxID
+		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
+			continue
+		}
+		if tx.BlockHeight == 0 {
+			continue
+		}
+		confirmationTxs = append(confirmationTxs, tx)
+		txsIdStrings = append(txsIdStrings, tx.TxID)
+		txsStrings = append(txsStrings, s)
+	}
+	for i := startHeight; i < endHeight + 1; i++ {
+		block, err := app.LnClient.GetBlockByHeight(i)
+		if app.LogError(err) != nil {
+			continue
+		}
+		for _, t := range block.Transactions {
+			if contains, index := util.ArrayContainsIndex(txsIdStrings, t); contains {
+				confirmationTx := txsStrings[index]
+				tx := confirmationTxs[index]
+				app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, confirmationTx)
+				tx.BlockHeight = i
+				txIDBytes, _ := json.Marshal(tx)
+				app.RedisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+				app.logger.Info(fmt.Sprintf("Found tx %s in block %d", tx.TxID, i))
+			}
 		}
 	}
 }
