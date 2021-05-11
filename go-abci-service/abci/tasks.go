@@ -258,6 +258,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			continue
 		}
 		app.logger.Info(fmt.Sprintf("Checking root %s at %d for failure", anchor.AnchorBtcAggRoot, anchor.BtcBlockHeight))
+		//A core reported a lack of balance for anchoring
 		if anchor.AnchorBtcAggRoot == app.state.LastErrorCoreID {
 			app.logger.Info(fmt.Sprintf("BTC-E for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
@@ -267,6 +268,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			app.resetAnchor(anchor.BeginCalTxInt)
 			continue
 		}
+		// The anchor is late, we need to react
 		if (anchor.BtcBlockHeight != 0 && app.state.BtcHeight-anchor.BtcBlockHeight >= int64(3)) || app.config.ElectionMode == "test" {
 			app.logger.Info(fmt.Sprintf("Anchor Delay for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
 			results := app.RedisClient.WithContext(context.Background()).SMembers(NEW_BTC_TX_IDS_KEY)
@@ -281,25 +283,36 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 					continue
 				}
 				if tx.AnchorBtcAggRoot == anchor.AnchorBtcAggRoot {
-					found = true
-					app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-					newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.LnClient.FeeMultiplier)
-					_, err := app.LnClient.ReplaceByFee(tx.BtcTxBody, false, int(newFee))
-					if app.LogError(err) != nil {
-						continue
-					}
-					app.logger.Info("RBF Success for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-					//Remove old anchor check
-					delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-					if app.LogError(delRes.Err()) != nil {
-						continue
-					}
-					//Add new anchor check
-					anchor.BtcBlockHeight = app.state.BtcHeight // give ourselves extra time
-					failedAnchorJSON, _ := json.Marshal(anchor)
-					redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
-					if app.LogError(redisResult.Err()) != nil {
-						continue
+					// if our tx is in mempool and is late, then we try to rbf, else we re-anchor
+					if app.IsInConfirmedTxs(tx.BtcTxID) {
+						found = true
+						app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
+						newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.LnClient.FeeMultiplier)
+						_, err := app.LnClient.ReplaceByFee(tx.BtcTxBody, false, int(newFee))
+						if app.LogError(err) != nil {
+							continue
+						}
+						app.logger.Info("RBF Success for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
+						//Remove old anchor check
+						delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+						if app.LogError(delRes.Err()) != nil {
+							continue
+						}
+						//Add new anchor check
+						anchor.BtcBlockHeight = app.state.BtcHeight // give ourselves extra time
+						failedAnchorJSON, _ := json.Marshal(anchor)
+						redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+						if app.LogError(redisResult.Err()) != nil {
+							continue
+						}
+					} else {
+						app.logger.Info("Anchor Timeout", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", tx.BtcTxID)
+						// if there are subsequent anchors, we try to re-anchor just that range, else reset for a new anchor period
+						if app.state.EndCalTxInt > anchor.EndCalTxInt {
+							go app.AnchorBTC(anchor.BeginCalTxInt, anchor.EndCalTxInt)
+						} else {
+							app.resetAnchor(anchor.BeginCalTxInt)
+						}
 					}
 					break
 				}
@@ -378,6 +391,23 @@ func (app *AnchorApplication) MonitorNewTx() {
 			app.LogError(delRes.Err())
 		}(btcMonBytes, s)
 	}
+}
+
+func (app *AnchorApplication) IsInConfirmedTxs(txid string) bool {
+	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
+	if app.LogError(results.Err()) != nil {
+		return false
+	}
+	for _, s := range results.Val() {
+		var tx types.TxID
+		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
+			continue
+		}
+		if tx.TxID == txid {
+			return true
+		}
+	}
+	return false
 }
 
 // MonitorConfirmedTx : Begins anchor confirmation process when a Tx is 6 btc blocks deep
