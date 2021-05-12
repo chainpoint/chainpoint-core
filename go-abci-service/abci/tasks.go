@@ -531,4 +531,5 @@ func (app *AnchorApplication) MonitorBlocksForConfirmation(startHeight int64, en
 			}
 		}
 	}
+	return nil
 }
