@@ -75,22 +75,18 @@ func (app *AnchorApplication) SyncMonitor() {
 
 //LNDMonitor : maintains unlock of wallet while abci is running, updates height, runs confirmation loop
 func (app *AnchorApplication) LNDMonitor() {
-	for {
-		app.LnClient.Unlocker()
-		state, err := app.LnClient.GetInfo()
-		if app.LogError(err) == nil {
-			app.state.LNState = *state
-			//U
-			if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
-				currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
-				if app.state.ChainSynced && currBlockHeightInt64 != 0 {
-					app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
-				}
-				app.state.BtcHeight = int64(app.state.LNState.BlockHeight)
-				app.logger.Info(fmt.Sprintf("New BTC Block %d", app.state.BtcHeight))
+	app.LnClient.Unlocker()
+	state, err := app.LnClient.GetInfo()
+	if app.LogError(err) == nil {
+		app.state.LNState = *state
+		if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
+			currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
+			if currBlockHeightInt64 != 0 {
+				app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
 			}
+			app.state.BtcHeight = int64(app.state.LNState.BlockHeight)
+			app.logger.Info(fmt.Sprintf("New BTC Block %d", app.state.BtcHeight))
 		}
-		time.Sleep(60 * time.Second)
 	}
 }
 
