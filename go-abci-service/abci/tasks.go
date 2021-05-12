@@ -75,13 +75,17 @@ func (app *AnchorApplication) SyncMonitor() {
 
 //LNDMonitor : maintains unlock of wallet while abci is running, updates height, runs confirmation loop
 func (app *AnchorApplication) LNDMonitor() {
+	app.logger.Info("Starting LND Monitor...")
 	app.LnClient.Unlocker()
 	state, err := app.LnClient.GetInfo()
 	if app.LogError(err) == nil {
+		app.logger.Info("LND state retrieved...")
 		app.state.LNState = *state
 		if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
+			app.logger.Info("New Blocks detected from LND")
 			currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
 			if currBlockHeightInt64 != 0 {
+				app.logger.Info("Monitoring Blocks from LND for Txs")
 				err = app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
 				if app.LogError(err) != nil {
 					return
@@ -91,6 +95,7 @@ func (app *AnchorApplication) LNDMonitor() {
 			app.logger.Info(fmt.Sprintf("New BTC Block %d", app.state.BtcHeight))
 		}
 	}
+	app.logger.Info("Finished LND Monitor")
 }
 
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
