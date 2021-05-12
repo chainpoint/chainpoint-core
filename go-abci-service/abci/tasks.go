@@ -82,7 +82,10 @@ func (app *AnchorApplication) LNDMonitor() {
 		if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
 			currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
 			if currBlockHeightInt64 != 0 {
-				app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
+				err = app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
+				if app.LogError(err) != nil {
+					return
+				}
 			}
 			app.state.BtcHeight = int64(app.state.LNState.BlockHeight)
 			app.logger.Info(fmt.Sprintf("New BTC Block %d", app.state.BtcHeight))
@@ -238,10 +241,11 @@ func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
 
 //FailedAnchorMonitor: ensures transactions reach btc chain within certain time limit
 func (app *AnchorApplication) FailedAnchorMonitor() {
-	if app.state.BtcHeight == 0 {
+	if app.state.LNState.BlockHeight == 0 {
 		app.logger.Info("BTC Height record is 0, waiting for update from btc chain...")
 		return
 	}
+	btcHeight := int64(app.state.LNState.BlockHeight)
 	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(checkResults.Err()) != nil {
 		return
@@ -265,7 +269,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			continue
 		}
 		hasBeen10CalBlocks := app.state.Height - anchor.CalBlockHeight > 10
-		hasBeen3BtcBlocks := anchor.BtcBlockHeight != 0 && app.state.BtcHeight-anchor.BtcBlockHeight >= int64(3)
+		hasBeen3BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(3)
 
 		newTx, tx := app.IsInNewTx(anchor.AnchorBtcAggRoot)                     // Is this a new tx (issuing core)?
 		confirmed, confirmedTx := app.IsInConfirmedTxs(anchor.AnchorBtcAggRoot) // Is this a confirmed tx (all cores)?
@@ -286,7 +290,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 				continue
 			}
 			//Add new anchor check
-			anchor.BtcBlockHeight = app.state.BtcHeight // give ourselves extra time
+			anchor.BtcBlockHeight = btcHeight // give ourselves extra time
 			failedAnchorJSON, _ := json.Marshal(anchor)
 			redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 			if app.LogError(redisResult.Err()) != nil {
@@ -493,7 +497,7 @@ func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails
 }
 
 // MonitorBlocksForConfirmation : since LND can't retrieve confirmed Txs, search block by block
-func (app *AnchorApplication) MonitorBlocksForConfirmation(startHeight int64, endHeight int64) {
+func (app *AnchorApplication) MonitorBlocksForConfirmation(startHeight int64, endHeight int64) error {
 	confirmationTxs := make([]types.TxID, 0)
 	txsIdStrings := make([]string, 0)
 	txsStrings := make([]string, 0)
@@ -503,7 +507,7 @@ func (app *AnchorApplication) MonitorBlocksForConfirmation(startHeight int64, en
 		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
 			continue
 		}
-		if tx.BlockHeight == 0 {
+		if tx.BlockHeight != 0 {
 			continue
 		}
 		confirmationTxs = append(confirmationTxs, tx)
@@ -513,7 +517,7 @@ func (app *AnchorApplication) MonitorBlocksForConfirmation(startHeight int64, en
 	for i := startHeight; i < endHeight + 1; i++ {
 		block, err := app.LnClient.GetBlockByHeight(i)
 		if app.LogError(err) != nil {
-			continue
+			return err
 		}
 		for _, t := range block.Transactions {
 			if contains, index := util.ArrayContainsIndex(txsIdStrings, t); contains {

@@ -155,7 +155,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		failedAnchorCheck := types.AnchorRange{
 			AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
 			CalBlockHeight:   app.state.Height,
-			BtcBlockHeight:   int64(app.state.BtcHeight),
+			BtcBlockHeight:   int64(app.state.LNState.BlockHeight),
 			BeginCalTxInt:    startTxRange,
 			EndCalTxInt:      endTxRange,
 		}
