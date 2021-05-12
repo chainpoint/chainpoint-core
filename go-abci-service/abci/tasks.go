@@ -84,7 +84,8 @@ func (app *AnchorApplication) LNDMonitor() {
 		if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
 			app.logger.Info("New Blocks detected from LND")
 			currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
-			if currBlockHeightInt64 != 0 {
+			isSynced := currBlockHeightInt64 - app.state.BtcHeight < 36 // core should have a gap of less than 6 hours
+			if currBlockHeightInt64 != 0 && isSynced {
 				app.logger.Info("Monitoring Blocks from LND for Txs")
 				err = app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
 				if app.LogError(err) != nil {
@@ -378,7 +379,7 @@ func (app *AnchorApplication) MonitorNewTx() {
 		txBytes, _ := hex.DecodeString(tx.BtcTxID)
 		txDetails, err := app.LnClient.GetTransaction(txBytes)
 		if app.LogError(err) != nil {
-			app.logger.Info("New BTC Check: Cannot find transaction")
+			app.logger.Info("New BTC Check: Cannot retrieve transaction")
 			continue
 		}
 		if len(txDetails.GetTransactions()) == 0 {
