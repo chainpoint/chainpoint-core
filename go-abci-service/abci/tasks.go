@@ -79,8 +79,8 @@ func (app *AnchorApplication) LNDMonitor() {
 	app.LnClient.Unlocker()
 	state, err := app.LnClient.GetInfo()
 	if app.LogError(err) == nil {
-		app.logger.Info("LND state retrieved...")
 		app.state.LNState = *state
+		app.logger.Info(fmt.Sprintf("LND state retrieved currHeight: %d vs newHeight: %d", app.state.BtcHeight, app.state.LNState.BlockHeight))
 		if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
 			app.logger.Info("New Blocks detected from LND")
 			currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
