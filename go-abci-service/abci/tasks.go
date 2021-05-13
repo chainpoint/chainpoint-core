@@ -379,7 +379,7 @@ func (app *AnchorApplication) MonitorNewTx() {
 		txBytes, _ := hex.DecodeString(tx.BtcTxID)
 		txDetails, err := app.LnClient.GetTransaction(txBytes)
 		if app.LogError(err) != nil {
-			app.logger.Info("New BTC Check: Cannot retrieve transaction")
+			app.logger.Info("New BTC Check: Cannot retrieve transaction", "tx", tx.BtcTxID)
 			continue
 		}
 		if len(txDetails.GetTransactions()) == 0 {
