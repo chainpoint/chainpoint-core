@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ import (
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	//Instantiate Tendermint Node Config
 	tmConfig, err := initTendermintConfig()
 	if util.LogError(err) != nil {
