@@ -276,6 +276,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 		}
 		hasBeen10CalBlocks := app.state.Height - anchor.CalBlockHeight > 10
 		hasBeen3BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(3)
+		hasBeen144BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(144)
 
 		newTx, tx := app.IsInNewTx(anchor.AnchorBtcAggRoot)                     // Is this a new tx (issuing core)?
 		confirmed, confirmedTx := app.IsInConfirmedTxs(anchor.AnchorBtcAggRoot) // Is this a confirmed tx (all cores)?
@@ -283,6 +284,9 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 
 		// if our tx is in the mempool but late, rbf
 		if hasBeen3BtcBlocks && mempoolButNoBlock {
+			if hasBeen144BtcBlocks {
+				app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
+			}
 			app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 			newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.LnClient.FeeMultiplier)
 			_, err := app.LnClient.ReplaceByFee(tx.BtcTxBody, false, int(newFee))
@@ -291,21 +295,18 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			}
 			app.logger.Info("RBF Success for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 			//Remove old anchor check
-			delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-			if app.LogError(delRes.Err()) != nil {
-				continue
-			}
+			app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			//Add new anchor check
 			anchor.BtcBlockHeight = btcHeight // give ourselves extra time
 			failedAnchorJSON, _ := json.Marshal(anchor)
-			redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
-			if app.LogError(redisResult.Err()) != nil {
-				continue
-			}
+			app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 		}
 		if hasBeen10CalBlocks && !confirmed { // if we have no confirmation of mempool inclusion after 10 minutes
+			// this usually means there's something seriously wrong with LND
 			if newTx {
 				app.logger.Info(fmt.Sprintf("Anchor Timeout: tx never transmitted, maybe check if lnd has peers?"))
+				removeTx, _ := json.Marshal(tx)
+				app.RedisClient.WithContext(context.Background()).SRem(NEW_BTC_TX_IDS_KEY, string(removeTx))
 				continue
 			}
 			app.logger.Info("Anchor Timeout", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", confirmedTx.TxID)
