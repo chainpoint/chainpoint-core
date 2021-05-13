@@ -336,7 +336,6 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 	if app.state.ChainSynced && app.config.DoAnchor {
 		go func() {
 			app.LNDMonitor()
-			app.MonitorNewTx()
 			app.MonitorConfirmedTx()
 			app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
 		}()

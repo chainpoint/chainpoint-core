@@ -530,15 +530,28 @@ func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
 	return *invoice, nil
 }
 
-func (ln *LnClient) ReplaceByFee(txRaw string, OPRETURNIndex bool, newfee int) (walletrpc.BumpFeeResponse, error) {
+func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (walletrpc.BumpFeeResponse, error) {
 	wallet, close := ln.GetWalletClient()
 	defer close()
-	decodedTx, err := hex.DecodeString(txRaw)
+	decodedId, err := hex.DecodeString(txid)
+	if err != nil {
+		return walletrpc.BumpFeeResponse{}, err
+	}
+	tx, err := ln.GetTransaction(decodedId)
+	if err != nil {
+		return walletrpc.BumpFeeResponse{}, err
+	}
+	if len(tx.Transactions) == 0 {
+		return walletrpc.BumpFeeResponse{}, errors.New("no transaction found")
+	}
+	rawTxHex := tx.GetTransactions()[0].RawTxHex
+	decodedTx, err := hex.DecodeString(rawTxHex)
 	if err != nil {
 		return walletrpc.BumpFeeResponse{}, err
 	}
 	var msgTx wire.MsgTx
 	if ln.LoggerError(msgTx.BtcDecode(bytes.NewReader(decodedTx), 0, wire.WitnessEncoding)); err != nil {
+		ln.Logger.Info("RBF Decoding for tx output failed")
 		return walletrpc.BumpFeeResponse{}, err
 	}
 	chainParam := chaincfg.Params{}

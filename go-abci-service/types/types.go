@@ -262,6 +262,7 @@ type AnchorRange struct {
 	BtcBlockHeight   int64  `json:"btc_block_height"`
 	BeginCalTxInt    int64  `json:"begin_cal_int"`
 	EndCalTxInt      int64  `json:"end_cal_int"`
+	AmLeader         bool   `json:"am_leader"`
 }
 
 // BtcTxMsg : A RMQ message object
