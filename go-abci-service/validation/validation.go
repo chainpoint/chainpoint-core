@@ -98,14 +98,23 @@ func GetPubKeyHex(coreID string, state types.AnchorState) string {
 	return pubKeyHex
 }
 
-// GetLastCalSubmitters : Given a past block range, get map of Cores that have submitted CAL tx
-func GetLastCalSubmitters(n int64, state types.AnchorState) map[string]int64 {
+// GetLastNSubmitters : Given a past block range, get map of Cores that have submitted CAL tx
+func GetLastNSubmitters(n int64, state types.AnchorState) map[string]int64 {
 	coreList := map[string]int64{}
 	for id := range state.CoreKeys {
 		pubKeyHex := GetPubKeyHex(id, state)
 		if validationRecord, exists := state.TxValidation[pubKeyHex]; exists {
 			if validationRecord.LastCalTxHeight > (state.Height - n) {
 				coreList[id] = validationRecord.LastCalTxHeight
+			}
+			if validationRecord.LastFeeTxHeight > (state.Height - n) {
+				coreList[id] = validationRecord.LastFeeTxHeight
+			}
+			if validationRecord.LastBtcaTxHeight > (state.Height - n) {
+				coreList[id] = validationRecord.LastBtcaTxHeight
+			}
+			if validationRecord.LastBtccTxHeight > (state.Height - n) {
+				coreList[id] = validationRecord.LastBtccTxHeight
 			}
 		}
 	}
