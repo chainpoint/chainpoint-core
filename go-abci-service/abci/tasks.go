@@ -305,7 +305,9 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			// this usually means there's something seriously wrong with LND
 			app.logger.Info("Anchor Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", confirmedTx.TxID)
 			// if there are subsequent anchors, we try to re-anchor just that range, else reset for a new anchor period
-			if app.state.EndCalTxInt > anchor.EndCalTxInt {
+			if len(confirmedTx.TxID) == 0 {
+				app.logger.Info("no tx for this root")
+			} else if app.state.EndCalTxInt > anchor.EndCalTxInt {
 				go app.AnchorBTC(anchor.BeginCalTxInt, anchor.EndCalTxInt)
 			} else {
 				app.resetAnchor(anchor.BeginCalTxInt)
