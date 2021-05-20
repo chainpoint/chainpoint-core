@@ -130,7 +130,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	if err != nil {
 		return err
 	}
-	app.logger.Info(fmt.Sprintf("Anchoring tx ranges %d to %d at Height %d, latestBtcaHeight %d, for aggroot: %s", startTxRange, endTxRange, app.state.Height, app.state.LatestBtcaHeight, treeData.AnchorBtcAggRoot))
+	app.logger.Info(fmt.Sprintf("Anchor tx ranges %d to %d at Height %d, latestBtcaHeight %d, for aggroot: %s", startTxRange, endTxRange, app.state.Height, app.state.LatestBtcaHeight, treeData.AnchorBtcAggRoot))
 	app.logger.Info(fmt.Sprintf("treeData for Anchor: %#v", treeData))
 
 	// If we have something to anchor, perform anchoring and proofgen functions
@@ -142,12 +142,17 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		}
 		// elect anchorer
 		if iAmLeader {
-			err := app.SendBtcTx(treeData, app.state.Height, startTxRange, endTxRange)
+			btca, err := app.SendBtcTx(treeData, app.state.Height, startTxRange, endTxRange)
 			if app.LogError(err) != nil {
 				_, err := app.rpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
 					panic(err)
 				}
+			}
+			_, err = app.rpc.BroadcastTx("BTC-A", string(btca), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+			if app.LogError(err) != nil {
+				app.logger.Info(fmt.Sprintf("failed sending BTC-A"))
+				panic(err)
 			}
 		}
 
@@ -155,9 +160,10 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		failedAnchorCheck := types.AnchorRange{
 			AnchorBtcAggRoot: treeData.AnchorBtcAggRoot,
 			CalBlockHeight:   app.state.Height,
-			BtcBlockHeight:   int64(app.state.BtcHeight),
+			BtcBlockHeight:   int64(app.state.LNState.BlockHeight),
 			BeginCalTxInt:    startTxRange,
 			EndCalTxInt:      endTxRange,
+			AmLeader:         iAmLeader,
 		}
 		failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
 		redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
@@ -173,35 +179,28 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 }
 
 // SendBtcTx : sends btc tx to lnd and enqueues tx monitoring information
-func (app *AnchorApplication) SendBtcTx(anchorDataObj types.BtcAgg, height int64, start int64, end int64) error {
+func (app *AnchorApplication) SendBtcTx(anchorDataObj types.BtcAgg, height int64, start int64, end int64) ([]byte, error) {
 	hexRoot, err := hex.DecodeString(anchorDataObj.AnchorBtcAggRoot)
 	if util.LogError(err) != nil {
-		return err
+		return []byte{}, err
 	}
 	txid, rawtx, err := app.LnClient.SendOpReturn(hexRoot)
 	if util.LogError(err) != nil {
-		return err
+		return []byte{}, err
 	}
 	msgBtcMon := types.BtcTxMsg{
 		AnchorBtcAggID:   anchorDataObj.AnchorBtcAggID,
 		AnchorBtcAggRoot: anchorDataObj.AnchorBtcAggRoot,
-		BtcTxBody:        rawtx,
 		BtcTxID:          txid,
+		BtcTxBody:        rawtx,
+		BtcTxHeight:	  0,
 		CalBlockHeight:   height,
 		BeginCalTxInt:    start,
 		EndCalTxInt:      end,
 	}
 	btcJSON, err := json.Marshal(msgBtcMon)
 	app.logger.Info(fmt.Sprint("Sending BTC-A OP_RETURN: %#v", msgBtcMon))
-	if util.LogError(err) != nil {
-		return err
-	}
-	result := app.RedisClient.WithContext(context.Background()).SAdd(NEW_BTC_TX_IDS_KEY, string(btcJSON))
-	if util.LogError(result.Err()) != nil {
-		return result.Err()
-	}
-	app.logger.Info("Added BTC-A message to redis")
-	return nil
+	return btcJSON, err
 }
 
 // AnchorReward : Send sats to last anchoring core
@@ -243,7 +242,7 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 
-	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, BlockHeight: btcTxObj.BtcTxHeight})
+	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, AnchorBtcAggRoot: btcTxObj.AnchorBtcAggRoot})
 	result := app.RedisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 	if app.LogError(result.Err()) != nil {
 		return err

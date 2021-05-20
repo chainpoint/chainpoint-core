@@ -551,3 +551,12 @@ func ArrayContains(arr []string, item string) bool {
 	}
 	return false
 }
+
+func ArrayContainsIndex(arr []string, item string) (bool, int) {
+	for i, v := range arr {
+		if v == item {
+			return true, i
+		}
+	}
+	return false, -1
+}

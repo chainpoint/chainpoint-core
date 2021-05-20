@@ -38,6 +38,7 @@ import (
 )
 
 func main() {
+	//runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	//Instantiate Tendermint Node Config
 	tmConfig, err := initTendermintConfig()
 	if util.LogError(err) != nil {

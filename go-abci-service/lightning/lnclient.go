@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
 	"runtime"
 	/*	"github.com/btcsuite/btcd/chaincfg"
@@ -480,7 +481,8 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	ln.Logger.Info(fmt.Sprintf("Anchoring with FEE: %d", ln.LastFee))
 	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: ln.LastFee, Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
-	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %v", resp))
+	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %%v", resp))
+	ln.Logger.Info(fmt.Sprintf("Ln Raw Tx: %s", hex.EncodeToString(resp.RawTx)))
 	if ln.LoggerError(err) != nil {
 		return "", "", err
 	}
@@ -529,12 +531,64 @@ func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
 	return *invoice, nil
 }
 
-func (ln *LnClient) ReplaceByFee(txstr string, output int, newfee int) (walletrpc.BumpFeeResponse, error) {
+func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (walletrpc.BumpFeeResponse, error) {
 	wallet, close := ln.GetWalletClient()
 	defer close()
+	decodedId, err := hex.DecodeString(txid)
+	if err != nil {
+		return walletrpc.BumpFeeResponse{}, err
+	}
+	tx, err := ln.GetTransaction(decodedId)
+	if err != nil {
+		return walletrpc.BumpFeeResponse{}, err
+	}
+	if len(tx.Transactions) == 0 {
+		return walletrpc.BumpFeeResponse{}, errors.New("no transaction found")
+	}
+	rawTxHex := tx.GetTransactions()[0].RawTxHex
+	decodedTx, err := hex.DecodeString(rawTxHex)
+	if err != nil {
+		return walletrpc.BumpFeeResponse{}, err
+	}
+	var msgTx wire.MsgTx
+	if ln.LoggerError(msgTx.BtcDecode(bytes.NewReader(decodedTx), 0, wire.WitnessEncoding)); err != nil {
+		ln.Logger.Info("RBF Decoding for tx output failed")
+		return walletrpc.BumpFeeResponse{}, err
+	}
+	chainParam := chaincfg.Params{}
+	if ln.Testnet {
+		chainParam = chaincfg.TestNet3Params
+	} else {
+		chainParam = chaincfg.MainNetParams
+	}
+	var outputIndex uint32
+	for i, txOut := range msgTx.TxOut {
+		script, _, _, err := txscript.ExtractPkScriptAddrs(
+			txOut.PkScript, &chainParam,
+		)
+		ln.Logger.Info(fmt.Sprintf("Extracted script %s from output %d", script.String(), i))
+		if ln.LoggerError(err) != nil {
+			continue
+		}
+		if OPRETURNIndex {
+			if script.String() == txscript.NullDataTy.String() {
+				ln.Logger.Info("Selected OP_RETURN output")
+				outputIndex = uint32(i)
+				break
+			}
+		} else {
+			if script.String() != txscript.NullDataTy.String() {
+				ln.Logger.Info("Selected Payment output")
+				outputIndex = uint32(i)
+				break
+			}
+		}
+	}
+	txIdHash := (msgTx).TxHash()
+	txIdBytes := txIdHash.CloneBytes()
 	outpoint := lnrpc.OutPoint{
-		TxidStr:              txstr,
-		OutputIndex:          uint32(output),
+		TxidBytes:            txIdBytes,
+		OutputIndex:          outputIndex,
 		XXX_NoUnkeyedLiteral: struct{}{},
 		XXX_unrecognized:     nil,
 		XXX_sizecache:        0,

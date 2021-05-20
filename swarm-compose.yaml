@@ -89,7 +89,7 @@ services:
         max-file: '5'
 
   lnd:
-    image: tierion/lnd:${NETWORK:-testnet}-11.1.2
+    image: tierion/lnd:${NETWORK:-testnet}-mempool
     user: ${USERID}:${GROUPID}
     entrypoint: 'rm /root/.lnd/tls.* || echo "tls certs already removed" && ./start-lnd.sh'
     ports:
