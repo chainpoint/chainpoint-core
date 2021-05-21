@@ -19,7 +19,7 @@ import (
 )
 
 type Calendar struct {
-	Logger      log.Logger
+	Logger log.Logger
 }
 
 // NewCalendar returns a new Calendar Object with a built-in logger. Useful for testing
@@ -27,7 +27,7 @@ func NewCalendar(rmqUri string) *Calendar {
 	allowLevel, _ := log.AllowLevel(strings.ToLower("ERROR"))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 	calendar := Calendar{
-		Logger:      tmLogger,
+		Logger: tmLogger,
 	}
 	return &calendar
 }
@@ -66,7 +66,7 @@ func (calendar *Calendar) GenerateCalendarTree(aggs []types.Aggregation) types.C
 }
 
 // CreateCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
-func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) ([]types.CalStateObject) {
+func (calendar *Calendar) CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) []types.CalStateObject {
 	calStates := make([]types.CalStateObject, 0)
 	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
 	uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, tx.Hash)
@@ -166,7 +166,7 @@ func (calendar *Calendar) PrepareBtcaStateData(anchorDataObj types.BtcAgg) []typ
 }
 
 // GenerateHeadStateObject: Assembles anchor operations into object ready for insertion into postgres
-func (calendar *Calendar) GenerateHeadStateObject(hash []byte, btcMonObj types.BtcMonMsg) (types.AnchorBtcHeadState) {
+func (calendar *Calendar) GenerateHeadStateObject(hash []byte, btcMonObj types.BtcMonMsg) types.AnchorBtcHeadState {
 	anchorOps := types.AnchorOpsState{}
 	anchorOps.Ops = make([]types.ProofLineItem, 0)
 	for _, p := range btcMonObj.Path {
@@ -194,7 +194,7 @@ func (calendar *Calendar) GenerateHeadStateObject(hash []byte, btcMonObj types.B
 }
 
 //GenerateAnchorBtcTxState : gather btc anchor info into form ready for postgres
-func (calendar *Calendar) GenerateAnchorBtcTxState(btcTxObj types.BtcTxMsg) (stateObj types.AnchorBtcTxState){
+func (calendar *Calendar) GenerateAnchorBtcTxState(btcTxObj types.BtcTxMsg) (stateObj types.AnchorBtcTxState) {
 	btcTxState := types.OpsState{
 		Ops: []types.ProofLineItem{
 			{

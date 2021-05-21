@@ -2,9 +2,9 @@ package fee
 
 import (
 	"encoding/json"
-	"time"
-	"net/http"
 	"github.com/btcsuite/btcd/blockchain"
+	"net/http"
+	"time"
 )
 
 // BitcoinerFee : estimates fee from bitcoiner service

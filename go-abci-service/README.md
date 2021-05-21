@@ -4,13 +4,13 @@
 
 The Chainpoint Network's blockchain is based around the Tendermint blockchain library, a Byzantine Fault Tolerant (BFT) peer-to-peer consensus layer. Tendermint allows anyone to interact with a self-generated Tendermint blockchain using an Application-BlockChain Interface (ABCI) app written in Go.
 
-This service module encompasses a Tendermint Core, Chainpoint ABCI app, and various submodules for connecting to C_Level_DB, RabbitMQ, PostgreSQL, Ethereum Smart Contracts, and Redis. The result is one dockerized binary run in a Docker Swarm capable of coordinating all Core services on a single host.
+This service module encompasses a Tendermint Core, Chainpoint ABCI app, and various submodules for connecting to C_Level_DB, PostgreSQL, and Redis. The result is one dockerized binary run in a Docker Swarm capable of coordinating all Core services on a single host.
 
 ## Operation Modes
 
 When initialized, Tendermint will create Genesis, Config, and Node_Key files in `~/.chainpoint/core/config/node_1`. All other data, including ECDSA, redis, and postgresql files, can be found in `~/.chainpoint/core/data`.
 
-A Tendermint full-node can become a validator, and share greater responsibilities such as confirming new Cores, generating proofs, and injecting NIST Beacon entropy into the blockchain.
+A Tendermint full-node can become a validator, and share greater responsibilities such as confirming new Cores, generating proofs, and injecting DRAND Beacon entropy into the blockchain.
 
 ## Deeper Dive
 
@@ -19,20 +19,15 @@ When a Chainpoint Core starts up, it first retrieves all configuration options f
 Every block epoch (60 seconds by default), the ABCI application is set to perform a number of functions:
 
 - Authenticate transactions from all other Cores.
-- Aggregate all hashes received from `node-api-service` into a CAL transaction and submit it to the Calendar.
-- Elect a leader to send a NIST Beacon Entropy transaction to the blockchain.
+- Aggregate all hashes received from the API into a CAL transaction and submit it to the Calendar.
+- Elect a leader to send a DRAND Beacon Entropy transaction to the blockchain.
 - Monitor for public keys from new Cores, which are broadcast via a JWK message.
 - Monitor sync status with the rest of the Network (and shutdown critical functions if not synced yet).
 
 Every anchor epoch (60 minutes by default), the ABCI application is set to perform the following anchor/reward functions:
 
 - Elect a leader to anchor all hashes received since last anchor epoch by broadcasting their Merkle Root to Bitcoin via the `lnd` service. The resulting Bitcoin TX ID is placed in a BTC-A transaction and submitted to the Calendar.
-- Monitor for the confirmation of a successful anchor to Bitcoin via the `btc-mon-service`. The resulting Bitcoin header info containing the anchor is placed in a BTC-C transaction and submitted to the Calendar.
-
-At any time, the ABCI application may:
-
-- Sync proof data via a BTC-M message to all other Cores using Tendermint's P2P layer, so the network understands which CAL transactions are included in the anchor.
-- Sync authorization data via a TOKEN message to all other Cores consisting of a hash of a Chainpoint Node's JWT auth token, so that only authorized Nodes may submit hashes to the Network.
+- Monitor for the confirmation of a successful anchor to Bitcoin. The resulting Bitcoin header info containing the anchor is placed in a BTC-C transaction and submitted to the Calendar.
 
 ## Troubleshooting
 
