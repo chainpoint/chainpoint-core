@@ -83,7 +83,7 @@ func (app *AnchorApplication) LNDMonitor() {
 		if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
 			app.logger.Info("New Blocks detected from LND")
 			currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
-			isSynced := currBlockHeightInt64 - app.state.BtcHeight < 36 // core should have a gap of less than 6 hours
+			isSynced := currBlockHeightInt64-app.state.BtcHeight < 36 // core should have a gap of less than 6 hours
 			if currBlockHeightInt64 != 0 && isSynced {
 				app.logger.Info("Monitoring Blocks from LND for Txs")
 				err = app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
@@ -273,7 +273,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			app.resetAnchor(anchor.BeginCalTxInt)
 			continue
 		}
-		hasBeen10CalBlocks := app.state.Height - anchor.CalBlockHeight > 10
+		hasBeen10CalBlocks := app.state.Height-anchor.CalBlockHeight > 10
 		hasBeen3BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(3)
 		hasBeen144BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(144)
 
@@ -457,7 +457,7 @@ func (app *AnchorApplication) MonitorBlocksForConfirmation(startHeight int64, en
 		txsIdStrings = append(txsIdStrings, tx.TxID)
 		txsStrings = append(txsStrings, s)
 	}
-	for i := startHeight; i < endHeight + 1; i++ {
+	for i := startHeight; i < endHeight+1; i++ {
 		block, err := app.LnClient.GetBlockByHeight(i)
 		if app.LogError(err) != nil {
 			return err

@@ -310,8 +310,8 @@ type AnchorOpsState struct {
 
 // TxID : RMQ message dispatched to initiate monitoring
 type TxID struct {
-	TxID        string `json:"tx_id"`
-	BlockHeight int64  `json:"block_height"`
+	TxID             string `json:"tx_id"`
+	BlockHeight      int64  `json:"block_height"`
 	AnchorBtcAggRoot string `json:"anchor_btc_agg_root"`
 }
 

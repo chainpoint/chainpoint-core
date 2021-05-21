@@ -271,7 +271,7 @@ func (app *AnchorApplication) getAllJWKs() ([]types.Tx, error) {
 }
 
 // GetBTCCTx: retrieves and verifies existence of btcc tx
-func (app *AnchorApplication) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte){
+func (app *AnchorApplication) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
 	btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
 	txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25, "")
 	if app.LogError(err) == nil {
