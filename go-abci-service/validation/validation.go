@@ -232,15 +232,15 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		validated = true
 		validationRecord.CalValidationSuccess++
 		validationRecord.LastCalTxHeight = state.Height
-		/*		RateLimitUpdate(state.Height, &validationRecord.CalAllowedRate)
-				if !IsHabitualViolator(validationRecord.CalAllowedRate) {
-					validated = true
-					UpdateAcceptTx(&validationRecord.CalAllowedRate)
-					validationRecord.CalValidationSuccess++
-					validationRecord.LastCalTxHeight = state.Height
-				} else {
-					validationRecord.CalValidationFailures++
-				}*/
+		RateLimitUpdate(state.Height, &validationRecord.CalAllowedRate)
+		if !IsHabitualViolator(validationRecord.CalAllowedRate) {
+			validated = true
+			UpdateAcceptTx(&validationRecord.CalAllowedRate)
+			validationRecord.CalValidationSuccess++
+			validationRecord.LastCalTxHeight = state.Height
+		} else {
+			validationRecord.CalValidationFailures++
+		}
 		break
 	case "BTC-E":
 		validated = true
@@ -255,12 +255,12 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		break
 	case "BTC-C":
 		validated = true
-		/*		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
-				if !(IsHabitualViolator(validationRecord.BtccAllowedRate) ) {
-					validated = true
-					UpdateAcceptTx(&validationRecord.BtccAllowedRate)
-					validationRecord.LastBtccTxHeight = state.Height
-				}*/
+		RateLimitUpdate(state.Height, &validationRecord.BtccAllowedRate)
+		if !(IsHabitualViolator(validationRecord.BtccAllowedRate) || IsValidator(coreID, state)) {
+			validated = true
+			UpdateAcceptTx(&validationRecord.BtccAllowedRate)
+			validationRecord.LastBtccTxHeight = state.Height
+		}
 		break
 	case "FEE":
 		i, err := strconv.ParseInt(tx.Data, 10, 64)
