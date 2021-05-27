@@ -57,11 +57,10 @@ func (app *AnchorApplication) SyncMonitor() {
 			}
 			cores := validation.GetLastNSubmitters(128, app.state) //get Active cores on network
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
-			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by 2/3 of validators
+			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by validators
 			app.state.Validators = validators.Validators
-			app.LnClient.LocalSats = stakeAmt
 			app.state.LnStakePerVal = stakeAmt
-			app.state.LnStakePrice = stakeAmt * int64(len(validators.Validators)) //Total Stake Price includes the other 1/3 just in case
+			app.state.LnStakePrice = totalStake //Total Stake Price includes the other 1/3 just in case
 			//app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
 		}
 		if app.state.TMState.SyncInfo.CatchingUp {
@@ -138,11 +137,11 @@ func (app *AnchorApplication) StakeIdentity() {
 					peerExists, err := app.LnClient.PeerExists(lnID.Peer)
 					app.LogError(err)
 					if peerExists || app.LogError(app.LnClient.AddPeer(lnID.Peer)) == nil {
-						chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.LnClient.LocalSats)
+						chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.state.LnStakePerVal)
 						app.LogError(err)
 						if !chanExists {
-							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", app.LnClient.LocalSats, lnID.Peer))
-							_, err := app.LnClient.CreateChannel(lnID.Peer, app.LnClient.LocalSats)
+							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", app.state.LnStakePerVal, lnID.Peer))
+							_, err := app.LnClient.CreateChannel(lnID.Peer, app.state.LnStakePerVal)
 							app.LogError(err)
 						} else {
 							app.logger.Info(fmt.Sprintf("Lightning Channel %s exists, skipping...", lnID.Peer))
@@ -209,7 +208,7 @@ func (app *AnchorApplication) FeeMonitor() {
 					fee = STATIC_FEE_AMT
 				}
 				if app.LogError(err) != nil || app.LnClient.Testnet {
-					fee = int64(app.LnClient.FeeMultiplier * float64(fee))
+					fee = int64(app.config.FeeMultiplier * float64(fee))
 					app.LnClient.Logger.Info(fmt.Sprintf("Static FEE: %d", fee))
 				}
 			}
@@ -287,7 +286,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			}
 			if anchor.AmLeader {
 				app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-				newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.LnClient.FeeMultiplier)
+				newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.config.FeeMultiplier)
 				_, err := app.LnClient.ReplaceByFee(confirmedTx.TxID, false, int(newFee))
 				if app.LogError(err) != nil {
 					continue

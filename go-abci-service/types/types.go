@@ -57,6 +57,7 @@ type AnchorConfig struct {
 	AnchorReward     int
 	StakePerCore     int64
 	FeeInterval      int64
+	FeeMultiplier    float64
 	HashPrice        int
 	UseAllowlist     bool
 	GatewayAllowlist []string
