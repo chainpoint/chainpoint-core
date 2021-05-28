@@ -48,6 +48,7 @@ func (app *AnchorApplication) SyncMonitor() {
 		}
 		if app.ID == "" {
 			app.ID = app.state.TMState.ValidatorInfo.Address.String()
+			app.state.ID = app.ID
 			app.logger.Info("Core ID set ", "ID", app.ID)
 		}
 		if app.state.Height != 0 && app.state.ChainSynced {
@@ -196,7 +197,7 @@ func (app *AnchorApplication) BeaconMonitor() {
 func (app *AnchorApplication) FeeMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 && app.state.Height-app.state.LastBtcFeeHeight >= app.config.FeeInterval {
-		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}); leader {
+		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}, app.state, app.config); leader {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
 			fee, err := app.LnClient.GetLndFeeEstimate()
@@ -307,7 +308,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			if len(confirmedTx.TxID) == 0 {
 				app.logger.Info("no tx for this root")
 			} else if app.state.EndCalTxInt > anchor.EndCalTxInt {
-				go app.AnchorToChain(anchor.BeginCalTxInt, anchor.EndCalTxInt)
+				go app.Anchor.AnchorToChain(anchor.BeginCalTxInt, anchor.EndCalTxInt)
 			} else {
 				app.ResetAnchor(anchor.BeginCalTxInt)
 			}

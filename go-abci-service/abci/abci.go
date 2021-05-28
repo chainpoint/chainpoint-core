@@ -81,7 +81,7 @@ type AnchorApplication struct {
 	CoreRewardSignatures []string
 	Db                   dbm.DB
 	Anchor               AnchorEngine
-	state                types.AnchorState
+	state                *types.AnchorState
 	config               types.AnchorConfig
 	logger               log.Logger
 	calendar             *calendar.Calendar
@@ -99,7 +99,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
 	db := dbm.NewDB(name, dbm.CLevelDBBackend, "/tendermint/data")
-	state := loadState(db)
+	load_state := loadState(db)
+	state := &load_state
 	if state.TxValidation == nil {
 		state.TxValidation = validation.NewTxValidationMap()
 	}
@@ -185,10 +186,18 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	jwkType := util.GenerateKey(&config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
 
+	var anchorEngine AnchorEngine = AnchorBTC{
+		state: 	state,
+		config: config,
+		logger: *config.Logger,
+	}
+
+
 	//Construct application
 	app := AnchorApplication{
 		valAddrToPubKeyMap:   map[string]types2.PubKey{},
 		Db:                   db,
+		Anchor:				  anchorEngine,
 		state:                state,
 		config:               config,
 		logger:               *config.Logger,

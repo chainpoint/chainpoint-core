@@ -17,8 +17,8 @@ import (
 
 type AnchorBTC struct {
 	state *types.AnchorState
-	config *types.AnchorConfig
-	logger *log.Logger
+	config types.AnchorConfig
+	logger log.Logger
 }
 
 // StartAnchoring: StartAnchoring calendar and btc blockchains
@@ -127,7 +127,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 	if app.config.ElectionMode == "test" {
 		app.state.LastErrorCoreID = ""
 	}
-	iAmLeader, leaderIDs := app.ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID})
+	iAmLeader, leaderIDs := ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID}, *app.state)
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
