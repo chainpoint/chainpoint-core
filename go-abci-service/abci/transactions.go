@@ -145,8 +145,8 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		//Begin monitoring using the data contained in this transaction
 		if app.state.ChainSynced {
-			go app.ConsumeBtcTxMsg([]byte(tx.Data))
-			app.logger.Info(fmt.Sprintf("BTC-A Anchor Data: %s", tx.Data))
+			go app.BeginTxMonitor([]byte(tx.Data))
+			app.logger.Info(fmt.Sprintf("BTC-A StartAnchoring Data: %s", tx.Data))
 		} else {
 			app.state.BeginCalTxInt = btca.EndCalTxInt
 		}
@@ -238,7 +238,7 @@ func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]c
 
 //getAnchoringCore : gets core to whom last anchor is attributed
 func (app *AnchorApplication) getAnchoringCore(queryLine string) (string, error) {
-	app.logger.Info("Anchor confirmation query: " + queryLine)
+	app.logger.Info("StartAnchoring confirmation query: " + queryLine)
 	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
 	if app.LogError(err) == nil {
 		for _, tx := range txResult.Txs {

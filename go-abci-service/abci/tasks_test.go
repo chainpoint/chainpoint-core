@@ -88,8 +88,8 @@ func TestMonitorConsumeBtcTxMsg(t *testing.T) {
 		"me_id",
 		"signature",
 	}
-	err := app.ConsumeBtcTxMsg([]byte(tx.Data))
-	assert.Equal(err, nil, "err from ConsumeBtcTxMsg should be nil")
+	err := app.BeginTxMonitor([]byte(tx.Data))
+	assert.Equal(err, nil, "err from BeginTxMonitor should be nil")
 
 	// Test for msg presence in proofstate queueblah
 	session, err := rabbitmq.ConnectAndConsume(rabbitTestURI, "work.proofstate")
@@ -154,8 +154,8 @@ func TestMonitorConsumeBtcTxMsg(t *testing.T) {
 		RoutingKey:      "",
 		Body:            msgBytes,
 	}
-	err = app.ConsumeBtcMonMsg(msgAmqp)
-	assert.Equal(err, nil, "err from ConsumeBtcMonMsg should be nil")
+	err = app.ConfirmAnchor(msgAmqp)
+	assert.Equal(err, nil, "err from ConfirmAnchor should be nil")
 
 	session, err := rabbitmq.ConnectAndConsume(rabbitTestURI, "work.proofstate")
 	for m := range session.Msgs {

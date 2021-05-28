@@ -452,7 +452,7 @@ func (ln *LnClient) GetLndFeeEstimate() (int64, error) {
 	return fee.SatPerKw, nil
 }
 
-func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
+func (ln *LnClient) AnchorData(hash []byte) (string, string, error) {
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
 	b.AddData(hash)

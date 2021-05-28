@@ -71,8 +71,8 @@ func (app *AnchorApplication) SyncMonitor() {
 	}
 }
 
-//LNDMonitor : maintains unlock of wallet while abci is running, updates height, runs confirmation loop
-func (app *AnchorApplication) LNDMonitor() {
+//BlockSyncMonitor : maintains unlock of wallet while abci is running, updates height, runs confirmation loop
+func (app *AnchorApplication) BlockSyncMonitor() {
 	app.logger.Info("Starting LND Monitor...")
 	app.LnClient.Unlocker()
 	state, err := app.LnClient.GetInfo()
@@ -269,7 +269,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			if app.LogError(delRes.Err()) != nil {
 				continue
 			}
-			app.resetAnchor(anchor.BeginCalTxInt)
+			app.ResetAnchor(anchor.BeginCalTxInt)
 			continue
 		}
 		hasBeen10CalBlocks := app.state.Height-anchor.CalBlockHeight > 10
@@ -302,14 +302,14 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 		}
 		if hasBeen10CalBlocks && !confirmed { // if we have no confirmation of mempool inclusion after 10 minutes
 			// this usually means there's something seriously wrong with LND
-			app.logger.Info("Anchor Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", confirmedTx.TxID)
+			app.logger.Info("StartAnchoring Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", confirmedTx.TxID)
 			// if there are subsequent anchors, we try to re-anchor just that range, else reset for a new anchor period
 			if len(confirmedTx.TxID) == 0 {
 				app.logger.Info("no tx for this root")
 			} else if app.state.EndCalTxInt > anchor.EndCalTxInt {
-				go app.AnchorBTC(anchor.BeginCalTxInt, anchor.EndCalTxInt)
+				go app.AnchorToChain(anchor.BeginCalTxInt, anchor.EndCalTxInt)
 			} else {
-				app.resetAnchor(anchor.BeginCalTxInt)
+				app.ResetAnchor(anchor.BeginCalTxInt)
 			}
 			app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 
@@ -399,7 +399,7 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 			}
 		}
 		btcmsg.Path = jsproofs
-		go app.ConsumeBtcMonMsg(btcmsg)
+		go app.ConfirmAnchor(btcmsg)
 		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
 		delRes := app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {

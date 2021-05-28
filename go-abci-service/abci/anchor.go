@@ -12,11 +12,18 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
-// Anchor: Anchor calendar and btc blockchains
-func (app *AnchorApplication) Anchor() {
-	// Run AnchorCalendar and AnchorBTC one after another
+type AnchorBTC struct {
+	state *types.AnchorState
+	config *types.AnchorConfig
+	logger *log.Logger
+}
+
+// StartAnchoring: StartAnchoring calendar and btc blockchains
+func (app *AnchorApplication) StartAnchoring() {
+	// Run AnchorCalendar and AnchorToChain one after another
 	if app.state.ChainSynced && app.config.DoCal {
 		go app.AnchorCalendar(app.state.Height)
 	}
@@ -24,7 +31,7 @@ func (app *AnchorApplication) Anchor() {
 		if app.state.ChainSynced {
 			// prevent current height, non-indexed cal roots from being anchored
 			if app.state.LatestCalTxInt-app.state.BeginCalTxInt > app.state.CurrentCalInts {
-				go app.AnchorBTC(app.state.BeginCalTxInt, app.state.LatestCalTxInt-app.state.CurrentCalInts)
+				go app.Anchor.AnchorToChain(app.state.BeginCalTxInt, app.state.LatestCalTxInt-app.state.CurrentCalInts)
 			}
 		} else {
 			app.state.EndCalTxInt = app.state.LatestCalTxInt
@@ -114,8 +121,8 @@ func (app *AnchorApplication) GetTreeFromCalRange(startTxRange int64, endTxRange
 	return treeData, nil
 }
 
-// AnchorBTC : Anchor scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
-func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) error {
+// AnchorToChain : StartAnchoring scans all CAL transactions since last anchor epoch and writes the merkle root to the Calendar and to bitcoin
+func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error {
 	// elect leader to do the actual anchoring
 	if app.config.ElectionMode == "test" {
 		app.state.LastErrorCoreID = ""
@@ -124,14 +131,14 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
-	app.logger.Info(fmt.Sprintf("Anchor Leaders: %v", leaderIDs))
+	app.logger.Info(fmt.Sprintf("StartAnchoring Leaders: %v", leaderIDs))
 
 	treeData, err := app.GetTreeFromCalRange(startTxRange, endTxRange)
 	if err != nil {
 		return err
 	}
-	app.logger.Info(fmt.Sprintf("Anchor tx ranges %d to %d at Height %d, latestBtcaHeight %d, for aggroot: %s", startTxRange, endTxRange, app.state.Height, app.state.LatestBtcaHeight, treeData.AnchorBtcAggRoot))
-	app.logger.Info(fmt.Sprintf("treeData for Anchor: %#v", treeData))
+	app.logger.Info(fmt.Sprintf("StartAnchoring tx ranges %d to %d at Height %d, latestBtcaHeight %d, for aggroot: %s", startTxRange, endTxRange, app.state.Height, app.state.LatestBtcaHeight, treeData.AnchorBtcAggRoot))
+	app.logger.Info(fmt.Sprintf("treeData for StartAnchoring: %#v", treeData))
 
 	// If we have something to anchor, perform anchoring and proofgen functions
 	if treeData.AnchorBtcAggRoot != "" {
@@ -184,7 +191,7 @@ func (app *AnchorApplication) SendBtcTx(anchorDataObj types.BtcAgg, height int64
 	if util.LogError(err) != nil {
 		return []byte{}, err
 	}
-	txid, rawtx, err := app.LnClient.SendOpReturn(hexRoot)
+	txid, rawtx, err := app.LnClient.AnchorData(hexRoot)
 	if util.LogError(err) != nil {
 		return []byte{}, err
 	}
@@ -227,8 +234,8 @@ func (app *AnchorApplication) AnchorReward(CoreID string) error {
 	return errors.New(fmt.Sprintf("Reward not sent; LnURI of CoreID %s not found in local database", CoreID))
 }
 
-// ConsumeBtcTxMsg : Consumes a btctx RMQ message to initiate monitoring on all nodes
-func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
+// BeginTxMonitor : Consumes a btctx message to initiate monitoring on all nodes
+func (app *AnchorApplication) BeginTxMonitor(msgBytes []byte) error {
 	var btcTxObj types.BtcTxMsg
 	if err := json.Unmarshal(msgBytes, &btcTxObj); err != nil {
 		return app.LogError(err)
@@ -255,30 +262,30 @@ func (app *AnchorApplication) ConsumeBtcTxMsg(msgBytes []byte) error {
 		return err
 	}
 	if btcAgg.AnchorBtcAggRoot != btcTxObj.AnchorBtcAggRoot {
-		app.logger.Info(fmt.Sprintf("BTC-A Anchor TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btcTxObj.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
-		app.logger.Info(fmt.Sprintf("BTC-A treeData for Anchor comparison: %#v", btcAgg))
-		return errors.New("Anchor failure, AggRoot mismatch")
+		app.logger.Info(fmt.Sprintf("BTC-A StartAnchoring TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btcTxObj.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
+		app.logger.Info(fmt.Sprintf("BTC-A treeData for StartAnchoring comparison: %#v", btcAgg))
+		return errors.New("StartAnchoring failure, AggRoot mismatch")
 	}
 	anchorBTCAggStateObjects := app.calendar.PrepareBtcaStateData(btcAgg)
 	err = app.PgClient.BulkInsertBtcAggState(anchorBTCAggStateObjects)
 	if app.LogError(err) != nil {
-		app.logger.Info(fmt.Sprintf("Anchor TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
+		app.logger.Info(fmt.Sprintf("StartAnchoring TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
 		return err
 	}
-	app.logger.Info(fmt.Sprintf("BTC-A Anchor Success for %s", btcTxObj.AnchorBtcAggRoot))
+	app.logger.Info(fmt.Sprintf("BTC-A StartAnchoring Success for %s", btcTxObj.AnchorBtcAggRoot))
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
 	return nil
 }
 
-// ConsumeBtcMonMsg : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
-func (app *AnchorApplication) ConsumeBtcMonMsg(btcMonObj types.BtcMonMsg) error {
+// ConfirmAnchor : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
+func (app *AnchorApplication) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 	app.logger.Info(fmt.Sprintf("Consuming BTC-C for %s", btcMonObj.BtcTxID))
 	var hash []byte
 	anchoringCoreID, err := app.getAnchoringCore(fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID))
 	if len(anchoringCoreID) == 0 {
-		app.logger.Error(fmt.Sprintf("Anchor confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
+		app.logger.Error(fmt.Sprintf("StartAnchoring confirmation: Cannot retrieve BTCTX-tagged transaction for btc tx: %s", btcMonObj.BtcTxID))
 	} else {
 		if app.config.ElectionMode == "test" {
 			anchoringCoreID = ""
@@ -393,9 +400,9 @@ func (app *AnchorApplication) GenerateBtcBatch(proofIds []string, btcHeadState t
 	return app.LogError(app.PgClient.BulkInsertProofs(proofs))
 }
 
-// resetAnchor ensures that anchoring will begin again in the next block
-func (app *AnchorApplication) resetAnchor(startTxRange int64) {
-	app.logger.Info(fmt.Sprintf("Anchor failure, restarting anchor epoch from tx %d", startTxRange))
+// ResetAnchor ensures that anchoring will begin again in the next block
+func (app *AnchorApplication) ResetAnchor(startTxRange int64) {
+	app.logger.Info(fmt.Sprintf("StartAnchoring failure, restarting anchor epoch from tx %d", startTxRange))
 	app.state.BeginCalTxInt = startTxRange
 	app.state.LatestBtcaHeight = -1 //ensure election and anchoring reoccurs next block
 }
