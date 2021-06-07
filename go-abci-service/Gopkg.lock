@@ -162,14 +162,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:140a060564cf0cd5d6efc51845e9ed5d98596f48b5caa34e660ebaaa6ff40475"
-  name = "github.com/didip/tollbooth"
-  packages = ["limiter"]
-  pruneopts = ""
-  revision = "4a3af0d94edfddc169de231525db021ef6a15e1b"
-  version = "v6.1.0"
-
-[[projects]]
   digest = "1:2841841c90842645c6a3ed260fa4242a18e1f2f4edd309d40347443b2c662fcb"
   name = "github.com/drand/drand"
   packages = [
@@ -282,14 +274,6 @@
   pruneopts = ""
   revision = "3be5f6aae7db841d31dc5e1b3bb7b4cff19200b3"
   version = "v0.5.0"
-
-[[projects]]
-  digest = "1:6f8b692f04c4fd65375293bf931e9665d94065183c500bae71a5c07470955c0d"
-  name = "github.com/go-pkgz/expirable-cache"
-  packages = ["."]
-  pruneopts = ""
-  revision = "2ff274f83edf8adf252eea60c460531f1b584387"
-  version = "v0.0.3"
 
 [[projects]]
   digest = "1:d819edb31c249b00bef9d4795e4331ef19adbddb3802d24adcff3711d82f63ed"
@@ -1072,14 +1056,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:58294820c8ff2caa6f43885b37c9149113c56bdedd75be51ef864ffa24b207dd"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  pruneopts = ""
-  revision = "f8bda1e9f3badef837c98cbaf4f7c335de90f266"
-
-[[projects]]
-  branch = "master"
   digest = "1:178e6a9f09b8cbf22777e213e38c9008ee1a83472cb4818b3f4ee694a10fcdbc"
   name = "golang.org/x/tools"
   packages = [
@@ -1255,17 +1231,6 @@
   version = "v2.1.0"
 
 [[projects]]
-  digest = "1:7d897a9344f0392e5b211b2b4bf4f2995fa42c4ffe2c3a48efbf9c600173fd2e"
-  name = "gopkg.in/throttled/throttled.v2"
-  packages = [
-    ".",
-    "store/memstore",
-  ]
-  pruneopts = ""
-  revision = "b5675e93f9d999b22f92d859a5bf2138d3641af4"
-  version = "v2.0.3"
-
-[[projects]]
   digest = "1:43eca683d801087f3acacfd036474638bc5e293ff6078758d710d99c40ec3f7c"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -1291,7 +1256,6 @@
     "github.com/btcsuite/btcd/wire",
     "github.com/btcsuite/btcutil",
     "github.com/chainpoint/tendermint/abci/example/code",
-    "github.com/didip/tollbooth/limiter",
     "github.com/drand/drand/client",
     "github.com/drand/drand/client/grpc",
     "github.com/drand/drand/key",
@@ -1334,8 +1298,6 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/credentials",
     "gopkg.in/macaroon.v2",
-    "gopkg.in/throttled/throttled.v2",
-    "gopkg.in/throttled/throttled.v2/store/memstore",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/didip/tollbooth"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
+	"github.com/didip/tollbooth"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
