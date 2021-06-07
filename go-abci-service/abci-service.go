@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/didip/tollbooth"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -23,8 +24,6 @@ import (
 
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
-	"gopkg.in/throttled/throttled.v2"
-	"gopkg.in/throttled/throttled.v2/store/memstore"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -90,40 +89,21 @@ func main() {
 
 	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
 
-	/* /hash, /proof, /calendar, /status, /peers, /gateways/public, /boltwall/invoice, /boltwall/node */
-	store, err := memstore.New(65536)
-	if err != nil {
-		util.LogError(err)
-		panic(err)
-	}
+	hashLimiter := tollbooth.NewLimiter(0.017, nil)
+	apiLimiter := tollbooth.NewLimiter(15, nil)
 
-	hashQuota := throttled.RateQuota{throttled.PerMin(3), 5}
-	apiQuota := throttled.RateQuota{throttled.PerSec(10), 50}
-	hashLimiter, err := throttled.NewGCRARateLimiter(store, hashQuota)
-	apiLimiter, err := throttled.NewGCRARateLimiter(store, apiQuota)
-	if err != nil {
-		util.LogError(err)
-		panic(err)
-	}
-
-	hashRateLimiter := throttled.HTTPRateLimiter{
-		RateLimiter: hashLimiter,
-		VaryBy:      &throttled.VaryBy{Path: true},
-	}
-	apiRateLimiter := throttled.HTTPRateLimiter{
-		RateLimiter: apiLimiter,
-		VaryBy:      &throttled.VaryBy{Path: true},
-	}
+	hashLimiter.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+	apiLimiter.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
 
 	r := mux.NewRouter()
-	r.Handle("/", apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)))
-	r.Handle("/hash", hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)))
-	r.Handle("/proofs", apiRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
-	r.Handle("/calendar/{txid}", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)))
-	r.Handle("/calendar/{txid}/data", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)))
-	r.Handle("/status", apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)))
-	r.Handle("/peers", apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)))
-	r.Handle("/gateways/public", http.HandlerFunc(app.GatewaysHandler))
+	r.Handle("/", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.HomeHandler))))
+	r.Handle("/hash", tollbooth.LimitFuncHandler(hashLimiter, (http.HandlerFunc(app.HashHandler))))
+	r.Handle("/proofs", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.ProofHandler))))
+	r.Handle("/calendar/{txid}", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.CalHandler))))
+	r.Handle("/calendar/{txid}/data", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.CalDataHandler))))
+	r.Handle("/status", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.StatusHandler))))
+	r.Handle("/peers", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.PeerHandler))))
+	r.Handle("/gateways/public", tollbooth.LimitFuncHandler(apiLimiter, http.HandlerFunc(app.GatewaysHandler)))
 	//r.Handle("/boltwall/invoice", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallInvoiceHandler)))
 	//r.Handle("/boltwall/node", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallNodeHandler)))
 
