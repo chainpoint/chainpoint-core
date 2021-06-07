@@ -91,16 +91,18 @@ func main() {
 
 	hashLimiter := tollbooth.NewLimiter(0.017, nil)
 	apiLimiter := tollbooth.NewLimiter(15, nil)
+	proofLimiter := tollbooth.NewLimiter(10, nil)
 
 	hashLimiter.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
 	apiLimiter.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+	proofLimiter.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
 
 	r := mux.NewRouter()
 	r.Handle("/", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.HomeHandler))))
 	r.Handle("/hash", tollbooth.LimitFuncHandler(hashLimiter, (http.HandlerFunc(app.HashHandler))))
-	r.Handle("/proofs", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.ProofHandler))))
-	r.Handle("/calendar/{txid}", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.CalHandler))))
-	r.Handle("/calendar/{txid}/data", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.CalDataHandler))))
+	r.Handle("/proofs", tollbooth.LimitFuncHandler(proofLimiter, (http.HandlerFunc(app.ProofHandler))))
+	r.Handle("/calendar/{txid}", tollbooth.LimitFuncHandler(proofLimiter, (http.HandlerFunc(app.CalHandler))))
+	r.Handle("/calendar/{txid}/data", tollbooth.LimitFuncHandler(proofLimiter, (http.HandlerFunc(app.CalDataHandler))))
 	r.Handle("/status", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.StatusHandler))))
 	r.Handle("/peers", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.PeerHandler))))
 	r.Handle("/gateways/public", tollbooth.LimitFuncHandler(apiLimiter, http.HandlerFunc(app.GatewaysHandler)))
