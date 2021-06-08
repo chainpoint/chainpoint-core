@@ -144,6 +144,7 @@ func (app *AnchorApplication) AnchorBTC(startTxRange int64, endTxRange int64) er
 		if iAmLeader {
 			btca, err := app.SendBtcTx(treeData, app.state.Height, startTxRange, endTxRange)
 			if app.LogError(err) != nil {
+				app.logger.Error("Error Sending OP_RETURN sending BTC-E instead", "error", err)
 				_, err := app.rpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
 					panic(err)
