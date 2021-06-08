@@ -12,7 +12,6 @@ import (
 	fee2 "github.com/chainpoint/chainpoint-core/go-abci-service/fee"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/lightningnetwork/lnd/lnrpc"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -28,7 +27,7 @@ import (
 
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
 const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
-const STATIC_FEE_AMT = 40000 // 12500 // 60k amounts to 240 sat/vbyte
+const STATIC_FEE_AMT = 30000 // 12500 // 60k amounts to 240 sat/vbyte
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -285,7 +284,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 			if hasBeen144BtcBlocks {
 				app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			}
-			if anchor.AmLeader {
+/*			if anchor.AmLeader {
 				app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 				newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.LnClient.FeeMultiplier)
 				_, err := app.LnClient.ReplaceByFee(confirmedTx.TxID, false, int(newFee))
@@ -299,7 +298,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 				anchor.BtcBlockHeight = btcHeight // give ourselves extra time
 				failedAnchorJSON, _ := json.Marshal(anchor)
 				app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
-			}
+			}*/
 		}
 		if hasBeen10CalBlocks && !confirmed { // if we have no confirmation of mempool inclusion after 10 minutes
 			// this usually means there's something seriously wrong with LND
