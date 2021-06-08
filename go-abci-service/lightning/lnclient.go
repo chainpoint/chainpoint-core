@@ -71,55 +71,55 @@ func GetCurrentFuncName(numCallStack int) string {
 	return fmt.Sprintf("%s", runtime.FuncForPC(pc).Name())
 }
 
-func (ln *LnClient) GetClient() (lnrpc.LightningClient, func()) {
+func (ln *LnClient) GetClient() (lnrpc.LightningClient, func(), error) {
 	conn, err := ln.CreateConn()
 	closeIt := func() {
 		conn.Close()
 	}
 	if ln.LoggerError(err) != nil {
-		return nil, nil
+		return nil, nil, err
 	}
-	return lnrpc.NewLightningClient(conn), closeIt
+	return lnrpc.NewLightningClient(conn), closeIt, nil
 }
 
-func (ln *LnClient) GetWalletUnlockerClient() (lnrpc.WalletUnlockerClient, func()) {
+func (ln *LnClient) GetWalletUnlockerClient() (lnrpc.WalletUnlockerClient, func(), error) {
 	conn, err := ln.CreateConn()
 	closeIt := func() {
 		conn.Close()
 	}
 	if ln.LoggerError(err) != nil {
-		return nil, nil
+		return nil, nil, err
 	}
-	return lnrpc.NewWalletUnlockerClient(conn), closeIt
+	return lnrpc.NewWalletUnlockerClient(conn), closeIt, nil
 }
 
-func (ln *LnClient) GetWalletClient() (walletrpc.WalletKitClient, func()) {
+func (ln *LnClient) GetWalletClient() (walletrpc.WalletKitClient, func(), error) {
 	conn, err := ln.CreateConn()
 	closeIt := func() {
 		conn.Close()
 	}
 	if ln.LoggerError(err) != nil {
-		return nil, nil
+		return nil, nil, err
 	}
-	return walletrpc.NewWalletKitClient(conn), closeIt
+	return walletrpc.NewWalletKitClient(conn), closeIt, nil
 }
 
-func (ln *LnClient) GetInvoiceClient() (invoicesrpc.InvoicesClient, func()) {
+func (ln *LnClient) GetInvoiceClient() (invoicesrpc.InvoicesClient, func(), error) {
 	conn, err := ln.CreateConn()
 	closeIt := func() {
 		conn.Close()
 	}
 	if ln.LoggerError(err) != nil {
-		return nil, nil
+		return nil, nil, err
 	}
-	return invoicesrpc.NewInvoicesClient(conn), closeIt
+	return invoicesrpc.NewInvoicesClient(conn), closeIt, nil
 }
 
 func (ln *LnClient) Unlocker() error {
-	conn, close := ln.GetWalletUnlockerClient()
+	conn, close, err := ln.GetWalletUnlockerClient()
 	defer close()
-	if conn == nil {
-		return errors.New("unable to obtain client")
+	if err != nil {
+		return err
 	}
 	unlockReq := lnrpc.UnlockWalletRequest{
 		WalletPassword:       []byte(ln.WalletPass),
@@ -129,7 +129,7 @@ func (ln *LnClient) Unlocker() error {
 		XXX_unrecognized:     nil,
 		XXX_sizecache:        0,
 	}
-	_, err := conn.UnlockWallet(context.Background(), &unlockReq)
+	_, err = conn.UnlockWallet(context.Background(), &unlockReq)
 	if err != nil {
 		if strings.Contains(err.Error(), "unknown service lnrpc.WalletUnlocker") {
 			return nil
@@ -175,21 +175,30 @@ func GetIpFromUri(uri string) string {
 }
 
 func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return nil, err
+	}
 	defer closeFunc()
 	resp, err := client.GetInfo(context.Background(), &lnrpc.GetInfoRequest{})
 	return resp, err
 }
 
 func (ln *LnClient) GetWalletBalance() (*lnrpc.WalletBalanceResponse, error) {
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return nil, err
+	}
 	defer closeFunc()
 	resp, err := client.WalletBalance(context.Background(), &lnrpc.WalletBalanceRequest{})
 	return resp, err
 }
 
 func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) {
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return lnrpc.TransactionDetails{}, err
+	}
 	defer closeFunc()
 	txResponse, err := client.GetTransactions(context.Background(), &lnrpc.GetTransactionsRequest{
 		Txid: id,
@@ -201,7 +210,10 @@ func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) 
 }
 
 func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error) {
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return lnrpc.BlockDetails{}, err
+	}
 	defer closeFunc()
 	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHeight: uint32(height)})
 	if ln.LoggerError(err) != nil {
@@ -211,7 +223,10 @@ func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error) {
 }
 
 func (ln *LnClient) GetBlockByHash(hash string) (lnrpc.BlockDetails, error) {
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return lnrpc.BlockDetails{}, err
+	}
 	defer closeFunc()
 	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHash: hash})
 	if ln.LoggerError(err) != nil {
@@ -227,7 +242,10 @@ func (ln *LnClient) PeerExists(peer string) (bool, error) {
 	}
 	pubKey := peerParts[0]
 	addr := peerParts[1]
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return false, err
+	}
 	defer closeFunc()
 	peers, err := client.ListPeers(context.Background(), &lnrpc.ListPeersRequest{})
 	if err != nil {
@@ -253,9 +271,12 @@ func (ln *LnClient) AddPeer(peer string) error {
 	connectPeer := lnrpc.ConnectPeerRequest{
 		Addr: &peerAddr,
 	}
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return err
+	}
 	defer closeFunc()
-	_, err := client.ConnectPeer(context.Background(), &connectPeer)
+	_, err = client.ConnectPeer(context.Background(), &connectPeer)
 	if err != nil {
 		return err
 	}
@@ -342,14 +363,20 @@ func (ln *LnClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool,
 }
 
 func (ln *LnClient) GetChannels() (*lnrpc.ListChannelsResponse, error) {
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return nil, err
+	}
 	defer closeFunc()
 	channels, err := client.ListChannels(context.Background(), &lnrpc.ListChannelsRequest{})
 	return channels, err
 }
 
 func (ln *LnClient) GetPendingChannels() (*lnrpc.PendingChannelsResponse, error) {
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return nil, err
+	}
 	defer closeFunc()
 	channels, err := client.PendingChannels(context.Background(), &lnrpc.PendingChannelsRequest{})
 	return channels, err
@@ -379,7 +406,10 @@ func (ln *LnClient) CreateChannel(peer string, satVal int64) (lnrpc.Lightning_Op
 	if ln.TargetConfs != 0 {
 		openSesame.TargetConf = int32(ln.TargetConfs)
 	}
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return nil, err
+	}
 	defer closeFunc()
 	resp, err := client.OpenChannel(context.Background(), &openSesame)
 	if ln.LoggerError(err) != nil {
@@ -448,7 +478,7 @@ func (ln *LnClient) feeSatByteToWeight() int64 {
 }
 
 func (ln *LnClient) GetLndFeeEstimate() (int64, error) {
-	wallet, closeFunc := ln.GetWalletClient()
+	wallet, closeFunc, err := ln.GetWalletClient()
 	defer closeFunc()
 	fee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
 	if err != nil {
@@ -468,7 +498,7 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 	if ln.LoggerError(err) != nil {
 		return "", "", err
 	}
-	wallet, closeFunc := ln.GetWalletClient()
+	wallet, closeFunc, err := ln.GetWalletClient()
 	defer closeFunc()
 	ln.Logger.Info("Ln Wallet client created")
 	outputs := []*signrpc.TxOut{
@@ -502,13 +532,16 @@ func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
 }
 
 func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCoinsResponse, error) {
-	wallet, closeWalletFunc := ln.GetWalletClient()
+	wallet, closeWalletFunc, err := ln.GetWalletClient()
+	if ln.LoggerError(err) != nil {
+		return lnrpc.SendCoinsResponse{}, err
+	}
 	defer closeWalletFunc()
 	estimatedFee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
 	if err != nil {
 		return lnrpc.SendCoinsResponse{}, err
 	}
-	client, closeFunc := ln.GetClient()
+	client, closeFunc, err := ln.GetClient()
 	defer closeFunc()
 	sendCoinsReq := lnrpc.SendCoinsRequest{
 		Addr:       addr,
@@ -522,7 +555,10 @@ func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCo
 }
 
 func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
-	lightning, close := ln.GetClient()
+	lightning, close, err := ln.GetClient()
+	if ln.LoggerError(err) != nil {
+		return lnrpc.Invoice{}, err
+	}
 	defer close()
 	invoice, err := lightning.LookupInvoice(context.Background(), &lnrpc.PaymentHash{RHash: payhash})
 	if ln.LoggerError(err) != nil {
@@ -532,7 +568,10 @@ func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
 }
 
 func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (walletrpc.BumpFeeResponse, error) {
-	wallet, close := ln.GetWalletClient()
+	wallet, close, err := ln.GetWalletClient()
+	if ln.LoggerError(err) != nil {
+		return walletrpc.BumpFeeResponse{}, err
+	}
 	defer close()
 	decodedId, err := hex.DecodeString(txid)
 	if err != nil {
