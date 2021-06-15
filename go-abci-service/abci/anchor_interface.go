@@ -10,7 +10,7 @@ type AnchorEngine interface {
 
 	BeginTxMonitor(msgBytes []byte) (error)
 
-	ConfirmTxMsg(btcMonObj types.BtcMonMsg) (error)
+	ConfirmAnchor(btcMonObj types.BtcMonMsg) (error)
 
 	BlockSyncMonitor()
 

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/tendermint/tendermint/libs/log"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
@@ -30,7 +29,7 @@ func NewRPCClient(tendermintRPC types.TendermintConfig, logger log.Logger) (rpc 
 	}
 }
 
-//LogError : log rpc errors
+//LogError : log tendermintRpc errors
 func (rpc *RPC) LogError(err error) error {
 	if err != nil {
 		rpc.logger.Error(fmt.Sprintf("Error in %s: %s", util.GetCurrentFuncName(2), err.Error()))
@@ -71,7 +70,7 @@ func (rpc *RPC) BroadcastTxCommit(txType string, data string, version int64, tim
 // GetStatus retrieves status of our node.
 func (rpc *RPC) GetStatus() (core_types.ResultStatus, error) {
 	if rpc == nil {
-		return core_types.ResultStatus{}, errors.New("rpc failure")
+		return core_types.ResultStatus{}, errors.New("tendermintRpc failure")
 	}
 	status, err := rpc.client.Status()
 	if rpc.LogError(err) != nil {
@@ -83,7 +82,7 @@ func (rpc *RPC) GetStatus() (core_types.ResultStatus, error) {
 // GetNetInfo retrieves known peer information.
 func (rpc *RPC) GetNetInfo() (core_types.ResultNetInfo, error) {
 	if rpc == nil {
-		return core_types.ResultNetInfo{}, errors.New("rpc failure")
+		return core_types.ResultNetInfo{}, errors.New("tendermintRpc failure")
 	}
 	netInfo, err := rpc.client.NetInfo()
 	if rpc.LogError(err) != nil {
@@ -142,3 +141,51 @@ func (rpc *RPC) GetGenesis() (core_types.ResultGenesis, error) {
 	}
 	return *resp, nil
 }
+
+// GetTxRange gets all CAL TXs within a particular range
+func (rpc *RPC) getCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
+	if maxTxInt <= minTxInt {
+		return nil, errors.New("max of tx range is less than or equal to min")
+	}
+	Txs := []core_types.ResultTx{}
+	for i := minTxInt; i <= maxTxInt; i++ {
+		txResult, err := rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", i), false, 1, 1, "")
+		if err != nil {
+			return nil, err
+		} else if txResult.TotalCount > 0 {
+			for _, tx := range txResult.Txs {
+				Txs = append(Txs, *tx)
+			}
+		}
+	}
+	return Txs, nil
+}
+
+//getAnchoringCore : gets core to whom last anchor is attributed
+func (rpc *RPC) getAnchoringCore(queryLine string) (string, error) {
+	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 25, "")
+	if rpc.LogError(err) == nil {
+		for _, tx := range txResult.Txs {
+			decoded, err := util.DecodeTx(tx.Tx)
+			if rpc.LogError(err) != nil {
+				continue
+			}
+			return decoded.CoreID, nil
+		}
+	}
+	return "", err
+}
+
+// GetBTCCTx: retrieves and verifies existence of btcc tx
+func (rpc *RPC) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
+	btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
+	txResult, err := rpc.client.TxSearch(btccQueryLine, false, 1, 25, "")
+	if rpc.LogError(err) == nil {
+		for _, tx := range txResult.Txs {
+			hash = tx.Hash
+			rpc.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
+		}
+	}
+	return hash
+}
+

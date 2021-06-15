@@ -24,7 +24,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	types2 "github.com/tendermint/tendermint/abci/types"
@@ -84,7 +83,6 @@ type AnchorApplication struct {
 	state                *types.AnchorState
 	config               types.AnchorConfig
 	logger               log.Logger
-	calendar             *calendar.Calendar
 	aggregator           *aggregator.Aggregator
 	PgClient             *postgres.Postgres
 	RedisClient          *redis.Client
@@ -186,10 +184,15 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	jwkType := util.GenerateKey(&config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
 
-	var anchorEngine AnchorEngine = AnchorBTC{
-		state: 	state,
-		config: config,
-		logger: *config.Logger,
+	rpcClient := NewRPCClient(config.TendermintConfig, *config.Logger)
+
+	var anchorEngine AnchorEngine = &AnchorBTC{
+		state:         state,
+		config:        config,
+		tendermintRpc: rpcClient,
+		PgClient:      pgClient,
+		RedisClient:   redisClient,
+		logger:        *config.Logger,
 	}
 
 
@@ -203,16 +206,13 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		logger:               *config.Logger,
 		NodeRewardSignatures: make([]string, 0),
 		CoreRewardSignatures: make([]string, 0),
-		calendar: &calendar.Calendar{
-			Logger: *config.Logger,
-		},
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
 		},
 		PgClient:    pgClient,
 		RedisClient: redisClient,
 		LnClient:    &config.LightningConfig,
-		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
+		rpc:         rpcClient,
 		JWK:         jwkType,
 	}
 
@@ -361,7 +361,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	binary.PutVarint(appHash, app.state.Height)
 	app.state.AppHash = appHash
 	app.state.Height++
-	saveState(app.Db, app.state)
+	saveState(app.Db, *app.state)
 
 	return types2.ResponseCommit{Data: appHash}
 }
@@ -421,7 +421,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 					resQuery.Code = code.CodeTypeUnauthorized
 					return
 				}*/
-		JWKChanges, _ := validation.GetJWKChanges(coreID, &app.state)
+		JWKChanges, _ := validation.GetJWKChanges(coreID, app.state)
 		if JWKChanges > 3 {
 			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
 			resQuery.Code = code.CodeTypeUnauthorized

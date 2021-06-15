@@ -2,7 +2,6 @@ package abci
 
 import (
 	"errors"
-	"fmt"
 	types2 "github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 	"sort"
@@ -15,22 +14,20 @@ import (
 )
 
 // ElectPeerAsLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
-func (app *AnchorApplication) ElectPeerAsLeader(numLeaders int, blacklistedIDs []string, state types2.AnchorState) (isLeader bool, leaderID []string) {
-	if app.ID == "" {
+func ElectPeerAsLeader(numLeaders int, blacklistedIDs []string, state types2.AnchorState) (isLeader bool, leaderID []string) {
+	if state.ID == "" {
 		return false, []string{}
 	}
 	blockHash := state.TMState.SyncInfo.LatestBlockHash.String()
-	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
 	return determineLeader(numLeaders, blacklistedIDs, state.TMState, state.TMNetInfo, blockHash)
 }
 
 // ElectValidatorAsLeader : elect a slice of validators as a leader and return whether we're the leader
-func (app *AnchorApplication) ElectValidatorAsLeader(numLeaders int, blacklistedIDs []string, state types2.AnchorState, config types2.AnchorConfig) (isLeader bool, leaderID []string) {
-	if app.ID == "" {
+func ElectValidatorAsLeader(numLeaders int, blacklistedIDs []string, state types2.AnchorState, config types2.AnchorConfig) (isLeader bool, leaderID []string) {
+	if state.ID == "" {
 		return false, []string{}
 	}
 	blockHash := state.TMState.SyncInfo.LatestBlockHash.String()
-	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
 	return determineValidatorLeader(numLeaders, blacklistedIDs, state.TMState, state.Validators, blockHash, config.FilePV.GetAddress().String())
 }
 

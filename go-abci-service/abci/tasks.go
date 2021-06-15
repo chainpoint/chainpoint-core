@@ -318,28 +318,7 @@ func (app *AnchorApplication) FailedAnchorMonitor() {
 	}
 }
 
-//FindAndRemoveBtcCheck : remove all checks in case of btc tx failure
-func (app *AnchorApplication) FindAndRemoveBtcCheck(aggRoot string) error {
-	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
-	if app.LogError(checkResults.Err()) != nil {
-		return checkResults.Err()
-	}
-	for _, s := range checkResults.Val() {
-		var anchor types.AnchorRange
-		if app.LogError(json.Unmarshal([]byte(s), &anchor)) != nil {
-			app.logger.Error("cannot unmarshal json for Failed BTC check")
-			continue
-		}
-		if anchor.AnchorBtcAggRoot != aggRoot {
-			continue
-		}
-		delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-		if app.LogError(delRes.Err()) != nil {
-			return delRes.Err()
-		}
-	}
-	return nil
-}
+
 
 func (app *AnchorApplication) IsInConfirmedTxs(anchorRoot string) (bool, types.TxID) {
 	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
@@ -400,7 +379,7 @@ func (app *AnchorApplication) MonitorConfirmedTx() {
 			}
 		}
 		btcmsg.Path = jsproofs
-		go app.ConfirmAnchor(btcmsg)
+		go app.Anchor.ConfirmAnchor(btcmsg)
 		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
 		delRes := app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {

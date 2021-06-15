@@ -16,7 +16,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/libs/kv"
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 // incrementTxInt: Helper method to increment transaction integer
@@ -217,41 +216,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	return resp
 }
 
-// GetTxRange gets all CAL TXs within a particular range
-func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
-	if maxTxInt <= minTxInt {
-		return nil, errors.New("max of tx range is less than or equal to min")
-	}
-	Txs := []core_types.ResultTx{}
-	for i := minTxInt; i <= maxTxInt; i++ {
-		txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", i), false, 1, 1, "")
-		if err != nil {
-			return nil, err
-		} else if txResult.TotalCount > 0 {
-			for _, tx := range txResult.Txs {
-				Txs = append(Txs, *tx)
-			}
-		}
-	}
-	return Txs, nil
-}
-
-//getAnchoringCore : gets core to whom last anchor is attributed
-func (app *AnchorApplication) getAnchoringCore(queryLine string) (string, error) {
-	app.logger.Info("StartAnchoring confirmation query: " + queryLine)
-	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
-	if app.LogError(err) == nil {
-		for _, tx := range txResult.Txs {
-			decoded, err := util.DecodeTx(tx.Tx)
-			if app.LogError(err) != nil {
-				continue
-			}
-			return decoded.CoreID, nil
-		}
-	}
-	return "", err
-}
-
 // getAllJWKs gets all JWK TXs
 func (app *AnchorApplication) getAllJWKs() ([]types.Tx, error) {
 	Txs := []types.Tx{}
@@ -268,17 +232,4 @@ func (app *AnchorApplication) getAllJWKs() ([]types.Tx, error) {
 		}
 	}
 	return Txs, nil
-}
-
-// GetBTCCTx: retrieves and verifies existence of btcc tx
-func (app *AnchorApplication) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
-	btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
-	txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25, "")
-	if app.LogError(err) == nil {
-		for _, tx := range txResult.Txs {
-			hash = tx.Hash
-			app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
-		}
-	}
-	return hash
 }
