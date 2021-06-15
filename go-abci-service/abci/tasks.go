@@ -1,29 +1,15 @@
 package abci
 
 import (
-	"bytes"
-	"context"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
+
 	fee2 "github.com/chainpoint/chainpoint-core/go-abci-service/fee"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
-	"github.com/lightningnetwork/lnd/lnrpc"
-	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-
 	beacon "github.com/chainpoint/chainpoint-core/go-abci-service/beacon"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 )
 
 const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
@@ -56,7 +42,7 @@ func (app *AnchorApplication) SyncMonitor() {
 			if app.LogError(err) != nil {
 				continue
 			}
-			cores := validation.GetLastNSubmitters(128, app.state) //get Active cores on network
+			cores := validation.GetLastNSubmitters(128, *app.state) //get Active cores on network
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
 			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by validators
 			app.state.Validators = validators.Validators
@@ -70,32 +56,6 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.state.ChainSynced = true
 		}
 	}
-}
-
-//BlockSyncMonitor : maintains unlock of wallet while abci is running, updates height, runs confirmation loop
-func (app *AnchorApplication) BlockSyncMonitor() {
-	app.logger.Info("Starting LND Monitor...")
-	app.LnClient.Unlocker()
-	state, err := app.LnClient.GetInfo()
-	if app.LogError(err) == nil {
-		app.state.LNState = *state
-		app.logger.Info(fmt.Sprintf("LND state retrieved currHeight: %d vs newHeight: %d", app.state.BtcHeight, app.state.LNState.BlockHeight))
-		if app.state.BtcHeight != int64(app.state.LNState.BlockHeight) {
-			app.logger.Info("New Blocks detected from LND")
-			currBlockHeightInt64 := int64(app.state.LNState.BlockHeight)
-			isSynced := currBlockHeightInt64-app.state.BtcHeight < 36 // core should have a gap of less than 6 hours
-			if currBlockHeightInt64 != 0 && isSynced {
-				app.logger.Info("Monitoring Blocks from LND for Txs")
-				err = app.MonitorBlocksForConfirmation(app.state.BtcHeight, currBlockHeightInt64)
-				if app.LogError(err) != nil {
-					return
-				}
-			}
-			app.state.BtcHeight = int64(app.state.LNState.BlockHeight)
-			app.logger.Info(fmt.Sprintf("New BTC Block %d", app.state.BtcHeight))
-		}
-	}
-	app.logger.Info("Finished LND Monitor")
 }
 
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
@@ -197,7 +157,7 @@ func (app *AnchorApplication) BeaconMonitor() {
 func (app *AnchorApplication) FeeMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 && app.state.Height-app.state.LastBtcFeeHeight >= app.config.FeeInterval {
-		if leader, leaders := app.ElectValidatorAsLeader(1, []string{}, app.state, app.config); leader {
+		if leader, leaders := ElectValidatorAsLeader(1, []string{}, *app.state, app.config); leader {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
 			fee, err := app.LnClient.GetLndFeeEstimate()
@@ -222,236 +182,3 @@ func (app *AnchorApplication) FeeMonitor() {
 	}
 }
 
-func (app *AnchorApplication) CheckAnchor(btcmsg types.BtcTxMsg) error {
-	btcBodyBytes, _ := hex.DecodeString(btcmsg.BtcTxBody)
-	var msgTx wire.MsgTx
-	msgTx.DeserializeNoWitness(bytes.NewReader(btcBodyBytes))
-	b := txscript.NewScriptBuilder()
-	b.AddOp(txscript.OP_RETURN)
-	rootBytes, _ := hex.DecodeString(btcmsg.AnchorBtcAggRoot)
-	b.AddData(rootBytes)
-	outputScript, err := b.Script()
-	if app.LogError(err) != nil {
-		return err
-	}
-	for _, out := range msgTx.TxOut {
-		if bytes.Compare(out.PkScript, outputScript) == 0 && msgTx.TxHash().String() == btcmsg.BtcTxID {
-			app.logger.Info(fmt.Sprintf("BTC-A %s confirmed", btcmsg.BtcTxID))
-			return nil
-		}
-		app.logger.Info(fmt.Sprintf("BTC-A Confirmation loop %s != %s", btcmsg.BtcTxID, msgTx.TxHash().String()))
-	}
-	return errors.New("unable to verify BTC-A")
-}
-
-//FailedAnchorMonitor: ensures transactions reach btc chain within certain time limit
-func (app *AnchorApplication) FailedAnchorMonitor() {
-	if app.state.LNState.BlockHeight == 0 {
-		app.logger.Info("BTC Height record is 0, waiting for update from btc chain...")
-		return
-	}
-	btcHeight := int64(app.state.LNState.BlockHeight)
-	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
-	if app.LogError(checkResults.Err()) != nil {
-		return
-	}
-	//iterate through pending tx looking for timeouts
-	for _, s := range checkResults.Val() {
-		var anchor types.AnchorRange
-		if app.LogError(json.Unmarshal([]byte(s), &anchor)) != nil {
-			app.logger.Error("cannot unmarshal json for Failed BTC check")
-			continue
-		}
-		app.logger.Info(fmt.Sprintf("Checking root %s at %d for failure", anchor.AnchorBtcAggRoot, anchor.BtcBlockHeight))
-		//A core reported a lack of balance for anchoring
-		if anchor.AnchorBtcAggRoot == app.state.LastErrorCoreID {
-			app.logger.Info(fmt.Sprintf("BTC-E for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
-			delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-			if app.LogError(delRes.Err()) != nil {
-				continue
-			}
-			app.ResetAnchor(anchor.BeginCalTxInt)
-			continue
-		}
-		hasBeen10CalBlocks := app.state.Height-anchor.CalBlockHeight > 10
-		hasBeen3BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(3)
-		hasBeen144BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(144)
-
-		confirmed, confirmedTx := app.IsInConfirmedTxs(anchor.AnchorBtcAggRoot) // Is this a confirmed tx (all cores)?
-		mempoolButNoBlock := confirmed && confirmedTx.BlockHeight == 0
-
-		// if our tx is in the mempool but late, rbf
-		if hasBeen3BtcBlocks && mempoolButNoBlock {
-			if hasBeen144BtcBlocks {
-				app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-			}
-			if anchor.AmLeader {
-				app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-				newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.config.FeeMultiplier)
-				_, err := app.LnClient.ReplaceByFee(confirmedTx.TxID, false, int(newFee))
-				if app.LogError(err) != nil {
-					continue
-				}
-				app.logger.Info("RBF Success for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-				//Remove old anchor check
-				app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-				//Add new anchor check
-				anchor.BtcBlockHeight = btcHeight // give ourselves extra time
-				failedAnchorJSON, _ := json.Marshal(anchor)
-				app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
-			}
-		}
-		if hasBeen10CalBlocks && !confirmed { // if we have no confirmation of mempool inclusion after 10 minutes
-			// this usually means there's something seriously wrong with LND
-			app.logger.Info("StartAnchoring Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", confirmedTx.TxID)
-			// if there are subsequent anchors, we try to re-anchor just that range, else reset for a new anchor period
-			if len(confirmedTx.TxID) == 0 {
-				app.logger.Info("no tx for this root")
-			} else if app.state.EndCalTxInt > anchor.EndCalTxInt {
-				go app.Anchor.AnchorToChain(anchor.BeginCalTxInt, anchor.EndCalTxInt)
-			} else {
-				app.ResetAnchor(anchor.BeginCalTxInt)
-			}
-			app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
-
-		}
-	}
-}
-
-
-
-func (app *AnchorApplication) IsInConfirmedTxs(anchorRoot string) (bool, types.TxID) {
-	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
-	if app.LogError(results.Err()) != nil {
-		return false, types.TxID{}
-	}
-	for _, s := range results.Val() {
-		var tx types.TxID
-		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
-			continue
-		}
-		if tx.AnchorBtcAggRoot == anchorRoot {
-			return true, tx
-		}
-	}
-	return false, types.TxID{}
-}
-
-// MonitorConfirmedTx : Begins anchor confirmation process when a Tx is in the mempool
-func (app *AnchorApplication) MonitorConfirmedTx() {
-	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
-	if app.LogError(results.Err()) != nil {
-		return
-	}
-	for _, s := range results.Val() {
-		app.logger.Info(fmt.Sprintf("Checking confirmed btc tx %s", s))
-		var tx types.TxID
-		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
-			continue
-		}
-		if tx.BlockHeight == 0 {
-			app.logger.Info(fmt.Sprintf("btc tx %s not yet in block", s))
-			continue
-		}
-		confirmCount := app.state.BtcHeight - tx.BlockHeight + 1
-		if confirmCount < 6 {
-			app.logger.Info(fmt.Sprintf("btc tx %s at %d confirmations", s, confirmCount))
-			continue
-		}
-		block, tree, txIndex, err := app.GetBlockTree(tx)
-		if app.LogError(err) != nil {
-			if strings.Contains(err.Error(), "not found in block") {
-				app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
-			}
-			continue
-		}
-		var btcmsg types.BtcMonMsg
-		btcmsg.BtcTxID = tx.TxID
-		btcmsg.BtcHeadHeight = tx.BlockHeight
-		btcmsg.BtcHeadRoot = util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot))
-		proofs := tree.GetProof(txIndex)
-		jsproofs := make([]types.JSProof, len(proofs))
-		for i, proof := range proofs {
-			if proof.Left {
-				jsproofs[i] = types.JSProof{Left: hex.EncodeToString(proof.Value)}
-			} else {
-				jsproofs[i] = types.JSProof{Right: hex.EncodeToString(proof.Value)}
-			}
-		}
-		btcmsg.Path = jsproofs
-		go app.Anchor.ConfirmAnchor(btcmsg)
-		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
-		delRes := app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
-		if app.LogError(delRes.Err()) != nil {
-			continue
-		}
-	}
-}
-
-// GetBlockTree : constructs block merkel tree with transaction as index
-func (app *AnchorApplication) GetBlockTree(btcTx types.TxID) (lnrpc.BlockDetails, merkletools.MerkleTree, int, error) {
-	block, err := app.LnClient.GetBlockByHeight(btcTx.BlockHeight)
-	if app.LogError(err) != nil {
-		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, err
-	}
-	var tree merkletools.MerkleTree
-	txIndex := -1
-	for i, t := range block.Transactions {
-		if t == btcTx.TxID {
-			txIndex = i
-		}
-		tx := util.ReverseTxHex(t)
-		hexTx, _ := hex.DecodeString(tx)
-		tree.AddLeaf(hexTx)
-	}
-	if txIndex == -1 {
-		return lnrpc.BlockDetails{}, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("Transaction %s not found in block %d", btcTx.TxID, btcTx.BlockHeight))
-	}
-	tree.MakeBTCTree()
-	root := tree.GetMerkleRoot()
-	reversedRoot := util.ReverseTxHex(hex.EncodeToString(root))
-	reversedRootBytes, _ := hex.DecodeString(reversedRoot)
-	reversedMerkleRoot, _ := hex.DecodeString(util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot)))
-	if !bytes.Equal(reversedRootBytes, reversedMerkleRoot) {
-		return block, merkletools.MerkleTree{}, -1, errors.New(fmt.Sprintf("%s does not equal block merkle root %s", hex.EncodeToString(reversedRootBytes), hex.EncodeToString(block.MerkleRoot)))
-	}
-	return block, tree, txIndex, nil
-}
-
-// MonitorBlocksForConfirmation : since LND can't retrieve confirmed Txs, search block by block
-func (app *AnchorApplication) MonitorBlocksForConfirmation(startHeight int64, endHeight int64) error {
-	confirmationTxs := make([]types.TxID, 0)
-	txsIdStrings := make([]string, 0)
-	txsStrings := make([]string, 0)
-	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
-	for _, s := range results.Val() {
-		var tx types.TxID
-		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
-			continue
-		}
-		if tx.BlockHeight != 0 {
-			continue
-		}
-		confirmationTxs = append(confirmationTxs, tx)
-		txsIdStrings = append(txsIdStrings, tx.TxID)
-		txsStrings = append(txsStrings, s)
-	}
-	for i := startHeight; i < endHeight+1; i++ {
-		block, err := app.LnClient.GetBlockByHeight(i)
-		if app.LogError(err) != nil {
-			return err
-		}
-		for _, t := range block.Transactions {
-			if contains, index := util.ArrayContainsIndex(txsIdStrings, t); contains {
-				confirmationTx := txsStrings[index]
-				tx := confirmationTxs[index]
-				app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, confirmationTx)
-				tx.BlockHeight = i
-				txIDBytes, _ := json.Marshal(tx)
-				app.RedisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
-				app.logger.Info(fmt.Sprintf("Found tx %s in block %d", tx.TxID, i))
-			}
-		}
-	}
-	return nil
-}

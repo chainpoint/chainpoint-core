@@ -209,6 +209,14 @@
   version = "v0.1.0"
 
 [[projects]]
+  digest = "1:6ad39535d79b99465204d488a683f6d04c0f784422e70969b2ed59edf77342c9"
+  name = "github.com/enriquebris/goconcurrentqueue"
+  packages = ["."]
+  pruneopts = ""
+  revision = "dfa38a073c54ff28d525229c234049181a8fa9f0"
+  version = "v0.6.0"
+
+[[projects]]
   digest = "1:988feb3d21be75c16b9d45d824d64534e346664ebbcae38eee5e0085415dc242"
   name = "github.com/etcd-io/bbolt"
   packages = ["."]
@@ -1223,17 +1231,6 @@
   version = "v2.1.0"
 
 [[projects]]
-  digest = "1:7d897a9344f0392e5b211b2b4bf4f2995fa42c4ffe2c3a48efbf9c600173fd2e"
-  name = "gopkg.in/throttled/throttled.v2"
-  packages = [
-    ".",
-    "store/memstore",
-  ]
-  pruneopts = ""
-  revision = "b5675e93f9d999b22f92d859a5bf2138d3641af4"
-  version = "v2.0.3"
-
-[[projects]]
   digest = "1:43eca683d801087f3acacfd036474638bc5e293ff6078758d710d99c40ec3f7c"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -1254,6 +1251,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/btcsuite/btcd/blockchain",
+    "github.com/btcsuite/btcd/chaincfg",
     "github.com/btcsuite/btcd/txscript",
     "github.com/btcsuite/btcd/wire",
     "github.com/btcsuite/btcutil",
@@ -1261,6 +1259,7 @@
     "github.com/drand/drand/client",
     "github.com/drand/drand/client/grpc",
     "github.com/drand/drand/key",
+    "github.com/enriquebris/goconcurrentqueue",
     "github.com/ethereum/go-ethereum/common",
     "github.com/go-redis/redis",
     "github.com/google/uuid",
@@ -1299,8 +1298,6 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/credentials",
     "gopkg.in/macaroon.v2",
-    "gopkg.in/throttled/throttled.v2",
-    "gopkg.in/throttled/throttled.v2/store/memstore",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

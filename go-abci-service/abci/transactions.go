@@ -29,7 +29,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	var err error
 	var valid bool
 	if app.state.ChainSynced {
-		tx, valid, err = validation.Validate(rawTx, &app.state)
+		tx, valid, err = validation.Validate(rawTx, app.state)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 		valid = true
@@ -46,7 +46,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
-		if matchErr := app.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
+		if matchErr := app.Anchor.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
 	}
@@ -62,15 +62,15 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 			amVal, _ := app.IsValidator(app.ID)
 			isSubmitterVal, _ := app.IsValidator(tx.CoreID)
 			if !isSubmitterVal {
-				if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, app.state); err != nil {
+				if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
 					submitterRecord.UnAuthValSubmissions++
-					validation.SetValidationRecord(tx.CoreID, submitterRecord, &app.state)
+					validation.SetValidationRecord(tx.CoreID, submitterRecord, app.state)
 				}
 			}
 			id := components[0]
 			if amVal {
 				goodCandidate := false
-				if _, record, err := validation.GetValidationRecord(id, app.state); err != nil {
+				if _, record, err := validation.GetValidationRecord(id, *app.state); err != nil {
 					numValidators := len(app.state.Validators)
 					power, err := strconv.ParseInt(components[2], 10, 32)
 					if err != nil {
@@ -144,7 +144,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		//Begin monitoring using the data contained in this transaction
 		if app.state.ChainSynced {
-			go app.BeginTxMonitor([]byte(tx.Data))
+			go app.Anchor.BeginTxMonitor([]byte(tx.Data))
 			app.logger.Info(fmt.Sprintf("BTC-A StartAnchoring Data: %s", tx.Data))
 		} else {
 			app.state.BeginCalTxInt = btca.EndCalTxInt
@@ -174,7 +174,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 			if app.state.ChainSynced {
 				go app.AnchorReward(app.state.LastAnchorCoreID)
 			}
-			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, &app.state)
+			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, app.state)
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break

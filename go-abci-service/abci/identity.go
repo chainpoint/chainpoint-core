@@ -29,7 +29,7 @@ func (app *AnchorApplication) SendIdentity() error {
 	uri := resp.Uris[0]
 	lnID := types.LnIdentity{
 		Peer:            uri,
-		RequiredChanAmt: app.LnClient.LocalSats,
+		RequiredChanAmt: app.state.LnStakePerVal,
 	}
 	lnIDBytes, err := json.Marshal(lnID)
 	if app.LogError(err) != nil {
@@ -139,7 +139,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return true
 		}
 		app.logger.Info("JWK Identity: Checking Channel Funding")
-		chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.LnClient.LocalSats)
+		chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.state.LnStakePerVal)
 		if app.LogError(err) == nil && chanExists {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true

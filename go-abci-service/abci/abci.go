@@ -229,7 +229,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	}
 
 	// Ensure LND Wallet stays unlocked
-	go app.BlockSyncMonitor()
+	go app.Anchor.BlockSyncMonitor()
 
 	// Load JWK into local mapping from redis
 	app.LoadIdentity()
@@ -345,9 +345,9 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
 		go func() {
-			app.BlockSyncMonitor()
-			app.MonitorConfirmedTx()
-			app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+			app.Anchor.BlockSyncMonitor()
+			app.Anchor.MonitorConfirmedTx()
+			app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
 		}()
 		go app.PgClient.PruneProofStateTables()
 	}
