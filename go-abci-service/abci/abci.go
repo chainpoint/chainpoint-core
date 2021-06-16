@@ -192,6 +192,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		tendermintRpc: rpcClient,
 		PgClient:      pgClient,
 		RedisClient:   redisClient,
+		LnClient:      &config.LightningConfig,
 		logger:        *config.Logger,
 	}
 
