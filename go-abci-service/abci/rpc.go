@@ -143,7 +143,7 @@ func (rpc *RPC) GetGenesis() (core_types.ResultGenesis, error) {
 }
 
 // GetTxRange gets all CAL TXs within a particular range
-func (rpc *RPC) getCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
+func (rpc *RPC) GetCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
 	if maxTxInt <= minTxInt {
 		return nil, errors.New("max of tx range is less than or equal to min")
 	}
@@ -161,8 +161,8 @@ func (rpc *RPC) getCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.Resu
 	return Txs, nil
 }
 
-//getAnchoringCore : gets core to whom last anchor is attributed
-func (rpc *RPC) getAnchoringCore(queryLine string) (string, error) {
+//GetAnchoringCore : gets core to whom last anchor is attributed
+func (rpc *RPC) GetAnchoringCore(queryLine string) (string, error) {
 	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 25, "")
 	if rpc.LogError(err) == nil {
 		for _, tx := range txResult.Txs {

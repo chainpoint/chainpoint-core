@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor/bitcoin"
 	"github.com/chainpoint/tendermint/abci/example/code"
 	"net"
 	"path"
@@ -79,7 +81,7 @@ type AnchorApplication struct {
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string
 	Db                   dbm.DB
-	Anchor               AnchorEngine
+	Anchor               anchor.AnchorEngine
 	state                *types.AnchorState
 	config               types.AnchorConfig
 	logger               log.Logger
@@ -186,15 +188,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	rpcClient := NewRPCClient(config.TendermintConfig, *config.Logger)
 
-	var anchorEngine AnchorEngine = &AnchorBTC{
-		state:         state,
-		config:        config,
-		tendermintRpc: rpcClient,
-		PgClient:      pgClient,
-		RedisClient:   redisClient,
-		LnClient:      &config.LightningConfig,
-		logger:        *config.Logger,
-	}
+	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, redisClient, &config.LightningConfig, *config.Logger)
+
 
 
 	//Construct application

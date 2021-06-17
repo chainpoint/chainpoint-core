@@ -1,4 +1,4 @@
-package abci
+package anchor
 
 import "github.com/chainpoint/chainpoint-core/go-abci-service/types"
 
