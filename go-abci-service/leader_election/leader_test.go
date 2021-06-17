@@ -1,4 +1,4 @@
-package abci
+package leader_election
 
 import (
 	"testing"

@@ -12,6 +12,8 @@ type AnchorEngine interface {
 
 	ConfirmAnchor(btcMonObj types.BtcMonMsg) (error)
 
+	AnchorReward(CoreID string) error
+
 	BlockSyncMonitor()
 
 	FailedAnchorMonitor()

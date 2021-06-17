@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 	"strconv"
 	"strings"
 
@@ -59,8 +60,8 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	if tx.TxType == "VAL" {
 		components := strings.Split(tx.Data, "!")
 		if len(components) == 3 {
-			amVal, _ := app.IsValidator(app.ID)
-			isSubmitterVal, _ := app.IsValidator(tx.CoreID)
+			amVal, _ := leader_election.IsValidator(*app.state, app.ID)
+			isSubmitterVal, _ := leader_election.IsValidator(*app.state, tx.CoreID)
 			if !isSubmitterVal {
 				if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
 					submitterRecord.UnAuthValSubmissions++
@@ -172,7 +173,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		if len(meta) > 0 {
 			app.state.LastAnchorCoreID = meta[0]
 			if app.state.ChainSynced {
-				go app.AnchorReward(app.state.LastAnchorCoreID)
+				go app.Anchor.AnchorReward(app.state.LastAnchorCoreID)
 			}
 			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, app.state)
 		}
@@ -214,22 +215,4 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	}
 	resp.Events = events
 	return resp
-}
-
-// getAllJWKs gets all JWK TXs
-func (app *AnchorApplication) getAllJWKs() ([]types.Tx, error) {
-	Txs := []types.Tx{}
-	txResult, err := app.rpc.client.TxSearch("JWK.CORE='NEW'", false, 1, 200, "")
-	if err != nil {
-		return nil, err
-	} else if txResult.TotalCount > 0 {
-		app.logger.Info(fmt.Sprintf("Found %d JWK tx while loading", txResult.TotalCount))
-		for _, tx := range txResult.Txs {
-			decoded, err := util.DecodeTx(tx.Tx)
-			if app.LogError(err) == nil {
-				Txs = append(Txs, decoded)
-			}
-		}
-	}
-	return Txs, nil
 }

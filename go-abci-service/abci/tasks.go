@@ -2,6 +2,7 @@ package abci
 
 import (
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 
 	fee2 "github.com/chainpoint/chainpoint-core/go-abci-service/fee"
 	"strconv"
@@ -12,8 +13,6 @@ import (
 	beacon "github.com/chainpoint/chainpoint-core/go-abci-service/beacon"
 )
 
-const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
-const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
 const STATIC_FEE_AMT = 40000 // 12500 // 60k amounts to 240 sat/vbyte
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
@@ -81,7 +80,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.logger.Info("Chain not synced, restarting staking loop...")
 			continue
 		}
-		amValidator, err := app.AmValidator()
+		amValidator, err := leader_election.AmValidator(*app.state)
 		if app.LogError(err) != nil {
 			app.logger.Info("Cannot determin validators, restarting staking loop...")
 			continue
@@ -157,7 +156,7 @@ func (app *AnchorApplication) BeaconMonitor() {
 func (app *AnchorApplication) FeeMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 && app.state.Height-app.state.LastBtcFeeHeight >= app.config.FeeInterval {
-		if leader, leaders := ElectValidatorAsLeader(1, []string{}, *app.state, app.config); leader {
+		if leader, leaders := leader_election.ElectValidatorAsLeader(1, []string{}, *app.state, app.config); leader {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
 			fee, err := app.LnClient.GetLndFeeEstimate()

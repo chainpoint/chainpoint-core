@@ -1,4 +1,4 @@
-package abci
+package leader_election
 
 import (
 	"errors"
@@ -167,12 +167,12 @@ func GetSortedValidatorList(validators []*types.Validator) []types.Validator {
 }
 
 // GetPeers : get list of all peers
-func (app *AnchorApplication) GetPeers() []core_types.Peer {
-	if app.ID == "" {
+func GetPeers(state types2.AnchorState, tmState core_types.ResultStatus, tmNetInfo core_types.ResultNetInfo) []core_types.Peer {
+	if state.ID == "" {
 		return []core_types.Peer{}
 	}
 
-	peers := GetSortedPeerList(app.state.TMState, app.state.TMNetInfo)
+	peers := GetSortedPeerList(tmState, tmNetInfo)
 	return peers
 }
 
@@ -239,12 +239,12 @@ func determineLeader(numLeaders int, blacklistedIDs []string, status core_types.
 }
 
 // AmValidator : determines if this node is a validator, without needing to load an ID from elsewhere
-func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
-	if app.ID == "" {
+func AmValidator(state types2.AnchorState) (amValidator bool, err error) {
+	if state.ID == "" {
 		return false, errors.New("status unintialized")
 	}
-	status := app.state.TMState
-	for _, validator := range app.state.Validators {
+	status := state.TMState
+	for _, validator := range state.Validators {
 		if validator.Address.String() == status.ValidatorInfo.Address.String() {
 			return true, nil
 		}
@@ -253,8 +253,8 @@ func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
 }
 
 //IsValidator : determines if a node is a validator by checking an external ID
-func (app *AnchorApplication) IsValidator(ID string) (amValidator bool, err error) {
-	for _, validator := range app.state.Validators {
+func IsValidator(state types2.AnchorState, ID string) (amValidator bool, err error) {
+	for _, validator := range state.Validators {
 		if validator.Address.String() == ID {
 			return true, nil
 		}

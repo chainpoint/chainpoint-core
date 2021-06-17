@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -21,10 +22,9 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
 
+	"github.com/didip/tollbooth"
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
-	"github.com/didip/tollbooth"
-
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -312,7 +312,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 					TMServer: peerIP,
 					TMPort:   "26657",
 				}
-				rpc := abci.NewRPCClient(peerRPC, logger)
+				rpc := tendermint_rpc.NewRPCClient(peerRPC, logger)
 				// Pull and save genesis file
 				genesis, err := rpc.GetGenesis()
 				if err == nil {

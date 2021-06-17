@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/blake2s"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -288,7 +289,7 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request) {
-	peers := app.GetPeers()
+	peers := leader_election.GetPeers(*app.state, app.state.TMState, app.state.TMNetInfo)
 	peerList := []string{}
 	for _, peer := range peers {
 		var finalIp string

@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
@@ -25,17 +26,20 @@ import (
 	"time"
 )
 
+const CONFIRMED_BTC_TX_IDS_KEY = "BTC_Mon:ConfirmedBTCTxIds"
+const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
+
 type AnchorBTC struct {
 	state         *types.AnchorState
 	config        types.AnchorConfig
-	tendermintRpc *abci.RPC
+	tendermintRpc *tendermint_rpc.RPC
 	PgClient      *postgres.Postgres
 	RedisClient   *redis.Client
 	LnClient      *lightning.LnClient
 	logger        log.Logger
 }
 
-func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *abci.RPC,
+func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
 	PgClient *postgres.Postgres, RedisClient *redis.Client, LnClient *lightning.LnClient, logger log.Logger) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
@@ -66,7 +70,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 	if app.config.ElectionMode == "test" {
 		app.state.LastErrorCoreID = ""
 	}
-	iAmLeader, leaderIDs := abci.ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID}, *app.state)
+	iAmLeader, leaderIDs := leader_election.ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID}, *app.state)
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
@@ -112,7 +116,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 			AmLeader:         iAmLeader,
 		}
 		failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
-		redisResult := app.RedisClient.WithContext(context.Background()).SAdd(abci.CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+		redisResult := app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 		if app.LogError(redisResult.Err()) != nil {
 			return redisResult.Err()
 		}
@@ -189,7 +193,7 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 	}
 
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, AnchorBtcAggRoot: btcTxObj.AnchorBtcAggRoot})
-	result := app.RedisClient.WithContext(context.Background()).SAdd(abci.CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	result := app.RedisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
@@ -237,7 +241,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 		//only start BTC-C leader election process if someone else hasn't
 		if btcMonObj.BtcHeadRoot != string(app.state.LatestBtccTx) {
 			// Broadcast the confirmation message with metadata
-			amLeader, _ := abci.ElectValidatorAsLeader(1, []string{anchoringCoreID}, *app.state, app.config)
+			amLeader, _ := leader_election.ElectValidatorAsLeader(1, []string{anchoringCoreID}, *app.state, app.config)
 			if amLeader {
 				result, err := app.tendermintRpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.state.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
 				app.LogError(err)
@@ -348,7 +352,7 @@ func (app *AnchorBTC) LogError(err error) error {
 
 //FindAndRemoveBtcCheck : remove all checks in case of btc tx failure
 func (app *AnchorBTC) FindAndRemoveBtcCheck(aggRoot string) error {
-	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(abci.CHECK_BTC_TX_IDS_KEY)
+	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(checkResults.Err()) != nil {
 		return checkResults.Err()
 	}
@@ -361,7 +365,7 @@ func (app *AnchorBTC) FindAndRemoveBtcCheck(aggRoot string) error {
 		if anchor.AnchorBtcAggRoot != aggRoot {
 			continue
 		}
-		delRes := app.RedisClient.WithContext(context.Background()).SRem(abci.CHECK_BTC_TX_IDS_KEY, s)
+		delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			return delRes.Err()
 		}
@@ -424,7 +428,7 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 		return
 	}
 	btcHeight := int64(app.state.LNState.BlockHeight)
-	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(abci.CHECK_BTC_TX_IDS_KEY)
+	checkResults := app.RedisClient.WithContext(context.Background()).SMembers(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(checkResults.Err()) != nil {
 		return
 	}
@@ -439,7 +443,7 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 		//A core reported a lack of balance for anchoring
 		if anchor.AnchorBtcAggRoot == app.state.LastErrorCoreID {
 			app.logger.Info(fmt.Sprintf("BTC-E for aggroot %s from cal range %d to %d", anchor.AnchorBtcAggRoot, anchor.BeginCalTxInt, anchor.EndCalTxInt))
-			delRes := app.RedisClient.WithContext(context.Background()).SRem(abci.CHECK_BTC_TX_IDS_KEY, s)
+			delRes := app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			if app.LogError(delRes.Err()) != nil {
 				continue
 			}
@@ -456,7 +460,7 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 		// if our tx is in the mempool but late, rbf
 		if hasBeen3BtcBlocks && mempoolButNoBlock {
 			if hasBeen144BtcBlocks {
-				app.RedisClient.WithContext(context.Background()).SRem(abci.CHECK_BTC_TX_IDS_KEY, s)
+				app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 			}
 			if anchor.AmLeader {
 				app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
@@ -467,11 +471,11 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 				}
 				app.logger.Info("RBF Success for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 				//Remove old anchor check
-				app.RedisClient.WithContext(context.Background()).SRem(abci.CHECK_BTC_TX_IDS_KEY, s)
+				app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 				//Add new anchor check
 				anchor.BtcBlockHeight = btcHeight // give ourselves extra time
 				failedAnchorJSON, _ := json.Marshal(anchor)
-				app.RedisClient.WithContext(context.Background()).SAdd(abci.CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+				app.RedisClient.WithContext(context.Background()).SAdd(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 			}
 		}
 		if hasBeen10CalBlocks && !confirmed { // if we have no confirmation of mempool inclusion after 10 minutes
@@ -485,14 +489,14 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 			} else {
 				app.ResetAnchor(anchor.BeginCalTxInt)
 			}
-			app.RedisClient.WithContext(context.Background()).SRem(abci.CHECK_BTC_TX_IDS_KEY, s)
+			app.RedisClient.WithContext(context.Background()).SRem(CHECK_BTC_TX_IDS_KEY, s)
 
 		}
 	}
 }
 
 func (app *AnchorBTC) IsInConfirmedTxs(anchorRoot string) (bool, types.TxID) {
-	results := app.RedisClient.WithContext(context.Background()).SMembers(abci.CONFIRMED_BTC_TX_IDS_KEY)
+	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return false, types.TxID{}
 	}
@@ -510,7 +514,7 @@ func (app *AnchorBTC) IsInConfirmedTxs(anchorRoot string) (bool, types.TxID) {
 
 // MonitorConfirmedTx : Begins anchor confirmation process when a Tx is in the mempool
 func (app *AnchorBTC) MonitorConfirmedTx() {
-	results := app.RedisClient.WithContext(context.Background()).SMembers(abci.CONFIRMED_BTC_TX_IDS_KEY)
+	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(results.Err()) != nil {
 		return
 	}
@@ -532,7 +536,7 @@ func (app *AnchorBTC) MonitorConfirmedTx() {
 		block, tree, txIndex, err := app.GetBlockTree(tx)
 		if app.LogError(err) != nil {
 			if strings.Contains(err.Error(), "not found in block") {
-				app.RedisClient.WithContext(context.Background()).SRem(abci.CONFIRMED_BTC_TX_IDS_KEY, s)
+				app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 			}
 			continue
 		}
@@ -552,7 +556,7 @@ func (app *AnchorBTC) MonitorConfirmedTx() {
 		btcmsg.Path = jsproofs
 		go app.ConfirmAnchor(btcmsg)
 		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
-		delRes := app.RedisClient.WithContext(context.Background()).SRem(abci.CONFIRMED_BTC_TX_IDS_KEY, s)
+		delRes := app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, s)
 		if app.LogError(delRes.Err()) != nil {
 			continue
 		}
@@ -594,7 +598,7 @@ func (app *AnchorBTC) MonitorBlocksForConfirmation(startHeight int64, endHeight 
 	confirmationTxs := make([]types.TxID, 0)
 	txsIdStrings := make([]string, 0)
 	txsStrings := make([]string, 0)
-	results := app.RedisClient.WithContext(context.Background()).SMembers(abci.CONFIRMED_BTC_TX_IDS_KEY)
+	results := app.RedisClient.WithContext(context.Background()).SMembers(CONFIRMED_BTC_TX_IDS_KEY)
 	for _, s := range results.Val() {
 		var tx types.TxID
 		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
@@ -616,10 +620,10 @@ func (app *AnchorBTC) MonitorBlocksForConfirmation(startHeight int64, endHeight 
 			if contains, index := util.ArrayContainsIndex(txsIdStrings, t); contains {
 				confirmationTx := txsStrings[index]
 				tx := confirmationTxs[index]
-				app.RedisClient.WithContext(context.Background()).SRem(abci.CONFIRMED_BTC_TX_IDS_KEY, confirmationTx)
+				app.RedisClient.WithContext(context.Background()).SRem(CONFIRMED_BTC_TX_IDS_KEY, confirmationTx)
 				tx.BlockHeight = i
 				txIDBytes, _ := json.Marshal(tx)
-				app.RedisClient.WithContext(context.Background()).SAdd(abci.CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+				app.RedisClient.WithContext(context.Background()).SAdd(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 				app.logger.Info(fmt.Sprintf("Found tx %s in block %d", tx.TxID, i))
 			}
 		}

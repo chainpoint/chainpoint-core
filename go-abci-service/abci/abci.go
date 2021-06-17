@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor/bitcoin"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/chainpoint/tendermint/abci/example/code"
 	"net"
 	"path"
@@ -89,7 +90,7 @@ type AnchorApplication struct {
 	PgClient             *postgres.Postgres
 	RedisClient          *redis.Client
 	LnClient             *lightning.LnClient
-	rpc                  *RPC
+	rpc                  *tendermint_rpc.RPC
 	ID                   string
 	JWK                  types.Jwk
 }
@@ -186,7 +187,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	jwkType := util.GenerateKey(&config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
 
-	rpcClient := NewRPCClient(config.TendermintConfig, *config.Logger)
+	rpcClient := tendermint_rpc.NewRPCClient(config.TendermintConfig, *config.Logger)
 
 	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, redisClient, &config.LightningConfig, *config.Logger)
 
