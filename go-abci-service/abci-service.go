@@ -90,7 +90,7 @@ func main() {
 
 	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
 
-	hashLimiter := tollbooth.NewLimiter(0.017, nil)
+	hashLimiter := tollbooth.NewLimiter(0.05, nil)
 	apiLimiter := tollbooth.NewLimiter(15, nil)
 	proofLimiter := tollbooth.NewLimiter(10, nil)
 
