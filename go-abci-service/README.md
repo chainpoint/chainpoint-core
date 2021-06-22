@@ -29,6 +29,27 @@ Every anchor epoch (60 minutes by default), the ABCI application is set to perfo
 - Elect a leader to anchor all hashes received since last anchor epoch by broadcasting their Merkle Root to Bitcoin via the `lnd` service. The resulting Bitcoin TX ID is placed in a BTC-A transaction and submitted to the Calendar.
 - Monitor for the confirmation of a successful anchor to Bitcoin. The resulting Bitcoin header info containing the anchor is placed in a BTC-C transaction and submitted to the Calendar.
 
+## Anchor Interface
+
+The `go-abci-service/anchor` package contains an interface which allows alternate blockchain anchor engine to be implemented. 
+Chainpoint's bitcoin anchoring implementation is included in the `bitcoin` subpackage. 
+
+Any new blockchain anchor must implement the methods in the `anchor_interface.go` file, as well as assign the new anchor to the AnchorEngine in the ABCI AnchorApplication.
+
+## Useful Packages
+
+The following packages contain `go` language utilities which may be useful in the following ways:
+
+- `lightning` : Methods for interacting with `tierion/lnd` modified lightning nodes. Most methods can also interact with the lightninglabs lnd nodes. 
+- `aggregator` : Multithreaded method of creating Merkle trees from large numbers of hashes
+- `beacon` : Retrieves timestamped entropy from the [drand](https://drand.love/) network
+- `blake2s` : Implements the [BLAKE](https://en.wikipedia.org/wiki/BLAKE_(hash_function)) hash function 
+- `fee` : Retrieves bitcoin fees from the [bitcoinerlive](https://bitcoiner.live/) service
+- `leader_election` : Methods for deterministically electing a leader from a group of Tendermint nodes
+- `merkletools` : Chainpoint Merkle tree implementation
+- `tendermint_rpc` : RPC methods for interacting with a Tendermint node
+- `util` : Various utilities for doing everything from verifying ECDSA signatures to generically finding array elements
+
 ## Troubleshooting
 
 - If the Tendermint Core crashes, it will log a `panic` message. Usually this is due to the Tendermint Core having a corrupt copy of the chain. When in doubt, don't be afraid to `make remove` and `make clean` to stop the node and delete the chainstate, then redeploy with `make deploy`. A fast-sync with the rest of the Network should fix the issue.
