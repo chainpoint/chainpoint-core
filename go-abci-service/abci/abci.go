@@ -8,7 +8,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor/bitcoin"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
-	"github.com/chainpoint/tendermint/abci/example/code"
+	"github.com/tendermint/tendermint/abci/example/code"
 	"net"
 	"path"
 	"strings"

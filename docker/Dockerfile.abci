@@ -16,8 +16,9 @@ ENV PKG_NAME=github.com/chainpoint/chainpoint-core/go-abci-service
 ENV PKG_PATH=$GOPATH/src/$PKG_NAME
 WORKDIR $PKG_PATH
 COPY go-abci-service/Gopkg.lock go-abci-service/Gopkg.toml $PKG_PATH/
+COPY go-abci-service/go.mod $PKG_PATH/
 ADD go-abci-service $PKG_PATH
-RUN dep ensure
+RUN go mod download
 RUN make install
 RUN mkdir -p /root/.lnd
 RUN chmod -R 777 /root
