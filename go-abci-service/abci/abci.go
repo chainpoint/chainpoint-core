@@ -5,7 +5,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/chainpoint/tendermint/abci/example/code"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor/bitcoin"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
+	"github.com/tendermint/tendermint/abci/example/code"
 	"net"
 	"path"
 	"strings"
@@ -24,7 +27,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	types2 "github.com/tendermint/tendermint/abci/types"
@@ -80,15 +82,15 @@ type AnchorApplication struct {
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string
 	Db                   dbm.DB
-	state                types.AnchorState
+	Anchor               anchor.AnchorEngine
+	state                *types.AnchorState
 	config               types.AnchorConfig
 	logger               log.Logger
-	calendar             *calendar.Calendar
 	aggregator           *aggregator.Aggregator
 	PgClient             *postgres.Postgres
 	RedisClient          *redis.Client
 	LnClient             *lightning.LnClient
-	rpc                  *RPC
+	rpc                  *tendermint_rpc.RPC
 	ID                   string
 	JWK                  types.Jwk
 }
@@ -98,7 +100,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
 	db := dbm.NewDB(name, dbm.CLevelDBBackend, "/tendermint/data")
-	state := loadState(db)
+	load_state := loadState(db)
+	state := &load_state
 	if state.TxValidation == nil {
 		state.TxValidation = validation.NewTxValidationMap()
 	}
@@ -184,25 +187,29 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	jwkType := util.GenerateKey(&config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
 
+	rpcClient := tendermint_rpc.NewRPCClient(config.TendermintConfig, *config.Logger)
+
+	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, redisClient, &config.LightningConfig, *config.Logger)
+
+
+
 	//Construct application
 	app := AnchorApplication{
 		valAddrToPubKeyMap:   map[string]types2.PubKey{},
 		Db:                   db,
+		Anchor:				  anchorEngine,
 		state:                state,
 		config:               config,
 		logger:               *config.Logger,
 		NodeRewardSignatures: make([]string, 0),
 		CoreRewardSignatures: make([]string, 0),
-		calendar: &calendar.Calendar{
-			Logger: *config.Logger,
-		},
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
 		},
 		PgClient:    pgClient,
 		RedisClient: redisClient,
 		LnClient:    &config.LightningConfig,
-		rpc:         NewRPCClient(config.TendermintConfig, *config.Logger),
+		rpc:         rpcClient,
 		JWK:         jwkType,
 	}
 
@@ -219,7 +226,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	}
 
 	// Ensure LND Wallet stays unlocked
-	go app.LNDMonitor()
+	go app.Anchor.BlockSyncMonitor()
 
 	// Load JWK into local mapping from redis
 	app.LoadIdentity()
@@ -329,15 +336,15 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 		go app.BeaconMonitor() // update time beacon using deterministic leader election
 		go app.FeeMonitor()
 	}
-	// Anchor blockchain
-	app.Anchor()
+	// StartAnchoring blockchain
+	app.StartAnchoring()
 
 	// monitor confirmed tx
 	if app.state.ChainSynced && app.config.DoAnchor {
 		go func() {
-			app.LNDMonitor()
-			app.MonitorConfirmedTx()
-			app.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+			app.Anchor.BlockSyncMonitor()
+			app.Anchor.MonitorConfirmedTx()
+			app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
 		}()
 		go app.PgClient.PruneProofStateTables()
 	}
@@ -351,7 +358,7 @@ func (app *AnchorApplication) Commit() types2.ResponseCommit {
 	binary.PutVarint(appHash, app.state.Height)
 	app.state.AppHash = appHash
 	app.state.Height++
-	saveState(app.Db, app.state)
+	saveState(app.Db, *app.state)
 
 	return types2.ResponseCommit{Data: appHash}
 }
@@ -411,7 +418,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 					resQuery.Code = code.CodeTypeUnauthorized
 					return
 				}*/
-		JWKChanges, _ := validation.GetJWKChanges(coreID, &app.state)
+		JWKChanges, _ := validation.GetJWKChanges(coreID, app.state)
 		if JWKChanges > 3 {
 			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
 			resQuery.Code = code.CodeTypeUnauthorized

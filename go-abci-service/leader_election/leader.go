@@ -1,8 +1,8 @@
-package abci
+package leader_election
 
 import (
 	"errors"
-	"fmt"
+	types2 "github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 	"sort"
 
@@ -14,33 +14,31 @@ import (
 )
 
 // ElectPeerAsLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index
-func (app *AnchorApplication) ElectPeerAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
-	if app.ID == "" {
+func ElectPeerAsLeader(numLeaders int, blacklistedIDs []string, state types2.AnchorState) (isLeader bool, leaderID []string) {
+	if state.ID == "" {
 		return false, []string{}
 	}
-	blockHash := app.state.TMState.SyncInfo.LatestBlockHash.String()
-	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineLeader(numLeaders, blacklistedIDs, app.state.TMState, app.state.TMNetInfo, blockHash)
+	blockHash := state.TMState.SyncInfo.LatestBlockHash.String()
+	return determineLeader(numLeaders, blacklistedIDs, state.TMState, state.TMNetInfo, blockHash)
 }
 
 // ElectValidatorAsLeader : elect a slice of validators as a leader and return whether we're the leader
-func (app *AnchorApplication) ElectValidatorAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
-	if app.ID == "" {
+func ElectValidatorAsLeader(numLeaders int, blacklistedIDs []string, state types2.AnchorState, config types2.AnchorConfig) (isLeader bool, leaderID []string) {
+	if state.ID == "" {
 		return false, []string{}
 	}
-	blockHash := app.state.TMState.SyncInfo.LatestBlockHash.String()
-	app.logger.Info(fmt.Sprintf("Blockhash Seed: %s", blockHash))
-	return determineValidatorLeader(numLeaders, blacklistedIDs, app.state.TMState, app.state.Validators, blockHash, app.config.FilePV.GetAddress().String())
+	blockHash := state.TMState.SyncInfo.LatestBlockHash.String()
+	return determineValidatorLeader(numLeaders, blacklistedIDs, state.TMState, state.Validators, blockHash, config.FilePV.GetAddress().String())
 }
 
 // ElectChainContributedAsLeaderNaive : elects a node that's contributed to the chain without checking if its been active recently
-func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
-	if app.ID == "" {
+func ElectChainContributorAsLeaderNaive(numLeaders int, blacklistedIDs []string, state types2.AnchorState) (isLeader bool, leaderID []string) {
+	if state.ID == "" {
 		return false, []string{}
 	}
-	status := app.state.TMState
-	keys := make([]string, 0, len(app.state.CoreKeys))
-	for k := range app.state.CoreKeys {
+	status := state.TMState
+	keys := make([]string, 0, len(state.CoreKeys))
+	for k := range state.CoreKeys {
 		filtered := false
 		for _, id := range blacklistedIDs {
 			if k == id {
@@ -54,7 +52,6 @@ func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int,
 	sort.Strings(keys)
 	coreListLength := len(keys)
 	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
-	app.logger.Info(fmt.Sprintf("Leader is %d th out of %v", index, keys))
 	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)
 		return false, []string{}
@@ -66,7 +63,7 @@ func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int,
 	}
 	iAmLeader := false
 	for _, leader := range keys {
-		if leader == app.ID && !status.SyncInfo.CatchingUp {
+		if leader == state.ID && !status.SyncInfo.CatchingUp {
 			iAmLeader = true
 		}
 	}
@@ -74,15 +71,13 @@ func (app *AnchorApplication) ElectChainContributorAsLeaderNaive(numLeaders int,
 }
 
 // ElectChainContributedAsLeader : elects a node that's contributed to the chain while checking if it's submitted a NIST value recently
-func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int, blacklistedIDs []string) (isLeader bool, leaderID []string) {
-	if app.ID == "" {
+func ElectChainContributorAsLeader(numLeaders int, blacklistedIDs []string, state types2.AnchorState) (isLeader bool, leaderID []string) {
+	if state.ID == "" {
 		return false, []string{}
 	}
-	status := app.state.TMState
-	keys := make([]string, 0, len(app.state.CoreKeys))
-	app.logger.Info("CoreKeys", "app.state.CoreKeys", len(app.state.CoreKeys))
-	cores := validation.GetLastNSubmitters(128, app.state)
-	app.logger.Info("Core Cal Submitters", "cores", len(cores))
+	status := state.TMState
+	keys := make([]string, 0, len(state.CoreKeys))
+	cores := validation.GetLastNSubmitters(128, state)
 	for k := range cores {
 		filtered := false
 		for _, id := range blacklistedIDs {
@@ -97,11 +92,9 @@ func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int, blac
 	sort.Strings(keys)
 	coreListLength := len(keys)
 	if coreListLength == 0 {
-		app.logger.Error("coreListLength is 0")
 		return false, []string{}
 	}
 	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
-	app.logger.Info(fmt.Sprintf("Leader is %d th out of %v", index, keys))
 	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
 		util.LogError(err)
 		return false, []string{}
@@ -113,7 +106,7 @@ func (app *AnchorApplication) ElectChainContributorAsLeader(numLeaders int, blac
 	}
 	iAmLeader := false
 	for _, leader := range keys {
-		if leader == app.ID && !status.SyncInfo.CatchingUp {
+		if leader == state.ID && !status.SyncInfo.CatchingUp {
 			iAmLeader = true
 		}
 	}
@@ -174,12 +167,12 @@ func GetSortedValidatorList(validators []*types.Validator) []types.Validator {
 }
 
 // GetPeers : get list of all peers
-func (app *AnchorApplication) GetPeers() []core_types.Peer {
-	if app.ID == "" {
+func GetPeers(state types2.AnchorState, tmState core_types.ResultStatus, tmNetInfo core_types.ResultNetInfo) []core_types.Peer {
+	if state.ID == "" {
 		return []core_types.Peer{}
 	}
 
-	peers := GetSortedPeerList(app.state.TMState, app.state.TMNetInfo)
+	peers := GetSortedPeerList(tmState, tmNetInfo)
 	return peers
 }
 
@@ -246,12 +239,12 @@ func determineLeader(numLeaders int, blacklistedIDs []string, status core_types.
 }
 
 // AmValidator : determines if this node is a validator, without needing to load an ID from elsewhere
-func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
-	if app.ID == "" {
+func AmValidator(state types2.AnchorState) (amValidator bool, err error) {
+	if state.ID == "" {
 		return false, errors.New("status unintialized")
 	}
-	status := app.state.TMState
-	for _, validator := range app.state.Validators {
+	status := state.TMState
+	for _, validator := range state.Validators {
 		if validator.Address.String() == status.ValidatorInfo.Address.String() {
 			return true, nil
 		}
@@ -260,8 +253,8 @@ func (app *AnchorApplication) AmValidator() (amValidator bool, err error) {
 }
 
 //IsValidator : determines if a node is a validator by checking an external ID
-func (app *AnchorApplication) IsValidator(ID string) (amValidator bool, err error) {
-	for _, validator := range app.state.Validators {
+func IsValidator(state types2.AnchorState, ID string) (amValidator bool, err error) {
+	for _, validator := range state.Validators {
 		if validator.Address.String() == ID {
 			return true, nil
 		}

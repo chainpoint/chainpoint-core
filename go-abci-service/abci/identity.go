@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
@@ -29,7 +30,7 @@ func (app *AnchorApplication) SendIdentity() error {
 	uri := resp.Uris[0]
 	lnID := types.LnIdentity{
 		Peer:            uri,
-		RequiredChanAmt: app.LnClient.LocalSats,
+		RequiredChanAmt: app.state.LnStakePerVal,
 	}
 	lnIDBytes, err := json.Marshal(lnID)
 	if app.LogError(err) != nil {
@@ -101,7 +102,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 				time.Sleep(5 * time.Second)
 			}
 		}
-		txs, err := app.getAllJWKs()
+		txs, err := app.rpc.GetAllJWKs()
 		if err == nil {
 			for _, tx := range txs {
 				var jwkType types.Jwk
@@ -133,13 +134,13 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return false
 		}
 		app.logger.Info("Checking if the incoming JWK Identity is from a validator")
-		isVal, err := app.IsValidator(tx.CoreID)
+		isVal, err := leader_election.IsValidator(*app.state, tx.CoreID)
 		app.LogError(err)
 		if isVal {
 			return true
 		}
 		app.logger.Info("JWK Identity: Checking Channel Funding")
-		chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.LnClient.LocalSats)
+		chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.state.LnStakePerVal)
 		if app.LogError(err) == nil && chanExists {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true
@@ -150,7 +151,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	} else if !app.state.ChainSynced {
 		// we're fast-syncing, so agree with the prior chainstate
 		return true
-	} else if isVal, err := app.IsValidator(tx.CoreID); err == nil && isVal && app.state.AmValidator {
+	} else if isVal, err := leader_election.IsValidator(*app.state, tx.CoreID); err == nil && isVal && app.state.AmValidator {
 		// if we're both validators, verify identity
 		return true
 	}

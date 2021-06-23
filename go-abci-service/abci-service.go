@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -21,9 +22,10 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
 
+	"github.com/throttled/throttled/v2"
+	"github.com/throttled/throttled/v2/store/memstore"
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
-	"github.com/didip/tollbooth"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -89,25 +91,40 @@ func main() {
 
 	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
 
-	hashLimiter := tollbooth.NewLimiter(0.017, nil)
-	apiLimiter := tollbooth.NewLimiter(15, nil)
-	proofLimiter := tollbooth.NewLimiter(10, nil)
+	store, err := memstore.New(65536)
+	if err != nil {
+		util.LogError(err)
+		panic(err)
+	}
 
-	hashLimiter.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
-	apiLimiter.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
-	proofLimiter.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+	hashQuota := throttled.RateQuota{throttled.PerMin(3), 5}
+	apiQuota := throttled.RateQuota{throttled.PerSec(15), 50}
+	hashLimiter, err := throttled.NewGCRARateLimiter(store, hashQuota)
+	apiLimiter, err := throttled.NewGCRARateLimiter(store, apiQuota)
+	if err != nil {
+		util.LogError(err)
+		panic(err)
+	}
+
+	hashRateLimiter := throttled.HTTPRateLimiter{
+		RateLimiter: hashLimiter,
+		VaryBy:      &throttled.VaryBy{RemoteAddr: true},
+	}
+	apiRateLimiter := throttled.HTTPRateLimiter{
+		RateLimiter: apiLimiter,
+		VaryBy:      &throttled.VaryBy{RemoteAddr: true},
+	}
 
 	r := mux.NewRouter()
-	r.Handle("/", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.HomeHandler))))
-	r.Handle("/hash", tollbooth.LimitFuncHandler(hashLimiter, (http.HandlerFunc(app.HashHandler))))
-	r.Handle("/proofs", tollbooth.LimitFuncHandler(proofLimiter, (http.HandlerFunc(app.ProofHandler))))
-	r.Handle("/calendar/{txid}", tollbooth.LimitFuncHandler(proofLimiter, (http.HandlerFunc(app.CalHandler))))
-	r.Handle("/calendar/{txid}/data", tollbooth.LimitFuncHandler(proofLimiter, (http.HandlerFunc(app.CalDataHandler))))
-	r.Handle("/status", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.StatusHandler))))
-	r.Handle("/peers", tollbooth.LimitFuncHandler(apiLimiter, (http.HandlerFunc(app.PeerHandler))))
-	r.Handle("/gateways/public", tollbooth.LimitFuncHandler(apiLimiter, http.HandlerFunc(app.GatewaysHandler)))
-	//r.Handle("/boltwall/invoice", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallInvoiceHandler)))
-	//r.Handle("/boltwall/node", hashRateLimiter.RateLimit(http.HandlerFunc(app.BoltwallNodeHandler)))
+	r.Handle("/", apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)))
+	r.Handle("/hash", hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)))
+	r.Handle("/proofs", apiRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
+	r.Handle("/calendar/{txid}", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)))
+	r.Handle("/calendar/{txid}/data", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)))
+	r.Handle("/status", apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)))
+	r.Handle("/peers", apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)))
+	r.Handle("/gateways/public", apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)))
+
 
 	server := &http.Server{
 		Handler:      r,
@@ -205,7 +222,6 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 			Testnet:        bitcoinNetwork == "testnet",
 			WalletAddress:  walletAddress,
 			WalletPass:     walletPass,
-			FeeMultiplier:  feeMultiplier,
 			HashPrice:      int64(hashPrice),
 			SessionSecret:  sessionSecret,
 		},
@@ -227,6 +243,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		AnchorReward:     anchorReward,
 		StakePerCore:     1000000,
 		FeeInterval:      int64(feeInterval),
+		FeeMultiplier:    feeMultiplier,
 		HashPrice:        hashPrice,
 		UseAllowlist:     useAggregatorAllowlist,
 		GatewayAllowlist: aggregatorAllowlist,
@@ -312,7 +329,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 					TMServer: peerIP,
 					TMPort:   "26657",
 				}
-				rpc := abci.NewRPCClient(peerRPC, logger)
+				rpc := tendermint_rpc.NewRPCClient(peerRPC, logger)
 				// Pull and save genesis file
 				genesis, err := rpc.GetGenesis()
 				if err == nil {

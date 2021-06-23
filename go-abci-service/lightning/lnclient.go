@@ -41,13 +41,10 @@ type LnClient struct {
 	MacPath        string
 	MinConfs       int64
 	TargetConfs    int64
-	LocalSats      int64
-	PushSats       int64
 	Logger         log.Logger
 	Testnet        bool
 	WalletAddress  string
 	WalletPass     string
-	FeeMultiplier  float64
 	LastFee        int64
 	HashPrice      int64
 	SessionSecret  string
@@ -394,12 +391,7 @@ func (ln *LnClient) CreateChannel(peer string, satVal int64) (lnrpc.Lightning_Op
 	openSesame := lnrpc.OpenChannelRequest{
 		NodePubkey: pubKey,
 	}
-	if ln.LocalSats != 0 {
-		openSesame.LocalFundingAmount = satVal
-	}
-	if ln.PushSats != 0 {
-		openSesame.PushSat = ln.PushSats
-	}
+	openSesame.LocalFundingAmount = satVal
 	if ln.MinConfs != 0 {
 		openSesame.MinConfs = int32(ln.MinConfs)
 	}
@@ -490,7 +482,7 @@ func (ln *LnClient) GetLndFeeEstimate() (int64, error) {
 	return fee.SatPerKw, nil
 }
 
-func (ln *LnClient) SendOpReturn(hash []byte) (string, string, error) {
+func (ln *LnClient) AnchorData(hash []byte) (string, string, error) {
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
 	b.AddData(hash)

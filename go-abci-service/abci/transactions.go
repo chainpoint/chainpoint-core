@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 	"strconv"
 	"strings"
 
@@ -16,7 +17,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/libs/kv"
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 // incrementTxInt: Helper method to increment transaction integer
@@ -30,7 +30,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	var err error
 	var valid bool
 	if app.state.ChainSynced {
-		tx, valid, err = validation.Validate(rawTx, &app.state)
+		tx, valid, err = validation.Validate(rawTx, app.state)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 		valid = true
@@ -47,7 +47,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
-		if matchErr := app.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
+		if matchErr := app.Anchor.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
 	}
@@ -60,18 +60,18 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	if tx.TxType == "VAL" {
 		components := strings.Split(tx.Data, "!")
 		if len(components) == 3 {
-			amVal, _ := app.IsValidator(app.ID)
-			isSubmitterVal, _ := app.IsValidator(tx.CoreID)
+			amVal, _ := leader_election.IsValidator(*app.state, app.ID)
+			isSubmitterVal, _ := leader_election.IsValidator(*app.state, tx.CoreID)
 			if !isSubmitterVal {
-				if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, app.state); err != nil {
+				if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
 					submitterRecord.UnAuthValSubmissions++
-					validation.SetValidationRecord(tx.CoreID, submitterRecord, &app.state)
+					validation.SetValidationRecord(tx.CoreID, submitterRecord, app.state)
 				}
 			}
 			id := components[0]
 			if amVal {
 				goodCandidate := false
-				if _, record, err := validation.GetValidationRecord(id, app.state); err != nil {
+				if _, record, err := validation.GetValidationRecord(id, *app.state); err != nil {
 					numValidators := len(app.state.Validators)
 					power, err := strconv.ParseInt(components[2], 10, 32)
 					if err != nil {
@@ -145,8 +145,8 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		}
 		//Begin monitoring using the data contained in this transaction
 		if app.state.ChainSynced {
-			go app.ConsumeBtcTxMsg([]byte(tx.Data))
-			app.logger.Info(fmt.Sprintf("BTC-A Anchor Data: %s", tx.Data))
+			go app.Anchor.BeginTxMonitor([]byte(tx.Data))
+			app.logger.Info(fmt.Sprintf("BTC-A StartAnchoring Data: %s", tx.Data))
 		} else {
 			app.state.BeginCalTxInt = btca.EndCalTxInt
 		}
@@ -173,9 +173,9 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 		if len(meta) > 0 {
 			app.state.LastAnchorCoreID = meta[0]
 			if app.state.ChainSynced {
-				go app.AnchorReward(app.state.LastAnchorCoreID)
+				go app.Anchor.AnchorReward(app.state.LastAnchorCoreID)
 			}
-			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, &app.state)
+			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, app.state)
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 		break
@@ -215,70 +215,4 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	}
 	resp.Events = events
 	return resp
-}
-
-// GetTxRange gets all CAL TXs within a particular range
-func (app *AnchorApplication) getCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.ResultTx, error) {
-	if maxTxInt <= minTxInt {
-		return nil, errors.New("max of tx range is less than or equal to min")
-	}
-	Txs := []core_types.ResultTx{}
-	for i := minTxInt; i <= maxTxInt; i++ {
-		txResult, err := app.rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", i), false, 1, 1, "")
-		if err != nil {
-			return nil, err
-		} else if txResult.TotalCount > 0 {
-			for _, tx := range txResult.Txs {
-				Txs = append(Txs, *tx)
-			}
-		}
-	}
-	return Txs, nil
-}
-
-//getAnchoringCore : gets core to whom last anchor is attributed
-func (app *AnchorApplication) getAnchoringCore(queryLine string) (string, error) {
-	app.logger.Info("Anchor confirmation query: " + queryLine)
-	txResult, err := app.rpc.client.TxSearch(queryLine, false, 1, 25, "")
-	if app.LogError(err) == nil {
-		for _, tx := range txResult.Txs {
-			decoded, err := util.DecodeTx(tx.Tx)
-			if app.LogError(err) != nil {
-				continue
-			}
-			return decoded.CoreID, nil
-		}
-	}
-	return "", err
-}
-
-// getAllJWKs gets all JWK TXs
-func (app *AnchorApplication) getAllJWKs() ([]types.Tx, error) {
-	Txs := []types.Tx{}
-	txResult, err := app.rpc.client.TxSearch("JWK.CORE='NEW'", false, 1, 200, "")
-	if err != nil {
-		return nil, err
-	} else if txResult.TotalCount > 0 {
-		app.logger.Info(fmt.Sprintf("Found %d JWK tx while loading", txResult.TotalCount))
-		for _, tx := range txResult.Txs {
-			decoded, err := util.DecodeTx(tx.Tx)
-			if app.LogError(err) == nil {
-				Txs = append(Txs, decoded)
-			}
-		}
-	}
-	return Txs, nil
-}
-
-// GetBTCCTx: retrieves and verifies existence of btcc tx
-func (app *AnchorApplication) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
-	btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
-	txResult, err := app.rpc.client.TxSearch(btccQueryLine, false, 1, 25, "")
-	if app.LogError(err) == nil {
-		for _, tx := range txResult.Txs {
-			hash = tx.Hash
-			app.logger.Info(fmt.Sprint("Found BTC-C Hash from confirmation leader: %v", hash))
-		}
-	}
-	return hash
 }
