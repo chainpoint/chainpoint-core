@@ -30,7 +30,10 @@ func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 		return LSAT{}, err
 	}
 	hash := sha256.Sum256(preimage)
-	invoice, closeInvFunc := ln.GetInvoiceClient()
+	invoice, closeInvFunc, err := ln.GetInvoiceClient()
+	if err != nil {
+		return LSAT{}, err
+	}
 	defer closeInvFunc()
 	addInvoiceReq, err := invoice.AddHoldInvoice(context.Background(), &invoicesrpc.AddHoldInvoiceRequest{
 		Memo:                 fmt.Sprintf("HODL invoice payment from Chainpoint Core %s", ln.ServerHostPort),

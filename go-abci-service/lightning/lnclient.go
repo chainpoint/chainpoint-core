@@ -506,12 +506,12 @@ func (ln *LnClient) AnchorData(hash []byte) (string, string, error) {
 	if ln.LoggerError(err) != nil {
 		return "", "", err
 	}
-	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %+v", resp))
-	ln.Logger.Info(fmt.Sprintf("Ln Raw Tx: %s", hex.EncodeToString(resp.RawTx)))
 	tx, err := btcutil.NewTxFromBytes(resp.RawTx)
 	if ln.LoggerError(err) != nil {
 		return "", "", err
 	}
+	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %+v", resp))
+	ln.Logger.Info(fmt.Sprintf("Ln Raw Tx: %s", hex.EncodeToString(resp.RawTx)))
 	var msgTx wire.MsgTx
 	if ln.LoggerError(msgTx.BtcDecode(bytes.NewReader(resp.RawTx), 0, wire.WitnessEncoding)); err != nil {
 		return "", "", err
