@@ -99,8 +99,10 @@ func main() {
 
 	hashQuota := throttled.RateQuota{throttled.PerMin(3), 5}
 	apiQuota := throttled.RateQuota{throttled.PerSec(15), 50}
+	proofQuota := throttled.RateQuota{throttled.PerSec(25), 100}
 	hashLimiter, err := throttled.NewGCRARateLimiter(store, hashQuota)
 	apiLimiter, err := throttled.NewGCRARateLimiter(store, apiQuota)
+	proofLimiter, err := throttled.NewGCRARateLimiter(store, proofQuota)
 	if err != nil {
 		util.LogError(err)
 		panic(err)
@@ -114,11 +116,15 @@ func main() {
 		RateLimiter: apiLimiter,
 		VaryBy:      &throttled.VaryBy{RemoteAddr: true},
 	}
+	proofRateLimiter := throttled.HTTPRateLimiter{
+		RateLimiter: proofLimiter,
+		VaryBy:      &throttled.VaryBy{RemoteAddr: true},
+	}
 
 	r := mux.NewRouter()
 	r.Handle("/", apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)))
 	r.Handle("/hash", hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)))
-	r.Handle("/proofs", apiRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
+	r.Handle("/proofs", proofRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
 	r.Handle("/calendar/{txid}", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)))
 	r.Handle("/calendar/{txid}/data", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)))
 	r.Handle("/status", apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)))
