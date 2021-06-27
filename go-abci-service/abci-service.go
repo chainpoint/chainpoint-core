@@ -91,7 +91,9 @@ func main() {
 
 	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
 
-	store, err := memstore.New(65536)
+	hashStore, err := memstore.New(65536)
+	apiStore, err := memstore.New(65536)
+	proofStore, err := memstore.New(65536)
 	if err != nil {
 		util.LogError(err)
 		panic(err)
@@ -100,9 +102,9 @@ func main() {
 	hashQuota := throttled.RateQuota{throttled.PerMin(3), 5}
 	apiQuota := throttled.RateQuota{throttled.PerSec(15), 50}
 	proofQuota := throttled.RateQuota{throttled.PerSec(25), 100}
-	hashLimiter, err := throttled.NewGCRARateLimiter(store, hashQuota)
-	apiLimiter, err := throttled.NewGCRARateLimiter(store, apiQuota)
-	proofLimiter, err := throttled.NewGCRARateLimiter(store, proofQuota)
+	hashLimiter, err := throttled.NewGCRARateLimiter(hashStore, hashQuota)
+	apiLimiter, err := throttled.NewGCRARateLimiter(apiStore, apiQuota)
+	proofLimiter, err := throttled.NewGCRARateLimiter(proofStore, proofQuota)
 	if err != nil {
 		util.LogError(err)
 		panic(err)
