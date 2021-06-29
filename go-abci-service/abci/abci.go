@@ -303,7 +303,7 @@ func (app *AnchorApplication) Info(req types2.RequestInfo) (resInfo types2.Respo
 
 // DeliverTx : tx is url encoded json
 func (app *AnchorApplication) DeliverTx(tx types2.RequestDeliverTx) types2.ResponseDeliverTx {
-	return app.updateStateFromTx(tx.Tx, false)
+	return app.updateStateFromTx(tx.Tx)
 }
 
 // CheckTx : Pre-gossip validation

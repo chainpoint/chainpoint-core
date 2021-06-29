@@ -288,7 +288,9 @@ func Validate(incoming []byte, state *types.AnchorState) (types.Tx, bool, error)
 		validationRecord.LastJWKTxHeight = state.Height
 		validated = true
 	}
-	fmt.Printf("Rate Limiter has Validated Tx %s:%t\n", tx.TxType, validated)
+	if !validated {
+		fmt.Printf("Rate Limiter has failed to validate Tx %s:%t\n", tx.TxType, validated)
+	}
 	state.TxValidation[pubKeyHex] = validationRecord
 	return tx, validated, err
 }

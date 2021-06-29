@@ -103,7 +103,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 }
 
 // updateStateFromTx: Updates state based on type of transaction received. Used by DeliverTx
-func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types2.ResponseDeliverTx {
+func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
 	var tx types.Tx
 	var err error
 	var resp types2.ResponseDeliverTx
@@ -113,7 +113,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte, gossip bool) types
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 	}
-	app.logger.Info(fmt.Sprintf("Received Tx: %s, Gossip: %t", tx.TxType, gossip))
+	app.logger.Info(fmt.Sprintf("DeliverTx: %s", tx.TxType))
 	app.LogError(err)
 	switch string(tx.TxType) {
 	case "VAL":

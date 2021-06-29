@@ -176,7 +176,6 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	d.DisallowUnknownFields()
 	hash := Hash{}
 	err := d.Decode(&hash)
-	app.logger.Info(fmt.Sprintf("Received hash %s", hash.Hash))
 	if app.LogError(err) != nil || len(hash.Hash) == 0 {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid JSON body: missing hash"})
 	}
