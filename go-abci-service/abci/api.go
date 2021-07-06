@@ -116,6 +116,8 @@ func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request
 }
 
 func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Request) {
+	ip := util.GetClientIP(r)
+	app.logger.Info(fmt.Sprintf("Status Client IP: %s", ip))
 	status := app.state.TMState
 	info, err := app.LnClient.GetInfo()
 	if app.LogError(err) != nil {
@@ -218,6 +220,8 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Request) {
+	ip := util.GetClientIP(r)
+	app.logger.Info(fmt.Sprintf("Proof Client IP: %s", ip))
 	proofidHeader := r.Header.Get("proofids")
 	if len(proofidHeader) == 0 {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, at least one hash id required"})
@@ -253,6 +257,8 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *AnchorApplication) CalHandler(w http.ResponseWriter, r *http.Request) {
+	ip := util.GetClientIP(r)
+	app.logger.Info(fmt.Sprintf("Cal Client IP: %s", ip))
 	vars := mux.Vars(r)
 	if _, exists := vars["txid"]; exists {
 		result, err := app.rpc.GetTxByHash(vars["txid"])
@@ -267,6 +273,8 @@ func (app *AnchorApplication) CalHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Request) {
+	ip := util.GetClientIP(r)
+	app.logger.Info(fmt.Sprintf("CalData Client IP: %s", ip))
 	vars := mux.Vars(r)
 	if _, exists := vars["txid"]; exists {
 		result, err := app.rpc.GetTxByHash(vars["txid"])
@@ -288,6 +296,8 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request) {
+	ip := util.GetClientIP(r)
+	app.logger.Info(fmt.Sprintf("Peers Client IP: %s", ip))
 	peers := leader_election.GetPeers(*app.state, app.state.TMState, app.state.TMNetInfo)
 	peerList := []string{}
 	for _, peer := range peers {
@@ -324,6 +334,8 @@ func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *AnchorApplication) GatewaysHandler(w http.ResponseWriter, r *http.Request) {
+	ip := util.GetClientIP(r)
+	app.logger.Info(fmt.Sprintf("Gateways Client IP: %s", ip))
 	if !app.config.UseAllowlist {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte{})
