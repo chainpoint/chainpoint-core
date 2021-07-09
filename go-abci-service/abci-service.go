@@ -196,6 +196,9 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	apiURI := util.GetEnv("API_URI", "http://api:8080")
 	coreURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0")
 
+	coreName := util.GetEnv("CHAINPOINT_CORE_NAME", "CORE-" + coreURI)
+	analyticsID := util.GetEnv("GOOGLE_UA_ID", "")
+
 	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "info")))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
@@ -256,6 +259,8 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		UseAllowlist:     useAggregatorAllowlist,
 		GatewayAllowlist: aggregatorAllowlist,
 		CoreURI:          coreURI,
+		CoreName:         coreName,
+		AnalyticsID:      analyticsID,
 	}
 }
 
