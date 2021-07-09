@@ -10,8 +10,6 @@ require (
 	github.com/ethereum/go-ethereum v1.9.15
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-errors/errors v1.1.1 // indirect
-	github.com/go-openapi/runtime v0.19.29 // indirect
-	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/go-redis/redis v6.15.8+incompatible
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.2.0
