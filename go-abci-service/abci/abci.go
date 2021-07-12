@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	analytics2 "github.com/chainpoint/chainpoint-core/go-abci-service/analytics"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor/bitcoin"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
@@ -93,6 +94,7 @@ type AnchorApplication struct {
 	rpc                  *tendermint_rpc.RPC
 	ID                   string
 	JWK                  types.Jwk
+	Analytics            *analytics2.UniversalAnalytics
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -189,8 +191,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	rpcClient := tendermint_rpc.NewRPCClient(config.TendermintConfig, *config.Logger)
 
-	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, redisClient, &config.LightningConfig, *config.Logger)
+	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID)
 
+	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, redisClient, &config.LightningConfig, *config.Logger, &analytics)
 
 
 	//Construct application
@@ -211,6 +214,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		LnClient:    &config.LightningConfig,
 		rpc:         rpcClient,
 		JWK:         jwkType,
+		Analytics:   &analytics,
 	}
 
 	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked, "JWK Kid", jwkType.Kid)

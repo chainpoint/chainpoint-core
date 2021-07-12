@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	analytics2 "github.com/chainpoint/chainpoint-core/go-abci-service/analytics"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
@@ -37,10 +38,11 @@ type AnchorBTC struct {
 	RedisClient   *redis.Client
 	LnClient      *lightning.LnClient
 	logger        log.Logger
+	analytics     *analytics2.UniversalAnalytics
 }
 
 func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
-	PgClient *postgres.Postgres, RedisClient *redis.Client, LnClient *lightning.LnClient, logger log.Logger) *AnchorBTC {
+	PgClient *postgres.Postgres, RedisClient *redis.Client, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
 		config:        config,
@@ -49,6 +51,7 @@ func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, ten
 		RedisClient:   RedisClient,
 		LnClient:      LnClient,
 		logger:        logger,
+		analytics:     analytics,
 	}
 }
 
@@ -219,6 +222,7 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
+	go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTxObj.BtcTxID, time.Now().Format(time.RFC3339), "", "")
 	return nil
 }
 
@@ -262,6 +266,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 	app.logger.Info(fmt.Sprintf("BtcHeadState: %#v", headStateObj))
 	app.LogError(app.PgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
 	app.LogError(app.GenerateBtcBatch(proofIds, headStateObj))
+	go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateConfirmTx", btcMonObj.BtcTxID, time.Now().Format(time.RFC3339), "", "")
 	return nil
 }
 

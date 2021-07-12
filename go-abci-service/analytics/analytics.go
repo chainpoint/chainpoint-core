@@ -20,22 +20,21 @@ func NewClient (CoreName string, GoogleUaId string) UniversalAnalytics {
 	}
 }
 
-func (ua *UniversalAnalytics) SendEvent(drand int64, action, label, cd1, cd2, ip string) error {
+func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip string) error {
 	if ua.GoogleUaID == "" {
 		return errors.New("analytics: GA_TRACKING_ID environment variable is missing")
 	}
 	if ua.CategoryName == "" || action == "" {
 		return errors.New("analytics: category and action are required")
 	}
-	if drand == 0 {
+	if drand == "" {
 		return errors.New("analytics: no drand beacon yet")
 	}
-	cid := strconv.FormatInt(drand, 10)
 
 	v := url.Values{
 		"v":   {"1"},
 		"tid": {ua.GoogleUaID},
-		"cid": {cid},
+		"cid": {drand},
 		"t":   {"event"},
 		"ec":  {ua.CategoryName},
 		"ea":  {action},

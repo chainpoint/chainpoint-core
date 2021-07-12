@@ -214,6 +214,7 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 			BtcHint: time.Now().Add(90 * time.Minute).Format(time.RFC3339),
 		},
 	}
+	go app.Analytics.SendEvent(app.state.LatestTimeRecord, "HashReceived", hashResponse.ProofId, hashResponse.HashReceived, ip, ip)
 	// Add hash item to aggregator
 	app.aggregator.AddHashItem(types.HashItem{Hash: hash.Hash, ProofID: proofId})
 	respondJSON(w, http.StatusOK, hashResponse)
@@ -248,6 +249,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 			if err := json.Unmarshal([]byte(val.Proof), &rawJSON); err != nil {
 				response = append(response, map[string]interface{}{"proof_id": id, "proof": nil})
 			}
+			go app.Analytics.SendEvent(app.state.LatestTimeRecord, "GetProof", id, time.Now().Format(time.RFC3339), ip, ip)
 			response = append(response, map[string]interface{}{"proof_id": id, "proof": rawJSON})
 		} else {
 			response = append(response, map[string]interface{}{"proof_id": id, "proof": nil})
