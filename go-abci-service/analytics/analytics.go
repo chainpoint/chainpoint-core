@@ -2,32 +2,41 @@ package analytics
 
 import (
 	"errors"
+	"fmt"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"net"
 	"net/http"
 	"net/url"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 type UniversalAnalytics struct {
 	CategoryName string
 	GoogleUaID   string
+	logger      log.Logger
 }
 
-func NewClient (CoreName string, GoogleUaId string) UniversalAnalytics {
+func NewClient (CoreName string, GoogleUaId string, logger log.Logger) UniversalAnalytics {
 	return UniversalAnalytics{
 		CoreName,
 		GoogleUaId,
+		 logger,
 	}
 }
 
 func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip string) error {
+	var err error
 	if ua.GoogleUaID == "" {
-		return errors.New("analytics: GA_TRACKING_ID environment variable is missing")
+		err =  errors.New("analytics: GA_TRACKING_ID environment variable is missing")
 	}
 	if ua.CategoryName == "" || action == "" {
-		return errors.New("analytics: category and action are required")
+	    err = errors.New("analytics: category and action are required")
 	}
 	if drand == "" {
-		return errors.New("analytics: no drand beacon yet")
+		err = errors.New("analytics: no drand beacon yet")
+	}
+	if ua.LogError(err) != nil {
+		return err
 	}
 
 	v := url.Values{
@@ -56,6 +65,14 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 	}
 
 	// NOTE: Google Analytics returns a 200, even if the request is malformed.
-	_, err := http.PostForm("https://www.google-analytics.com/collect", v)
+	_, err = http.PostForm("https://www.google-analytics.com/collect", v)
+	ua.LogError(err)
+	return err
+}
+
+func (ua *UniversalAnalytics) LogError(err error) error {
+	if err != nil {
+		 ua.logger.Error(fmt.Sprintf("Error in %s: %s", util.GetCurrentFuncName(2), err.Error()))
+	}
 	return err
 }

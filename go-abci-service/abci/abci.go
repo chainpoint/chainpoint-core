@@ -191,7 +191,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	rpcClient := tendermint_rpc.NewRPCClient(config.TendermintConfig, *config.Logger)
 
-	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID)
+	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
 	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, redisClient, &config.LightningConfig, *config.Logger, &analytics)
 
