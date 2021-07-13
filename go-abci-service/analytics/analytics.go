@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
