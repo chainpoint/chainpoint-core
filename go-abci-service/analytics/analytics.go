@@ -38,7 +38,7 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 	} else {
 		arr := strings.Split(drand, ":")
 		if len(arr) == 2 {
-			drand = arr[1]
+			drand = arr[0]
 		}
 	}
 	if ua.LogError(err) != nil {
