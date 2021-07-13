@@ -59,7 +59,11 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 	}
 
 	if remoteIP, _, err := net.SplitHostPort(ip); err != nil {
-		v.Set("uip", remoteIP)
+		if remoteIP == "" && ip != "" {
+			v.Set("uip", ip)
+		} else {
+			v.Set("uip", remoteIP)
+		}
 	}
 
 	if cd1 != "" {
@@ -67,7 +71,7 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 	}
 
 	if cd2 != "" {
-		v.Set("cd2", cd1)
+		v.Set("cd2", cd2)
 	}
 	ua.logger.Info("Sending Event: " + v.Encode())
 
