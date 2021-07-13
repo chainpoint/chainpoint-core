@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"github.com/tendermint/tendermint/libs/log"
+	"strings"
 )
 
 type UniversalAnalytics struct {
@@ -34,6 +35,11 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 	}
 	if drand == "" {
 		err = errors.New("analytics: no drand beacon yet")
+	} else {
+		arr := strings.Split(drand, ":")
+		if len(arr) == 2 {
+			drand = arr[1]
+		}
 	}
 	if ua.LogError(err) != nil {
 		return err
