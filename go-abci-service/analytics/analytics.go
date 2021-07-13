@@ -69,6 +69,7 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 	if cd2 != "" {
 		v.Set("cd2", cd1)
 	}
+	ua.logger.Info("Sending Event: " + v.Encode())
 
 	// NOTE: Google Analytics returns a 200, even if the request is malformed.
 	_, err = http.PostForm("https://www.google-analytics.com/collect", v)
