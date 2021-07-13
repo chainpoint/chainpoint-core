@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -53,6 +52,7 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 		"t":   {"event"},
 		"ec":  {ua.CategoryName},
 		"ea":  {action},
+		"ua":  {"Chp/4.0"},
 	}
 
 	if label != "" && len(label) >= 7 {
@@ -76,13 +76,6 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 
 	// NOTE: Google Analytics returns a 200, even if the request is malformed.
 	_, err = http.PostForm("https://www.google-analytics.com/collect", v)
-	ua.LogError(err)
-	
-	resp, err := http.PostForm("https://www.google-analytics.com/debug/collect", v)
-	b, err := ioutil.ReadAll(resp.Body)
-	if err == nil && len(string(b)) != 0 {
-		ua.logger.Info(string(b))
-	}
 	ua.LogError(err)
 	return err
 }
