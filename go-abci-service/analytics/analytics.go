@@ -28,7 +28,7 @@ func NewClient (CoreName string, GoogleUaId string, logger log.Logger) Universal
 func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip string) error {
 	var err error
 	if ua.GoogleUaID == "" {
-		err =  errors.New("analytics: GA_TRACKING_ID environment variable is missing")
+		return nil
 	}
 	if ua.CategoryName == "" || action == "" {
 	    err = errors.New("analytics: category and action are required")

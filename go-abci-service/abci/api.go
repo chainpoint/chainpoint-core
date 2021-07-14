@@ -336,8 +336,8 @@ func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (app *AnchorApplication) GatewaysHandler(w http.ResponseWriter, r *http.Request) {
-	ip := util.GetClientIP(r)
-	app.logger.Info(fmt.Sprintf("Gateways Client IP: %s", ip))
+	//ip := util.GetClientIP(r)
+	//app.logger.Info(fmt.Sprintf("Gateways Client IP: %s", ip))
 	if !app.config.UseAllowlist {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte{})
