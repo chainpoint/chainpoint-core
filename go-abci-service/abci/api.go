@@ -298,8 +298,8 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request) {
-	ip := util.GetClientIP(r)
-	app.logger.Info(fmt.Sprintf("Peers Client IP: %s", ip))
+	//ip := util.GetClientIP(r)
+	//app.logger.Info(fmt.Sprintf("Peers Client IP: %s", ip))
 	peers := leader_election.GetPeers(*app.state, app.state.TMState, app.state.TMNetInfo)
 	peerList := []string{}
 	for _, peer := range peers {
