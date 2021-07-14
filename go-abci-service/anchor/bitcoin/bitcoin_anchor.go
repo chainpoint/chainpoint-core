@@ -10,13 +10,13 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	analytics2 "github.com/chainpoint/chainpoint-core/go-abci-service/analytics"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/go-redis/redis"
@@ -95,7 +95,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 		}
 		// elect anchorer
 		if iAmLeader {
-			btca, err := app.SendBtcTx(treeData, app.state.Height, startTxRange, endTxRange)
+			btcTx, btca, err := app.SendBtcTx(treeData, app.state.Height, startTxRange, endTxRange)
 			if app.LogError(err) != nil {
 				_, err := app.tendermintRpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.state.ID, &app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
@@ -106,6 +106,8 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 			if app.LogError(err) != nil {
 				app.logger.Info(fmt.Sprintf("failed sending BTC-A"))
 				panic(err)
+			} else {
+				go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTx, time.Now().Format(time.RFC3339), "", "")
 			}
 		}
 
@@ -132,14 +134,14 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 }
 
 // SendBtcTx : sends btc tx to lnd and enqueues tx monitoring information
-func (app *AnchorBTC) SendBtcTx(anchorDataObj types.BtcAgg, height int64, start int64, end int64) ([]byte, error) {
+func (app *AnchorBTC) SendBtcTx(anchorDataObj types.BtcAgg, height int64, start int64, end int64) (string, []byte, error) {
 	hexRoot, err := hex.DecodeString(anchorDataObj.AnchorBtcAggRoot)
 	if util.LogError(err) != nil {
-		return []byte{}, err
+		return "", []byte{}, err
 	}
 	txid, rawtx, err := app.LnClient.AnchorData(hexRoot)
 	if util.LogError(err) != nil {
-		return []byte{}, err
+		return "", []byte{}, err
 	}
 	msgBtcMon := types.BtcTxMsg{
 		AnchorBtcAggID:   anchorDataObj.AnchorBtcAggID,
@@ -153,7 +155,7 @@ func (app *AnchorBTC) SendBtcTx(anchorDataObj types.BtcAgg, height int64, start 
 	}
 	btcJSON, err := json.Marshal(msgBtcMon)
 	app.logger.Info(fmt.Sprint("Sending BTC-A OP_RETURN: %#v", msgBtcMon))
-	return btcJSON, err
+	return txid, btcJSON, err
 }
 
 // AnchorReward : Send sats to last anchoring core
@@ -222,7 +224,6 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 	if app.LogError(result.Err()) != nil {
 		return err
 	}
-	go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTxObj.BtcTxID, time.Now().Format(time.RFC3339), "", "")
 	return nil
 }
 
