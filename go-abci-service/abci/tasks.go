@@ -147,7 +147,7 @@ func (app *AnchorApplication) BeaconMonitor() {
 			app.aggregator.LatestTime = app.state.LatestTimeRecord
 		}
 		if app.LogError(err) != nil {
-			app.logger.Debug(fmt.Sprintf("Failed to gossip DRAND beacon value of %s", chainpointFormat))
+			app.logger.Debug(fmt.Sprintf("Failed to obtain DRAND beacon value of %s", chainpointFormat))
 		}
 	}
 }
