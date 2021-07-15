@@ -25,7 +25,7 @@ func NewClient (CoreName string, GoogleUaId string, logger log.Logger) Universal
 	}
 }
 
-func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip string) error {
+func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, cd3, ip string) error {
 	var err error
 	if ua.GoogleUaID == "" {
 		return nil
@@ -71,6 +71,10 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, ip strin
 
 	if cd2 != "" {
 		v.Add("cd2", cd2)
+	}
+
+	if cd3 != "" {
+		v.Add("cd3", cd3)
 	}
 	ua.logger.Info("Sending Event: " + v.Encode())
 

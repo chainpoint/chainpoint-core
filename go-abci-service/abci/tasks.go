@@ -13,7 +13,7 @@ import (
 	beacon "github.com/chainpoint/chainpoint-core/go-abci-service/beacon"
 )
 
-const STATIC_FEE_AMT = 40000 // 12500 // 60k amounts to 240 sat/vbyte
+const STATIC_FEE_AMT = 12500 // 12500 // 60k amounts to 240 sat/vbyte
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {

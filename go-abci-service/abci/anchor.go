@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
+	"strconv"
 	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
@@ -54,7 +55,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 		if app.LogError(err) != nil {
 			return 0, err
 		}
-		go app.Analytics.SendEvent(app.state.LatestTimeRecord, "CreateCalTx", calAgg.CalRoot, time.Now().Format(time.RFC3339), "", "")
+		go app.Analytics.SendEvent(app.state.LatestTimeRecord, "CreateCalTx", calAgg.CalRoot, time.Now().Format(time.RFC3339), "", strconv.FormatInt(app.state.LatestBtcFee, 10), "")
 /*		deadline := height + 2
 		for app.state.Height < deadline {
 			time.Sleep(10 * time.Second)

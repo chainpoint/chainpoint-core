@@ -267,7 +267,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 	app.logger.Info(fmt.Sprintf("BtcHeadState: %#v", headStateObj))
 	app.LogError(app.PgClient.BulkInsertBtcHeadState([]types.AnchorBtcHeadState{headStateObj}))
 	app.LogError(app.GenerateBtcBatch(proofIds, headStateObj))
-	go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateConfirmTx", btcMonObj.BtcTxID, time.Now().Format(time.RFC3339), "", "")
+	go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateConfirmTx", btcMonObj.BtcTxID, time.Now().Format(time.RFC3339), "", "", "")
 	return nil
 }
 
