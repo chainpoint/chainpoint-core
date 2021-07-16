@@ -107,7 +107,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 				app.logger.Info(fmt.Sprintf("failed sending BTC-A"))
 				panic(err)
 			} else {
-				go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTx, time.Now().Format(time.RFC3339), "", "")
+				go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTx, time.Now().Format(time.RFC3339), "", "", "")
 			}
 		}
 
