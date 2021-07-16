@@ -23,6 +23,7 @@ import (
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/tendermint/tendermint/libs/log"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -107,7 +108,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 				app.logger.Info(fmt.Sprintf("failed sending BTC-A"))
 				panic(err)
 			} else {
-				go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTx, time.Now().Format(time.RFC3339), "", "", "")
+				go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTx, time.Now().Format(time.RFC3339), "", strconv.FormatInt(app.state.LatestBtcFee * 4 / 1000, 10), "")
 			}
 		}
 
