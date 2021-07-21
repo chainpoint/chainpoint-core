@@ -62,6 +62,8 @@ type AnchorConfig struct {
 	UseAllowlist     bool
 	GatewayAllowlist []string
 	CoreURI          string
+	CoreName         string
+	AnalyticsID      string
 }
 
 //EthConfig holds contract addresses and eth node URI

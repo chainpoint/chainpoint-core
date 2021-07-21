@@ -54,7 +54,8 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 		if app.LogError(err) != nil {
 			return 0, err
 		}
-		deadline := height + 2
+		go app.Analytics.SendEvent(app.state.LatestTimeRecord, "CreateCalTx", calAgg.CalRoot, time.Now().Format(time.RFC3339), "", "", "")
+		deadline := height + 1
 		for app.state.Height < deadline {
 			time.Sleep(10 * time.Second)
 		}
