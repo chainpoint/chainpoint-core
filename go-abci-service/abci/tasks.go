@@ -3,6 +3,7 @@ package abci
 import (
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 
 	fee2 "github.com/chainpoint/chainpoint-core/go-abci-service/fee"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 	beacon "github.com/chainpoint/chainpoint-core/go-abci-service/beacon"
 )
 
-const STATIC_FEE_AMT = 12500 // 12500 // 60k amounts to 240 sat/vbyte
+const STATIC_FEE_AMT = 0 // 60k amounts to 240 sat/vbyte
 
 //SyncMonitor : turns off anchoring if we're not synced. Not cron scheduled since we need it to start immediately.
 func (app *AnchorApplication) SyncMonitor() {
@@ -159,21 +160,14 @@ func (app *AnchorApplication) FeeMonitor() {
 		if leader, leaders := leader_election.ElectValidatorAsLeader(1, []string{}, *app.state, app.config); leader {
 			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
 			var fee int64
-			fee, err := app.LnClient.GetLndFeeEstimate()
-			app.LnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", fee))
-			if app.LogError(err) != nil || fee <= STATIC_FEE_AMT {
-				fee, err = fee2.GetThirdPartyFeeEstimate()
-				app.LnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", fee))
-				if fee < STATIC_FEE_AMT {
-					fee = STATIC_FEE_AMT
-				}
-				if app.LogError(err) != nil || app.LnClient.Testnet {
-					fee = int64(app.config.FeeMultiplier * float64(fee))
-					app.LnClient.Logger.Info(fmt.Sprintf("Static FEE: %d", fee))
-				}
-			}
+			lndFee, _ := app.LnClient.GetLndFeeEstimate()
+			app.LnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", lndFee))
+			thirdPartyFee, _ := fee2.GetThirdPartyFeeEstimate()
+			app.LnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", thirdPartyFee))
+			fee = util.MaxInt64(lndFee, thirdPartyFee)
+			fee = util.MaxInt64(fee, STATIC_FEE_AMT)
 			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
-			_, err = app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+			_, err := app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if app.LogError(err) != nil {
 				app.logger.Debug(fmt.Sprintf("Failed to gossip Fee value of %d", fee))
 			}

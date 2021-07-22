@@ -560,3 +560,10 @@ func ArrayContainsIndex(arr []string, item string) (bool, int) {
 	}
 	return false, -1
 }
+
+func MaxInt64(x, y int64) int64 {
+	if x < y {
+		return y
+	}
+	return x
+}
