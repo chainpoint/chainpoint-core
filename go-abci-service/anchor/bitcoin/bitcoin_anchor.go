@@ -22,6 +22,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/tendermint/tendermint/libs/log"
+	dbm "github.com/tendermint/tm-db"
 	"math"
 	"strconv"
 	"strings"
@@ -37,19 +38,21 @@ type AnchorBTC struct {
 	tendermintRpc *tendermint_rpc.RPC
 	PgClient      *postgres.Postgres
 	RedisClient   *redis.Client
+	LevelDb       *dbm.DB
 	LnClient      *lightning.LnClient
 	logger        log.Logger
 	analytics     *analytics2.UniversalAnalytics
 }
 
 func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
-	PgClient *postgres.Postgres, RedisClient *redis.Client, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
+	PgClient *postgres.Postgres, RedisClient *redis.Client, db *dbm.DB, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
 		config:        config,
 		tendermintRpc: tendermintRpc,
 		PgClient:      PgClient,
 		RedisClient:   RedisClient,
+		LevelDb:       db,
 		LnClient:      LnClient,
 		logger:        logger,
 		analytics:     analytics,
