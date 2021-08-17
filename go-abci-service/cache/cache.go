@@ -32,6 +32,9 @@ func (cache *Cache) Get (key string) ([]string, error) {
 		if err != nil {
 			return []string{}, err
 		}
+		if bArr == nil {
+			return []string{}, nil
+		}
 		var arr []string
 		err = json.Unmarshal(bArr, &arr)
 		if err != nil {
@@ -61,6 +64,9 @@ func (cache *Cache) Set(key string, value string) error {
 func (cache *Cache) Del(key string, value string) error {
 	if cache.RedisClient != nil {
 		cache.RedisClient.WithContext(context.Background()).SRem(key, value)
+	}
+	if value == "" {
+		return cache.LevelDb.Delete([]byte(key))
 	}
 	results, err := cache.Get(key)
 	if err != nil {

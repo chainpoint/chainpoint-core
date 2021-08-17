@@ -19,10 +19,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/go-redis/redis"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/tendermint/tendermint/libs/log"
-	dbm "github.com/tendermint/tm-db"
 	"math"
 	"strconv"
 	"strings"
@@ -44,13 +42,13 @@ type AnchorBTC struct {
 }
 
 func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
-	PgClient *postgres.Postgres, RedisClient *redis.Client, db *dbm.DB, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
+	PgClient *postgres.Postgres, cache *cache.Cache, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
 		config:        config,
 		tendermintRpc: tendermintRpc,
 		PgClient:      PgClient,
-		Cache:         cache.NewCache(RedisClient, db),
+		Cache:         cache,
 		LnClient:      LnClient,
 		logger:        logger,
 		analytics:     analytics,

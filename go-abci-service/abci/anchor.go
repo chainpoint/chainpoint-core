@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -55,11 +56,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			return 0, err
 		}
 		go app.Analytics.SendEvent(app.state.LatestTimeRecord, "CreateCalTx", calAgg.CalRoot, time.Now().Format(time.RFC3339), "", "", "")
-		deadline := height + 1
-		for app.state.Height < deadline {
-			time.Sleep(10 * time.Second)
-		}
-		app.logger.Debug(fmt.Sprintf("CAL result: %v", result))
+		app.logger.Debug(fmt.Sprintf("CAL result: %+v", result))
 		if result.Code == 0 {
 			var tx types.TxTm
 			tx.Hash = result.Hash.Bytes()
@@ -69,6 +66,8 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			app.logger.Info("Generating Cal Batch")
 			app.LogError(app.PgClient.BulkInsertCalState(calStates))
 			app.LogError(app.GenerateCalBatch(aggStates, calStates))
+			hashRoot := hex.EncodeToString(tx.Hash)
+			app.Cache.Set(hashRoot, calAgg.CalRoot)
 			app.logger.Info("Generating Cal Batch Complete")
 			return len(aggs), nil
 		}
