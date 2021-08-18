@@ -1,7 +1,7 @@
 FROM golang:latest
 ENV GO111MODULE=auto
 ENV TMHOME /tendermint
-RUN apt-get update -y && apt-get install -y wget build-essential libsnappy-dev go-dep
+RUN apt-get update -y && apt-get install -y wget build-essential libsnappy-dev
 RUN wget https://github.com/google/leveldb/archive/v1.20.tar.gz && \
   tar -zxvf v1.20.tar.gz && \
   cd leveldb-1.20/ && \
