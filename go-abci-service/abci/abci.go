@@ -147,7 +147,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	//Declare redis Client
 	var redisClient *redis.Client
-	deadline = time.Now().Add(1 * time.Minute)
+	deadline = time.Now().Add(10 * time.Second)
 	for !time.Now().After(deadline) {
 		opt, err := redis.ParseURL(config.RedisURI)
 		if util.LoggerError(*config.Logger, err) != nil {
@@ -163,11 +163,10 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			break
 		}
 	}
-	if err != nil {
-		fmt.Println("Redis not ready after 1 minute")
-		panic(err)
-	} else if redisClient != nil {
+	if redisClient != nil {
 		fmt.Println("Connection to Redis established")
+	} else {
+		fmt.Println("falling back to leveldb")
 	}
 
 	//Wait for lightning connection
