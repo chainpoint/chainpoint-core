@@ -281,9 +281,9 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 	tx := types.Tx{}
 	if _, exists := vars["txid"]; exists {
 		result, err := app.rpc.GetTxByHash(vars["txid"])
-		if app.LogError(err) != nil {
+		if err != nil {
 			root, err := app.Cache.Get(vars["txid"])
-			if err != nil {
+			if app.LogError(err) != nil {
 				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
 				return
 			}

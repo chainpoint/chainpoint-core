@@ -163,10 +163,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			break
 		}
 	}
-	if redisClient != nil {
+	if _, err = redisClient.Ping().Result(); err == nil {
 		fmt.Println("Connection to Redis established")
 	} else {
-		fmt.Println("falling back to leveldb")
+		redisClient = nil
+		fmt.Println("Falling back to leveldb")
 	}
 
 	//Wait for lightning connection
@@ -184,8 +185,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if err != nil {
 		fmt.Println("LND not ready after 1 minute")
 		panic(err)
-	} else if redisClient != nil {
-		fmt.Println("Connection to LND established")
 	}
 
 	jwkType := util.GenerateKey(&config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
