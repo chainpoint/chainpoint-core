@@ -28,7 +28,7 @@ func (cache *Cache) Get (key string) ([]string, error) {
 		}
 		return results.Val(), nil
 	} else {
-		bArr, err := cache.LevelDb.Get([]byte("key"))
+		bArr, err := cache.LevelDb.Get([]byte(key))
 		if err != nil {
 			return []string{}, err
 		}
@@ -45,7 +45,7 @@ func (cache *Cache) Get (key string) ([]string, error) {
 }
 
 func (cache *Cache) GetOne (key string) (string, error) {
-	bArr, err := cache.LevelDb.Get([]byte("key"))
+	bArr, err := cache.LevelDb.Get([]byte(key))
 	return string(bArr), err
 
 }
