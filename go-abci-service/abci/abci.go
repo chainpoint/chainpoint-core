@@ -144,6 +144,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		}
 		fmt.Println("Connection to Postgres established")
 	}
+	err = nil
 
 	//Declare redis Client
 	var redisClient *redis.Client
@@ -169,6 +170,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		redisClient = nil
 		fmt.Println("Falling back to leveldb")
 	}
+	err = nil
 
 	//Wait for lightning connection
 	deadline = time.Now().Add(5 * time.Minute)
@@ -186,6 +188,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		fmt.Println("LND not ready after 1 minute")
 		panic(err)
 	}
+	err = nil
 
 	jwkType := util.GenerateKey(&config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
 
