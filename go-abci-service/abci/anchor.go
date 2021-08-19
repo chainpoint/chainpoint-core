@@ -67,7 +67,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			app.LogError(app.PgClient.BulkInsertCalState(calStates))
 			app.LogError(app.GenerateCalBatch(aggStates, calStates))
 			hashRoot := hex.EncodeToString(tx.Hash)
-			app.Cache.Set(hashRoot, calAgg.CalRoot)
+			app.Cache.Add(hashRoot, calAgg.CalRoot)
 			app.logger.Info("Generating Cal Batch Complete")
 			return len(aggs), nil
 		}

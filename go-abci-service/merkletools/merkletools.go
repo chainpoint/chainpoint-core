@@ -140,7 +140,7 @@ func makeTree(mt *MerkleTree, useOddNodeDuplication bool, performHashesTwice boo
 
 		// Process newNodeSet while there are still node pairs to process
 		for len(newNodeSet) > 1 {
-			// Set the current working set to newNodeSet and clear newNodeSet
+			// Add the current working set to newNodeSet and clear newNodeSet
 			currentNodeSet := make([]*Node, len(newNodeSet))
 			copy(currentNodeSet, newNodeSet)
 			newNodeSet = nil

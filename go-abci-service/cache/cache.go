@@ -44,7 +44,13 @@ func (cache *Cache) Get (key string) ([]string, error) {
 	}
 }
 
-func (cache *Cache) Set(key string, value string) error {
+func (cache *Cache) GetOne (key string) (string, error) {
+	bArr, err := cache.LevelDb.Get([]byte("key"))
+	return string(bArr), err
+
+}
+
+func (cache *Cache) Add(key string, value string) error {
 	if cache.RedisClient != nil {
 		cache.RedisClient.WithContext(context.Background()).SAdd(key, value)
 	}
@@ -55,6 +61,23 @@ func (cache *Cache) Set(key string, value string) error {
 	results = append(results, value)
 	bArr, _ := json.Marshal(results)
 	err = cache.LevelDb.Set([]byte(key), bArr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cache *Cache) SetArray(key string, values []string) error {
+	bArr, _ := json.Marshal(values)
+	err := cache.LevelDb.Set([]byte(key), bArr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cache *Cache) Set(key string, value string) error {
+	err := cache.LevelDb.Set([]byte(key), []byte(value))
 	if err != nil {
 		return err
 	}

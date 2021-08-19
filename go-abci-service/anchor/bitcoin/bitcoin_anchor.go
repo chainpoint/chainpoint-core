@@ -121,7 +121,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 			AmLeader:         iAmLeader,
 		}
 		failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
-		err := app.Cache.Set(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+		err := app.Cache.Add(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 		if app.LogError(err) != nil {
 			return err
 		}
@@ -198,7 +198,7 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 	}
 
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, AnchorBtcAggRoot: btcTxObj.AnchorBtcAggRoot})
-	err = app.Cache.Set(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	err = app.Cache.Add(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 	if err != nil {
 		return err
 	}
@@ -478,7 +478,7 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 				//Add new anchor check
 				anchor.BtcBlockHeight = btcHeight // give ourselves extra time
 				failedAnchorJSON, _ := json.Marshal(anchor)
-				app.Cache.Set(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+				app.Cache.Add(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 			}
 		}
 		if hasBeen10CalBlocks && !confirmed { // if we have no confirmation of mempool inclusion after 10 minutes
@@ -627,7 +627,7 @@ func (app *AnchorBTC) MonitorBlocksForConfirmation(startHeight int64, endHeight 
 				app.Cache.Del(CONFIRMED_BTC_TX_IDS_KEY, confirmationTx)
 				tx.BlockHeight = i
 				txIDBytes, _ := json.Marshal(tx)
-				app.Cache.Set(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+				app.Cache.Add(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 				app.logger.Info(fmt.Sprintf("Found tx %s in block %d", tx.TxID, i))
 			}
 		}
