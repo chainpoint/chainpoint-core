@@ -8,6 +8,7 @@ import (
 	analytics2 "github.com/chainpoint/chainpoint-core/go-abci-service/analytics"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor/bitcoin"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/cache"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"net"
@@ -90,6 +91,7 @@ type AnchorApplication struct {
 	aggregator           *aggregator.Aggregator
 	PgClient             *postgres.Postgres
 	RedisClient          *redis.Client
+	Cache                *cache.Cache
 	LnClient             *lightning.LnClient
 	rpc                  *tendermint_rpc.RPC
 	ID                   string
@@ -142,10 +144,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		}
 		fmt.Println("Connection to Postgres established")
 	}
+	err = nil
 
 	//Declare redis Client
 	var redisClient *redis.Client
-	deadline = time.Now().Add(1 * time.Minute)
+	deadline = time.Now().Add(10 * time.Second)
 	for !time.Now().After(deadline) {
 		opt, err := redis.ParseURL(config.RedisURI)
 		if util.LoggerError(*config.Logger, err) != nil {
@@ -161,12 +164,13 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			break
 		}
 	}
-	if err != nil {
-		fmt.Println("Redis not ready after 1 minute")
-		panic(err)
-	} else if redisClient != nil {
+	if _, err = redisClient.Ping().Result(); err == nil {
 		fmt.Println("Connection to Redis established")
+	} else {
+		redisClient = nil
+		fmt.Println("Falling back to leveldb")
 	}
+	err = nil
 
 	//Wait for lightning connection
 	deadline = time.Now().Add(5 * time.Minute)
@@ -183,9 +187,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	if err != nil {
 		fmt.Println("LND not ready after 1 minute")
 		panic(err)
-	} else if redisClient != nil {
-		fmt.Println("Connection to LND established")
 	}
+	err = nil
 
 	jwkType := util.GenerateKey(&config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
 
@@ -193,7 +196,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
-	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, redisClient, &config.LightningConfig, *config.Logger, &analytics)
+	cache := cache.NewCache(redisClient, &db)
+
+	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, cache, &config.LightningConfig, *config.Logger, &analytics)
 
 
 	//Construct application
@@ -211,6 +216,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		},
 		PgClient:    pgClient,
 		RedisClient: redisClient,
+		Cache:       cache,
 		LnClient:    &config.LightningConfig,
 		rpc:         rpcClient,
 		JWK:         jwkType,

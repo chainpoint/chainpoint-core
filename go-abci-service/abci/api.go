@@ -278,16 +278,27 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 	ip := util.GetClientIP(r)
 	app.logger.Info(fmt.Sprintf("CalData Client IP: %s", ip))
 	vars := mux.Vars(r)
+	tx := types.Tx{}
 	if _, exists := vars["txid"]; exists {
 		result, err := app.rpc.GetTxByHash(vars["txid"])
-		if app.LogError(err) != nil {
-			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
-			return
-		}
-		tx, err := util.DecodeTx(result.Tx)
-		if app.LogError(err) != nil {
-			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not decode tx"})
-			return
+		if err != nil {
+			root, err := app.Cache.Get(vars["txid"])
+			if app.LogError(err) != nil {
+				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
+				return
+			}
+			if len(root) == 1 {
+				tx.Data = root[0]
+			} else {
+				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx from cache"})
+				return
+			}
+		} else {
+			tx, err = util.DecodeTx(result.Tx)
+			if app.LogError(err) != nil {
+				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not decode tx"})
+				return
+			}
 		}
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)

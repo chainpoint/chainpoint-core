@@ -417,7 +417,7 @@ func rotate(slice interface{}, rotate int) error {
 		}
 		// slice[j] = slice
 		sliceV.Index(j).Set(temp)
-		// elemJ.Set(temp)
+		// elemJ.Add(temp)
 	}
 	// success
 	return nil

@@ -1,12 +1,15 @@
 package abci
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
@@ -129,6 +132,12 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		}
 		break
 	case "CAL":
+		go func() {
+			time.Sleep(1 * time.Minute)
+			txHash := tmhash.Sum(rawTx)
+			app.logger.Info("Removing Cal Hash from Cache:", "hash", hex.EncodeToString(txHash))
+			app.Cache.Del(hex.EncodeToString(txHash), "")
+		}()
 		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt
 		app.state.CurrentCalInts++

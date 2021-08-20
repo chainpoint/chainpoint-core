@@ -12,7 +12,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
-	"github.com/go-redis/redis"
 	"strings"
 	"time"
 )
@@ -49,16 +48,24 @@ func (app *AnchorApplication) SendIdentity() error {
 func (app *AnchorApplication) LoadIdentity() error {
 	var cursor uint64
 	var idKeys []string
-	for {
-		var keys []string
-		var err error
-		keys, cursor, err = app.RedisClient.Scan(cursor, "CoreID:*", 10).Result()
-		if err != nil {
-			return err
+	var err error
+	if app.RedisClient != nil {
+		for {
+			var keys []string
+			keys, cursor, err = app.RedisClient.Scan(cursor, "CoreID:*", 10).Result()
+			if err != nil {
+				return err
+			}
+			idKeys = append(idKeys, keys...)
+			if cursor == 0 {
+				break
+			}
 		}
-		idKeys = append(idKeys, keys...)
-		if cursor == 0 {
-			break
+		app.LogError(app.Cache.SetArray("CoreIDs", idKeys))
+	} else {
+		idKeys, err = app.Cache.Get("CoreIDs")
+		if app.LogError(err) != nil {
+			return err
 		}
 	}
 	if len(idKeys) == 0 {
@@ -72,9 +79,21 @@ func (app *AnchorApplication) LoadIdentity() error {
 		} else {
 			continue
 		}
-		b64Str, err := app.RedisClient.Get(k).Result()
-		if app.LogError(err) != nil {
-			continue
+		var b64Str string
+		if app.RedisClient != nil {
+			b64Str, err = app.RedisClient.Get(k).Result()
+			if app.LogError(err) != nil {
+				continue
+			}
+			err = app.Cache.Set(k, b64Str)
+			if app.LogError(err) != nil {
+				continue
+			}
+		} else {
+			b64Str, err = app.Cache.GetOne(k)
+			if app.LogError(err) != nil {
+				continue
+			}
 		}
 		pubKeyBytes, err := base64.StdEncoding.DecodeString(b64Str)
 		if app.LogError(err) != nil {
@@ -163,26 +182,14 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	var jwkType types.Jwk
 	json.Unmarshal([]byte(tx.Data), &jwkType)
-	key := fmt.Sprintf("CorePublicKey:%s", jwkType.Kid)
 	app.logger.Info("JWK kid", "JWK Tx kid", jwkType.Kid, "app JWK kid", app.JWK.Kid)
-	jsonJwk, err := json.Marshal(jwkType)
-	if app.LogError(err) != nil {
-		return err
-	}
 	pubKey, err := util.DecodePubKey(tx)
 	var pubKeyBytes []byte
 	if app.LogError(err) == nil {
 		app.state.CoreKeys[tx.CoreID] = *pubKey
 		pubKeyBytes = elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
-		util.LoggerError(app.logger, app.RedisClient.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes), 0).Err())
-	}
-	value, err := app.RedisClient.Get(key).Result()
-	if app.LogError(err) == redis.Nil || value != string(jsonJwk) {
-		err = app.RedisClient.Set(key, value, 0).Err()
-		if app.LogError(err) != nil {
-			return err
-		}
-		app.logger.Info(fmt.Sprintf("Set JWK cache for kid %s", jwkType.Kid))
+		util.LoggerError(app.logger, app.Cache.Add("CoreIDs", tx.CoreID))
+		util.LoggerError(app.logger, app.Cache.Set("CoreID:" + tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes)))
 	}
 	pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
 	if val, exists := app.state.TxValidation[pubKeyHex]; exists {
