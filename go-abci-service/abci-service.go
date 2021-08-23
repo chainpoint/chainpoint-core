@@ -76,7 +76,9 @@ func main() {
 	tmos.TrapSignal(*config.Logger, func() {
 		if n.IsRunning() {
 			app.PgClient.DB.Close()
-			app.RedisClient.Close()
+			if app.RedisClient != nil {
+				app.RedisClient.Close()
+			}
 			logger.Info("Shutting down Core...")
 			n.Stop()
 		}
