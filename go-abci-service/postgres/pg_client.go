@@ -235,30 +235,6 @@ func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 	return types.AnchorBtcTxState{}, err
 }
 
-//GetBTCHeadStateObjectByBTCTxId: Get btc header state objects, given an array of btcTxIds
-func (pg *Postgres) GetBTCHeadStateObjectByBTCTxId(btcTxId string) (types.AnchorBtcHeadState, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := "SELECT btctx_id, btchead_height, btchead_state FROM btchead_states WHERE btctx_id = $1;"
-	rows, err := pg.DB.Query(stmt, btcTxId)
-	if err != nil {
-		return types.AnchorBtcHeadState{}, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var aggState types.AnchorBtcHeadState
-		switch err := rows.Scan(&aggState.BtcTxId, &aggState.BtcHeadHeight, &aggState.BtcHeadState); err {
-		case sql.ErrNoRows:
-			return types.AnchorBtcHeadState{}, nil
-		case nil:
-			return aggState, nil
-		default:
-			util.LoggerError(pg.Logger, err)
-			return types.AnchorBtcHeadState{}, err
-		}
-	}
-	return types.AnchorBtcHeadState{}, err
-}
-
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
 func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 	//pg.Logger.Info(util.GetCurrentFuncName(1))
@@ -357,28 +333,9 @@ func (pg *Postgres) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) erro
 	return err
 }
 
-// BulkInsertBtcHeadState : inserts head state into postgres
-func (pg *Postgres) BulkInsertBtcHeadState(headStates []types.AnchorBtcHeadState) error {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	insert := "INSERT INTO btchead_states (btctx_id, btchead_height, btchead_state, created_at, updated_at) VALUES "
-	values := []string{}
-	valuesArgs := make([]interface{}, 0)
-	i := 0
-	for _, h := range headStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
-		valuesArgs = append(valuesArgs, h.BtcTxId)
-		valuesArgs = append(valuesArgs, h.BtcHeadHeight)
-		valuesArgs = append(valuesArgs, h.BtcHeadState)
-		i++
-	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (btctx_id) DO UPDATE SET btchead_height = EXCLUDED.btchead_height, btchead_state = EXCLUDED.btchead_state"
-	_, err := pg.DB.Exec(stmt, valuesArgs...)
-	return err
-}
-
 // PruneProofStateTables : prunes proof tables
 func (pg *Postgres) PruneProofStateTables() error {
-	tables := []string{"proofs", "agg_states", "cal_states", "anchor_btc_agg_states", "btctx_states", "btchead_states"}
+	tables := []string{"proofs", "agg_states", "cal_states", "anchor_btc_agg_states", "btctx_states"}
 	var err error
 	for _, tabl := range tables {
 		go func(table string) {
