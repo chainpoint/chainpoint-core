@@ -30,15 +30,13 @@ func (cache *Cache) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 func (cache *Cache) GetProofsByProofIds(proofIds []string) (map[string]types.ProofState, error) {
 	proofs := make(map[string]types.ProofState)
 	for _, id := range proofIds {
-		results, err := cache.Get("proof:" + id)
+		result, err := cache.GetOne("proof:" + id)
 		if err != nil {
 			return map[string]types.ProofState{}, err
 		}
-		for _, res := range results {
-			proof := types.ProofState{}
-			json.Unmarshal([]byte(res), &proof)
-			proofs[proof.ProofID] = proof
-		}
+		proof := types.ProofState{}
+		json.Unmarshal([]byte(result), &proof)
+		proofs[proof.ProofID] = proof
 	}
 	return proofs, nil
 }
@@ -161,7 +159,7 @@ func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 	for _, proof := range proofs {
 		p, err := json.Marshal(proof)
 		if err != nil {
-			continue
+			return err
 		}
 		err = cache.Set("proof:"+proof.ProofID, string(p))
 		if err != nil {
