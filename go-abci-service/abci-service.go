@@ -76,6 +76,7 @@ func main() {
 	tmos.TrapSignal(*config.Logger, func() {
 		if n.IsRunning() {
 			app.PgClient.DB.Close()
+			app.Cache.LevelDb.Close()
 			if app.RedisClient != nil {
 				app.RedisClient.Close()
 			}

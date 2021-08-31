@@ -356,7 +356,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 			app.Anchor.MonitorConfirmedTx()
 			app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
 		}()
-		go app.PgClient.PruneProofStateTables()
+		go app.Cache.PruneOldState()
 	}
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
