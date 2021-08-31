@@ -177,8 +177,8 @@ func (cache *Cache) BulkInsertAggState(aggStates []types.AggState) error {
 		if err != nil {
 			continue
 		}
-		err = cache.Set("aggstate:" + agg.AggID, string(a))
-		err2 := cache.Set("aggstate_by_proof:" + agg.ProofID, string(a))
+		err = cache.Add("aggstate:" + agg.AggID, string(a))
+		err2 := cache.Add("aggstate_by_proof:" + agg.ProofID, string(a))
 		cache.Set("aggstateCreated:" + agg.ProofID, string(time.Now().Unix()))
 		if err != nil || err2 != nil {
 			return errors.New("aggstate insert failed")
@@ -194,8 +194,8 @@ func (cache *Cache) BulkInsertCalState(calStates []types.CalStateObject) error {
 		if err != nil {
 			continue
 		}
-		err = cache.Set("calstate:" + cal.CalId, string(c))
-		err2 := cache.Set("calstate_by_agg:" + cal.AggID, string(c))
+		err = cache.Add("calstate:" + cal.CalId, string(c))
+		err2 := cache.Add("calstate_by_agg:" + cal.AggID, string(c))
 		cache.Set("calstateCreated:" + cal.AggID, string(time.Now().Unix()))
 		if err != nil || err2 != nil {
 			return errors.New("calstate insert failed")
@@ -211,8 +211,8 @@ func (cache *Cache) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) e
 		if err != nil {
 			continue
 		}
-		err = cache.Set("anchorbtcaggstate:"+ agg.AnchorBtcAggId, string(a))
-		err2 := cache.Set("anchorbtcaggstate_by_cal:" + agg.CalId, string(a))
+		err = cache.Add("anchorbtcaggstate:"+ agg.AnchorBtcAggId, string(a))
+		err2 := cache.Add("anchorbtcaggstate_by_cal:" + agg.CalId, string(a))
 		cache.Set("anchorbtcaggstateCreated:" + agg.CalId, string(time.Now().Unix()))
 		if err != nil || err2 != nil {
 			return errors.New("anchorbtcaggstate insert failed")
