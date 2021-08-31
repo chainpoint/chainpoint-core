@@ -1,192 +1,132 @@
-package postgres
+package level
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/lib/pq"
 	"strings"
-
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-
-	_ "github.com/lib/pq"
-	"github.com/tendermint/tendermint/libs/log"
 )
 
-// Postgres : holds db connection info
-type Postgres struct {
-	DB     sql.DB
-	Logger log.Logger
-}
-
-//NewPG : creates new postgres connection and tests it
-func NewPG(user string, password string, host string, port string, dbName string, logger log.Logger) (*Postgres, error) {
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, dbName)
-	db, err := sql.Open("postgres", connStr)
-	if util.LoggerError(logger, err) != nil {
-		return nil, err
-	}
-	err = db.Ping()
-	if util.LoggerError(logger, err) != nil {
-		return nil, err
-	}
-	return &Postgres{
-		DB:     *db,
-		Logger: logger,
-	}, nil
-}
-
-func NewPGFromURI(connStr string, logger log.Logger) (*Postgres, error) {
-	db, err := sql.Open("postgres", connStr)
-	if util.LoggerError(logger, err) != nil {
-		return nil, err
-	}
-	err = db.Ping()
-	if util.LoggerError(logger, err) != nil {
-		return nil, err
-	}
-	return &Postgres{
-		DB:     *db,
-		Logger: logger,
-	}, nil
-}
-
-// GetProofIdsByAggIds : get proof ids from proof table, based on aggId
-func (pg *Postgres) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := "SELECT proof_id FROM agg_states WHERE agg_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, pq.Array(aggIds))
-	if err != nil {
-		return []string{}, err
-	}
-	defer rows.Close()
-	proofIds := make([]string, 0)
-	for rows.Next() {
-		var proofid string
-		switch err := rows.Scan(&proofid); err {
-		case sql.ErrNoRows:
-			return []string{}, nil
-		case nil:
-			proofIds = append(proofIds, proofid)
-			break
-		default:
-			util.LoggerError(pg.Logger, err)
+// GetProofIdsByAggIds : get proof ids from agg table, based on aggId
+func (cache *Cache) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
+	aggResults := []string{}
+	for _, id := range aggIds {
+		results, err := cache.Get("agg_state:" + id)
+		if err != nil {
 			return []string{}, err
 		}
+		for _, res := range results {
+			aggState := types.AggState{}
+			json.Unmarshal([]byte(res), &aggState)
+			aggResults = append(aggResults, aggState.ProofID)
+		}
 	}
-	return proofIds, nil
+	return aggResults, nil
 }
 
 // GetProofsByProofIds : get proofs from proof table, based on id
-func (pg *Postgres) GetProofsByProofIds(proofIds []string) (map[string]types.ProofState, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := "SELECT proof_id, proof FROM proofs WHERE proof_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, pq.Array(proofIds))
-	if err != nil {
-		return map[string]types.ProofState{}, err
-	}
-	defer rows.Close()
+func (cache *Cache) GetProofsByProofIds(proofIds []string) (map[string]types.ProofState, error) {
 	proofs := make(map[string]types.ProofState)
-	for rows.Next() {
-		var proof types.ProofState
-		switch err := rows.Scan(&proof.ProofID, &proof.Proof); err {
-		case sql.ErrNoRows:
-			return map[string]types.ProofState{}, nil
-		case nil:
-			proofs[proof.ProofID] = proof
-			break
-		default:
-			util.LoggerError(pg.Logger, err)
+	for _, id := range proofIds {
+		results, err := cache.Get("proof:" + id)
+		if err != nil {
 			return map[string]types.ProofState{}, err
+		}
+		for _, res := range results {
+			proof := types.ProofState{}
+			json.Unmarshal([]byte(res), &proof)
+			proofs[proof.ProofID] = proof
 		}
 	}
 	return proofs, nil
 }
 
 // GetProofIdsByBtcTxId : get proof ids from proof table, based on btctxId
-func (pg *Postgres) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := `SELECT a.proof_id FROM agg_states a
-    INNER JOIN cal_states c ON c.agg_id = a.agg_id
-    INNER JOIN anchor_btc_agg_states aa ON aa.cal_id = c.cal_id
-    INNER JOIN btctx_states tx ON tx.anchor_btc_agg_id = aa.anchor_btc_agg_id
-    WHERE tx.btctx_id = $1`
-	rows, err := pg.DB.Query(stmt, btcTxId)
+func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
+	btcTxStateStr, err := cache.GetOne("btctxstate:" + btcTxId)
 	if err != nil {
-		return []string{}, err
+		return []string{}, nil
 	}
-	defer rows.Close()
-	proofIds := make([]string, 0)
-	for rows.Next() {
-		var proofid string
-		switch err := rows.Scan(&proofid); err {
-		case sql.ErrNoRows:
-			return []string{}, nil
-		case nil:
-			proofIds = append(proofIds, proofid)
-			break
-		default:
-			util.LoggerError(pg.Logger, err)
-			return []string{}, err
+	btcTxState := types.AnchorBtcTxState{}
+	json.Unmarshal([]byte(btcTxStateStr), &btcTxState)
+	anchoraggs, err := cache.Get("anchorbtcaggstate:"+btcTxState.AnchorBtcAggId)
+	if err != nil {
+		return []string{}, nil
+	}
+	proofIds := []string{}
+	for _, agg := range anchoraggs {
+		anchorAggState := types.AnchorBtcAggState{}
+		if err := json.Unmarshal([]byte(agg), &anchorAggState); err != nil {
+			continue
+		}
+		calstates, err := cache.Get("calstate:" + anchorAggState.CalId)
+		if err != nil {
+			continue
+		}
+		for _, cs := range calstates {
+			cso := types.CalStateObject{}
+			if err := json.Unmarshal([]byte(cs), &cso); err != nil {
+				continue
+			}
+			aggstates, err := cache.Get("aggstate:" + cso.AggID)
+			if err != nil {
+				continue
+			}
+			for _, aggs := range aggstates {
+				aggState := types.AggState{}
+				if err := json.Unmarshal([]byte(aggs), &aggState); err != nil {
+					continue
+				}
+				proofIds = append(proofIds, aggState.ProofID)
+			}
 		}
 	}
 	return proofIds, nil
 }
 
 //GetCalStateObjectsByProofIds : Get calstate objects, given an array of aggIds
-func (pg *Postgres) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := "SELECT agg_id, cal_id, cal_state FROM cal_states WHERE agg_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, pq.Array(aggIds))
-	if err != nil {
-		return []types.CalStateObject{}, err
-	}
-	defer rows.Close()
-	calStates := make([]types.CalStateObject, 0)
-	for rows.Next() {
-		var calState types.CalStateObject
-		switch err := rows.Scan(&calState.AggID, &calState.CalId, &calState.CalState); err {
-		case sql.ErrNoRows:
-			return []types.CalStateObject{}, nil
-		case nil:
-			calStates = append(calStates, calState)
-			break
-		default:
-			util.LoggerError(pg.Logger, err)
+func  (cache *Cache) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
+	results := []types.CalStateObject{}
+	for _, agg := range aggIds {
+		cals, err := cache.Get("cal_state_by_agg_id:" + agg)
+		if err != nil {
 			return []types.CalStateObject{}, err
 		}
+		for _, cal := range cals {
+			result := types.CalStateObject{}
+			if err := json.Unmarshal([]byte(cal), &result); err != nil {
+				continue
+			}
+			results = append(results, result)
+		}
 	}
-	return calStates, nil
+	return results, nil
 }
 
 //GetAggStateObjectsByProofIds : Get aggstate objects, given an array of proofIds
-func (pg *Postgres) GetAggStateObjectsByProofIds(proofIds []string) ([]types.AggState, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := "SELECT proof_id, hash, agg_id, agg_state, agg_root FROM agg_states WHERE proof_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, pq.Array(proofIds))
-	if err != nil {
-		return []types.AggState{}, err
-	}
-	defer rows.Close()
-	aggStates := make([]types.AggState, 0)
-	for rows.Next() {
-		var aggState types.AggState
-		switch err := rows.Scan(&aggState.ProofID, &aggState.Hash, &aggState.AggID, &aggState.AggState, &aggState.AggRoot); err {
-		case sql.ErrNoRows:
-			return []types.AggState{}, nil
-		case nil:
-			aggStates = append(aggStates, aggState)
-			break
-		default:
-			util.LoggerError(pg.Logger, err)
+func (cache *Cache) GetAggStateObjectsByProofIds(proofIds []string) ([]types.AggState, error) {
+	results := []types.AggState{}
+	for _, id := range proofIds {
+		aggs, err := cache.Get("agg_state_by_proof_id:" + id)
+		if err != nil {
 			return []types.AggState{}, err
 		}
+		for _, agg := range aggs {
+			result := types.AggState{}
+			if err := json.Unmarshal([]byte(agg), &result); err != nil {
+				continue
+			}
+			results = append(results, result)
+		}
 	}
-	return aggStates, err
+	return results, nil
 }
 
 //GetAnchorBTCAggStateObjectsByCalIds: Get anchor state objects, given an array of calIds
-func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]types.AnchorBtcAggState, error) {
+func (cache *Cache) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]types.AnchorBtcAggState, error) {
 	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM anchor_btc_agg_states WHERE cal_id::TEXT = ANY($1);"
 	rows, err := pg.DB.Query(stmt, pq.Array(calIds))
@@ -212,7 +152,7 @@ func (pg *Postgres) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 }
 
 //GetBTCTxStateObjectByAnchorBTCAggId: Get btc state objects, given an array of agg ids
-func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
+func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
 	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	stmt := "SELECT anchor_btc_agg_id, btctx_id, btctx_state FROM btctx_states WHERE anchor_btc_agg_id::TEXT = $1;"
 	rows, err := pg.DB.Query(stmt, aggId)
@@ -235,8 +175,32 @@ func (pg *Postgres) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 	return types.AnchorBtcTxState{}, err
 }
 
+//GetBTCHeadStateObjectByBTCTxId: Get btc header state objects, given an array of btcTxIds
+func (cache *Cache) GetBTCHeadStateObjectByBTCTxId(btcTxId string) (types.AnchorBtcHeadState, error) {
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
+	stmt := "SELECT btctx_id, btchead_height, btchead_state FROM btchead_states WHERE btctx_id = $1;"
+	rows, err := pg.DB.Query(stmt, btcTxId)
+	if err != nil {
+		return types.AnchorBtcHeadState{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var aggState types.AnchorBtcHeadState
+		switch err := rows.Scan(&aggState.BtcTxId, &aggState.BtcHeadHeight, &aggState.BtcHeadState); err {
+		case sql.ErrNoRows:
+			return types.AnchorBtcHeadState{}, nil
+		case nil:
+			return aggState, nil
+		default:
+			util.LoggerError(pg.Logger, err)
+			return types.AnchorBtcHeadState{}, err
+		}
+	}
+	return types.AnchorBtcHeadState{}, err
+}
+
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
-func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
+func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO proofs (proof_id, proof, created_at, updated_at) VALUES "
 	values := []string{}
@@ -255,7 +219,7 @@ func (pg *Postgres) BulkInsertProofs(proofs []types.ProofState) error {
 }
 
 // BulkInsertAggState : inserts aggregator state into postgres
-func (pg *Postgres) BulkInsertAggState(aggStates []types.AggState) error {
+func (cache *Cache) BulkInsertAggState(aggStates []types.AggState) error {
 	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO agg_states (proof_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES "
 	values := []string{}
@@ -276,7 +240,7 @@ func (pg *Postgres) BulkInsertAggState(aggStates []types.AggState) error {
 }
 
 // BulkInsertCalState : inserts aggregator state into postgres
-func (pg *Postgres) BulkInsertCalState(calStates []types.CalStateObject) error {
+func (cache *Cache) BulkInsertCalState(calStates []types.CalStateObject) error {
 	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES "
 	values := []string{}
@@ -295,7 +259,7 @@ func (pg *Postgres) BulkInsertCalState(calStates []types.CalStateObject) error {
 }
 
 // BulkInsertBtcAggState : inserts aggregator state into postgres
-func (pg *Postgres) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) error {
+func (cache *Cache) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) error {
 	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES "
 	values := []string{}
@@ -314,7 +278,7 @@ func (pg *Postgres) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) e
 }
 
 // BulkInsertBtcTxState : inserts aggregator state into postgres
-func (pg *Postgres) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) error {
+func (cache *Cache) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) error {
 	//pg.Logger.Info(util.GetCurrentFuncName(1))
 	insert := "INSERT INTO btctx_states (anchor_btc_agg_id, btctx_id, btctx_state, created_at, updated_at) VALUES "
 	values := []string{}
@@ -333,16 +297,21 @@ func (pg *Postgres) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) erro
 	return err
 }
 
-// PruneProofStateTables : prunes proof tables
-func (pg *Postgres) PruneProofStateTables() error {
-	tables := []string{"proofs", "agg_states", "cal_states", "anchor_btc_agg_states", "btctx_states"}
-	var err error
-	for _, tabl := range tables {
-		go func(table string) {
-			pruneStmt := fmt.Sprintf("DELETE FROM %s WHERE created_at < NOW() - INTERVAL '24 HOURS'", table)
-			_, err := pg.DB.Exec(pruneStmt)
-			util.LoggerError(pg.Logger, err)
-		}(tabl)
+// BulkInsertBtcHeadState : inserts head state into postgres
+func (cache *Cache) BulkInsertBtcHeadState(headStates []types.AnchorBtcHeadState) error {
+	//pg.Logger.Info(util.GetCurrentFuncName(1))
+	insert := "INSERT INTO btchead_states (btctx_id, btchead_height, btchead_state, created_at, updated_at) VALUES "
+	values := []string{}
+	valuesArgs := make([]interface{}, 0)
+	i := 0
+	for _, h := range headStates {
+		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
+		valuesArgs = append(valuesArgs, h.BtcTxId)
+		valuesArgs = append(valuesArgs, h.BtcHeadHeight)
+		valuesArgs = append(valuesArgs, h.BtcHeadState)
+		i++
 	}
+	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (btctx_id) DO UPDATE SET btchead_height = EXCLUDED.btchead_height, btchead_state = EXCLUDED.btchead_state"
+	_, err := pg.DB.Exec(stmt, valuesArgs...)
 	return err
 }

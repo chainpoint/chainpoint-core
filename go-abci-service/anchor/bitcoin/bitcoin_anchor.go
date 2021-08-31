@@ -9,7 +9,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	analytics2 "github.com/chainpoint/chainpoint-core/go-abci-service/analytics"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/cache"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/level"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
@@ -35,14 +35,14 @@ type AnchorBTC struct {
 	config        types.AnchorConfig
 	tendermintRpc *tendermint_rpc.RPC
 	PgClient      *postgres.Postgres
-	Cache         *cache.Cache
+	Cache         *level.Cache
 	LnClient      *lightning.LnClient
 	logger        log.Logger
 	analytics     *analytics2.UniversalAnalytics
 }
 
 func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
-	PgClient *postgres.Postgres, cache *cache.Cache, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
+	PgClient *postgres.Postgres, cache *level.Cache, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
 		config:        config,

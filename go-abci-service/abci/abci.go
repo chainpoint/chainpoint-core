@@ -8,7 +8,7 @@ import (
 	analytics2 "github.com/chainpoint/chainpoint-core/go-abci-service/analytics"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor/bitcoin"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/cache"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/level"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"net"
@@ -91,7 +91,7 @@ type AnchorApplication struct {
 	aggregator           *aggregator.Aggregator
 	PgClient             *postgres.Postgres
 	RedisClient          *redis.Client
-	Cache                *cache.Cache
+	Cache                *level.Cache
 	LnClient             *lightning.LnClient
 	rpc                  *tendermint_rpc.RPC
 	ID                   string
@@ -196,7 +196,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
-	cache := cache.NewCache(redisClient, &db)
+	cache := level.NewCache(redisClient, &db)
 
 	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, cache, &config.LightningConfig, *config.Logger, &analytics)
 
