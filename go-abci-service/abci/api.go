@@ -238,7 +238,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": errStr})
 		}
 	}
-	proofStates, err := app.PgClient.GetProofsByProofIds(proofids)
+	proofStates, err := app.Cache.GetProofsByProofIds(proofids)
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve proofs"})
 	}

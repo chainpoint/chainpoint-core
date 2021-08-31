@@ -41,7 +41,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 	aggStates := make([]types.AggState, 0)
 	for _, agg := range aggs {
 		aggStates = append(aggStates, agg.AggStates...)
-		app.LogError(app.PgClient.BulkInsertAggState(agg.AggStates))
+		app.LogError(app.Cache.BulkInsertAggState(agg.AggStates))
 	}
 	app.logger.Debug(fmt.Sprintf("Aggregated %d roots: ", len(aggs)))
 	app.logger.Debug(fmt.Sprintf("Aggregation Tree: %#v", aggs))
@@ -64,7 +64,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			calStates := calendar.CreateCalStateMessage(tx, calAgg)
 			app.logger.Info(fmt.Sprintf("Cal States: %#v", len(calStates)))
 			app.logger.Info("Generating Cal Batch")
-			app.LogError(app.PgClient.BulkInsertCalState(calStates))
+			app.LogError(app.Cache.BulkInsertCalState(calStates))
 			app.LogError(app.GenerateCalBatch(aggStates, calStates))
 			hashRoot := hex.EncodeToString(tx.Hash)
 			app.Cache.Add(hashRoot, calAgg.CalRoot)
@@ -97,6 +97,6 @@ func (app *AnchorApplication) GenerateCalBatch(aggStates []types.AggState, calSt
 		}
 		proofs = append(proofs, proofState)
 	}
-	return app.LogError(app.PgClient.BulkInsertProofs(proofs))
+	return app.LogError(app.Cache.BulkInsertProofs(proofs))
 }
 

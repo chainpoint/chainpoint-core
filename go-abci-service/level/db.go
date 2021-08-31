@@ -1,20 +1,19 @@
 package level
 
 import (
-	"database/sql"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/lib/pq"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // GetProofIdsByAggIds : get proof ids from agg table, based on aggId
 func (cache *Cache) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 	aggResults := []string{}
 	for _, id := range aggIds {
-		results, err := cache.Get("agg_state:" + id)
+		results, err := cache.Get("aggstate:" + id)
 		if err != nil {
 			return []string{}, err
 		}
@@ -91,7 +90,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 func  (cache *Cache) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
 	results := []types.CalStateObject{}
 	for _, agg := range aggIds {
-		cals, err := cache.Get("cal_state_by_agg_id:" + agg)
+		cals, err := cache.Get("calstate_by_agg:" + agg)
 		if err != nil {
 			return []types.CalStateObject{}, err
 		}
@@ -110,7 +109,7 @@ func  (cache *Cache) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalSta
 func (cache *Cache) GetAggStateObjectsByProofIds(proofIds []string) ([]types.AggState, error) {
 	results := []types.AggState{}
 	for _, id := range proofIds {
-		aggs, err := cache.Get("agg_state_by_proof_id:" + id)
+		aggs, err := cache.Get("aggstate_by_proof:" + id)
 		if err != nil {
 			return []types.AggState{}, err
 		}
@@ -127,191 +126,209 @@ func (cache *Cache) GetAggStateObjectsByProofIds(proofIds []string) ([]types.Agg
 
 //GetAnchorBTCAggStateObjectsByCalIds: Get anchor state objects, given an array of calIds
 func (cache *Cache) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]types.AnchorBtcAggState, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := "SELECT cal_id, anchor_btc_agg_id, anchor_btc_agg_state FROM anchor_btc_agg_states WHERE cal_id::TEXT = ANY($1);"
-	rows, err := pg.DB.Query(stmt, pq.Array(calIds))
-	if err != nil {
-		return []types.AnchorBtcAggState{}, err
-	}
-	defer rows.Close()
-	aggStates := make([]types.AnchorBtcAggState, 0)
-	for rows.Next() {
-		var aggState types.AnchorBtcAggState
-		switch err := rows.Scan(&aggState.CalId, &aggState.AnchorBtcAggId, &aggState.AnchorBtcAggState); err {
-		case sql.ErrNoRows:
+	results := []types.AnchorBtcAggState{}
+	for _, id := range calIds {
+		anchoraggs, err := cache.Get("anchorbtcaggstate_by_cal:" + id)
+		if err != nil {
 			return []types.AnchorBtcAggState{}, nil
-		case nil:
-			aggStates = append(aggStates, aggState)
-			break
-		default:
-			util.LoggerError(pg.Logger, err)
-			return []types.AnchorBtcAggState{}, err
+		}
+		for _, agg := range anchoraggs {
+			result := types.AnchorBtcAggState{}
+			if err := json.Unmarshal([]byte(agg), &result); err != nil {
+				continue
+			}
+			results = append(results, result)
 		}
 	}
-	return aggStates, err
+	return results, nil
 }
 
 //GetBTCTxStateObjectByAnchorBTCAggId: Get btc state objects, given an array of agg ids
 func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := "SELECT anchor_btc_agg_id, btctx_id, btctx_state FROM btctx_states WHERE anchor_btc_agg_id::TEXT = $1;"
-	rows, err := pg.DB.Query(stmt, aggId)
+	btcTxStateStr , err := cache.GetOne("btctxstate_by_agg:" + aggId)
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var aggState types.AnchorBtcTxState
-		switch err := rows.Scan(&aggState.AnchorBtcAggId, &aggState.BtcTxId, &aggState.BtcTxState); err {
-		case sql.ErrNoRows:
-			return types.AnchorBtcTxState{}, nil
-		case nil:
-			return aggState, nil
-		default:
-			util.LoggerError(pg.Logger, err)
-			return types.AnchorBtcTxState{}, err
-		}
+	btcTxState := types.AnchorBtcTxState{}
+	if err := json.Unmarshal([]byte(btcTxStateStr), &btcTxState); err != nil {
+		return types.AnchorBtcTxState{}, err
 	}
-	return types.AnchorBtcTxState{}, err
-}
-
-//GetBTCHeadStateObjectByBTCTxId: Get btc header state objects, given an array of btcTxIds
-func (cache *Cache) GetBTCHeadStateObjectByBTCTxId(btcTxId string) (types.AnchorBtcHeadState, error) {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	stmt := "SELECT btctx_id, btchead_height, btchead_state FROM btchead_states WHERE btctx_id = $1;"
-	rows, err := pg.DB.Query(stmt, btcTxId)
-	if err != nil {
-		return types.AnchorBtcHeadState{}, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var aggState types.AnchorBtcHeadState
-		switch err := rows.Scan(&aggState.BtcTxId, &aggState.BtcHeadHeight, &aggState.BtcHeadState); err {
-		case sql.ErrNoRows:
-			return types.AnchorBtcHeadState{}, nil
-		case nil:
-			return aggState, nil
-		default:
-			util.LoggerError(pg.Logger, err)
-			return types.AnchorBtcHeadState{}, err
-		}
-	}
-	return types.AnchorBtcHeadState{}, err
+	return btcTxState, nil
 }
 
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
 func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	insert := "INSERT INTO proofs (proof_id, proof, created_at, updated_at) VALUES "
-	values := []string{}
-	valuesArgs := make([]interface{}, 0)
-	i := 0
-	for _, p := range proofs {
-		values = append(values, fmt.Sprintf("($%d, $%d, clock_timestamp(), clock_timestamp())", i*2+1, i*2+2))
-		valuesArgs = append(valuesArgs, p.ProofID)
-		valuesArgs = append(valuesArgs, p.Proof)
-		i++
+	for _, proof := range proofs {
+		p, err := json.Marshal(proof)
+		if err != nil {
+			continue
+		}
+		err = cache.Set("proof:"+proof.ProofID, string(p))
+		if err != nil {
+			return err
+		}
+		cache.Set("proofCreated:" + proof.ProofID, string(time.Now().Unix()))
 	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (proof_id) DO UPDATE SET proof = EXCLUDED.proof"
-	pg.Logger.Info(fmt.Sprintf("INSERT INTO PROOFS: %s", stmt))
-	_, err := pg.DB.Exec(stmt, valuesArgs...)
-	return err
+	return nil
 }
 
 // BulkInsertAggState : inserts aggregator state into postgres
 func (cache *Cache) BulkInsertAggState(aggStates []types.AggState) error {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	insert := "INSERT INTO agg_states (proof_id, hash, agg_id, agg_state, agg_root, created_at, updated_at) VALUES "
-	values := []string{}
-	valuesArgs := make([]interface{}, 0)
-	i := 0
-	for _, a := range aggStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*5+1, i*5+2, i*5+3, i*5+4, i*5+5))
-		valuesArgs = append(valuesArgs, a.ProofID)
-		valuesArgs = append(valuesArgs, a.Hash)
-		valuesArgs = append(valuesArgs, a.AggID)
-		valuesArgs = append(valuesArgs, a.AggState)
-		valuesArgs = append(valuesArgs, a.AggRoot)
-		i++
+	for _, agg := range aggStates {
+		a, err := json.Marshal(agg)
+		if err != nil {
+			continue
+		}
+		err = cache.Set("aggstate:" + agg.AggID, string(a))
+		err2 := cache.Set("aggstate_by_proof:" + agg.ProofID, string(a))
+		cache.Set("aggstateCreated:" + agg.ProofID, string(time.Now().Unix()))
+		if err != nil || err2 != nil {
+			return errors.New("aggstate insert failed")
+		}
 	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (proof_id) DO NOTHING"
-	_, err := pg.DB.Exec(stmt, valuesArgs...)
-	return err
+	return nil
 }
 
 // BulkInsertCalState : inserts aggregator state into postgres
 func (cache *Cache) BulkInsertCalState(calStates []types.CalStateObject) error {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	insert := "INSERT INTO cal_states (agg_id, cal_id, cal_state, created_at, updated_at) VALUES "
-	values := []string{}
-	valuesArgs := make([]interface{}, 0)
-	i := 0
-	for _, c := range calStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
-		valuesArgs = append(valuesArgs, c.AggID)
-		valuesArgs = append(valuesArgs, c.CalId)
-		valuesArgs = append(valuesArgs, c.CalState)
-		i++
+	for _, cal := range calStates {
+		c, err := json.Marshal(cal)
+		if err != nil {
+			continue
+		}
+		err = cache.Set("calstate:" + cal.CalId, string(c))
+		err2 := cache.Set("calstate_by_agg:" + cal.AggID, string(c))
+		cache.Set("calstateCreated:" + cal.AggID, string(time.Now().Unix()))
+		if err != nil || err2 != nil {
+			return errors.New("calstate insert failed")
+		}
 	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (agg_id) DO NOTHING"
-	_, err := pg.DB.Exec(stmt, valuesArgs...)
-	return err
+	return nil
 }
 
 // BulkInsertBtcAggState : inserts aggregator state into postgres
 func (cache *Cache) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) error {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	insert := "INSERT INTO anchor_btc_agg_states (cal_id, anchor_btc_agg_id, anchor_btc_agg_state, created_at, updated_at) VALUES "
-	values := []string{}
-	valuesArgs := make([]interface{}, 0)
-	i := 0
-	for _, a := range aggStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
-		valuesArgs = append(valuesArgs, a.CalId)
-		valuesArgs = append(valuesArgs, a.AnchorBtcAggId)
-		valuesArgs = append(valuesArgs, a.AnchorBtcAggState)
-		i++
+	for _, agg := range aggStates {
+		a, err := json.Marshal(agg)
+		if err != nil {
+			continue
+		}
+		err = cache.Set("anchorbtcaggstate:"+ agg.AnchorBtcAggId, string(a))
+		err2 := cache.Set("anchorbtcaggstate_by_cal:" + agg.CalId, string(a))
+		cache.Set("anchorbtcaggstateCreated:" + agg.CalId, string(time.Now().Unix()))
+		if err != nil || err2 != nil {
+			return errors.New("anchorbtcaggstate insert failed")
+		}
 	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (cal_id) DO NOTHING"
-	_, err := pg.DB.Exec(stmt, valuesArgs...)
-	return err
+	return nil
 }
 
 // BulkInsertBtcTxState : inserts aggregator state into postgres
 func (cache *Cache) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) error {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	insert := "INSERT INTO btctx_states (anchor_btc_agg_id, btctx_id, btctx_state, created_at, updated_at) VALUES "
-	values := []string{}
-	valuesArgs := make([]interface{}, 0)
-	i := 0
-	for _, t := range txStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
-		valuesArgs = append(valuesArgs, t.AnchorBtcAggId)
-		valuesArgs = append(valuesArgs, t.BtcTxId)
-		valuesArgs = append(valuesArgs, t.BtcTxState)
-		i++
+	for _, state := range txStates {
+		s, err := json.Marshal(state)
+		if err != nil {
+			continue
+		}
+		err = cache.Set("btctxstate:"+ state.BtcTxId, string(s))
+		err2 := cache.Set("btctxstate_by_agg:" + state.AnchorBtcAggId, string(s))
+		cache.Set("btctxstateCreated:" + state.AnchorBtcAggId, string(time.Now().Unix()))
+		if err != nil || err2 != nil {
+			return errors.New("anchorbtcaggstate insert failed")
+		}
 	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (anchor_btc_agg_id) DO UPDATE SET btctx_id = EXCLUDED.btctx_id, btctx_state = EXCLUDED.btctx_state"
-	_, err := pg.DB.Exec(stmt, valuesArgs...)
-	pg.Logger.Info(fmt.Sprintf("INSERT INTO BTCTX: %s", stmt))
-	return err
+	return nil
 }
 
-// BulkInsertBtcHeadState : inserts head state into postgres
-func (cache *Cache) BulkInsertBtcHeadState(headStates []types.AnchorBtcHeadState) error {
-	//pg.Logger.Info(util.GetCurrentFuncName(1))
-	insert := "INSERT INTO btchead_states (btctx_id, btchead_height, btchead_state, created_at, updated_at) VALUES "
-	values := []string{}
-	valuesArgs := make([]interface{}, 0)
-	i := 0
-	for _, h := range headStates {
-		values = append(values, fmt.Sprintf("($%d, $%d, $%d, clock_timestamp(), clock_timestamp())", i*3+1, i*3+2, i*3+3))
-		valuesArgs = append(valuesArgs, h.BtcTxId)
-		valuesArgs = append(valuesArgs, h.BtcHeadHeight)
-		valuesArgs = append(valuesArgs, h.BtcHeadState)
-		i++
+func (cache *Cache) PruneOldState() {
+	btctxstateIt, _ := cache.LevelDb.Iterator([]byte("btctxstateCreated:"), nil)
+	anchoraggstateIt, _ := cache.LevelDb.Iterator([]byte("anchorbtcaggstateCreated:"), nil)
+	calstateIt, _ := cache.LevelDb.Iterator([]byte("calstateCreated:"), nil)
+	aggstateIt, _ := cache.LevelDb.Iterator([]byte("aggstateCreated:"), nil)
+	proofstateIt, _ := cache.LevelDb.Iterator([]byte("proofCreated:"), nil)
+	for ; btctxstateIt.Valid(); btctxstateIt.Next() {
+		value := btctxstateIt.Value()
+		t, err := strconv.ParseInt(string(value), 10, 64)
+		if err != nil {
+			continue
+		}
+		tm := time.Unix(t, 0)
+		if time.Now().After(tm.Add(6 * time.Hour)) {
+			key := string(btctxstateIt.Key())
+			id := strings.Split(key, ":")[1]
+			state, _ := cache.GetBTCTxStateObjectByAnchorBTCAggId(id)
+			cache.Del(key, "")
+			cache.Del("btctxstate_by_agg:" + id, "")
+			cache.Del("btctxstate:" + state.BtcTxId, "")
+		}
 	}
-	stmt := insert + strings.Join(values, ", ") + " ON CONFLICT (btctx_id) DO UPDATE SET btchead_height = EXCLUDED.btchead_height, btchead_state = EXCLUDED.btchead_state"
-	_, err := pg.DB.Exec(stmt, valuesArgs...)
-	return err
+	for ; anchoraggstateIt.Valid(); anchoraggstateIt.Next() {
+		value := anchoraggstateIt.Value()
+		t, err := strconv.ParseInt(string(value), 10, 64)
+		if err != nil {
+			continue
+		}
+		tm := time.Unix(t, 0)
+		if time.Now().After(tm.Add(6 * time.Hour)) {
+			key := string(anchoraggstateIt.Key())
+			id := strings.Split(key, ":")[1]
+			states, _ := cache.GetAnchorBTCAggStateObjectsByCalIds([]string{id})
+			cache.Del(key, "")
+			cache.Del("anchorbtcaggstate_by_cal" + id, "")
+			for _, s := range states {
+				cache.Del("anchorbtcaggstate:"+s.AnchorBtcAggId, "")
+			}
+		}
+	}
+	for ; calstateIt.Valid(); calstateIt.Next() {
+		value := calstateIt.Value()
+		t, err := strconv.ParseInt(string(value), 10, 64)
+		if err != nil {
+			continue
+		}
+		tm := time.Unix(t, 0)
+		if time.Now().After(tm.Add(6 * time.Hour)) {
+			key := string(calstateIt.Key())
+			id := strings.Split(key, ":")[1]
+			states, _ := cache.GetCalStateObjectsByAggIds([]string{id})
+			cache.Del(key, "")
+			cache.Del("calstate_by_agg:" + id, "")
+			for _, s := range states {
+				cache.Del("calstate:"+s.CalId, "")
+			}
+		}
+	}
+	for ; aggstateIt.Valid(); aggstateIt.Next() {
+		value := aggstateIt.Value()
+		t, err := strconv.ParseInt(string(value), 10, 64)
+		if err != nil {
+			continue
+		}
+		tm := time.Unix(t, 0)
+		if time.Now().After(tm.Add(6 * time.Hour)) {
+			key := string(aggstateIt.Key())
+			id := strings.Split(key, ":")[1]
+			states, _ := cache.GetAggStateObjectsByProofIds([]string{id})
+			cache.Del(key, "")
+			cache.Del("aggstate_by_proof:" + id, "")
+			for _, s := range states {
+				cache.Del("aggstate:"+s.AggID, "")
+			}
+		}
+	}
+	for ; proofstateIt.Valid(); proofstateIt.Next() {
+		value := proofstateIt.Value()
+		t, err := strconv.ParseInt(string(value), 10, 64)
+		if err != nil {
+			continue
+		}
+		tm := time.Unix(t, 0)
+		if time.Now().After(tm.Add(24 * time.Hour)) {
+			key := string(aggstateIt.Key())
+			id := strings.Split(key, ":")[1]
+			cache.Del(key, "")
+			cache.Del("proof:" + id, "")
+		}
+	}
 }
+
