@@ -196,7 +196,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
-	cache := level.NewCache(redisClient, &db)
+	cache := level.NewCache(redisClient, &db, *config.Logger)
 
 	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, cache, &config.LightningConfig, *config.Logger, &analytics)
 

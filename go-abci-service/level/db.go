@@ -258,6 +258,7 @@ func (cache *Cache) PruneOldState() {
 			cache.Del(key, "")
 			cache.Del("btctxstate_by_agg:" + id, "")
 			cache.Del("btctxstate:" + state.BtcTxId, "")
+			cache.Logger.Info("db pruned", "btcTxState", state.BtcTxId)
 		}
 	}
 	for ; anchoraggstateIt.Valid(); anchoraggstateIt.Next() {
@@ -326,6 +327,7 @@ func (cache *Cache) PruneOldState() {
 			id := strings.Split(key, ":")[1]
 			cache.Del(key, "")
 			cache.Del("proof:" + id, "")
+			cache.Logger.Info("db pruned", "proof", id)
 		}
 	}
 }
