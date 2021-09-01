@@ -282,13 +282,13 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 	if _, exists := vars["txid"]; exists {
 		result, err := app.rpc.GetTxByHash(vars["txid"])
 		if err != nil {
-			root, err := app.Cache.Get(vars["txid"])
+			root, err := app.Cache.GetOne(vars["txid"])
 			if app.LogError(err) != nil {
 				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
 				return
 			}
-			if len(root) >= 1 {
-				tx.Data = root[0]
+			if len(root) != 0 {
+				tx.Data = root
 			} else {
 				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx from cache"})
 				return
