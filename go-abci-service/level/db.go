@@ -248,7 +248,7 @@ func (cache *Cache) PruneOldState() {
 	for ; btctxstateIt.Valid(); btctxstateIt.Next() {
 		value := btctxstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
-		cache.Logger.Info("Iterating", "key", btctxstateIt.Key(), "btcTxState", string(t),)
+		cache.Logger.Info("Iterating", "key", btctxstateIt.Key(), "btcTxState", string(value))
 		if err != nil {
 			continue
 		}
@@ -266,7 +266,7 @@ func (cache *Cache) PruneOldState() {
 	for ; anchoraggstateIt.Valid(); anchoraggstateIt.Next() {
 		value := anchoraggstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
-		cache.Logger.Info("Iterating", "key", anchoraggstateIt.Key(), "anchorAggState", string(t))
+		cache.Logger.Info("Iterating", "key", anchoraggstateIt.Key(), "anchorAggState", string(value))
 		if err != nil {
 			continue
 		}
@@ -285,7 +285,7 @@ func (cache *Cache) PruneOldState() {
 	for ; calstateIt.Valid(); calstateIt.Next() {
 		value := calstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
-		cache.Logger.Info("Iterating", "key", calstateIt.Key(), "calState", string(t))
+		cache.Logger.Info("Iterating", "key", calstateIt.Key(), "calState", string(value))
 		if err != nil {
 			continue
 		}
@@ -304,7 +304,7 @@ func (cache *Cache) PruneOldState() {
 	for ; aggstateIt.Valid(); aggstateIt.Next() {
 		value := aggstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
-		cache.Logger.Info("Iterating", "key", aggstateIt.Key(), "aggState", string(t))
+		cache.Logger.Info("Iterating", "key", aggstateIt.Key(), "aggState", string(value))
 		if err != nil {
 			continue
 		}
@@ -323,7 +323,7 @@ func (cache *Cache) PruneOldState() {
 	for ; proofstateIt.Valid(); proofstateIt.Next() {
 		value := proofstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
-		cache.Logger.Info("Iterating", "key", proofstateIt.Key(), "proofstateIt", string(t))
+		cache.Logger.Info("Iterating", "key", proofstateIt.Key(), "proofstateIt", string(value))
 		if err != nil {
 			continue
 		}
