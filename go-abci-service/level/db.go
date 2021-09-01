@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	db "github.com/tendermint/tm-db"
 	"strconv"
 	"strings"
 	"time"
@@ -239,13 +240,14 @@ func (cache *Cache) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) erro
 }
 
 func (cache *Cache) PruneOldState() {
-	btctxstateIt, _ := cache.LevelDb.Iterator([]byte("btctxstateCreated:"), nil)
-	anchoraggstateIt, _ := cache.LevelDb.Iterator([]byte("anchorbtcaggstateCreated:"), nil)
-	calstateIt, _ := cache.LevelDb.Iterator([]byte("calstateCreated:"), nil)
-	aggstateIt, _ := cache.LevelDb.Iterator([]byte("aggstateCreated:"), nil)
-	proofstateIt, _ := cache.LevelDb.Iterator([]byte("proofCreated:"), nil)
+	btctxstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("btctxstateCreated:"))
+	anchoraggstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("anchorbtcaggstateCreated:"))
+	calstateIt, _ :=db.IteratePrefix(cache.LevelDb, []byte("calstateCreated:"))
+	aggstateIt, _ :=db.IteratePrefix(cache.LevelDb, []byte("aggstateCreated:"))
+	proofstateIt, _ :=db.IteratePrefix(cache.LevelDb, []byte("proofCreated:"))
 	for ; btctxstateIt.Valid(); btctxstateIt.Next() {
 		value := btctxstateIt.Value()
+		cache.Logger.Info("Iterating", "btcTxState", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
 		if err != nil {
 			continue
@@ -263,6 +265,7 @@ func (cache *Cache) PruneOldState() {
 	}
 	for ; anchoraggstateIt.Valid(); anchoraggstateIt.Next() {
 		value := anchoraggstateIt.Value()
+		cache.Logger.Info("Iterating", "anchorAggState", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
 		if err != nil {
 			continue
@@ -281,6 +284,7 @@ func (cache *Cache) PruneOldState() {
 	}
 	for ; calstateIt.Valid(); calstateIt.Next() {
 		value := calstateIt.Value()
+		cache.Logger.Info("Iterating", "calState", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
 		if err != nil {
 			continue
@@ -299,6 +303,7 @@ func (cache *Cache) PruneOldState() {
 	}
 	for ; aggstateIt.Valid(); aggstateIt.Next() {
 		value := aggstateIt.Value()
+		cache.Logger.Info("Iterating", "aggState", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
 		if err != nil {
 			continue
@@ -317,6 +322,7 @@ func (cache *Cache) PruneOldState() {
 	}
 	for ; proofstateIt.Valid(); proofstateIt.Next() {
 		value := proofstateIt.Value()
+		cache.Logger.Info("Iterating", "proofstateIt", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
 		if err != nil {
 			continue
