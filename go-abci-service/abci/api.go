@@ -287,7 +287,7 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
 				return
 			}
-			if len(root) == 1 {
+			if len(root) > 1 {
 				tx.Data = root[0]
 			} else {
 				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx from cache"})
