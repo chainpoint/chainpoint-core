@@ -247,8 +247,8 @@ func (cache *Cache) PruneOldState() {
 	proofstateIt, _ :=db.IteratePrefix(cache.LevelDb, []byte("proofCreated:"))
 	for ; btctxstateIt.Valid(); btctxstateIt.Next() {
 		value := btctxstateIt.Value()
-		cache.Logger.Info("Iterating", "btcTxState", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
+		cache.Logger.Info("Iterating", "key", btctxstateIt.Key(), "btcTxState", string(t),)
 		if err != nil {
 			continue
 		}
@@ -265,8 +265,8 @@ func (cache *Cache) PruneOldState() {
 	}
 	for ; anchoraggstateIt.Valid(); anchoraggstateIt.Next() {
 		value := anchoraggstateIt.Value()
-		cache.Logger.Info("Iterating", "anchorAggState", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
+		cache.Logger.Info("Iterating", "key", anchoraggstateIt.Key(), "anchorAggState", string(t))
 		if err != nil {
 			continue
 		}
@@ -284,8 +284,8 @@ func (cache *Cache) PruneOldState() {
 	}
 	for ; calstateIt.Valid(); calstateIt.Next() {
 		value := calstateIt.Value()
-		cache.Logger.Info("Iterating", "calState", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
+		cache.Logger.Info("Iterating", "key", calstateIt.Key(), "calState", string(t))
 		if err != nil {
 			continue
 		}
@@ -303,8 +303,8 @@ func (cache *Cache) PruneOldState() {
 	}
 	for ; aggstateIt.Valid(); aggstateIt.Next() {
 		value := aggstateIt.Value()
-		cache.Logger.Info("Iterating", "aggState", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
+		cache.Logger.Info("Iterating", "key", aggstateIt.Key(), "aggState", string(t))
 		if err != nil {
 			continue
 		}
@@ -322,8 +322,8 @@ func (cache *Cache) PruneOldState() {
 	}
 	for ; proofstateIt.Valid(); proofstateIt.Next() {
 		value := proofstateIt.Value()
-		cache.Logger.Info("Iterating", "proofstateIt", string(value))
 		t, err := strconv.ParseInt(string(value), 10, 64)
+		cache.Logger.Info("Iterating", "key", proofstateIt.Key(), "proofstateIt", string(t))
 		if err != nil {
 			continue
 		}
