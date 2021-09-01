@@ -84,46 +84,5 @@ services:
     networks:
       - chainpoint
 
-  # Redis
-  #
-  redis:
-    restart: always
-    image: redis:4.0.9
-    container_name: redis-core
-    user: ${USERID}:${GROUPID}
-    ports:
-      - '6382:6379'
-    volumes:
-      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
-      - ~/.chainpoint/core/data/redis:/data:Z
-    networks:
-      - chainpoint
-    command:
-      - redis-server
-      - /usr/local/etc/redis/redis.conf
 
-  # Postgres
-  #
-  # See : https://hub.docker.com/_/postgres/
-  # Note: Connect locally on OS X:
-  #
-  # Installs local client 'psql'
-  #   brew install postgres
-  #
-  # Connect (uname/pass chainpoint/chainpoint):
-  #   psql -h 127.0.0.1 -U chainpoint
-  #
-  postgres:
-    restart: always
-    image: postgres:11.2
-    container_name: postgres-core
-    user: ${USERID}:${GROUPID}
-    volumes:
-      - ~/.chainpoint/core/data/postgresql:/var/lib/postgresql/data:Z
-    environment:
-      POSTGRES_USER: chainpoint
-      POSTGRES_PASSWORD: chainpoint
-    ports:
-      - '5433:5432'
-    networks:
-      - chainpoint
+
