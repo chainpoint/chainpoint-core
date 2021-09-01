@@ -166,7 +166,7 @@ func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 		if err != nil {
 			return err
 		}
-		cache.Set("proofCreated:" + proof.ProofID, string(time.Now().Unix()))
+		cache.Set("proofCreated:" + proof.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
 	}
 	return nil
 }
@@ -180,7 +180,7 @@ func (cache *Cache) BulkInsertAggState(aggStates []types.AggState) error {
 		}
 		err = cache.Add("aggstate:" + agg.AggID, string(a))
 		err2 := cache.Add("aggstate_by_proof:" + agg.ProofID, string(a))
-		cache.Set("aggstateCreated:" + agg.ProofID, string(time.Now().Unix()))
+		cache.Set("aggstateCreated:" + agg.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("aggstate insert failed")
 		}
@@ -197,7 +197,7 @@ func (cache *Cache) BulkInsertCalState(calStates []types.CalStateObject) error {
 		}
 		err = cache.Add("calstate:" + cal.CalId, string(c))
 		err2 := cache.Add("calstate_by_agg:" + cal.AggID, string(c))
-		cache.Set("calstateCreated:" + cal.AggID, string(time.Now().Unix()))
+		cache.Set("calstateCreated:" + cal.AggID, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("calstate insert failed")
 		}
@@ -214,7 +214,7 @@ func (cache *Cache) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) e
 		}
 		err = cache.Add("anchorbtcaggstate:"+ agg.AnchorBtcAggId, string(a))
 		err2 := cache.Add("anchorbtcaggstate_by_cal:" + agg.CalId, string(a))
-		cache.Set("anchorbtcaggstateCreated:" + agg.CalId, string(time.Now().Unix()))
+		cache.Set("anchorbtcaggstateCreated:" + agg.CalId, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("anchorbtcaggstate insert failed")
 		}
@@ -231,7 +231,7 @@ func (cache *Cache) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) erro
 		}
 		err = cache.Set("btctxstate:"+ state.BtcTxId, string(s))
 		err2 := cache.Set("btctxstate_by_agg:" + state.AnchorBtcAggId, string(s))
-		cache.Set("btctxstateCreated:" + state.AnchorBtcAggId, string(time.Now().Unix()))
+		cache.Set("btctxstateCreated:" + state.AnchorBtcAggId, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("anchorbtcaggstate insert failed")
 		}
