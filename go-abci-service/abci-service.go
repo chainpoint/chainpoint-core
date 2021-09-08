@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
+	"github.com/lightningnetwork/lnd/signal"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -26,6 +27,8 @@ import (
 	"github.com/throttled/throttled/v2/store/memstore"
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
+	"github.com/lightningnetwork/lnd"
+	"github.com/jessevdk/go-flags"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -142,9 +145,29 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+	go runLnd()
 	server.ListenAndServe()
-
 	return
+}
+
+func runLnd(){
+	loadedConfig, err := lnd.LoadConfig()
+	if err != nil {
+		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+			// Print error if not due to help request.
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		// Help was requested, exit normally.
+		os.Exit(0)
+	}
+	if err := lnd.Main(
+		loadedConfig, lnd.ListenerCfg{}, signal.ShutdownChannel(),
+	); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
 // initABCIConfig: receives ENV variables and initializes app config struct

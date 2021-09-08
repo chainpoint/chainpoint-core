@@ -14,9 +14,10 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
+	github.com/jessevdk/go-flags v1.4.0
 	github.com/knq/pemutil v0.0.0-20181215144041-fb6fad722528
 	github.com/lestrrat-go/jwx v0.9.2
-	github.com/lib/pq v1.7.0
+	github.com/lib/pq v1.7.0 // indirect
 	github.com/lightningnetwork/lnd v0.9.2-beta
 	github.com/ltcsuite/ltcd v0.20.1-beta // indirect
 	github.com/miekg/dns v1.1.29 // indirect
@@ -49,5 +50,6 @@ replace (
 	github.com/lightningnetwork/lnd/lnrpc/walletrpc v0.9.2-beta => github.com/tierion/lnd/lnrpc/walletrpc v0.9.0-beta-rc1.0.20210513144118-84217725bb47
 	github.com/lightningnetwork/lnd/lntypes v0.9.2-beta => github.com/tierion/lnd/lntypes v0.9.0-beta-rc1.0.20210513144118-84217725bb47
 	github.com/lightningnetwork/lnd/macaroons v0.9.2-beta => github.com/tierion/lnd/macaroons v0.9.0-beta-rc1.0.20210513144118-84217725bb47
+	github.com/lightninglabs/neutrino => github.com/Tierion/neutrino v0.11.1-0.20210510140741-bcbc10e7e12e
 	go.uber.org/atomic => github.com/uber-go/atomic v1.5.0
 )
