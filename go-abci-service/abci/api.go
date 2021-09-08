@@ -340,6 +340,8 @@ func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request
 	}
 	if len(app.config.CoreURI) != 0 {
 		selfIp := strings.ReplaceAll(app.config.CoreURI, "http://", "")
+		uriParts := strings.Split(selfIp, ":")
+		selfIp = uriParts[0]
 		peerList = append(peerList, selfIp)
 	}
 	peerList = util.UniquifyStrings(peerList)

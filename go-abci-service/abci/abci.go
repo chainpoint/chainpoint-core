@@ -23,8 +23,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
-	"github.com/go-redis/redis"
-
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/aggregator"
@@ -88,7 +86,6 @@ type AnchorApplication struct {
 	config               types.AnchorConfig
 	logger               log.Logger
 	aggregator           *aggregator.Aggregator
-	RedisClient          *redis.Client
 	Cache                *level.Cache
 	LnClient             *lightning.LnClient
 	rpc                  *tendermint_rpc.RPC
@@ -121,34 +118,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	var err error
 
-	//Declare redis Client
-	var redisClient *redis.Client
-	deadline := time.Now().Add(10 * time.Second)
-	for !time.Now().After(deadline) {
-		opt, err := redis.ParseURL(config.RedisURI)
-		if util.LoggerError(*config.Logger, err) != nil {
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		redisClient = redis.NewClient(opt)
-		_, err = redisClient.Ping().Result()
-		if util.LoggerError(*config.Logger, err) != nil {
-			time.Sleep(5 * time.Second)
-			continue
-		} else {
-			break
-		}
-	}
-	if _, err = redisClient.Ping().Result(); err == nil {
-		fmt.Println("Connection to Redis established")
-	} else {
-		redisClient = nil
-		fmt.Println("Falling back to leveldb")
-	}
-	err = nil
-
 	//Wait for lightning connection
-	deadline = time.Now().Add(5 * time.Minute)
+	deadline := time.Now().Add(5 * time.Minute)
 	for !time.Now().After(deadline) {
 		conn, err := config.LightningConfig.CreateConn()
 		if util.LoggerError(*config.Logger, err) != nil {
@@ -171,7 +142,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
-	cache := level.NewCache(redisClient, &db, *config.Logger)
+	cache := level.NewCache(&db, *config.Logger)
 
 	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, cache, &config.LightningConfig, *config.Logger, &analytics)
 
@@ -189,7 +160,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
 		},
-		RedisClient: redisClient,
 		Cache:       cache,
 		LnClient:    &config.LightningConfig,
 		rpc:         rpcClient,

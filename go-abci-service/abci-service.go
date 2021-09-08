@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/gorilla/mux"
+	"github.com/namsral/flag"
 	cfg "github.com/tendermint/tendermint/config"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
 	"github.com/tendermint/tendermint/libs/log"
@@ -41,7 +41,15 @@ import (
 	tmtime "github.com/tendermint/tendermint/types/time"
 )
 
+var home string
+
 func main() {
+	homedirname, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	home = fmt.Sprintf("%s/.chainpoint/core", homedirname)
+
 	//runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	//Instantiate Tendermint Node Config
 	tmConfig, err := initTendermintConfig()
@@ -79,9 +87,6 @@ func main() {
 	tmos.TrapSignal(*config.Logger, func() {
 		if n.IsRunning() {
 			app.Cache.LevelDb.Close()
-			if app.RedisClient != nil {
-				app.RedisClient.Close()
-			}
 			logger.Info("Shutting down Core...")
 			n.Stop()
 		}
@@ -173,22 +178,42 @@ func runLnd(){
 // initABCIConfig: receives ENV variables and initializes app config struct
 func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig {
 	// Perform env type conversions
-	bitcoinNetwork := util.GetEnv("NETWORK", "testnet")
-	doPrivateNetwork, _ := strconv.ParseBool(util.GetEnv("PRIVATE_NETWORK", "false"))
-	nodeIPs := strings.Split(util.GetEnv("PRIVATE_NODE_IPS", ""), ",")
-	coreIPs := strings.Split(util.GetEnv("PRIVATE_CORE_IPS", ""), ",")
-	useAggregatorAllowlist, _ := strconv.ParseBool(util.GetEnv("AGGREGATOR_PUBLIC", "false"))
-	aggregatorAllowlist := strings.Split(util.GetEnv("AGGREGATOR_WHITELIST", ""), ",")
-	doCalLoop, _ := strconv.ParseBool(util.GetEnv("AGGREGATE", "false"))
-	doAnchorLoop, _ := strconv.ParseBool(util.GetEnv("ANCHOR", "false"))
-	anchorInterval, _ := strconv.Atoi(util.GetEnv("ANCHOR_INTERVAL", "60"))
-	anchorTimeout, _ := strconv.Atoi(util.GetEnv("ANCHOR_TIMEOUT", "20"))
-	anchorReward, _ := strconv.Atoi(util.GetEnv("ANCHOR_REWARD", "0"))
-	blockCIDRs := strings.Split(util.GetEnv("CIDR_BLOCKLIST", ""), ",")
-	hashPrice, _ := strconv.Atoi(util.GetEnv("SUBMIT_HASH_PRICE_SAT", "2"))
-	electionMode := util.GetEnv("ELECTION", "reputation")
-
-	walletAddress := util.GetEnv("HOT_WALLET_ADDRESS", "")
+	var bitcoinNetwork, walletAddress, walletPass, secretKeyPath, aggregatorAllowStr, blockCIDRStr string
+	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
+	var coreURI, coreName, analyticsID, logLevel string
+	var feeMultiplier float64
+	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval int
+	var useAggregatorAllowlist, doCalLoop, doAnchorLoop bool
+	flag.StringVar(&bitcoinNetwork, "network", "mainnet", "bitcoin network")
+	flag.BoolVar(&useAggregatorAllowlist, "aggregator_public", false, "use aggregator allow list")
+	flag.StringVar(&aggregatorAllowStr, "aggregator_whitelist", "", "prevent whitelisted IPs from needing to pay invoices")
+	flag.BoolVar(&doCalLoop, "aggregate", true, "whether to submit calendar transactions to Chainpoint Calendar")
+	flag.BoolVar(&doAnchorLoop, "anchor", true, "whether to participate in bitcoin anchoring elections")
+	flag.StringVar(&electionMode, "election", "reputation", "mode for leader election")
+	flag.IntVar(&anchorInterval, "anchor_interval", 60, "interval to use for bitcoin anchoring")
+	flag.IntVar(&anchorTimeout, "anchor_timeout", 20, "timeout use for bitcoin anchoring")
+	flag.IntVar(&anchorReward, "anchor_reward", 0, "reward for cores that anchor")
+	flag.IntVar(&hashPrice, "submit_hash_price_sat", 2, "cost in satoshis for non-whitelisted gateways to submit a hash")
+	flag.StringVar(&blockCIDRStr, "cidr_blocklist", "", "comma-delimited list of IPs to block")
+	//lightning settings
+	flag.StringVar(&walletAddress, "hot_wallet_address", "", "birthday address for lnd account")
+	flag.StringVar(&walletPass, "hot_wallet_pass", "", "hot wallet password")
+	flag.StringVar(&macaroonPath, "macaroon_path", fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, strings.ToLower(bitcoinNetwork)), "path to lnd admin macaroon")
+	flag.StringVar(&tlsCertPath, "ln_tls_path", fmt.Sprint("%s/.lnd/tls.cert", home), "path to lnd tls certificate")
+	flag.StringVar(&lndSocket, "lnd_socket", "127.0.0.1:10009", "url to lnd grpc server")
+	flag.Float64Var(&feeMultiplier, "btc_fee_multiplier", 2.2, "multiply anchoring fee by this constant when mempool is congested")
+	flag.IntVar(&feeInterval, "fee_interval", 10, "interval in minutes to check for new bitcoin tx fee")
+	flag.StringVar(&sessionSecret, "session_secret", "", "mutual LSAT macaroon secret for cores and gateways")
+	flag.StringVar(&tmServer, "tendermint_host", "127.0.0.1", "tendermint api url")
+	flag.StringVar(&tmPort, "tendermint_port", "26657", "tendermint api port")
+	flag.StringVar(&coreURI, "chainpoint_core_base_uri", "http://0.0.0.0:26656", "core URI")
+	flag.StringVar(&coreName, "chainpoint_core_name", "", "core Name")
+	flag.StringVar(&analyticsID, "google_ua_id", "", "google analytics id")
+	flag.StringVar(&logLevel, "log_level", "info", "log level")
+	flag.StringVar(&secretKeyPath, "secret_key_path", home + "/data/keys/ecdsa_key.pem", "path to ECDSA secret key")
+	flag.Parse()
+	aggregatorAllowlist := strings.Split(aggregatorAllowStr, ",")
+	blockCIDRs := strings.Split(blockCIDRStr, ",")
 	if walletAddress == "" {
 		content, err := ioutil.ReadFile("/run/secrets/HOT_WALLET_ADDRESS")
 		if err != nil {
@@ -197,32 +222,19 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		walletAddress = string(content)
 	}
 
-	//lightning settings
-	tlsCertPath := util.GetEnv("LN_TLS_CERT", "/root/.lnd/tls.cert")
-	macaroonPath := util.GetEnv("MACAROON_PATH", fmt.Sprintf("/root/.lnd/data/chain/bitcoin/%s/admin.macaroon", strings.ToLower(bitcoinNetwork)))
-	walletPass := util.GetEnv("HOT_WALLET_PASS", "")
-	lndSocket := util.GetEnv("LND_SOCKET", "lnd:10009")
-	feeMultiplier, _ := strconv.ParseFloat(util.GetEnv("BTC_FEE_MULTIPLIER", "2.2"), 64)
-	feeInterval, _ := strconv.Atoi(util.GetEnv("FEE_INTERVAL", "10"))
-	sessionSecret := util.GetEnv("SESSION_SECRET", "")
-
-	//testMode := util.GetEnv("NETWORK", "testnet")
 	tendermintRPC := types.TendermintConfig{
-		TMServer: util.GetEnv("TENDERMINT_HOST", "127.0.0.1"),
-		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
+		TMServer: tmServer,
+		TMPort:   tmPort,
 		NodeKey:  nodeKey,
 	}
-	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
-	apiURI := util.GetEnv("API_URI", "http://api:8080")
-	coreURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0")
+	if len(coreName) == 0 {
+		coreName = coreURI
+	}
 
-	coreName := util.GetEnv("CHAINPOINT_CORE_NAME", coreURI)
-	analyticsID := util.GetEnv("GOOGLE_UA_ID", "")
-
-	allowLevel, _ := log.AllowLevel(strings.ToLower(util.GetEnv("LOG_LEVEL", "info")))
+	allowLevel, _ := log.AllowLevel(strings.ToLower(logLevel))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
-	store, err := pemutil.LoadFile("/run/secrets/ECDSA_PKPEM")
+	store, err := pemutil.LoadFile(secretKeyPath)
 	if err != nil {
 		util.LogError(err)
 	}
@@ -242,7 +254,6 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		DBType:           "goleveldb",
 		BitcoinNetwork:   bitcoinNetwork,
 		ElectionMode:     electionMode,
-		RabbitmqURI:      util.GetEnv("RABBITMQ_URI", "amqp://chainpoint:chainpoint@rabbitmq:5672/"),
 		TendermintConfig: tendermintRPC,
 		LightningConfig: lightning.LnClient{
 			TlsPath:        tlsCertPath,
@@ -256,12 +267,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 			HashPrice:      int64(hashPrice),
 			SessionSecret:  sessionSecret,
 		},
-		RedisURI:         redisURI,
-		APIURI:           apiURI,
 		ECPrivateKey:     *ecPrivKey,
-		DoPrivateNetwork: doPrivateNetwork,
-		PrivateNodeIPs:   nodeIPs,
-		PrivateCoreIPs:   coreIPs,
 		CIDRBlockList:    blockCIDRs,
 		IPBlockList:      blocklist,
 		DoCal:            doCalLoop,
@@ -288,7 +294,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	var TMConfig types.TendermintConfig
 	initEnv("TM")
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
-	homeDir := "/tendermint"
+	homeDir := home
 	viper.Set(homeFlag, homeDir)
 	viper.SetConfigName("config")                         // name of config file (without extension)
 	viper.AddConfigPath(homeDir)                          // search root directory
@@ -313,7 +319,12 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(65 * time.Second) // allows us to wait for tx to commit + 5 sec latency margin
 	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
-	listenAddr := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0:26656")
+	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter string
+	flag.StringVar(&listenAddr, "chainpoint_core_base_uri", "http://0.0.0.0:26656", "tendermint base uri")
+	flag.StringVar(&tendermintPeers, "peers", "", "comma-delimited list of peers")
+	flag.StringVar(&tendermintSeeds, "seeds", "", "comma-delimited list of seeds")
+	flag.StringVar(&tendermintLogFilter, "log_filter", "main:debug,state:info,*:error", "log level for tendermint")
+	flag.Parse()
 	if strings.Contains(listenAddr, "//") {
 		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/")+1:]
 	}
@@ -325,11 +336,11 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	defaultConfig.P2P.MaxNumOutboundPeers = 75
 	defaultConfig.TxIndex.IndexAllKeys = true
 	peers := []string{}
-	if tendermintPeers := util.GetEnv("PEERS", ""); tendermintPeers != "" {
+	if tendermintPeers != "" {
 		peers = strings.Split(tendermintPeers, ",")
 		defaultConfig.P2P.PersistentPeers = tendermintPeers
 	}
-	if tendermintSeeds := util.GetEnv("SEEDS", ""); tendermintSeeds != "" {
+	if tendermintSeeds != "" {
 		peers = strings.Split(tendermintSeeds, ",")
 		defaultConfig.P2P.Seeds = tendermintSeeds
 	}
@@ -341,7 +352,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	if defaultConfig.LogFormat == cfg.LogFormatJSON {
 		tmlogger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
 	}
-	logger, err := tmflags.ParseLogLevel(util.GetEnv("LOG_FILTER", "main:debug,state:info,*:error"), tmlogger, cfg.DefaultLogLevel())
+	logger, err := tmflags.ParseLogLevel(tendermintLogFilter, tmlogger, cfg.DefaultLogLevel())
 	if err != nil {
 		panic(err)
 	}

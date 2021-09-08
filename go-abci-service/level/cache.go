@@ -1,7 +1,6 @@
 package level
 
 import (
-	"context"
 	"encoding/json"
 	"github.com/go-redis/redis"
 	"github.com/tendermint/tendermint/libs/log"
@@ -15,36 +14,27 @@ type Cache struct {
 }
 
 // create redis caching layer that gradually migrates to leveldb
-func NewCache (redis *redis.Client, db *dbm.DB, logger log.Logger) *Cache {
+func NewCache (db *dbm.DB, logger log.Logger) *Cache {
 	return &Cache{
-		RedisClient: redis,
 		LevelDb:     *db,
 		Logger:      logger,
 	}
 }
 
 func (cache *Cache) Get (key string) ([]string, error) {
-	if cache.RedisClient != nil {
-		results := cache.RedisClient.WithContext(context.Background()).SMembers(key)
-		if results.Err() != nil {
-			return []string{}, results.Err()
-		}
-		return results.Val(), nil
-	} else {
-		bArr, err := cache.LevelDb.Get([]byte(key))
-		if err != nil {
-			return []string{}, err
-		}
-		if bArr == nil {
-			return []string{}, nil
-		}
-		var arr []string
-		err = json.Unmarshal(bArr, &arr)
-		if err != nil {
-			return []string{}, err
-		}
-		return arr, nil
+	bArr, err := cache.LevelDb.Get([]byte(key))
+	if err != nil {
+		return []string{}, err
 	}
+	if bArr == nil {
+		return []string{}, nil
+	}
+	var arr []string
+	err = json.Unmarshal(bArr, &arr)
+	if err != nil {
+		return []string{}, err
+	}
+	return arr, nil
 }
 
 func (cache *Cache) GetOne (key string) (string, error) {
@@ -54,9 +44,6 @@ func (cache *Cache) GetOne (key string) (string, error) {
 }
 
 func (cache *Cache) Add(key string, value string) error {
-	if cache.RedisClient != nil {
-		cache.RedisClient.WithContext(context.Background()).SAdd(key, value)
-	}
 	results, err := cache.Get(key)
 	if err != nil {
 		return err
@@ -88,9 +75,6 @@ func (cache *Cache) Set(key string, value string) error {
 }
 
 func (cache *Cache) Del(key string, value string) error {
-	if cache.RedisClient != nil {
-		cache.RedisClient.WithContext(context.Background()).SRem(key, value)
-	}
 	if value == "" {
 		return cache.LevelDb.Delete([]byte(key))
 	}

@@ -254,7 +254,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 		}
 		app.logger.Info(fmt.Sprintf("Restarting confirmation process for %s", btcMonObj.BtcTxID))
 	}
-	headStateObj := calendar.GenerateHeadStateObject(hash, btcMonObj)
+	headStateObj := calendar.GenerateHeadStateObject(app.config.CoreURI, hash, btcMonObj)
 	proofIds, err := app.Cache.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
 	app.logger.Info(fmt.Sprintf("BTC ProofIds: %#v", proofIds))
 	app.LogError(err)

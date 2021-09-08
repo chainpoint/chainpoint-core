@@ -46,27 +46,11 @@ func (app *AnchorApplication) SendIdentity() error {
 
 //LoadIdentity : load public keys derived from JWTs from redis
 func (app *AnchorApplication) LoadIdentity() error {
-	var cursor uint64
 	var idKeys []string
 	var err error
-	if app.RedisClient != nil {
-		for {
-			var keys []string
-			keys, cursor, err = app.RedisClient.Scan(cursor, "CoreID:*", 10).Result()
-			if err != nil {
-				return err
-			}
-			idKeys = append(idKeys, keys...)
-			if cursor == 0 {
-				break
-			}
-		}
-		app.LogError(app.Cache.SetArray("CoreIDs", idKeys))
-	} else {
-		idKeys, err = app.Cache.Get("CoreIDs")
-		if app.LogError(err) != nil {
-			return err
-		}
+	idKeys, err = app.Cache.Get("CoreIDs")
+	if app.LogError(err) != nil {
+		return err
 	}
 	if len(idKeys) == 0 {
 		return util.LoggerError(app.logger, errors.New("no JWT keys found in redis"))
@@ -80,20 +64,9 @@ func (app *AnchorApplication) LoadIdentity() error {
 			continue
 		}
 		var b64Str string
-		if app.RedisClient != nil {
-			b64Str, err = app.RedisClient.Get(k).Result()
-			if app.LogError(err) != nil {
-				continue
-			}
-			err = app.Cache.Set(k, b64Str)
-			if app.LogError(err) != nil {
-				continue
-			}
-		} else {
-			b64Str, err = app.Cache.GetOne(k)
-			if app.LogError(err) != nil {
-				continue
-			}
+		b64Str, err = app.Cache.GetOne(k)
+		if app.LogError(err) != nil {
+			continue
 		}
 		pubKeyBytes, err := base64.StdEncoding.DecodeString(b64Str)
 		if app.LogError(err) != nil {

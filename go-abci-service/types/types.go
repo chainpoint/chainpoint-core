@@ -33,19 +33,12 @@ type AnchorConfig struct {
 	DBType           string
 	BitcoinNetwork   string
 	ElectionMode     string
-	RabbitmqURI      string
 	TendermintConfig TendermintConfig
 	LightningConfig  lightning.LnClient
-	PostgresURI      string
-	RedisURI         string
-	APIURI           string
 	EthConfig        EthConfig
 	ECPrivateKey     ecdsa.PrivateKey
 	DoNodeManagement bool
 	DoNodeAudit      bool
-	DoPrivateNetwork bool
-	PrivateNodeIPs   []string
-	PrivateCoreIPs   []string
 	CIDRBlockList    []string
 	IPBlockList      []string
 	DoCal            bool

@@ -146,7 +146,7 @@ func PrepareBtcaStateData(anchorDataObj types.BtcAgg) []types.AnchorBtcAggState 
 }
 
 // GenerateHeadStateObject: Assembles anchor operations into object ready for insertion into postgres
-func GenerateHeadStateObject(hash []byte, btcMonObj types.BtcMonMsg) types.AnchorBtcHeadState {
+func GenerateHeadStateObject(uri string, hash []byte, btcMonObj types.BtcMonMsg) types.AnchorBtcHeadState {
 	anchorOps := types.AnchorOpsState{}
 	anchorOps.Ops = make([]types.ProofLineItem, 0)
 	for _, p := range btcMonObj.Path {
@@ -158,11 +158,12 @@ func GenerateHeadStateObject(hash []byte, btcMonObj types.BtcMonMsg) types.Ancho
 		}
 		anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Op: "sha-256-x2"})
 	}
-	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
-	uri := strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", baseURI, hash))
+	proofUri := strings.ReplaceAll(uri, "http://", "")
+	uriParts := strings.Split(proofUri, ":")
+	proofUri = uriParts[0]
 	anchorOps.Anchor = types.AnchorObj{
 		AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
-		Uris:     []string{uri},
+		Uris:     []string{strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", proofUri, hash))},
 	}
 	headState, _ := json.Marshal(anchorOps)
 	headStateObj := types.AnchorBtcHeadState{
