@@ -184,4 +184,4 @@ The README for the Core application in this repo is available [here](https://git
 
 ## License
 
-[Apache License Version 2.0](https://opensource.org/licenses/Apache-2.0)
+This is Open Source software released under [AGPLv3](./LICENSE.txt)
