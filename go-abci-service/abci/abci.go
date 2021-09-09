@@ -8,7 +8,7 @@ import (
 	analytics2 "github.com/chainpoint/chainpoint-core/go-abci-service/analytics"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/anchor/bitcoin"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/cache"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/level"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"net"
@@ -22,7 +22,6 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/go-abci-service/validation"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/go-redis/redis"
 
@@ -89,9 +88,8 @@ type AnchorApplication struct {
 	config               types.AnchorConfig
 	logger               log.Logger
 	aggregator           *aggregator.Aggregator
-	PgClient             *postgres.Postgres
 	RedisClient          *redis.Client
-	Cache                *cache.Cache
+	Cache                *level.Cache
 	LnClient             *lightning.LnClient
 	rpc                  *tendermint_rpc.RPC
 	ID                   string
@@ -121,34 +119,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	state.CoreKeys = map[string]ecdsa.PublicKey{}
 	state.ChainSynced = false // False until we finish syncing
 
-	// Declare postgres connection
-	var pgClient *postgres.Postgres
 	var err error
-	deadline := time.Now().Add(1 * time.Minute)
-	for !time.Now().After(deadline) {
-		pgClient, err = postgres.NewPGFromURI(config.PostgresURI, *config.Logger)
-		if util.LoggerError(*config.Logger, err) != nil {
-			time.Sleep(5 * time.Second)
-		} else {
-			break
-		}
-	}
-	if err != nil {
-		fmt.Println("Postgres not ready after 1 minute")
-		panic(err)
-	} else if pgClient != nil {
-		if !pgClient.SchemaExists() {
-			pgClient.CreateSchema()
-		} else {
-			fmt.Println("Schema exists")
-		}
-		fmt.Println("Connection to Postgres established")
-	}
-	err = nil
 
 	//Declare redis Client
 	var redisClient *redis.Client
-	deadline = time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(10 * time.Second)
 	for !time.Now().After(deadline) {
 		opt, err := redis.ParseURL(config.RedisURI)
 		if util.LoggerError(*config.Logger, err) != nil {
@@ -196,9 +171,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
-	cache := cache.NewCache(redisClient, &db)
+	cache := level.NewCache(redisClient, &db, *config.Logger)
 
-	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, pgClient, cache, &config.LightningConfig, *config.Logger, &analytics)
+	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, cache, &config.LightningConfig, *config.Logger, &analytics)
 
 
 	//Construct application
@@ -214,7 +189,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
 		},
-		PgClient:    pgClient,
 		RedisClient: redisClient,
 		Cache:       cache,
 		LnClient:    &config.LightningConfig,
@@ -356,7 +330,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 			app.Anchor.MonitorConfirmedTx()
 			app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
 		}()
-		go app.PgClient.PruneProofStateTables()
+		go app.Cache.PruneOldState()
 	}
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }

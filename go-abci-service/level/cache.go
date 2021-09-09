@@ -1,22 +1,25 @@
-package cache
+package level
 
 import (
 	"context"
 	"encoding/json"
 	"github.com/go-redis/redis"
+	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 )
 
 type Cache struct {
 	RedisClient   *redis.Client
 	LevelDb       dbm.DB
+	Logger        log.Logger
 }
 
 // create redis caching layer that gradually migrates to leveldb
-func NewCache (redis *redis.Client, db *dbm.DB) *Cache {
+func NewCache (redis *redis.Client, db *dbm.DB, logger log.Logger) *Cache {
 	return &Cache{
 		RedisClient: redis,
 		LevelDb:     *db,
+		Logger:      logger,
 	}
 }
 

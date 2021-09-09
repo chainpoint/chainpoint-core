@@ -9,12 +9,11 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	analytics2 "github.com/chainpoint/chainpoint-core/go-abci-service/analytics"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/cache"
+	"github.com/chainpoint/chainpoint-core/go-abci-service/level"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/calendar"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/leader_election"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/merkletools"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/postgres"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/proof"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
@@ -34,20 +33,18 @@ type AnchorBTC struct {
 	state         *types.AnchorState
 	config        types.AnchorConfig
 	tendermintRpc *tendermint_rpc.RPC
-	PgClient      *postgres.Postgres
-	Cache         *cache.Cache
+	Cache         *level.Cache
 	LnClient      *lightning.LnClient
 	logger        log.Logger
 	analytics     *analytics2.UniversalAnalytics
 }
 
 func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
-	PgClient *postgres.Postgres, cache *cache.Cache, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
+	cache *level.Cache, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
 		config:        config,
 		tendermintRpc: tendermintRpc,
-		PgClient:      PgClient,
 		Cache:         cache,
 		LnClient:      LnClient,
 		logger:        logger,
@@ -192,7 +189,7 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 	app.state.LatestBtcAggRoot = btcTxObj.AnchorBtcAggRoot
 	stateObj := calendar.GenerateAnchorBtcTxState(btcTxObj)
 	app.logger.Info(fmt.Sprintf("BTC-A BtcTx State Obj: %#v", stateObj))
-	err := app.PgClient.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
+	err := app.Cache.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
 	if app.LogError(err) != nil {
 		return err
 	}
@@ -215,7 +212,7 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 		return errors.New("StartAnchoring failure, AggRoot mismatch")
 	}
 	anchorBTCAggStateObjects := calendar.PrepareBtcaStateData(btcAgg)
-	err = app.PgClient.BulkInsertBtcAggState(anchorBTCAggStateObjects)
+	err = app.Cache.BulkInsertBtcAggState(anchorBTCAggStateObjects)
 	if app.LogError(err) != nil {
 		app.logger.Info(fmt.Sprintf("StartAnchoring TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
 		return err
@@ -258,7 +255,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 		app.logger.Info(fmt.Sprintf("Restarting confirmation process for %s", btcMonObj.BtcTxID))
 	}
 	headStateObj := calendar.GenerateHeadStateObject(hash, btcMonObj)
-	proofIds, err := app.PgClient.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
+	proofIds, err := app.Cache.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
 	app.logger.Info(fmt.Sprintf("BTC ProofIds: %#v", proofIds))
 	app.LogError(err)
 	app.logger.Info(fmt.Sprintf("BtcHeadState: %#v", headStateObj))
@@ -269,7 +266,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 
 func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.AnchorBtcHeadState) error {
 	app.logger.Info(util.GetCurrentFuncName(1))
-	aggStates, err := app.PgClient.GetAggStateObjectsByProofIds(proofIds)
+	aggStates, err := app.Cache.GetAggStateObjectsByProofIds(proofIds)
 	if err != nil {
 		return err
 	}
@@ -277,7 +274,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 	for _, aggState := range aggStates {
 		aggIds = append(aggIds, aggState.AggID)
 	}
-	calStates, err := app.PgClient.GetCalStateObjectsByAggIds(aggIds)
+	calStates, err := app.Cache.GetCalStateObjectsByAggIds(aggIds)
 	if err != nil {
 		return err
 	}
@@ -286,7 +283,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 		calIds = append(calIds, calState.CalId)
 	}
 
-	anchorBtcAggStates, err := app.PgClient.GetAnchorBTCAggStateObjectsByCalIds(calIds)
+	anchorBtcAggStates, err := app.Cache.GetAnchorBTCAggStateObjectsByCalIds(calIds)
 	if err != nil {
 		return err
 	}
@@ -297,7 +294,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 	for _, anchorBtcAggState := range anchorBtcAggStates {
 		anchorBTCAggIds = append(anchorBTCAggIds, anchorBtcAggState.AnchorBtcAggId)
 	}
-	btcTxState, err := app.PgClient.GetBTCTxStateObjectByAnchorBTCAggId(anchorBTCAggIds[0])
+	btcTxState, err := app.Cache.GetBTCTxStateObjectByAnchorBTCAggId(anchorBTCAggIds[0])
 	if err != nil {
 		return err
 	}
@@ -342,7 +339,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 		proofs = append(proofs, proofState)
 	}
 	app.logger.Info(fmt.Sprintf("btc proofs: %#v", proofs))
-	return app.LogError(app.PgClient.BulkInsertProofs(proofs))
+	return app.LogError(app.Cache.BulkInsertProofs(proofs))
 }
 
 func (app *AnchorBTC) LogError(err error) error {

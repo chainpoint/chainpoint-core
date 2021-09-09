@@ -75,7 +75,7 @@ func main() {
 	// Wait forever, shutdown gracefully upon
 	tmos.TrapSignal(*config.Logger, func() {
 		if n.IsRunning() {
-			app.PgClient.DB.Close()
+			app.Cache.LevelDb.Close()
 			if app.RedisClient != nil {
 				app.RedisClient.Close()
 			}
@@ -189,11 +189,6 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 		TMPort:   util.GetEnv("TENDERMINT_PORT", "26657"),
 		NodeKey:  nodeKey,
 	}
-	postgresUser := util.GetEnv(" POSTGRES_CONNECT_USER", "chainpoint")
-	postgresPw := util.GetEnv("POSTGRES_CONNECT_PW", "chainpoint")
-	postgresHost := util.GetEnv("POSTGRES_CONNECT_HOST", "postgres")
-	postgresPort := util.GetEnv("POSTGRES_CONNECT_PORT", "5432")
-	postgresDb := util.GetEnv("POSTGRES_CONNECT_DB", "chainpoint")
 	redisURI := util.GetEnv("REDIS", "redis://redis:6379")
 	apiURI := util.GetEnv("API_URI", "http://api:8080")
 	coreURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "http://0.0.0.0")
@@ -238,7 +233,6 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 			HashPrice:      int64(hashPrice),
 			SessionSecret:  sessionSecret,
 		},
-		PostgresURI:      fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPw, postgresHost, postgresPort, postgresDb),
 		RedisURI:         redisURI,
 		APIURI:           apiURI,
 		ECPrivateKey:     *ecPrivKey,
