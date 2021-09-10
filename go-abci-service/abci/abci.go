@@ -98,7 +98,7 @@ type AnchorApplication struct {
 func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
-	db := dbm.NewDB(name, dbm.CLevelDBBackend, config.HomePath + "/data")
+	db := dbm.NewDB(name, dbm.CLevelDBBackend, config.HomePath + "/config/node/data")
 	load_state := loadState(db)
 	state := &load_state
 	if state.TxValidation == nil {

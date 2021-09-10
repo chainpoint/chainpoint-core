@@ -303,7 +303,7 @@ func initTendermintConfig() (types.TendermintConfig, string, error) {
 	viper.Set(homeFlag, homeDir)
 	viper.SetConfigName("config")                         // name of config file (without extension)
 	viper.AddConfigPath(homeDir)                          // search root directory
-	viper.AddConfigPath(filepath.Join(homeDir, "config")) // search root directory /config
+	viper.AddConfigPath(filepath.Join(homeDir, "config/node")) // search root directory /config
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
