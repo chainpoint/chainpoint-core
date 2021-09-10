@@ -63,6 +63,9 @@ func main() {
 	if config.BitcoinNetwork == "mainnet" {
 		config.ChainId = "mainnet-chain-32"
 	}
+
+	go runLnd() //start lnd
+
 	app := abci.NewAnchorApplication(config)
 
 	//declare connection to abci app
@@ -150,7 +153,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	go runLnd()
 	server.ListenAndServe()
 	return
 }
