@@ -250,6 +250,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 
 	// Create config object
 	return types.AnchorConfig{
+		HomePath:         home,
 		DBType:           "goleveldb",
 		BitcoinNetwork:   bitcoinNetwork,
 		ElectionMode:     electionMode,
