@@ -33,7 +33,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
 	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
 	"github.com/gorilla/mux"
-	"github.com/robert-zaremba/flag"
+	"github.com/jacohend/flag"
 	cfg "github.com/tendermint/tendermint/config"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
 	"github.com/tendermint/tendermint/libs/log"
@@ -52,14 +52,14 @@ func main() {
 
 	//runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	//Instantiate Tendermint Node Config
-	tmConfig, err := initTendermintConfig()
+	tmConfig, listenAddr, err := initTendermintConfig()
 	if util.LogError(err) != nil {
 		return
 	}
 	logger := tmConfig.Logger
 
 	//Instantiate ABCI application
-	config := initABCIConfig(tmConfig.FilePV, tmConfig.NodeKey)
+	config := initABCIConfig(tmConfig.FilePV, tmConfig.NodeKey, listenAddr)
 	if config.BitcoinNetwork == "mainnet" {
 		config.ChainId = "mainnet-chain-32"
 	}
@@ -176,11 +176,11 @@ func runLnd(){
 }
 
 // initABCIConfig: receives ENV variables and initializes app config struct
-func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig {
+func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) types.AnchorConfig {
 	// Perform env type conversions
 	var bitcoinNetwork, walletAddress, walletPass, secretKeyPath, aggregatorAllowStr, blockCIDRStr string
 	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
-	var coreURI, coreName, analyticsID, logLevel string
+	var coreName, analyticsID, logLevel string
 	var feeMultiplier float64
 	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval int
 	var useAggregatorAllowlist, doCalLoop, doAnchorLoop bool
@@ -206,7 +206,6 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 	flag.StringVar(&sessionSecret, "session_secret", "", "mutual LSAT macaroon secret for cores and gateways")
 	flag.StringVar(&tmServer, "tendermint_host", "127.0.0.1", "tendermint api url")
 	flag.StringVar(&tmPort, "tendermint_port", "26657", "tendermint api port")
-	flag.StringVar(&coreURI, "chainpoint_core_base_uri", "http://0.0.0.0:26656", "core URI")
 	flag.StringVar(&coreName, "chainpoint_core_name", "", "core Name")
 	flag.StringVar(&analyticsID, "google_ua_id", "", "google analytics id")
 	flag.StringVar(&logLevel, "log_level", "info", "log level")
@@ -290,7 +289,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey) types.AnchorConfig 
 }
 
 // initTendermintConfig : imports tendermint config.toml and initializes config variables
-func initTendermintConfig() (types.TendermintConfig, error) {
+func initTendermintConfig() (types.TendermintConfig, string, error) {
 	var TMConfig types.TendermintConfig
 	initEnv("TM")
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
@@ -306,12 +305,12 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 		// fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 		// ignore not found error, return other errors
-		return TMConfig, err
+		return TMConfig, "", err
 	}
 	defaultConfig := cfg.DefaultConfig()
 	err := viper.Unmarshal(defaultConfig)
 	if err != nil {
-		return TMConfig, err
+		return TMConfig, "", err
 	}
 	defaultConfig.SetRoot(homeDir)
 	defaultConfig.DBBackend = "cleveldb"
@@ -430,7 +429,7 @@ func initTendermintConfig() (types.TendermintConfig, error) {
 	}
 	TMConfig.Config = defaultConfig
 
-	return TMConfig, nil
+	return TMConfig, listenAddr, nil
 }
 
 // initEnv sets to use ENV variables if set.
