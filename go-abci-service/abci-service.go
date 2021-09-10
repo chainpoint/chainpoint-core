@@ -200,7 +200,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 	//lightning settings
 	flag.StringVar(&walletAddress, "hot_wallet_address", "", "birthday address for lnd account")
 	flag.StringVar(&walletPass, "hot_wallet_pass", "", "hot wallet password")
-	flag.StringVar(&macaroonPath, "macaroon_path", fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, strings.ToLower(bitcoinNetwork)), "path to lnd admin macaroon")
+	flag.StringVar(&macaroonPath, "macaroon_path", "", "path to lnd admin macaroon")
 	flag.StringVar(&tlsCertPath, "ln_tls_path", fmt.Sprintf("%s/.lnd/tls.cert", home), "path to lnd tls certificate")
 	flag.StringVar(&lndSocket, "lnd_socket", "127.0.0.1:10009", "url to lnd grpc server")
 	flag.Float64Var(&feeMultiplier, "btc_fee_multiplier", 2.2, "multiply anchoring fee by this constant when mempool is congested")
@@ -221,6 +221,9 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 			panic(err)
 		}
 		walletAddress = string(content)
+	}
+	if macaroonPath == "" {
+		macaroonPath = fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, strings.ToLower(bitcoinNetwork))
 	}
 
 	tendermintRPC := types.TendermintConfig{

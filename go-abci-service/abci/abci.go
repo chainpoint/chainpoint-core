@@ -131,7 +131,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		}
 	}
 	if err != nil {
-		fmt.Println("LND not ready after 1 minute")
+		fmt.Println("LND not ready after 5 minutes")
 		panic(err)
 	}
 	err = nil
