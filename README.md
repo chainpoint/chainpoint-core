@@ -184,4 +184,4 @@ The README for the Core application in this repo is available [here](https://git
 
 ## License
 
-This is Open Source software released under [AGPLv3](./LICENSE.txt)
+This is Open Source software released under [AGPLv3](./LICENSE)
