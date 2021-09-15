@@ -298,10 +298,10 @@ func initTendermintConfig() (types.TendermintConfig, string, error) {
 	var TMConfig types.TendermintConfig
 	initEnv("TM")
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
-	homeDir := home + "/config/node"
+	homeDir := home + "/config"
 	viper.Set(homeFlag, homeDir)
 	viper.SetConfigName("config")                         // name of config file (without extension)
-	viper.AddConfigPath(homeDir) // search root directory /config
+	viper.AddConfigPath(homeDir + "/node") // search root directory /config
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
@@ -318,7 +318,7 @@ func initTendermintConfig() (types.TendermintConfig, string, error) {
 		return TMConfig, "", err
 	}
 	defaultConfig.SetRoot(homeDir)
-	defaultConfig.DBPath = homeDir + "/data"
+	defaultConfig.DBPath = homeDir + "/node/data"
 	defaultConfig.DBBackend = "cleveldb"
 	defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
 	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(65 * time.Second) // allows us to wait for tx to commit + 5 sec latency margin
