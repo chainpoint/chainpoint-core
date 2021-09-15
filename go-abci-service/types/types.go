@@ -30,6 +30,7 @@ type TendermintConfig struct {
 //AnchorConfig represents values to configure all connections within the ABCI anchor app
 type AnchorConfig struct {
 	HomePath         string
+	APIPort          string
 	ChainId          string
 	DBType           string
 	BitcoinNetwork   string

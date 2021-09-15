@@ -54,7 +54,7 @@ func main() {
 	//Instantiate Tendermint Node Config
 	tmConfig, listenAddr, err := initTendermintConfig()
 	if util.LogError(err) != nil {
-		return
+		panic(err)
 	}
 	logger := tmConfig.Logger
 
@@ -82,8 +82,7 @@ func main() {
 		logger,
 	)
 	if err != nil {
-		util.LogError(err)
-		return
+		panic(err)
 	}
 
 	// Wait forever, shutdown gracefully upon
@@ -97,8 +96,7 @@ func main() {
 
 	// Start Tendermint Node
 	if err := n.Start(); err != nil {
-		util.LogError(err)
-		return
+		panic(err)
 	}
 	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
@@ -108,7 +106,6 @@ func main() {
 	apiStore, err := memstore.New(65536)
 	proofStore, err := memstore.New(65536)
 	if err != nil {
-		util.LogError(err)
 		panic(err)
 	}
 
@@ -119,7 +116,6 @@ func main() {
 	apiLimiter, err := throttled.NewGCRARateLimiter(apiStore, apiQuota)
 	proofLimiter, err := throttled.NewGCRARateLimiter(proofStore, proofQuota)
 	if err != nil {
-		util.LogError(err)
 		panic(err)
 	}
 
@@ -149,11 +145,12 @@ func main() {
 
 	server := &http.Server{
 		Handler:      r,
-		Addr:         ":8080",
+		Addr:         ":" + config.APIPort,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	server.ListenAndServe()
+	util.LogError(server.ListenAndServe())
+
 	return
 }
 
@@ -180,7 +177,7 @@ func runLnd(){
 // initABCIConfig: receives ENV variables and initializes app config struct
 func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) types.AnchorConfig {
 	// Perform env type conversions
-	var bitcoinNetwork, walletAddress, walletPass, secretKeyPath, aggregatorAllowStr, blockCIDRStr string
+	var bitcoinNetwork, walletAddress, walletPass, secretKeyPath, aggregatorAllowStr, blockCIDRStr, apiPort string
 	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
 	var coreName, analyticsID, logLevel string
 	var feeMultiplier float64
@@ -208,6 +205,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 	flag.StringVar(&sessionSecret, "session_secret", "", "mutual LSAT macaroon secret for cores and gateways")
 	flag.StringVar(&tmServer, "tendermint_host", "127.0.0.1", "tendermint api url")
 	flag.StringVar(&tmPort, "tendermint_port", "26657", "tendermint api port")
+	flag.StringVar(&apiPort, "api_port", "8081", "core api port")
 	flag.StringVar(&coreName, "chainpoint_core_name", "", "core Name")
 	flag.StringVar(&analyticsID, "google_ua_id", "", "google analytics id")
 	flag.StringVar(&logLevel, "log_level", "info", "log level")
@@ -256,6 +254,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 	// Create config object
 	return types.AnchorConfig{
 		HomePath:         home,
+		APIPort:          apiPort,
 		DBType:           "goleveldb",
 		BitcoinNetwork:   bitcoinNetwork,
 		ElectionMode:     electionMode,
@@ -299,17 +298,17 @@ func initTendermintConfig() (types.TendermintConfig, string, error) {
 	var TMConfig types.TendermintConfig
 	initEnv("TM")
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
-	homeDir := home
+	homeDir := home + "/config/node"
 	viper.Set(homeFlag, homeDir)
 	viper.SetConfigName("config")                         // name of config file (without extension)
-	viper.AddConfigPath(homeDir)                          // search root directory
-	viper.AddConfigPath(filepath.Join(homeDir, "config/node")) // search root directory /config
+	viper.AddConfigPath(homeDir) // search root directory /config
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		// stderr, so if we redirect output to json file, this doesn't appear
 		// fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		fmt.Sprintf("Config File Not Found, err: $s", err.Error())
 		// ignore not found error, return other errors
 		return TMConfig, "", err
 	}
@@ -319,6 +318,7 @@ func initTendermintConfig() (types.TendermintConfig, string, error) {
 		return TMConfig, "", err
 	}
 	defaultConfig.SetRoot(homeDir)
+	defaultConfig.DBPath = homeDir + "/data"
 	defaultConfig.DBBackend = "cleveldb"
 	defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
 	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(65 * time.Second) // allows us to wait for tx to commit + 5 sec latency margin
