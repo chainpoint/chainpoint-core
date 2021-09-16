@@ -43,6 +43,16 @@ import (
 
 var home string
 
+func setup() {
+
+
+	if _, err := os.Stat(home); !os.IsNotExist(err) {
+		fmt.Println("Config directory exists, skipping setup")
+	}
+
+
+}
+
 func main() {
 	homedirname, err := os.UserHomeDir()
 	if err != nil {
@@ -52,19 +62,18 @@ func main() {
 
 	//runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	//Instantiate Tendermint Node Config
-	tmConfig, listenAddr, err := initTendermintConfig()
-	if util.LogError(err) != nil {
-		panic(err)
-	}
-	logger := tmConfig.Logger
+
 
 	//Instantiate ABCI application
-	config := initABCIConfig(tmConfig.FilePV, tmConfig.NodeKey, listenAddr)
+	config := initConfig()
 	if config.BitcoinNetwork == "mainnet" {
 		config.ChainId = "mainnet-chain-32"
 	}
+	logger := config.TendermintConfig.Logger
 
 	go runLnd() //start lnd
+
+	setup()
 
 	app := abci.NewAnchorApplication(config)
 
@@ -72,13 +81,13 @@ func main() {
 	appProxy := proxy.NewLocalClientCreator(app)
 
 	/* Instantiate Tendermint Node with given config and abci app */
-	n, err := node.NewNode(tmConfig.Config,
-		&tmConfig.FilePV,
-		tmConfig.NodeKey,
+	n, err := node.NewNode(config.TendermintConfig.Config,
+		&config.TendermintConfig.FilePV,
+		config.TendermintConfig.NodeKey,
 		appProxy,
-		node.DefaultGenesisDocProviderFunc(tmConfig.Config),
+		node.DefaultGenesisDocProviderFunc(config.TendermintConfig.Config),
 		node.DefaultDBProvider,
-		node.DefaultMetricsProvider(tmConfig.Config.Instrumentation),
+		node.DefaultMetricsProvider(config.TendermintConfig.Config.Instrumentation),
 		logger,
 	)
 	if err != nil {
@@ -174,15 +183,20 @@ func runLnd(){
 	}
 }
 
-// initABCIConfig: receives ENV variables and initializes app config struct
-func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) types.AnchorConfig {
+// initConfig: receives ENV variables and initializes app config struct
+func initConfig() types.AnchorConfig {
+
+
+
 	// Perform env type conversions
+	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter string
 	var bitcoinNetwork, walletAddress, walletPass, secretKeyPath, aggregatorAllowStr, blockCIDRStr, apiPort string
 	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
 	var coreName, analyticsID, logLevel string
 	var feeMultiplier float64
 	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval int
 	var useAggregatorAllowlist, doCalLoop, doAnchorLoop bool
+	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
 	flag.StringVar(&bitcoinNetwork, "network", "mainnet", "bitcoin network")
 	flag.BoolVar(&useAggregatorAllowlist, "aggregator_public", false, "use aggregator allow list")
 	flag.StringVar(&aggregatorAllowStr, "aggregator_whitelist", "", "prevent whitelisted IPs from needing to pay invoices")
@@ -210,6 +224,10 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 	flag.StringVar(&analyticsID, "google_ua_id", "", "google analytics id")
 	flag.StringVar(&logLevel, "log_level", "info", "log level")
 	flag.StringVar(&secretKeyPath, "secret_key_path", home + "/data/keys/ecdsa_key.pem", "path to ECDSA secret key")
+	flag.StringVar(&listenAddr, "chainpoint_core_base_uri", "http://0.0.0.0:26656", "tendermint base uri")
+	flag.StringVar(&tendermintPeers, "peers", "", "comma-delimited list of peers")
+	flag.StringVar(&tendermintSeeds, "seeds", "", "comma-delimited list of seeds")
+	flag.StringVar(&tendermintLogFilter, "log_filter", "main:debug,state:info,*:error", "log level for tendermint")
 	flag.Parse()
 	aggregatorAllowlist := strings.Split(aggregatorAllowStr, ",")
 	blockCIDRs := strings.Split(blockCIDRStr, ",")
@@ -224,13 +242,15 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 		macaroonPath = fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, strings.ToLower(bitcoinNetwork))
 	}
 
-	tendermintRPC := types.TendermintConfig{
-		TMServer: tmServer,
-		TMPort:   tmPort,
-		NodeKey:  nodeKey,
+	tmConfig, err := initTendermintConfig(listenAddr, tendermintSeeds, tendermintPeers, tendermintLogFilter)
+	if util.LogError(err) != nil {
+		panic(err)
 	}
+	tmConfig.TMServer = tmServer
+	tmConfig.TMPort = tmPort
+
 	if len(coreName) == 0 {
-		coreName = coreURI
+		coreName = listenAddr
 	}
 
 	allowLevel, _ := log.AllowLevel(strings.ToLower(logLevel))
@@ -258,7 +278,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 		DBType:           "goleveldb",
 		BitcoinNetwork:   bitcoinNetwork,
 		ElectionMode:     electionMode,
-		TendermintConfig: tendermintRPC,
+		TendermintConfig: tmConfig,
 		LightningConfig: lightning.LnClient{
 			TlsPath:        tlsCertPath,
 			MacPath:        macaroonPath,
@@ -278,7 +298,7 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 		DoAnchor:         doAnchorLoop,
 		AnchorInterval:   anchorInterval,
 		Logger:           &tmLogger,
-		FilePV:           pv,
+		FilePV:           tmConfig.FilePV,
 		AnchorTimeout:    anchorTimeout,
 		AnchorReward:     anchorReward,
 		StakePerCore:     1000000,
@@ -287,14 +307,14 @@ func initABCIConfig(pv privval.FilePV, nodeKey *p2p.NodeKey, coreURI string) typ
 		HashPrice:        hashPrice,
 		UseAllowlist:     useAggregatorAllowlist,
 		GatewayAllowlist: aggregatorAllowlist,
-		CoreURI:          coreURI,
+		CoreURI:          listenAddr,
 		CoreName:         coreName,
 		AnalyticsID:      analyticsID,
 	}
 }
 
 // initTendermintConfig : imports tendermint config.toml and initializes config variables
-func initTendermintConfig() (types.TendermintConfig, string, error) {
+func initTendermintConfig(listenAddr string, tendermintPeers string, tendermintSeeds string, tendermintLogFilter string) (types.TendermintConfig, error) {
 	var TMConfig types.TendermintConfig
 	initEnv("TM")
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
@@ -310,12 +330,12 @@ func initTendermintConfig() (types.TendermintConfig, string, error) {
 	} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 		fmt.Sprintf("Config File Not Found, err: $s", err.Error())
 		// ignore not found error, return other errors
-		return TMConfig, "", err
+		return TMConfig, err
 	}
 	defaultConfig := cfg.DefaultConfig()
 	err := viper.Unmarshal(defaultConfig)
 	if err != nil {
-		return TMConfig, "", err
+		return TMConfig, err
 	}
 	defaultConfig.SetRoot(homeDir)
 	defaultConfig.DBPath = homeDir + "/data"
@@ -324,12 +344,7 @@ func initTendermintConfig() (types.TendermintConfig, string, error) {
 	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(65 * time.Second) // allows us to wait for tx to commit + 5 sec latency margin
 	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
-	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter string
-	flag.StringVar(&listenAddr, "chainpoint_core_base_uri", "http://0.0.0.0:26656", "tendermint base uri")
-	flag.StringVar(&tendermintPeers, "peers", "", "comma-delimited list of peers")
-	flag.StringVar(&tendermintSeeds, "seeds", "", "comma-delimited list of seeds")
-	flag.StringVar(&tendermintLogFilter, "log_filter", "main:debug,state:info,*:error", "log level for tendermint")
-	flag.Parse()
+
 	if strings.Contains(listenAddr, "//") {
 		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/")+1:]
 	}
@@ -435,7 +450,7 @@ func initTendermintConfig() (types.TendermintConfig, string, error) {
 	}
 	TMConfig.Config = defaultConfig
 
-	return TMConfig, listenAddr, nil
+	return TMConfig, nil
 }
 
 // initEnv sets to use ENV variables if set.
