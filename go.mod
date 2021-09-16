@@ -1,4 +1,4 @@
-module github.com/chainpoint/chainpoint-core/go-abci-service
+module github.com/chainpoint/chainpoint-core
 
 go 1.16
 

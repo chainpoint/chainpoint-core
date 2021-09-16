@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/tendermint_rpc"
+	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
 	"github.com/lightningnetwork/lnd/signal"
 	"io/ioutil"
 	"net/http"
@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/lightning"
+	"github.com/chainpoint/chainpoint-core/lightning"
 
 	types2 "github.com/tendermint/tendermint/types"
 
@@ -29,9 +29,9 @@ import (
 	"github.com/lightningnetwork/lnd"
 	"github.com/jessevdk/go-flags"
 
-	"github.com/chainpoint/chainpoint-core/go-abci-service/abci"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/util"
+	"github.com/chainpoint/chainpoint-core/abci"
+	"github.com/chainpoint/chainpoint-core/types"
+	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/gorilla/mux"
 	"github.com/jacohend/flag"
 	cfg "github.com/tendermint/tendermint/config"
@@ -48,6 +48,8 @@ func setup() {
 
 	if _, err := os.Stat(home); !os.IsNotExist(err) {
 		fmt.Println("Config directory exists, skipping setup")
+	} else {
+		os.MkdirAll(home, os.ModePerm)
 	}
 
 
@@ -266,7 +268,7 @@ func initConfig() types.AnchorConfig {
 	}
 
 	var blocklist []string
-	blocklist, err = util.ReadLines("/go/src/github.com/chainpoint/chainpoint-core/go-abci-service/ip_blocklist.txt")
+	blocklist, err = util.ReadLines("/go/src/github.com/chainpoint/chainpoint-core/ip_blocklist.txt")
 	if util.LogError(err) != nil {
 		blocklist = []string{}
 	}

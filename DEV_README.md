@@ -31,7 +31,7 @@ Every anchor epoch (60 minutes by default), the ABCI application is set to perfo
 
 ## Anchor Interface
 
-The `go-abci-service/anchor` package contains an interface which allows alternate blockchain anchor engine to be implemented. 
+The `anchor` package contains an interface which allows alternate blockchain anchor engine to be implemented. 
 Chainpoint's bitcoin anchoring implementation is included in the `bitcoin` subpackage. 
 
 Any new blockchain anchor must implement the methods in the `anchor_interface.go` file, as well as assign the new anchor to the AnchorEngine in the ABCI AnchorApplication.

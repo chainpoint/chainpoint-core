@@ -180,7 +180,7 @@ We encourage anyone interested in contributing to fork this repo and submit a pu
 
 A description of the Chainpoint Network is available in the [chainpoint-start](https://github.com/chainpoint/chainpoint-start) repository.
 
-The README for the Core application in this repo is available [here](https://github.com/chainpoint/chainpoint-core/blob/master/go-abci-service/README.md).
+The README for the Core application in this repo is available [here](https://github.com/chainpoint/chainpoint-core/blob/master/README.md).
 
 ## License
 
