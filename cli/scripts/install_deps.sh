@@ -6,7 +6,7 @@ install_deps(){
   echo "    EUID: $EUID"
   if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
-    sudo bash -c "apt-get update -y && apt-get install -y wget build-essential libsnappy-dev"
+    sudo bash -c "apt-get update -y && apt-get install -y wget build-essential libsnappy-dev libcap2-bin "
 
     wget https://github.com/google/leveldb/archive/v1.20.tar.gz && \
     tar -zxvf v1.20.tar.gz && \

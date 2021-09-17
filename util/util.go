@@ -342,6 +342,13 @@ func Int2Ip(nn uint32) net.IP {
 	return ip
 }
 
+func ValidateIPAddress(ip string) error {
+	if net.ParseIP(ip) == nil {
+		return errors.New("IP address invalid")
+	}
+	return nil
+}
+
 //Contains : generic method for testing set (slice) inclusion
 func Contains(s interface{}, elem interface{}) bool {
 	arrV := reflect.ValueOf(s)

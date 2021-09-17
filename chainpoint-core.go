@@ -1,61 +1,126 @@
 package main
 
 import (
-	"errors"
+	"bufio"
+	"crypto/elliptic"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
+	"github.com/chainpoint/chainpoint-core/types"
+	"github.com/knq/pemutil"
 	"github.com/lightningnetwork/lnd/signal"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/chainpoint/chainpoint-core/lightning"
-
-	types2 "github.com/tendermint/tendermint/types"
 
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
 
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/privval"
-
 	"github.com/throttled/throttled/v2"
 	"github.com/throttled/throttled/v2/store/memstore"
-	"github.com/knq/pemutil"
-	"github.com/spf13/viper"
 	"github.com/lightningnetwork/lnd"
 	"github.com/jessevdk/go-flags"
 
 	"github.com/chainpoint/chainpoint-core/abci"
-	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/gorilla/mux"
-	"github.com/jacohend/flag"
-	cfg "github.com/tendermint/tendermint/config"
-	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
-	"github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	"github.com/common-nighthawk/go-figure"
+	"github.com/manifoldco/promptui"
 )
 
 var home string
 
 func setup() {
 
-
-	if _, err := os.Stat(home); !os.IsNotExist(err) {
-		fmt.Println("Config directory exists, skipping setup")
-	} else {
+	if _, err := os.Stat(home); os.IsNotExist(err) {
 		os.MkdirAll(home, os.ModePerm)
 	}
+
+	if _, err := os.Stat(home + "/.lnd"); os.IsNotExist(err) {
+		os.MkdirAll(home + "/.lnd", os.ModePerm)
+	}
+
+	if _, err := os.Stat(home + "/data/keys/ecdsa.pem"); os.IsNotExist(err) {
+		os.MkdirAll(home + "/data/keys", os.ModePerm)
+		st, _ := pemutil.GenerateECKeySet(elliptic.P256())
+		st.WriteFile(home + "/data/keys/ecdsa.pem")
+	}
+
+	if _, err := os.Stat(home + "/core.conf"); !os.IsNotExist(err) {
+		configs := []string{}
+		var seed, seedIp string
+		var seedStatus types.CoreAPIStatus
+		promptIp := promptui.Prompt{
+			Label:    "What is this server's public IP?",
+			Validate: util.ValidateIPAddress,
+		}
+		ipResult, err := promptIp.Run()
+		if err != nil {
+			panic(err)
+		}
+		configs = append(configs, "chainpoint_core_base_uri=http://" + ipResult)
+
+		promptNetwork := promptui.Select{
+			Label: "Select Bitcoin Network Type",
+			Items: []string{"mainnet", "testnet"},
+		}
+		_, networkResult, err := promptNetwork.Run()
+		if err != nil {
+			panic(err)
+		}
+		configs = append(configs, "network=" + networkResult)
+
+
+		promptPublic := promptui.Select{
+			Label: "Will this node be joining the public Chainpoint Network or running standalone?",
+			Items: []string{"Public Chainpoint Network", "Standalone Mode"},
+		}
+		_, publicResult, err := promptPublic.Run()
+		if err != nil {
+			panic(err)
+		}
+		configs = append(configs, "network=" + publicResult)
+		if publicResult == "Public Chainpoint Network"{
+			if networkResult == "mainnet" {
+				seed = "24ba3a2556ebae073b42d94815836b29594a2456@18.220.31.138:26656"
+				seedIp = "18.220.31.138"
+			}
+			if networkResult == "testnet" {
+				seed = "5c285f74977733ea970ac2c66e515cc767837644@3.135.54.225:26656"
+				seedIp = "3.135.54.225"
+			}
+			seedStatus = util.GetAPIStatus(seedIp)
+			if seedStatus.TotalStakePrice != 0 {
+				stakeText := fmt.Sprintf("You will need at least %s Satoshis (%s / 100000000 BTC) to join the Chainpoint Network!\n")
+				fmt.Printf(stakeText)
+			}
+			configs = append(configs, "seeds=" + seed)
+		}
+		file, err := os.OpenFile(home + "/core.config", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("failed creating file: %s", err)
+		}
+		datawriter := bufio.NewWriter(file)
+		for _, data := range configs {
+			_, _ = datawriter.WriteString(data + "\n")
+		}
+		datawriter.Flush()
+		file.Close()
+
+		//fmt.Println(result)
+
+		//return
+	}
+
+
+
 
 
 }
 
 func main() {
+	figure.NewColorFigure("Chainpoint Core", "colossal", "red", false).Print()
 	homedirname, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
@@ -67,15 +132,16 @@ func main() {
 
 
 	//Instantiate ABCI application
-	config := initConfig()
+	config := abci.InitConfig(home)
 	if config.BitcoinNetwork == "mainnet" {
 		config.ChainId = "mainnet-chain-32"
 	}
 	logger := config.TendermintConfig.Logger
 
+	setup()
+
 	go runLnd() //start lnd
 
-	setup()
 
 	app := abci.NewAnchorApplication(config)
 
@@ -185,299 +251,4 @@ func runLnd(){
 	}
 }
 
-// initConfig: receives ENV variables and initializes app config struct
-func initConfig() types.AnchorConfig {
 
-
-
-	// Perform env type conversions
-	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter string
-	var bitcoinNetwork, walletAddress, walletPass, secretKeyPath, aggregatorAllowStr, blockCIDRStr, apiPort string
-	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
-	var coreName, analyticsID, logLevel string
-	var feeMultiplier float64
-	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval int
-	var useAggregatorAllowlist, doCalLoop, doAnchorLoop bool
-	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
-	flag.StringVar(&bitcoinNetwork, "network", "mainnet", "bitcoin network")
-	flag.BoolVar(&useAggregatorAllowlist, "aggregator_public", false, "use aggregator allow list")
-	flag.StringVar(&aggregatorAllowStr, "aggregator_whitelist", "", "prevent whitelisted IPs from needing to pay invoices")
-	flag.BoolVar(&doCalLoop, "aggregate", true, "whether to submit calendar transactions to Chainpoint Calendar")
-	flag.BoolVar(&doAnchorLoop, "anchor", true, "whether to participate in bitcoin anchoring elections")
-	flag.StringVar(&electionMode, "election", "reputation", "mode for leader election")
-	flag.IntVar(&anchorInterval, "anchor_interval", 60, "interval to use for bitcoin anchoring")
-	flag.IntVar(&anchorTimeout, "anchor_timeout", 20, "timeout use for bitcoin anchoring")
-	flag.IntVar(&anchorReward, "anchor_reward", 0, "reward for cores that anchor")
-	flag.IntVar(&hashPrice, "submit_hash_price_sat", 2, "cost in satoshis for non-whitelisted gateways to submit a hash")
-	flag.StringVar(&blockCIDRStr, "cidr_blocklist", "", "comma-delimited list of IPs to block")
-	//lightning settings
-	flag.StringVar(&walletAddress, "hot_wallet_address", "", "birthday address for lnd account")
-	flag.StringVar(&walletPass, "hot_wallet_pass", "", "hot wallet password")
-	flag.StringVar(&macaroonPath, "macaroon_path", "", "path to lnd admin macaroon")
-	flag.StringVar(&tlsCertPath, "ln_tls_path", fmt.Sprintf("%s/.lnd/tls.cert", home), "path to lnd tls certificate")
-	flag.StringVar(&lndSocket, "lnd_socket", "127.0.0.1:10009", "url to lnd grpc server")
-	flag.Float64Var(&feeMultiplier, "btc_fee_multiplier", 2.2, "multiply anchoring fee by this constant when mempool is congested")
-	flag.IntVar(&feeInterval, "fee_interval", 10, "interval in minutes to check for new bitcoin tx fee")
-	flag.StringVar(&sessionSecret, "session_secret", "", "mutual LSAT macaroon secret for cores and gateways")
-	flag.StringVar(&tmServer, "tendermint_host", "127.0.0.1", "tendermint api url")
-	flag.StringVar(&tmPort, "tendermint_port", "26657", "tendermint api port")
-	flag.StringVar(&apiPort, "api_port", "8081", "core api port")
-	flag.StringVar(&coreName, "chainpoint_core_name", "", "core Name")
-	flag.StringVar(&analyticsID, "google_ua_id", "", "google analytics id")
-	flag.StringVar(&logLevel, "log_level", "info", "log level")
-	flag.StringVar(&secretKeyPath, "secret_key_path", home + "/data/keys/ecdsa_key.pem", "path to ECDSA secret key")
-	flag.StringVar(&listenAddr, "chainpoint_core_base_uri", "http://0.0.0.0:26656", "tendermint base uri")
-	flag.StringVar(&tendermintPeers, "peers", "", "comma-delimited list of peers")
-	flag.StringVar(&tendermintSeeds, "seeds", "", "comma-delimited list of seeds")
-	flag.StringVar(&tendermintLogFilter, "log_filter", "main:debug,state:info,*:error", "log level for tendermint")
-	flag.Parse()
-	aggregatorAllowlist := strings.Split(aggregatorAllowStr, ",")
-	blockCIDRs := strings.Split(blockCIDRStr, ",")
-	if walletAddress == "" {
-		content, err := ioutil.ReadFile("/run/secrets/HOT_WALLET_ADDRESS")
-		if err != nil {
-			panic(err)
-		}
-		walletAddress = string(content)
-	}
-	if macaroonPath == "" {
-		macaroonPath = fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, strings.ToLower(bitcoinNetwork))
-	}
-
-	tmConfig, err := initTendermintConfig(listenAddr, tendermintSeeds, tendermintPeers, tendermintLogFilter)
-	if util.LogError(err) != nil {
-		panic(err)
-	}
-	tmConfig.TMServer = tmServer
-	tmConfig.TMPort = tmPort
-
-	if len(coreName) == 0 {
-		coreName = listenAddr
-	}
-
-	allowLevel, _ := log.AllowLevel(strings.ToLower(logLevel))
-	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
-
-	store, err := pemutil.LoadFile(secretKeyPath)
-	if err != nil {
-		util.LogError(err)
-	}
-	ecPrivKey, ok := store.ECPrivateKey()
-	if !ok {
-		util.LogError(errors.New("ecdsa key load failed"))
-	}
-
-	var blocklist []string
-	blocklist, err = util.ReadLines("/go/src/github.com/chainpoint/chainpoint-core/ip_blocklist.txt")
-	if util.LogError(err) != nil {
-		blocklist = []string{}
-	}
-
-	// Create config object
-	return types.AnchorConfig{
-		HomePath:         home,
-		APIPort:          apiPort,
-		DBType:           "goleveldb",
-		BitcoinNetwork:   bitcoinNetwork,
-		ElectionMode:     electionMode,
-		TendermintConfig: tmConfig,
-		LightningConfig: lightning.LnClient{
-			TlsPath:        tlsCertPath,
-			MacPath:        macaroonPath,
-			ServerHostPort: lndSocket,
-			Logger:         tmLogger,
-			MinConfs:       3,
-			Testnet:        bitcoinNetwork == "testnet",
-			WalletAddress:  walletAddress,
-			WalletPass:     walletPass,
-			HashPrice:      int64(hashPrice),
-			SessionSecret:  sessionSecret,
-		},
-		ECPrivateKey:     *ecPrivKey,
-		CIDRBlockList:    blockCIDRs,
-		IPBlockList:      blocklist,
-		DoCal:            doCalLoop,
-		DoAnchor:         doAnchorLoop,
-		AnchorInterval:   anchorInterval,
-		Logger:           &tmLogger,
-		FilePV:           tmConfig.FilePV,
-		AnchorTimeout:    anchorTimeout,
-		AnchorReward:     anchorReward,
-		StakePerCore:     1000000,
-		FeeInterval:      int64(feeInterval),
-		FeeMultiplier:    feeMultiplier,
-		HashPrice:        hashPrice,
-		UseAllowlist:     useAggregatorAllowlist,
-		GatewayAllowlist: aggregatorAllowlist,
-		CoreURI:          listenAddr,
-		CoreName:         coreName,
-		AnalyticsID:      analyticsID,
-	}
-}
-
-// initTendermintConfig : imports tendermint config.toml and initializes config variables
-func initTendermintConfig(listenAddr string, tendermintPeers string, tendermintSeeds string, tendermintLogFilter string) (types.TendermintConfig, error) {
-	var TMConfig types.TendermintConfig
-	initEnv("TM")
-	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
-	homeDir := home
-	viper.Set(homeFlag, homeDir)
-	viper.SetConfigName("config")                         // name of config file (without extension)
-	viper.AddConfigPath(homeDir + "/config") // search root directory /config
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		// stderr, so if we redirect output to json file, this doesn't appear
-		// fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	} else if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-		fmt.Sprintf("Config File Not Found, err: $s", err.Error())
-		// ignore not found error, return other errors
-		return TMConfig, err
-	}
-	defaultConfig := cfg.DefaultConfig()
-	err := viper.Unmarshal(defaultConfig)
-	if err != nil {
-		return TMConfig, err
-	}
-	defaultConfig.SetRoot(homeDir)
-	defaultConfig.DBPath = homeDir + "/data"
-	defaultConfig.DBBackend = "cleveldb"
-	defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
-	defaultConfig.RPC.TimeoutBroadcastTxCommit = time.Duration(65 * time.Second) // allows us to wait for tx to commit + 5 sec latency margin
-	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
-	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
-
-	if strings.Contains(listenAddr, "//") {
-		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/")+1:]
-	}
-	if strings.Contains(listenAddr, ":") {
-		listenAddr = listenAddr[:strings.LastIndex(listenAddr, ":")]
-	}
-	defaultConfig.P2P.ExternalAddress = listenAddr + ":26656"
-	defaultConfig.P2P.MaxNumInboundPeers = 300
-	defaultConfig.P2P.MaxNumOutboundPeers = 75
-	defaultConfig.TxIndex.IndexAllKeys = true
-	peers := []string{}
-	if tendermintPeers != "" {
-		peers = strings.Split(tendermintPeers, ",")
-		defaultConfig.P2P.PersistentPeers = tendermintPeers
-	}
-	if tendermintSeeds != "" {
-		peers = strings.Split(tendermintSeeds, ",")
-		defaultConfig.P2P.Seeds = tendermintSeeds
-	}
-	fmt.Printf("Config : %#v\n", defaultConfig)
-	cfg.EnsureRoot(defaultConfig.RootDir)
-
-	//initialize logger
-	tmlogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
-	if defaultConfig.LogFormat == cfg.LogFormatJSON {
-		tmlogger = log.NewTMJSONLogger(log.NewSyncWriter(os.Stdout))
-	}
-	logger, err := tmflags.ParseLogLevel(tendermintLogFilter, tmlogger, cfg.DefaultLogLevel())
-	if err != nil {
-		panic(err)
-	}
-	logger = logger.With("module", "main")
-	TMConfig.Logger = logger
-	peerGenesis := false
-	// The following initializes an rpc client for a peer and pulls its genesis file
-	if len(peers) != 0 {
-		peer := peers[0]                    // get first peer
-		nodeUri := strings.Split(peer, "@") // separate to get IP
-		if len(nodeUri) == 2 {
-			peerUri := strings.Split(nodeUri[1], ":") // split port from IP
-			if len(peerUri) == 2 {
-				peerIP := peerUri[0]
-				//initialize RPC
-				peerRPC := types.TendermintConfig{
-					TMServer: peerIP,
-					TMPort:   "26657",
-				}
-				rpc := tendermint_rpc.NewRPCClient(peerRPC, logger)
-				// Pull and save genesis file
-				genesis, err := rpc.GetGenesis()
-				if err == nil {
-					genFile := defaultConfig.GenesisFile()
-					genDoc := types2.GenesisDoc{
-						ChainID:         genesis.Genesis.ChainID,
-						GenesisTime:     genesis.Genesis.GenesisTime,
-						ConsensusParams: genesis.Genesis.ConsensusParams,
-					}
-					genDoc.Validators = genesis.Genesis.Validators
-					if err := genDoc.SaveAs(genFile); err != nil {
-						panic(err)
-					} else {
-						peerGenesis = true
-					}
-					logger.Info("Saved genesis file from peer", "path", genFile)
-				}
-			}
-		}
-	}
-
-	// initialize private validator key
-	newPrivValKey := defaultConfig.PrivValidatorKeyFile()
-	newPrivValState := defaultConfig.PrivValidatorStateFile()
-	if !tmos.FileExists(newPrivValState) {
-		filePV := privval.GenFilePV(newPrivValKey, newPrivValState)
-		filePV.LastSignState.Save()
-	}
-	TMConfig.FilePV = *privval.LoadOrGenFilePV(newPrivValKey, newPrivValState)
-
-	//initialize this node's keys
-	nodeKey, err := p2p.LoadOrGenNodeKey(defaultConfig.NodeKeyFile())
-	TMConfig.NodeKey = nodeKey
-
-	// initialize genesis file
-	genFile := defaultConfig.GenesisFile()
-	if tmos.FileExists(genFile) || peerGenesis {
-		logger.Info("Found genesis file", "path", genFile)
-	} else {
-		genDoc := types2.GenesisDoc{
-			ChainID:         fmt.Sprintf(util.GetEnv("NETWORK", "testnet")+"-chain-%d", time.Now().Second()),
-			GenesisTime:     tmtime.Now(),
-			ConsensusParams: types2.DefaultConsensusParams(),
-		}
-		key, _ := TMConfig.FilePV.GetPubKey()
-		genDoc.Validators = []types2.GenesisValidator{{
-			Address: key.Address(),
-			PubKey:  key,
-			Power:   10,
-		}}
-		if err := genDoc.SaveAs(genFile); err != nil {
-			panic(err)
-		}
-		logger.Info("Generated genesis file", "path", genFile)
-	}
-	TMConfig.Config = defaultConfig
-
-	return TMConfig, nil
-}
-
-// initEnv sets to use ENV variables if set.
-func initEnv(prefix string) {
-	copyEnvVars(prefix)
-
-	// env variables with TM prefix (eg. TM_ROOT)
-	viper.SetEnvPrefix(prefix)
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
-	viper.AutomaticEnv()
-}
-
-// This copies all variables like TMROOT to TM_ROOT,
-// so we can support both formats for the user
-func copyEnvVars(prefix string) {
-	prefix = strings.ToUpper(prefix)
-	ps := prefix + "_"
-	for _, e := range os.Environ() {
-		kv := strings.SplitN(e, "=", 2)
-		if len(kv) == 2 {
-			k, v := kv[0], kv[1]
-			if strings.HasPrefix(k, prefix) && !strings.HasPrefix(k, ps) {
-				k2 := strings.Replace(k, prefix, ps, 1)
-				os.Setenv(k2, v)
-			}
-		}
-	}
-}
