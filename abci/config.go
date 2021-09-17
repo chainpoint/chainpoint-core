@@ -35,7 +35,7 @@ func InitConfig(home string) types.AnchorConfig {
 	var feeMultiplier float64
 	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval int
 	var useAggregatorAllowlist, doCalLoop, doAnchorLoop bool
-	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
+	flag.String(flag.DefaultConfigFlagname, home + "/core.conf", "path to config file")
 	flag.StringVar(&bitcoinNetwork, "network", "mainnet", "bitcoin network")
 	flag.BoolVar(&useAggregatorAllowlist, "aggregator_public", false, "use aggregator allow list")
 	flag.StringVar(&aggregatorAllowStr, "aggregator_whitelist", "", "prevent whitelisted IPs from needing to pay invoices")

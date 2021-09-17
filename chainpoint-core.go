@@ -97,7 +97,7 @@ func setup() {
 			}
 			configs = append(configs, "seeds=" + seed)
 		}
-		file, err := os.OpenFile(home + "/core.config", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(home + "/core.conf", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatalf("failed creating file: %s", err)
 		}
@@ -112,10 +112,6 @@ func setup() {
 
 		//return
 	}
-
-
-
-
 
 }
 
