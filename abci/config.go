@@ -29,7 +29,7 @@ func InitConfig(home string) types.AnchorConfig {
 
 	// Perform env type conversions
 	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter string
-	var bitcoinNetwork, walletAddress, walletPass, secretKeyPath, aggregatorAllowStr, blockCIDRStr, apiPort string
+	var bitcoinNetwork, walletAddress, walletPass, walletSeed, secretKeyPath, aggregatorAllowStr, blockCIDRStr, apiPort string
 	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
 	var coreName, analyticsID, logLevel string
 	var feeMultiplier float64
@@ -50,6 +50,7 @@ func InitConfig(home string) types.AnchorConfig {
 	//lightning settings
 	flag.StringVar(&walletAddress, "hot_wallet_address", "", "birthday address for lnd account")
 	flag.StringVar(&walletPass, "hot_wallet_pass", "", "hot wallet password")
+	flag.StringVar(&walletSeed, "hot_wallet_seed", "", "hot wallet seed phrase")
 	flag.StringVar(&macaroonPath, "macaroon_path", "", "path to lnd admin macaroon")
 	flag.StringVar(&tlsCertPath, "ln_tls_path", fmt.Sprintf("%s/.lnd/tls.cert", home), "path to lnd tls certificate")
 	flag.StringVar(&lndSocket, "lnd_socket", "127.0.0.1:10009", "url to lnd grpc server")
@@ -77,6 +78,9 @@ func InitConfig(home string) types.AnchorConfig {
 		}
 		walletAddress = string(content)
 	}*/
+	if walletSeed != "" && len(strings.Split(walletSeed, ",")) != 24 {
+		panic(errors.New("Provided wallet seed is not the required 24 words"))
+	}
 	if macaroonPath == "" {
 		macaroonPath = fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, strings.ToLower(bitcoinNetwork))
 	}
@@ -127,6 +131,7 @@ func InitConfig(home string) types.AnchorConfig {
 			Testnet:        bitcoinNetwork == "testnet",
 			WalletAddress:  walletAddress,
 			WalletPass:     walletPass,
+			WalletSeed:     strings.Split(walletSeed, ","),
 			HashPrice:      int64(hashPrice),
 			SessionSecret:  sessionSecret,
 		},

@@ -119,17 +119,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	var err error
 
 	//Wait for lightning connection
-	deadline := time.Now().Add(5 * time.Minute)
-	for !time.Now().After(deadline) {
-		conn, err := config.LightningConfig.CreateConn()
-		if util.LoggerError(*config.Logger, err) != nil {
-			time.Sleep(5 * time.Second)
-			continue
-		} else {
-			conn.Close()
-			break
-		}
-	}
+	err = config.LightningConfig.WaitForConnection(5 * time.Minute)
 	if err != nil {
 		fmt.Println("LND not ready after 5 minutes")
 		panic(err)

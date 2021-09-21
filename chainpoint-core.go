@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 
@@ -27,18 +28,15 @@ import (
 	tmos "github.com/tendermint/tendermint/libs/os"
 	"github.com/common-nighthawk/go-figure"
 	"github.com/manifoldco/promptui"
+	"github.com/sethvargo/go-password/password"
 )
 
 var home string
 
-func setup() {
+func setup(config types.AnchorConfig) {
 
 	if _, err := os.Stat(home); os.IsNotExist(err) {
 		os.MkdirAll(home, os.ModePerm)
-	}
-
-	if _, err := os.Stat(home + "/.lnd"); os.IsNotExist(err) {
-		os.MkdirAll(home + "/.lnd", os.ModePerm)
 	}
 
 	if _, err := os.Stat(home + "/data/keys/ecdsa.pem"); os.IsNotExist(err) {
@@ -47,7 +45,7 @@ func setup() {
 		st.WriteFile(home + "/data/keys/ecdsa.pem")
 	}
 
-	if _, err := os.Stat(home + "/core.conf"); !os.IsNotExist(err) {
+	if _, err := os.Stat(home + "/core.conf"); os.IsNotExist(err) {
 		configs := []string{}
 		var seed, seedIp string
 		var seedStatus types.CoreAPIStatus
@@ -92,10 +90,63 @@ func setup() {
 			}
 			seedStatus = util.GetAPIStatus(seedIp)
 			if seedStatus.TotalStakePrice != 0 {
-				stakeText := fmt.Sprintf("You will need at least %s Satoshis (%s / 100000000 BTC) to join the Chainpoint Network!\n")
+				inBtc := float64(seedStatus.TotalStakePrice) / float64(100000000)
+				stakeText := fmt.Sprintf("You will need at least %s Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
 				fmt.Printf(stakeText)
 			}
 			configs = append(configs, "seeds=" + seed)
+		}
+		if _, err := os.Stat(home + "/.lnd"); os.IsNotExist(err) {
+			os.MkdirAll(home + "/.lnd", os.ModePerm)
+			go runLnd()
+			config.LightningConfig.NoMacaroons = true
+			err = config.LightningConfig.WaitForConnection(5 * time.Minute)
+			if err != nil {
+				fmt.Println("LND not ready after 5 minutes")
+				panic(err)
+			}
+			if len(config.LightningConfig.WalletSeed) != 24 {
+				seed, err := config.LightningConfig.GenSeed()
+				if err != nil {
+					panic(err)
+				}
+				config.LightningConfig.WalletSeed = seed
+			}
+			if len(config.LightningConfig.WalletPass) == 0 {
+				res, err := password.Generate(20, 10, 0, false, false)
+				if err != nil {
+					panic(err)
+				}
+				config.LightningConfig.WalletPass = res
+			}
+			err := config.LightningConfig.InitWallet()
+			if err != nil {
+				fmt.Sprintf("Failed to initialize lnd wallet!")
+				panic(err)
+			}
+			configs = append(configs, "hot_wallet_pass=" + config.LightningConfig.WalletPass)
+			config.LightningConfig.NoMacaroons = false
+			address, err := config.LightningConfig.NewAddress()
+			if err != nil {
+				fmt.Sprintf("Failed to create new address!")
+				panic(err)
+			}
+			config.LightningConfig.WalletAddress = address
+			configs = append(configs, "hot_wallet_address=" + address)
+			fmt.Sprintf("****************************************************\n")
+			fmt.Sprintf("Lightning initialization has completed successfully.\n")
+			fmt.Sprintf("****************************************************\n")
+			fmt.Sprintf("Lightning Wallet Password: %s\n", config.LightningConfig.WalletPass)
+			fmt.Sprintf("Lightning Wallet Seed: %s\n", strings.Join(config.LightningConfig.WalletSeed, ","))
+			fmt.Sprintf("Lightning Wallet Address: %s\n", config.LightningConfig.WalletAddress)
+			fmt.Sprintf("****************************************************\n")
+			fmt.Sprintf("You should back this information up in a secure place\n")
+			fmt.Sprintf("****************************************************\n\n")
+			if publicResult == "Public Chainpoint Network" && seedStatus.TotalStakePrice != 0 {
+				inBtc := float64(seedStatus.TotalStakePrice) / float64(100000000)
+				stakeText := fmt.Sprintf("You will need to fund your new address with at least %s Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
+				fmt.Printf(stakeText)
+			}
 		}
 		file, err := os.OpenFile(home + "/core.conf", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
@@ -108,11 +159,8 @@ func setup() {
 		datawriter.Flush()
 		file.Close()
 
-		//fmt.Println(result)
-
-		//return
+		fmt.Println("Chainpoint Core Setup Complete")
 	}
-
 }
 
 func main() {
@@ -134,7 +182,7 @@ func main() {
 	}
 	logger := config.TendermintConfig.Logger
 
-	setup()
+	setup(config)
 
 	go runLnd() //start lnd
 

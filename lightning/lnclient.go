@@ -10,6 +10,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
 	"runtime"
+	"time"
+
 	/*	"github.com/btcsuite/btcd/chaincfg"
 		"github.com/btcsuite/btcwallet/wallet/txrules"
 		"github.com/btcsuite/btcwallet/wallet/txsizes"*/
@@ -45,9 +47,11 @@ type LnClient struct {
 	Testnet        bool
 	WalletAddress  string
 	WalletPass     string
+	WalletSeed     []string
 	LastFee        int64
 	HashPrice      int64
 	SessionSecret  string
+	NoMacaroons    bool
 }
 
 var (
@@ -134,6 +138,58 @@ func (ln *LnClient) Unlocker() error {
 		return ln.LoggerError(err)
 	}
 	return nil
+}
+
+func (ln *LnClient) InitWallet() error {
+	conn, close, err := ln.GetWalletUnlockerClient()
+	defer close()
+	if err != nil {
+		return err
+	}
+	initReq := lnrpc.InitWalletRequest{
+		WalletPassword:       []byte(ln.WalletPass),
+		CipherSeedMnemonic:   ln.WalletSeed,
+		AezeedPassphrase:     nil,
+		RecoveryWindow:       10000,
+		ChannelBackups:       nil,
+		StatelessInit:        false,
+		XXX_NoUnkeyedLiteral: struct{}{},
+		XXX_unrecognized:     nil,
+		XXX_sizecache:        0,
+	}
+	_, err = conn.InitWallet(context.Background(), &initReq)
+	if err != nil {
+		return ln.LoggerError(err)
+	}
+	return nil
+}
+
+func (ln *LnClient) GenSeed() ([]string, error) {
+	conn, close, err := ln.GetWalletUnlockerClient()
+	defer close()
+	if err != nil {
+		return []string{}, err
+	}
+	seedReq := lnrpc.GenSeedRequest{}
+	resp, err := conn.GenSeed(context.Background(), &seedReq)
+	if err != nil {
+		return []string{}, ln.LoggerError(err)
+	}
+	return resp.CipherSeedMnemonic, nil
+}
+
+func (ln *LnClient) NewAddress() (string, error) {
+	conn, close, err := ln.GetClient()
+	defer close()
+	if err != nil {
+		return "", err
+	}
+	addrReq := lnrpc.NewAddressRequest{Type:0}
+	resp, err := conn.NewAddress(context.Background(), &addrReq)
+	if err != nil {
+		return "", ln.LoggerError(err)
+	}
+	return resp.Address, nil
 }
 
 func CreateClient(serverHostPort string, tlsPath string, macPath string) LnClient {
@@ -423,30 +479,31 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 		grpc.WithTransportCredentials(creds),
 	}
 
-	macBytes, err := ioutil.ReadFile(ln.MacPath)
-	if ln.LoggerError(err) != nil {
-		return nil, err
+	if !ln.NoMacaroons {
+		macBytes, err := ioutil.ReadFile(ln.MacPath)
+		if ln.LoggerError(err) != nil {
+			return nil, err
+		}
+
+		mac := &macaroon.Macaroon{}
+		if err = mac.UnmarshalBinary(macBytes); err != nil {
+			return nil, err
+		}
+
+		macConstraints := []macaroons.Constraint{
+			macaroons.TimeoutConstraint(60),
+		}
+
+		// Apply constraints to the macaroon.
+		constrainedMac, err := macaroons.AddConstraints(mac, macConstraints...)
+		if ln.LoggerError(err) != nil {
+			return nil, err
+		}
+
+		// Now we append the macaroon credentials to the dial options.
+		cred := macaroons.NewMacaroonCredential(constrainedMac)
+		opts = append(opts, grpc.WithPerRPCCredentials(cred))
 	}
-
-	mac := &macaroon.Macaroon{}
-	if err = mac.UnmarshalBinary(macBytes); err != nil {
-		return nil, err
-	}
-
-	macConstraints := []macaroons.Constraint{
-		macaroons.TimeoutConstraint(60),
-	}
-
-	// Apply constraints to the macaroon.
-	constrainedMac, err := macaroons.AddConstraints(mac, macConstraints...)
-	if ln.LoggerError(err) != nil {
-		return nil, err
-	}
-
-	// Now we append the macaroon credentials to the dial options.
-	cred := macaroons.NewMacaroonCredential(constrainedMac)
-	opts = append(opts, grpc.WithPerRPCCredentials(cred))
-
 	// We need to use a custom dialer so we can also connect to unix sockets
 	// and not just TCP addresses.
 	hostPortArr := strings.Split(ln.ServerHostPort, ":")
@@ -636,4 +693,20 @@ func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (w
 		return walletrpc.BumpFeeResponse{}, err
 	}
 	return *resp, nil
+}
+
+func (ln *LnClient) WaitForConnection(d time.Duration) error {
+	//Wait for lightning connection
+	deadline := time.Now().Add(d)
+	for !time.Now().After(deadline) {
+		conn, err := ln.CreateConn()
+		if ln.LoggerError(err) != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			conn.Close()
+			return nil
+		}
+	}
+	return errors.New("Exceeded LND Connection deadline: check that LND has peers")
 }
