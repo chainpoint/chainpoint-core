@@ -3,11 +3,13 @@ package main
 import (
 	"bufio"
 	"crypto/elliptic"
+	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/knq/pemutil"
 	"github.com/lightningnetwork/lnd/signal"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -98,7 +100,7 @@ func setup(config types.AnchorConfig) {
 		}
 		if _, err := os.Stat(home + "/.lnd"); os.IsNotExist(err) {
 			os.MkdirAll(home + "/.lnd", os.ModePerm)
-			go runLnd()
+			go runLnd(config)
 			config.LightningConfig.NoMacaroons = true
 			err = config.LightningConfig.WaitForConnection(5 * time.Minute)
 			if err != nil {
@@ -184,7 +186,7 @@ func main() {
 
 	setup(config)
 
-	go runLnd() //start lnd
+	go runLnd(config) //start lnd
 
 
 	app := abci.NewAnchorApplication(config)
@@ -275,8 +277,40 @@ func main() {
 	return
 }
 
-func runLnd(){
+func runLnd(config types.AnchorConfig){
 	loadedConfig, err := lnd.LoadConfig()
+	if config.LightningConfig.UseChainpointConfig {
+		//defaults
+		loadedConfig.LndDir = "home" + "/.lnd"
+		loadedConfig.LogDir = loadedConfig.LndDir + "/logs"
+		loadedConfig.DataDir = loadedConfig.LndDir + "/data"
+		loadedConfig.Bitcoin.Node = "neutrino"
+		loadedConfig.Bitcoin.Active = true
+		loadedConfig.DebugLevel = "error"
+		coreIPOnly := util.GetIPOnly(config.CoreURI)
+		ip, err := net.ResolveIPAddr("ip", coreIPOnly+":9735")
+		if err != nil {
+			panic(errors.New("Invalid IP in CoreURI"))
+		}
+		loadedConfig.ExternalIPs = []net.Addr{ip}
+		p2p, _ := net.ResolveIPAddr("ip", "0.0.0.0:9735")
+		loadedConfig.Listeners = []net.Addr{p2p}
+		rest, _ := net.ResolveIPAddr("ip", "0.0.0.0:8080")
+		loadedConfig.RESTListeners = []net.Addr{rest}
+		rpc, _ := net.ResolveIPAddr("ip", "0.0.0.0:10009")
+		loadedConfig.RPCListeners = []net.Addr{rpc}
+		loadedConfig.Bitcoin.DefaultNumChanConfs = 3
+		loadedConfig.TLSExtraDomains = []string{"lnd"}
+		loadedConfig.TLSExtraIPs = []string{coreIPOnly}
+		if config.BitcoinNetwork == "mainnet" {
+			loadedConfig.Bitcoin.MainNet = true
+			loadedConfig.NeutrinoMode.AddPeers = []string{"btcd-mainnet.lightning.computer", "mainnet1-btcd.zaphq.io", "mainnet2-btcd.zaphq.io", "24.155.196.246:8333","75.103.209.147:8333"}
+			loadedConfig.FeeURL = "https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json"
+		} else if config.BitcoinNetwork == "testnet" {
+			loadedConfig.Bitcoin.TestNet3 = true
+			loadedConfig.NeutrinoMode.AddPeers = []string{"faucet.lightning.community:18333", "btcd-testnet.lightning.computer", "testnet1-btcd.zaphq.io", "testnet2-btcd.zaphq.io"}
+		}
+	}
 	if err != nil {
 		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
 			// Print error if not due to help request.

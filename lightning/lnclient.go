@@ -52,6 +52,7 @@ type LnClient struct {
 	HashPrice      int64
 	SessionSecret  string
 	NoMacaroons    bool
+	UseChainpointConfig bool
 }
 
 var (

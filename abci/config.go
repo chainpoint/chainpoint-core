@@ -34,7 +34,7 @@ func InitConfig(home string) types.AnchorConfig {
 	var coreName, analyticsID, logLevel string
 	var feeMultiplier float64
 	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval int
-	var useAggregatorAllowlist, doCalLoop, doAnchorLoop bool
+	var useAggregatorAllowlist, doCalLoop, doAnchorLoop, useChpLndConfig bool
 	flag.String(flag.DefaultConfigFlagname, home + "/core.conf", "path to config file")
 	flag.StringVar(&bitcoinNetwork, "network", "mainnet", "bitcoin network")
 	flag.BoolVar(&useAggregatorAllowlist, "aggregator_public", false, "use aggregator allow list")
@@ -54,6 +54,7 @@ func InitConfig(home string) types.AnchorConfig {
 	flag.StringVar(&macaroonPath, "macaroon_path", "", "path to lnd admin macaroon")
 	flag.StringVar(&tlsCertPath, "ln_tls_path", fmt.Sprintf("%s/.lnd/tls.cert", home), "path to lnd tls certificate")
 	flag.StringVar(&lndSocket, "lnd_socket", "127.0.0.1:10009", "url to lnd grpc server")
+	flag.BoolVar(&useChpLndConfig, "chainpoint_lnd_config", true, "whether to use chainpoint's default lnd config")
 	flag.Float64Var(&feeMultiplier, "btc_fee_multiplier", 2.2, "multiply anchoring fee by this constant when mempool is congested")
 	flag.IntVar(&feeInterval, "fee_interval", 10, "interval in minutes to check for new bitcoin tx fee")
 	flag.StringVar(&sessionSecret, "session_secret", "", "mutual LSAT macaroon secret for cores and gateways")
@@ -134,6 +135,7 @@ func InitConfig(home string) types.AnchorConfig {
 			WalletSeed:     strings.Split(walletSeed, ","),
 			HashPrice:      int64(hashPrice),
 			SessionSecret:  sessionSecret,
+			UseChainpointConfig: useChpLndConfig,
 		},
 		ECPrivateKey:     *ecPrivKey,
 		CIDRBlockList:    blockCIDRs,
@@ -189,13 +191,8 @@ func initTendermintConfig(home string, listenAddr string, tendermintPeers string
 	defaultConfig.RPC.ListenAddress = "tcp://0.0.0.0:26657"
 	defaultConfig.P2P.ListenAddress = "tcp://0.0.0.0:26656"
 
-	if strings.Contains(listenAddr, "//") {
-		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/")+1:]
-	}
-	if strings.Contains(listenAddr, ":") {
-		listenAddr = listenAddr[:strings.LastIndex(listenAddr, ":")]
-	}
-	defaultConfig.P2P.ExternalAddress = listenAddr + ":26656"
+	ipOnly := util.GetIPOnly(listenAddr)
+	defaultConfig.P2P.ExternalAddress = ipOnly + ":26656"
 	defaultConfig.P2P.MaxNumInboundPeers = 300
 	defaultConfig.P2P.MaxNumOutboundPeers = 75
 	defaultConfig.TxIndex.IndexAllKeys = true

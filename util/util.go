@@ -109,6 +109,17 @@ func GetAPIStatus(ip string) types.CoreAPIStatus {
 	return apiStatus
 }
 
+func GetIPOnly(ip string) string {
+	listenAddr := ip
+	if strings.Contains(listenAddr, "//") {
+		listenAddr = listenAddr[strings.LastIndex(listenAddr, "/")+1:]
+	}
+	if strings.Contains(listenAddr, ":") {
+		listenAddr = listenAddr[:strings.LastIndex(listenAddr, ":")]
+	}
+	return listenAddr
+}
+
 // GetSeededRandInt : Given a seed and a maximum size, generates a random int between 0 and upperBound
 func GetSeededRandInt(seedBytes []byte, upperBound int) int {
 	eightByteHash := seedBytes[0:7]
