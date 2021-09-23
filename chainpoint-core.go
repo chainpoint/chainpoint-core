@@ -130,20 +130,20 @@ func setup(config types.AnchorConfig) {
 			config.LightningConfig.NoMacaroons = false
 			address, err := config.LightningConfig.NewAddress()
 			if err != nil {
-				fmt.Sprintf("Failed to create new address!")
+				fmt.Printf("Failed to create new address!")
 				panic(err)
 			}
 			config.LightningConfig.WalletAddress = address
 			configs = append(configs, "hot_wallet_address=" + address)
-			fmt.Sprintf("****************************************************\n")
-			fmt.Sprintf("Lightning initialization has completed successfully.\n")
-			fmt.Sprintf("****************************************************\n")
-			fmt.Sprintf("Lightning Wallet Password: %s\n", config.LightningConfig.WalletPass)
-			fmt.Sprintf("Lightning Wallet Seed: %s\n", strings.Join(config.LightningConfig.WalletSeed, ","))
-			fmt.Sprintf("Lightning Wallet Address: %s\n", config.LightningConfig.WalletAddress)
-			fmt.Sprintf("****************************************************\n")
-			fmt.Sprintf("You should back this information up in a secure place\n")
-			fmt.Sprintf("****************************************************\n\n")
+			fmt.Printf("****************************************************\n")
+			fmt.Printf("Lightning initialization has completed successfully.\n")
+			fmt.Printf("****************************************************\n")
+			fmt.Printf("Lightning Wallet Password: %s\n", config.LightningConfig.WalletPass)
+			fmt.Printf("Lightning Wallet Seed: %s\n", strings.Join(config.LightningConfig.WalletSeed, ","))
+			fmt.Printf("Lightning Wallet Address: %s\n", config.LightningConfig.WalletAddress)
+			fmt.Printf("****************************************************\n")
+			fmt.Printf("You should back this information up in a secure place\n")
+			fmt.Printf("****************************************************\n\n")
 			if publicResult == "Public Chainpoint Network" && seedStatus.TotalStakePrice != 0 {
 				inBtc := float64(seedStatus.TotalStakePrice) / float64(100000000)
 				stakeText := fmt.Sprintf("You will need to fund your new address with at least %s Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
@@ -161,7 +161,8 @@ func setup(config types.AnchorConfig) {
 		datawriter.Flush()
 		file.Close()
 
-		fmt.Println("Chainpoint Core Setup Complete")
+		fmt.Printf("Chainpoint Core Setup Complete. Run with ./chainpoint-core -config $s", home + "/core.conf")
+		return
 	}
 }
 
