@@ -41,10 +41,10 @@ func setup(config types.AnchorConfig) {
 		os.MkdirAll(home, os.ModePerm)
 	}
 
-	if _, err := os.Stat(home + "/data/keys/ecdsa.pem"); os.IsNotExist(err) {
+	if _, err := os.Stat(home + "/data/keys/ecdsa_key.pem"); os.IsNotExist(err) {
 		os.MkdirAll(home + "/data/keys", os.ModePerm)
 		st, _ := pemutil.GenerateECKeySet(elliptic.P256())
-		st.WriteFile(home + "/data/keys/ecdsa.pem")
+		st.WriteFile(home + "/data/keys/ecdsa_key.pem")
 	}
 
 	if _, err := os.Stat(home + "/core.conf"); os.IsNotExist(err) {
