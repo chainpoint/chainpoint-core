@@ -279,7 +279,13 @@ func main() {
 }
 
 func runLnd(config types.AnchorConfig){
-	loadedConfig, err := lnd.LoadConfig()
+	var loadedConfig lnd.Config
+	lndConfig, err := lnd.LoadConfig()
+	if err != nil {
+		loadedConfig = lnd.DefaultConfig()
+	} else {
+		loadedConfig = *lndConfig
+	}
 	if config.LightningConfig.UseChainpointConfig {
 		//defaults
 		loadedConfig.LndDir = home + "/.lnd"
