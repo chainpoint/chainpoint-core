@@ -28,7 +28,7 @@ import (
 func InitConfig(home string) types.AnchorConfig {
 
 	// Perform env type conversions
-	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter string
+	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter, lndLogFilter string
 	var bitcoinNetwork, walletAddress, walletPass, walletSeed, secretKeyPath, aggregatorAllowStr, blockCIDRStr, apiPort string
 	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
 	var coreName, analyticsID, logLevel string
@@ -54,6 +54,7 @@ func InitConfig(home string) types.AnchorConfig {
 	flag.StringVar(&macaroonPath, "macaroon_path", "", "path to lnd admin macaroon")
 	flag.StringVar(&tlsCertPath, "ln_tls_path", fmt.Sprintf("%s/.lnd/tls.cert", home), "path to lnd tls certificate")
 	flag.StringVar(&lndSocket, "lnd_socket", "127.0.0.1:10009", "url to lnd grpc server")
+	flag.StringVar(&lndLogFilter, "lnd_log_level", "error", "log level for lnd")
 	flag.BoolVar(&useChpLndConfig, "chainpoint_lnd_config", true, "whether to use chainpoint's default lnd config")
 	flag.Float64Var(&feeMultiplier, "btc_fee_multiplier", 2.2, "multiply anchoring fee by this constant when mempool is congested")
 	flag.IntVar(&feeInterval, "fee_interval", 10, "interval in minutes to check for new bitcoin tx fee")
@@ -128,6 +129,7 @@ func InitConfig(home string) types.AnchorConfig {
 			MacPath:        macaroonPath,
 			ServerHostPort: lndSocket,
 			Logger:         tmLogger,
+			LndLogLevel:    lndLogFilter,
 			MinConfs:       3,
 			Testnet:        bitcoinNetwork == "testnet",
 			WalletAddress:  walletAddress,

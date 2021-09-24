@@ -44,6 +44,7 @@ type LnClient struct {
 	MinConfs       int64
 	TargetConfs    int64
 	Logger         log.Logger
+	LndLogLevel    string
 	Testnet        bool
 	WalletAddress  string
 	WalletPass     string

@@ -3,34 +3,32 @@ package main
 import (
 	"bufio"
 	"crypto/elliptic"
-	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/types"
+	"github.com/jessevdk/go-flags"
 	"github.com/knq/pemutil"
+	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/signal"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/proxy"
 
+	"github.com/lightningnetwork/lnd"
 	"github.com/throttled/throttled/v2"
 	"github.com/throttled/throttled/v2/store/memstore"
-	"github.com/lightningnetwork/lnd"
-	"github.com/jessevdk/go-flags"
 
 	"github.com/chainpoint/chainpoint-core/abci"
 	"github.com/chainpoint/chainpoint-core/util"
-	"github.com/gorilla/mux"
-	tmos "github.com/tendermint/tendermint/libs/os"
 	"github.com/common-nighthawk/go-figure"
+	"github.com/gorilla/mux"
 	"github.com/manifoldco/promptui"
 	"github.com/sethvargo/go-password/password"
+	tmos "github.com/tendermint/tendermint/libs/os"
 )
 
 var home string
@@ -280,34 +278,20 @@ func main() {
 
 func runLnd(config types.AnchorConfig){
 	var loadedConfig lnd.Config
-	lndConfig, err := lnd.LoadConfig()
-	if err != nil {
-		fmt.Println("lnd ini file or flags not found, falling back to defaults")
-		loadedConfig = lnd.DefaultConfig()
-	} else {
-		loadedConfig = *lndConfig
-	}
 	if config.LightningConfig.UseChainpointConfig {
+		loadedConfig = lnd.DefaultConfig()
 		//defaults
 		loadedConfig.LndDir = home + "/.lnd"
 		loadedConfig.LogDir = loadedConfig.LndDir + "/logs"
 		loadedConfig.DataDir = loadedConfig.LndDir + "/data"
 		loadedConfig.Bitcoin.Node = "neutrino"
 		loadedConfig.Bitcoin.Active = true
-		loadedConfig.DebugLevel = "error"
+		loadedConfig.DebugLevel = config.LightningConfig.LndLogLevel
 		coreIPOnly := util.GetIPOnly(config.CoreURI)
-		ip, err := net.ResolveIPAddr("ip", coreIPOnly)
-		if err != nil {
-			fmt.Println("Invalid IP in CoreURI")
-			panic(err)
-		}
-		loadedConfig.ExternalIPs = []net.Addr{ip}
-		p2p, _ := net.ResolveIPAddr("ip", "0.0.0.0")
-		loadedConfig.Listeners = []net.Addr{p2p}
-		rest, _ := net.ResolveIPAddr("ip", "0.0.0.0")
-		loadedConfig.RESTListeners = []net.Addr{rest}
-		rpc, _ := net.ResolveIPAddr("ip", "0.0.0.0")
-		loadedConfig.RPCListeners = []net.Addr{rpc}
+		loadedConfig.RawExternalIPs = []string{coreIPOnly + ":9735"}
+		loadedConfig.RawListeners = []string{"0.0.0.0:9735"}
+		loadedConfig.RawRESTListeners = []string{"0.0.0.0:8080"}
+		loadedConfig.RawRPCListeners = []string{"0.0.0.0:10009"}
 		loadedConfig.Bitcoin.DefaultNumChanConfs = 3
 		loadedConfig.TLSExtraDomains = []string{"lnd"}
 		loadedConfig.TLSExtraIPs = []string{coreIPOnly}
@@ -315,21 +299,34 @@ func runLnd(config types.AnchorConfig){
 			loadedConfig.Bitcoin.MainNet = true
 			loadedConfig.NeutrinoMode.AddPeers = []string{"btcd-mainnet.lightning.computer", "mainnet1-btcd.zaphq.io", "mainnet2-btcd.zaphq.io", "24.155.196.246:8333","75.103.209.147:8333"}
 			loadedConfig.FeeURL = "https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json"
+			loadedConfig.Routing = &lncfg.Routing{AssumeChannelValid:true}
 		} else if config.BitcoinNetwork == "testnet" {
 			loadedConfig.Bitcoin.TestNet3 = true
 			loadedConfig.NeutrinoMode.AddPeers = []string{"faucet.lightning.community:18333", "btcd-testnet.lightning.computer", "testnet1-btcd.zaphq.io", "testnet2-btcd.zaphq.io"}
+			loadedConfig.Routing = &lncfg.Routing{AssumeChannelValid:false}
 		}
+		loadedConfig.ProtocolOptions = &lncfg.ProtocolOptions{WumboChans:false, Anchors: false}
+		loadedConfig.WtClient = &lncfg.WtClient{Active:false, PrivateTowerURIs:[]string{}, SweepFeeRate:0}
+		validatedConfig, err := lnd.ValidateConfig(loadedConfig, "use chainpoint defaults, ini file, or flags for configuration")
+		if err == nil {
+			loadedConfig = *validatedConfig
+		} else {
+			fmt.Println("lnd config failed to validate")
+			panic(err)
+		}
+	} else {
+		lndConfig, err := lnd.LoadConfig()
+		if err != nil {
+			if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
+				// Print error if not due to help request.
+				_, _ = fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			panic(err)
+		}
+		loadedConfig = *lndConfig
 	}
-	if err != nil {
-		if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
-			// Print error if not due to help request.
-			_, _ = fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
 
-		// Help was requested, exit normally.
-		os.Exit(0)
-	}
 	if err := lnd.Main(
 		&loadedConfig, lnd.ListenerCfg{}, signal.ShutdownChannel(),
 	); err != nil {
