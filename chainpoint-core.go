@@ -282,7 +282,7 @@ func runLnd(config types.AnchorConfig){
 	loadedConfig, err := lnd.LoadConfig()
 	if config.LightningConfig.UseChainpointConfig {
 		//defaults
-		loadedConfig.LndDir = "home" + "/.lnd"
+		loadedConfig.LndDir = home + "/.lnd"
 		loadedConfig.LogDir = loadedConfig.LndDir + "/logs"
 		loadedConfig.DataDir = loadedConfig.LndDir + "/data"
 		loadedConfig.Bitcoin.Node = "neutrino"
