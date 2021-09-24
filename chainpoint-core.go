@@ -282,6 +282,7 @@ func runLnd(config types.AnchorConfig){
 	var loadedConfig lnd.Config
 	lndConfig, err := lnd.LoadConfig()
 	if err != nil {
+		fmt.Println("lnd ini file or flags not found, falling back to defaults")
 		loadedConfig = lnd.DefaultConfig()
 	} else {
 		loadedConfig = *lndConfig
@@ -295,16 +296,17 @@ func runLnd(config types.AnchorConfig){
 		loadedConfig.Bitcoin.Active = true
 		loadedConfig.DebugLevel = "error"
 		coreIPOnly := util.GetIPOnly(config.CoreURI)
-		ip, err := net.ResolveIPAddr("ip", coreIPOnly+":9735")
+		ip, err := net.ResolveIPAddr("ip", coreIPOnly)
 		if err != nil {
-			panic(errors.New("Invalid IP in CoreURI"))
+			fmt.Println("Invalid IP in CoreURI")
+			panic(err)
 		}
 		loadedConfig.ExternalIPs = []net.Addr{ip}
-		p2p, _ := net.ResolveIPAddr("ip", "0.0.0.0:9735")
+		p2p, _ := net.ResolveIPAddr("ip", "0.0.0.0")
 		loadedConfig.Listeners = []net.Addr{p2p}
-		rest, _ := net.ResolveIPAddr("ip", "0.0.0.0:8080")
+		rest, _ := net.ResolveIPAddr("ip", "0.0.0.0")
 		loadedConfig.RESTListeners = []net.Addr{rest}
-		rpc, _ := net.ResolveIPAddr("ip", "0.0.0.0:10009")
+		rpc, _ := net.ResolveIPAddr("ip", "0.0.0.0")
 		loadedConfig.RPCListeners = []net.Addr{rpc}
 		loadedConfig.Bitcoin.DefaultNumChanConfs = 3
 		loadedConfig.TLSExtraDomains = []string{"lnd"}
@@ -329,7 +331,7 @@ func runLnd(config types.AnchorConfig){
 		os.Exit(0)
 	}
 	if err := lnd.Main(
-		loadedConfig, lnd.ListenerCfg{}, signal.ShutdownChannel(),
+		&loadedConfig, lnd.ListenerCfg{}, signal.ShutdownChannel(),
 	); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
