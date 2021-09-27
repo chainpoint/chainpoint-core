@@ -325,7 +325,7 @@ func (cache *Cache) PruneOldState() {
 		}
 		tm := time.Unix(t, 0)
 		if time.Now().After(tm.Add(24 * time.Hour)) {
-			key := string(aggstateIt.Key())
+			key := string(proofstateIt.Key())
 			id := strings.Split(key, ":")[1]
 			cache.Del(key, "")
 			cache.Del("proof:" + id, "")

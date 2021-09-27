@@ -15,16 +15,28 @@ GID := $(shell id -g $$USER)
 
 DEP := $(shell command -v dep 2> /dev/null)
 BUILD_TAGS?='tendermint'
+DEV=dev
+PROD=experimental
+LND=autopilotrpc chainrpc invoicesrpc routerrpc signrpc signerrpc walletrpc watchtowerrpc monitoring
 BUILD_FLAGS = -ldflags "-X github.com/tendermint/tendermint/version.GitCommit=`git rev-parse --short=8 HEAD`"
 
 .PHONY : build
 build:
-	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc" chainpoint-core.go
+	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)" chainpoint-core.go
 	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' chainpoint-core
 
 .PHONY : install
 install:
-	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc" chainpoint-core.go
+	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)" chainpoint-core.go
+
+.PHONY : build
+build-dev:
+	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)" chainpoint-core.go
+	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' chainpoint-core
+
+.PHONY : install
+install-dev:
+	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)" chainpoint-core.go
 
 ## init-volumes              : Create data folder with proper permissions
 .PHONY : init-volumes
