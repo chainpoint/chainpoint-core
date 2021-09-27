@@ -5,9 +5,7 @@ import (
 	"crypto/elliptic"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/types"
-	"github.com/jessevdk/go-flags"
 	"github.com/knq/pemutil"
-	"github.com/lightningnetwork/lnd/lncfg"
 	"github.com/lightningnetwork/lnd/signal"
 	"log"
 	"net/http"
@@ -277,58 +275,41 @@ func main() {
 }
 
 func runLnd(config types.AnchorConfig){
-	var loadedConfig lnd.Config
 	if config.LightningConfig.UseChainpointConfig {
-		loadedConfig = lnd.DefaultConfig()
-		//defaults
-		loadedConfig.LndDir = home + "/.lnd"
-		loadedConfig.LogDir = loadedConfig.LndDir + "/logs"
-		loadedConfig.DataDir = loadedConfig.LndDir + "/data"
-		loadedConfig.Bitcoin.Node = "neutrino"
-		loadedConfig.Bitcoin.Active = true
-		loadedConfig.DebugLevel = config.LightningConfig.LndLogLevel
+		lndHome := home + "/.lnd"
 		coreIPOnly := util.GetIPOnly(config.CoreURI)
-		loadedConfig.RawExternalIPs = []string{coreIPOnly + ":9735"}
-		loadedConfig.RawListeners = []string{"0.0.0.0:9735"}
-		loadedConfig.RawRESTListeners = []string{"0.0.0.0:8080"}
-		loadedConfig.RawRPCListeners = []string{"0.0.0.0:10009"}
-		loadedConfig.Bitcoin.DefaultNumChanConfs = 3
-		loadedConfig.TLSExtraDomains = []string{"lnd"}
-		loadedConfig.TLSExtraIPs = []string{coreIPOnly}
+		osArgs := []string {
+			"--lnddir=" + lndHome,
+			"--logdir=" +  lndHome + "/logs",
+			"--datadir=" + lndHome + "/data",
+			"--bitcoin.active",
+			"--bitcoin.node=neutrino",
+			"--externalip=" + coreIPOnly + ":9735",
+			"--listen=0.0.0.0:9735",
+			"--restlisten=0.0.0.0:8080",
+			"--rpclisten=0.0.0.0:10009",
+			"--bitcoin.defaultchanconfs=3",
+			"--tlsextradomain=lnd",
+			"--tlsextraip=" + coreIPOnly,
+			"--debuglevel=" + config.LightningConfig.LndLogLevel,
+		}
 		if config.BitcoinNetwork == "mainnet" {
-			loadedConfig.Bitcoin.MainNet = true
-			loadedConfig.NeutrinoMode.AddPeers = []string{"btcd-mainnet.lightning.computer", "mainnet1-btcd.zaphq.io", "mainnet2-btcd.zaphq.io", "24.155.196.246:8333","75.103.209.147:8333"}
-			loadedConfig.FeeURL = "https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json"
-			loadedConfig.Routing = &lncfg.Routing{AssumeChannelValid:true}
+			osArgs = append(osArgs, "--feeurl=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json")
+			osArgs = append(osArgs, []string{"btcd-mainnet.lightning.computer", "mainnet1-btcd.zaphq.io", "mainnet2-btcd.zaphq.io", "24.155.196.246:8333","75.103.209.147:8333"}...)
+			osArgs = append(osArgs, "--bitcoin.mainnet")
+			osArgs = append(osArgs, "--routing.assumechanvalid")
 		} else if config.BitcoinNetwork == "testnet" {
-			loadedConfig.Bitcoin.TestNet3 = true
-			loadedConfig.NeutrinoMode.AddPeers = []string{"faucet.lightning.community:18333", "btcd-testnet.lightning.computer", "testnet1-btcd.zaphq.io", "testnet2-btcd.zaphq.io"}
-			loadedConfig.Routing = &lncfg.Routing{AssumeChannelValid:false}
+			osArgs = append(osArgs, "--bitcoin.testnet")
+			osArgs = append(osArgs, []string{"faucet.lightning.community:18333", "btcd-testnet.lightning.computer", "testnet1-btcd.zaphq.io", "testnet2-btcd.zaphq.io"}...)
 		}
-		loadedConfig.ProtocolOptions = &lncfg.ProtocolOptions{WumboChans:false, Anchors: false}
-		loadedConfig.WtClient = &lncfg.WtClient{Active:false, PrivateTowerURIs:[]string{}, SweepFeeRate:0}
-		validatedConfig, err := lnd.ValidateConfig(loadedConfig, "use chainpoint defaults, ini file, or flags for configuration")
-		if err == nil {
-			loadedConfig = *validatedConfig
-		} else {
-			fmt.Println("lnd config failed to validate")
-			panic(err)
-		}
-	} else {
-		lndConfig, err := lnd.LoadConfig()
-		if err != nil {
-			if e, ok := err.(*flags.Error); !ok || e.Type != flags.ErrHelp {
-				// Print error if not due to help request.
-				_, _ = fmt.Fprintln(os.Stderr, err)
-				os.Exit(1)
-			}
-			panic(err)
-		}
-		loadedConfig = *lndConfig
+		os.Args = append(os.Args, osArgs...)
 	}
-
+	loadedConfig, err := lnd.LoadConfig()
+	if err != nil {
+		panic(err)
+	}
 	if err := lnd.Main(
-		&loadedConfig, lnd.ListenerCfg{}, signal.ShutdownChannel(),
+		loadedConfig, lnd.ListenerCfg{}, signal.ShutdownChannel(),
 	); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
