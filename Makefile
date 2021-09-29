@@ -28,7 +28,7 @@ build:
 .PHONY : install
 install:
 	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)" chainpoint-core.go
-	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' $GOPATH/bin/chainpoint-core
+	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' ${GOPATH}/bin/chainpoint-core
 
 .PHONY : build-dev
 build-dev:
@@ -38,7 +38,7 @@ build-dev:
 .PHONY : install-dev
 install-dev:
 	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)" chainpoint-core.go
-	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' $GOPATH/bin/chainpoint-core
+	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' ${GOPATH}/bin/chainpoint-core
 
 .PHONY : install-deps
 install-deps:
