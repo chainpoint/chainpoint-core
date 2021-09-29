@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=$USER
-ExecStart=$HOME/go/bin/chainpoint-core
+ExecStart=$HOME/go/bin/chainpoint-core -config $HOME/.chainpoint/core/core.conf
 
 [Install]
 WantedBy=multi-user.target
