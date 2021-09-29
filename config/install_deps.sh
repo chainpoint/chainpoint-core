@@ -4,6 +4,9 @@ install_deps(){
   echo "Running installation as"
   echo "Username: $USER"
   echo "    EUID: $EUID"
+
+  curl -L https://git.io/vQhTU | bash -s -- --version 1.16.8
+
   if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
     sudo bash -c "apt-get update -y && apt-get install -y wget build-essential libsnappy-dev libcap2-bin "

@@ -61,7 +61,7 @@ func InitConfig(home string) types.AnchorConfig {
 	flag.StringVar(&sessionSecret, "session_secret", "", "mutual LSAT macaroon secret for cores and gateways")
 	flag.StringVar(&tmServer, "tendermint_host", "127.0.0.1", "tendermint api url")
 	flag.StringVar(&tmPort, "tendermint_port", "26657", "tendermint api port")
-	flag.StringVar(&apiPort, "api_port", "8081", "core api port")
+	flag.StringVar(&apiPort, "api_port", "80", "core api port")
 	flag.StringVar(&coreName, "chainpoint_core_name", "", "core Name")
 	flag.StringVar(&analyticsID, "google_ua_id", "", "google analytics id")
 	flag.StringVar(&logLevel, "log_level", "info", "log level")

@@ -28,15 +28,44 @@ build:
 .PHONY : install
 install:
 	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)" chainpoint-core.go
+	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' $GOPATH/bin/chainpoint-core
 
-.PHONY : build
+.PHONY : build-dev
 build-dev:
 	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)" chainpoint-core.go
 	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' chainpoint-core
 
-.PHONY : install
+.PHONY : install-dev
 install-dev:
 	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)" chainpoint-core.go
+	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' $GOPATH/bin/chainpoint-core
+
+.PHONY : install-deps
+install-deps:
+	bash ./config/install_deps.sh
+
+.PHONY : install-daemon
+install-daemon:
+	envsubst < ./config/chainpoint.service.template > ./config/chainpoint.service
+	sudo cp ./config/chainpoint.service /lib/systemd/system
+	sudo systemctl daemon-reload
+	sudo systemctl enable chainpoint
+
+.PHONY : start-daemon
+start-daemon:
+	sudo systemctl start chainpoint
+
+.PHONY : stop-daemon
+stop-daemon:
+	sudo systemctl stop chainpoint
+
+.PHONY : status-daemon
+status-daemon:
+	sudo systemctl status chainpoint
+
+.PHONY : log-daemon
+log-daemon:
+	journalctl --unit chainpoint --follow
 
 ## init-volumes              : Create data folder with proper permissions
 .PHONY : init-volumes
