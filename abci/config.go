@@ -111,7 +111,7 @@ func InitConfig(home string) types.AnchorConfig {
 	}
 
 	var blocklist []string
-	blocklist, err = util.ReadLines("/go/src/github.com/chainpoint/chainpoint-core/ip_blocklist.txt")
+	blocklist, err = util.ReadLines(home + "/ip_blocklist.txt")
 	if util.LogError(err) != nil {
 		blocklist = []string{}
 	}

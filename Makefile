@@ -44,6 +44,10 @@ install-dev:
 install-deps:
 	bash ./config/install_deps.sh
 
+.PHONY : install-blocklist
+install-blocklist:
+	cp ./config/ip_blocklist.txt ${HOME}/.chainpoint/core/ip_blocklist.txt
+
 .PHONY : install-daemon
 install-daemon:
 	envsubst < ./config/chainpoint.service.template > ./config/chainpoint.service
