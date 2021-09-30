@@ -284,11 +284,13 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 	app.StartAnchoring()
 
 	// monitor confirmed tx
-	if app.state.ChainSynced && app.config.DoAnchor {
+	if app.state.ChainSynced {
 		go func() {
-			app.Anchor.BlockSyncMonitor()
-			app.Anchor.MonitorConfirmedTx()
-			app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+			app.Anchor.BlockSyncMonitor() // allow unlock of lnd wallet even if anchoring is disabled
+			if app.config.DoAnchor {
+				app.Anchor.MonitorConfirmedTx()
+				app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+			}
 		}()
 		go app.Cache.PruneOldState()
 	}

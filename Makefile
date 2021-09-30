@@ -43,6 +43,7 @@ install-dev:
 .PHONY : install-deps
 install-deps:
 	bash ./config/install_deps.sh
+	source ${HOMEDIR}/.bashrc
 
 .PHONY : install-go
 install-go:

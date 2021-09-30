@@ -62,11 +62,11 @@ To start up a Core node and connect to the Chainpoint Network:
 $ sudo apt-get install make git
 $ git clone https://github.com/chainpoint/chainpoint-core.git
 $ cd chainpoint-core
-$ make install-deps
-
-You must logout and login to allow your user to use Docker
-$ exit #Logout of your server
+$ make install-deps  # installs go and cleveldb
+$ make install       # compiles core binary
 ```
+
+By default the resulting binary will be placed in `~/go/bin`.
 
 #### Configure Core
 
