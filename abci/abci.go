@@ -164,13 +164,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		go app.aggregator.StartAggregation()
 	}
 
-	//Initialize anchoring to bitcoin if enabled
-	if config.DoAnchor {
-		go app.SyncMonitor() //make sure we're synced before enabling anchoring
-	}
-
-	// Ensure LND Wallet stays unlocked
-	go app.Anchor.BlockSyncMonitor()
+	go app.SyncMonitor() //make sure we're synced
 
 	// Load JWK into local mapping from redis
 	app.LoadIdentity()
@@ -286,7 +280,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 	// monitor confirmed tx
 	if app.state.ChainSynced {
 		go func() {
-			app.Anchor.BlockSyncMonitor() // allow unlock of lnd wallet even if anchoring is disabled
+			app.Anchor.BlockSyncMonitor()
 			if app.config.DoAnchor {
 				app.Anchor.MonitorConfirmedTx()
 				app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
