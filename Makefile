@@ -44,6 +44,10 @@ install-dev:
 install-deps:
 	bash ./config/install_deps.sh
 
+.PHONY : install-go
+install-go:
+	 curl -L https://git.io/vQhTU | bash -s -- --version 1.16.8
+
 .PHONY : install-blocklist
 install-blocklist:
 	cp ./config/ip_blocklist.txt ${HOME}/.chainpoint/core/ip_blocklist.txt
@@ -94,3 +98,9 @@ optimize-network:
 	@sudo sysctl net.core.netdev_max_backlog=2000
 	@sudo sysctl net.ipv4.tcp_max_syn_backlog=2048
 
+migrate:
+	mv ${CORE_DATADIR}/config/node_1/data/* ${CORE_DATADIR}/data
+	mv ${CORE_DATADIR}/config/node_1/* ${CORE_DATADIR}/config
+	tr A-Z a-z < .env > ${CORE_DATADIR}/core.conf
+	sed -i 's/"//g' ${CORE_DATADIR}/core.conf
+	sed -i 's/lnd:10009/127.0.0.1:10009/g' ${CORE_DATADIR}/core.conf
