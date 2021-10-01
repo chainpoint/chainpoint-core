@@ -165,7 +165,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	go app.SyncMonitor() //make sure we're synced
 
 	// Load JWK into local mapping from redis
-	app.LoadIdentity()
+	go app.LoadIdentity()
 
 	// Stake and transmit identity
 	go app.StakeIdentity()
