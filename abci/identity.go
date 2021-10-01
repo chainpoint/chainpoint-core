@@ -44,43 +44,44 @@ func (app *AnchorApplication) SendIdentity() error {
 //LoadIdentity : load public keys derived from JWTs from redis
 func (app *AnchorApplication) LoadIdentity() error {
 	//map all NodeKey IDs to PrivateValidator addresses for consumption by peer filter
-	for i := 1; i < 5; i++ {
+	for {
 		_, err := app.rpc.GetStatus()
-		if err == nil {
-			break
-		} else {
+		if err != nil {
 			app.logger.Info("Waiting for tendermint to be ready...")
 			time.Sleep(5 * time.Second)
+			continue
 		}
-	}
-	txs, err := app.rpc.GetAllJWKs()
-	if err == nil {
-		for _, tx := range txs {
-			var jwkType types.Jwk
-			err := json.Unmarshal([]byte(tx.Data), &jwkType)
-			if app.LogError(err) != nil {
-				continue
+		txs, err := app.rpc.GetAllJWKs()
+		if err == nil {
+			for _, tx := range txs {
+				var jwkType types.Jwk
+				err := json.Unmarshal([]byte(tx.Data), &jwkType)
+				if app.LogError(err) != nil {
+					continue
+				}
+				pubKey, err := util.DecodePubKey(tx)
+				app.state.CoreKeys[tx.CoreID] = *pubKey
+				pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+				pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
+				app.logger.Info(fmt.Sprintf("Loading Core ID %s public key as %s", tx.CoreID, pubKeyHex))
+				if val, exists := app.state.TxValidation[pubKeyHex]; exists {
+					app.state.TxValidation[pubKeyHex] = val
+				} else {
+					validation := validation.NewTxValidation()
+					app.state.TxValidation[pubKeyHex] = validation
+				}
+				app.state.IDMap[jwkType.Kid] = tx.CoreID
+				lnID := types.LnIdentity{}
+				app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID))
+				if lightning.IsLnUri(lnID.Peer) {
+					app.logger.Info(fmt.Sprintf("Setting Core ID %s URI to %s", tx.CoreID, lnID.Peer))
+					app.state.LnUris[tx.CoreID] = lnID
+				}
 			}
-			pubKey, err := util.DecodePubKey(tx)
-			app.state.CoreKeys[tx.CoreID] = *pubKey
-			pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
-			pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
-			if val, exists := app.state.TxValidation[pubKeyHex]; exists {
-				app.state.TxValidation[pubKeyHex] = val
-			} else {
-				validation := validation.NewTxValidation()
-				app.state.TxValidation[pubKeyHex] = validation
-			}
-			app.state.IDMap[jwkType.Kid] = tx.CoreID
-			lnID := types.LnIdentity{}
-			app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID))
-			if lightning.IsLnUri(lnID.Peer) {
-				app.logger.Info(fmt.Sprintf("Setting Core ID %s URI to %s", tx.CoreID, lnID.Peer))
-				app.state.LnUris[tx.CoreID] = lnID
-			}
+			break;
+		} else {
+			app.LogError(err)
 		}
-	} else {
-		app.LogError(err)
 	}
 	return nil
 }
