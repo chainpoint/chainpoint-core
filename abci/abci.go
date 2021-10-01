@@ -16,8 +16,6 @@ import (
 	"strings"
 	"time"
 
-	types3 "github.com/tendermint/tendermint/types"
-
 	"github.com/chainpoint/chainpoint-core/lightning"
 
 	"github.com/chainpoint/chainpoint-core/validation"
@@ -252,18 +250,6 @@ func (app *AnchorApplication) CheckTx(rawTx types2.RequestCheckTx) types2.Respon
 // BeginBlock : Handler that runs at the beginning of every block
 func (app *AnchorApplication) BeginBlock(req types2.RequestBeginBlock) types2.ResponseBeginBlock {
 	app.ValUpdates = make([]types2.ValidatorUpdate, 0)
-	for _, ev := range req.ByzantineValidators {
-		if ev.Type == types3.ABCIEvidenceTypeDuplicateVote {
-			// decrease voting power by 1
-			if ev.TotalVotingPower == 0 {
-				continue
-			}
-			app.updateValidator(types2.ValidatorUpdate{
-				PubKey: app.valAddrToPubKeyMap[string(ev.Validator.Address)],
-				Power:  ev.TotalVotingPower - 1,
-			})
-		}
-	}
 	return types2.ResponseBeginBlock{}
 }
 
