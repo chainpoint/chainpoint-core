@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/knq/pemutil"
@@ -145,6 +147,11 @@ func setup(config types.AnchorConfig) {
 				stakeText := fmt.Sprintf("You will need to fund your new address with at least %s Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
 				fmt.Printf(stakeText)
 			}
+			sessionBytes := make([]byte, 32)
+			if _, err := rand.Read(sessionBytes); err != nil {
+				panic(err)
+			}
+			configs = append(configs, "session_secret=" + hex.EncodeToString(sessionBytes))
 		}
 		file, err := os.OpenFile(home + "/core.conf", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {

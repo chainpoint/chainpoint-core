@@ -277,7 +277,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 	// StartAnchoring blockchain
 	app.StartAnchoring()
 
-	// monitor confirmed tx
+	// monitor confirmed tx. Run on a separate thread but in order
 	if app.state.ChainSynced {
 		go func() {
 			app.Anchor.BlockSyncMonitor()
@@ -286,7 +286,9 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 				app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
 			}
 		}()
-		go app.Cache.PruneOldState()
+		if app.config.DoAnchor {
+			go app.Cache.PruneOldState()
+		}
 	}
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
