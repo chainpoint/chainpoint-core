@@ -1,18 +1,15 @@
 package abci
 
 import (
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/leader_election"
 	"github.com/chainpoint/chainpoint-core/lightning"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/chainpoint/chainpoint-core/validation"
-	"strings"
 	"time"
 )
 
@@ -46,68 +43,45 @@ func (app *AnchorApplication) SendIdentity() error {
 
 //LoadIdentity : load public keys derived from JWTs from redis
 func (app *AnchorApplication) LoadIdentity() error {
-	var idKeys []string
-	var err error
-	idKeys, err = app.Cache.Get("CoreIDs")
-	if app.LogError(err) != nil {
-		return err
-	}
-	if len(idKeys) == 0 {
-		return util.LoggerError(app.logger, errors.New("no JWT keys found in redis"))
-	}
-	for _, k := range idKeys {
-		var coreID string
-		idStr := strings.Split(k, ":")
-		if len(idStr) == 2 {
-			coreID = idStr[1]
-		} else {
-			continue
-		}
-		var b64Str string
-		b64Str, err = app.Cache.GetOne(k)
-		if app.LogError(err) != nil {
-			continue
-		}
-		pubKeyBytes, err := base64.StdEncoding.DecodeString(b64Str)
-		if app.LogError(err) != nil {
-			continue
-		}
-		x, y := elliptic.Unmarshal(elliptic.P256(), pubKeyBytes)
-		pubKey := ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-			X:     x,
-			Y:     y,
-		}
-		app.logger.Info(fmt.Sprintf("Setting JWK Identity for Core %s: %s", coreID, b64Str))
-		app.state.CoreKeys[coreID] = pubKey
-		app.state.TxValidation[fmt.Sprintf("%x", pubKeyBytes)] = validation.NewTxValidation()
-	}
-
 	//map all NodeKey IDs to PrivateValidator addresses for consumption by peer filter
-	go func() {
-		for i := 1; i < 5; i++ {
-			_, err := app.rpc.GetStatus()
-			if err == nil {
-				break
-			} else {
-				app.logger.Info("Waiting for tendermint to be ready...")
-				time.Sleep(5 * time.Second)
-			}
-		}
-		txs, err := app.rpc.GetAllJWKs()
+	for i := 1; i < 5; i++ {
+		_, err := app.rpc.GetStatus()
 		if err == nil {
-			for _, tx := range txs {
-				var jwkType types.Jwk
-				err := json.Unmarshal([]byte(tx.Data), &jwkType)
-				if app.LogError(err) != nil {
-					continue
-				}
-				app.state.IDMap[jwkType.Kid] = tx.CoreID
-			}
+			break
 		} else {
-			app.LogError(err)
+			app.logger.Info("Waiting for tendermint to be ready...")
+			time.Sleep(5 * time.Second)
 		}
-	}()
+	}
+	txs, err := app.rpc.GetAllJWKs()
+	if err == nil {
+		for _, tx := range txs {
+			var jwkType types.Jwk
+			err := json.Unmarshal([]byte(tx.Data), &jwkType)
+			if app.LogError(err) != nil {
+				continue
+			}
+			pubKey, err := util.DecodePubKey(tx)
+			app.state.CoreKeys[tx.CoreID] = *pubKey
+			pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+			pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
+			if val, exists := app.state.TxValidation[pubKeyHex]; exists {
+				app.state.TxValidation[pubKeyHex] = val
+			} else {
+				validation := validation.NewTxValidation()
+				app.state.TxValidation[pubKeyHex] = validation
+			}
+			app.state.IDMap[jwkType.Kid] = tx.CoreID
+			lnID := types.LnIdentity{}
+			app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID))
+			if lightning.IsLnUri(lnID.Peer) {
+				app.logger.Info(fmt.Sprintf("Setting Core ID %s URI to %s", tx.CoreID, lnID.Peer))
+				app.state.LnUris[tx.CoreID] = lnID
+			}
+		}
+	} else {
+		app.LogError(err)
+	}
 	return nil
 }
 
