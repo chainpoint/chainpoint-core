@@ -1,11 +1,13 @@
 #!/bin/bash
 
+install_go(){
+  curl -L https://git.io/vQhTU | bash -s -- --version 1.16.8
+}
+
 install_deps(){
   echo "Running installation as"
   echo "Username: $USER"
   echo "    EUID: $EUID"
-
-  curl -L https://git.io/vQhTU | bash -s -- --version 1.16.8
 
   if [[ "$OSTYPE" == "linux-gnu" ]]; then
 
@@ -42,4 +44,5 @@ install_deps(){
   fi
 }
 
-sudo bash -c "$(declare -f install_deps); install_deps"
+bash -c "$(declare -f install_go); install_go" //non-root install
+sudo bash -c "$(declare -f install_deps); install_deps" //root install
