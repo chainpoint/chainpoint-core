@@ -94,12 +94,12 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 		if iAmLeader {
 			btcTx, btca, err := app.SendBtcTx(treeData, app.state.Height, startTxRange, endTxRange)
 			if app.LogError(err) != nil {
-				_, err := app.tendermintRpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.state.ID, &app.config.ECPrivateKey)
+				_, err := app.tendermintRpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.state.ID, app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
 					panic(err)
 				}
 			}
-			_, err = app.tendermintRpc.BroadcastTx("BTC-A", string(btca), 2, time.Now().Unix(), app.state.ID, &app.config.ECPrivateKey)
+			_, err = app.tendermintRpc.BroadcastTx("BTC-A", string(btca), 2, time.Now().Unix(), app.state.ID, app.config.ECPrivateKey)
 			if app.LogError(err) != nil {
 				app.logger.Info(fmt.Sprintf("failed sending BTC-A"))
 				panic(err)
@@ -242,7 +242,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 			// Broadcast the confirmation message with metadata
 			amLeader, _ := leader_election.ElectValidatorAsLeader(1, []string{anchoringCoreID}, *app.state, app.config)
 			if amLeader {
-				result, err := app.tendermintRpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.state.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, &app.config.ECPrivateKey)
+				result, err := app.tendermintRpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.state.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, app.config.ECPrivateKey)
 				app.LogError(err)
 				app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
 			}

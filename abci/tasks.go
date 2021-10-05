@@ -167,7 +167,7 @@ func (app *AnchorApplication) FeeMonitor() {
 			fee = util.MaxInt64(lndFee, thirdPartyFee)
 			fee = util.MaxInt64(fee, STATIC_FEE_AMT)
 			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
-			_, err := app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey) // elect a leader to send a NIST tx
+			_, err := app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, app.config.ECPrivateKey) // elect a leader to send a NIST tx
 			if app.LogError(err) != nil {
 				app.logger.Debug(fmt.Sprintf("Failed to gossip Fee value of %d", fee))
 			}

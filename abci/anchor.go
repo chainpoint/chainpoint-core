@@ -51,7 +51,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 	if calAgg.CalRoot != "" {
 		app.logger.Info(fmt.Sprintf("Calendar Root: %s", calAgg.CalRoot))
 		app.logger.Debug(fmt.Sprintf("Calendar Tree: %#v", calAgg))
-		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+		result, err := app.rpc.BroadcastTx("CAL", calAgg.CalRoot, 2, time.Now().Unix(), app.ID, app.config.ECPrivateKey)
 		if app.LogError(err) != nil {
 			return 0, err
 		}

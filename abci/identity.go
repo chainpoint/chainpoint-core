@@ -34,7 +34,7 @@ func (app *AnchorApplication) SendIdentity() error {
 	}
 	app.logger.Info("Sending JWK...", "JWK", string(jwkJson))
 	//Declare our identity to the network
-	_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), &app.config.ECPrivateKey)
+	_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), app.config.ECPrivateKey)
 	if app.LogError(err) != nil {
 		return err
 	}

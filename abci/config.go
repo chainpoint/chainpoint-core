@@ -142,7 +142,7 @@ func InitConfig(home string) types.AnchorConfig {
 			SessionSecret:  sessionSecret,
 			UseChainpointConfig: useChpLndConfig,
 		},
-		ECPrivateKey:     *ecPrivKey,
+		ECPrivateKey:     ecPrivKey,
 		CIDRBlockList:    blockCIDRs,
 		IPBlockList:      blocklist,
 		DoCal:            doCalLoop,

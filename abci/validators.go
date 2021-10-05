@@ -39,7 +39,7 @@ func (app *AnchorApplication) VoteValidator()  {
 			if amLeader {
 				go func() {
 					time.Sleep(1 * time.Minute)
-					app.rpc.BroadcastTx("VAL", validatorValue, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+					app.rpc.BroadcastTx("VAL", validatorValue, 2, time.Now().Unix(), app.ID, app.config.ECPrivateKey)
 				}()
 			}
 		}

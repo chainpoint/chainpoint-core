@@ -38,7 +38,7 @@ type AnchorConfig struct {
 	TendermintConfig TendermintConfig
 	LightningConfig  lightning.LnClient
 	EthConfig        EthConfig
-	ECPrivateKey     ecdsa.PrivateKey
+	ECPrivateKey     *ecdsa.PrivateKey
 	DoNodeManagement bool
 	DoNodeAudit      bool
 	CIDRBlockList    []string
