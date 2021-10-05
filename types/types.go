@@ -401,5 +401,5 @@ type CoreAPIStatus struct {
 	ActiveChannelsCount int                     `json:"num_channels_count"`
 	NodeInfo            p2p.DefaultNodeInfo     `json:"node_info"`
 	SyncInfo            coretypes.SyncInfo      `json:"sync_info"`
-	ValidatorInfo       coretypes.ValidatorInfo `json:"validator_info"`
+	ValidatorInfo       coretypes.ValidatorInfo `json:"-"`
 }

@@ -70,7 +70,6 @@ func setup(config types.AnchorConfig) {
 		}
 		configs = append(configs, "network=" + networkResult)
 		config.BitcoinNetwork = networkResult
-		config.LightningConfig.Testnet = config.BitcoinNetwork == "testnet"
 
 		promptPublic := promptui.Select{
 			Label: "Will this node be joining the public Chainpoint Network or running standalone?",
@@ -100,6 +99,8 @@ func setup(config types.AnchorConfig) {
 			configs = append(configs, "seeds=" + seed)
 		}
 		if _, err := os.Stat(home + "/.lnd"); os.IsNotExist(err) {
+			config.LightningConfig.Testnet = config.BitcoinNetwork == "testnet"
+			config.LightningConfig.MacPath = fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, config.BitcoinNetwork)
 			os.MkdirAll(home + "/.lnd", os.ModePerm)
 			config.LightningConfig.NoMacaroons = true
 			go runLnd(config)
