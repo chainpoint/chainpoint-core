@@ -28,6 +28,7 @@ import (
 func InitConfig(home string) types.AnchorConfig {
 
 	// Perform env type conversions
+	var proposedValidator string
 	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter, lndLogFilter string
 	var bitcoinNetwork, walletAddress, walletPass, walletSeed, secretKeyPath, aggregatorAllowStr, blockCIDRStr, apiPort string
 	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
@@ -47,6 +48,8 @@ func InitConfig(home string) types.AnchorConfig {
 	flag.IntVar(&anchorReward, "anchor_reward", 0, "reward for cores that anchor")
 	flag.IntVar(&hashPrice, "submit_hash_price_sat", 2, "cost in satoshis for non-whitelisted gateways to submit a hash")
 	flag.StringVar(&blockCIDRStr, "cidr_blocklist", "", "comma-delimited list of IPs to block")
+	flag.StringVar(&proposedValidator, "propose_validator", "", "propose the promotion of a core to validator")
+
 	//lightning settings
 	flag.StringVar(&walletAddress, "hot_wallet_address", "", "birthday address for lnd account")
 	flag.StringVar(&walletPass, "hot_wallet_pass", "", "hot wallet password")
@@ -158,6 +161,7 @@ func InitConfig(home string) types.AnchorConfig {
 		CoreURI:          listenAddr,
 		CoreName:         coreName,
 		AnalyticsID:      analyticsID,
+		ProposedVal:      proposedValidator,
 	}
 }
 

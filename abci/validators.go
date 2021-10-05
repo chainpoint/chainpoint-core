@@ -3,13 +3,15 @@ package abci
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/leader_election"
+	"github.com/tendermint/tendermint/abci/example/code"
+	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"strconv"
 	"strings"
-
-	"github.com/tendermint/tendermint/abci/example/code"
-	"github.com/tendermint/tendermint/abci/types"
+	"time"
 )
 
 // constant prefix for a validator transaction
@@ -26,37 +28,57 @@ func isValidatorTx(tx []byte) bool {
 	return strings.HasPrefix(string(tx), ValidatorSetChangePrefix)
 }
 
-// format is "val:pubkey!power"
+func (app *AnchorApplication) VoteValidator()  {
+	var validatorValue string
+	if app.config.ProposedVal != "" {
+		err, _, _, _ := ValidateValidatorTx(app.config.ProposedVal)
+		if app.LogError(err) == nil {
+			app.PendingValidator = validatorValue
+			amLeader, leaderId := leader_election.ElectValidatorAsLeader(1, []string{}, *app.state, app.config)
+			app.logger.Info(fmt.Sprintf("Validator Promotion: %s was elected to submit VAL tx", leaderId))
+			if amLeader {
+				go func() {
+					time.Sleep(1 * time.Minute)
+					app.rpc.BroadcastTx("VAL", validatorValue, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
+				}()
+			}
+		}
+	}
+}
+
+func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power int64) {
+	//get the pubkey and power
+	idPubKeyAndPower := strings.Split(val, "!")
+	if len(idPubKeyAndPower) != 3 {
+		return errors.New("Expected 'val:id!pubkey!power'"), "", []byte{}, 0
+	}
+
+	idS, pubkeyS, powerS := idPubKeyAndPower[0], idPubKeyAndPower[1], idPubKeyAndPower[2]
+	id = idS
+	// decode the pubkey
+	pubkey, err = base64.StdEncoding.DecodeString(pubkeyS)
+	if err != nil {
+		return errors.New("pubkey is invalid base64"), "", []byte{}, 0
+
+	}
+	// decode the power
+	power, err = strconv.ParseInt(powerS, 10, 64)
+	if err != nil {
+		return errors.New("power isn't an integer"), "", []byte{}, 0
+	}
+
+	return nil, id, pubkey, power
+}
+
+// format is "id!pubkey!power"
 // pubkey is a base64-encoded 32-byte ed25519 key
 func (app *AnchorApplication) execValidatorTx(tx []byte) types.ResponseDeliverTx {
-	tx = tx[len(ValidatorSetChangePrefix):]
-
-	//get the pubkey and power
-	pubKeyAndPower := strings.Split(string(tx), "!")
-	if len(pubKeyAndPower) != 2 {
-		app.logger.Info(fmt.Sprintf("Expected 'pubkey!power'. Got %v", pubKeyAndPower))
-		return types.ResponseDeliverTx{
-			Code: code.CodeTypeEncodingError,
-			Log:  fmt.Sprintf("Expected 'pubkey!power'. Got %v", pubKeyAndPower)}
-	}
-	pubkeyS, powerS := pubKeyAndPower[0], pubKeyAndPower[1]
-
-	// decode the pubkey
-	pubkey, err := base64.StdEncoding.DecodeString(pubkeyS)
+	err, _, pubkey, power := ValidateValidatorTx(string(tx))
 	if err != nil {
-		app.logger.Info(fmt.Sprintf("Pubkey (%s) is invalid base64", pubkeyS))
 		return types.ResponseDeliverTx{
 			Code: code.CodeTypeEncodingError,
-			Log:  fmt.Sprintf("Pubkey (%s) is invalid base64", pubkeyS)}
-	}
-
-	// decode the power
-	power, err := strconv.ParseInt(powerS, 10, 64)
-	if err != nil {
-		app.logger.Info(fmt.Sprintf("Power (%s) is not an int", powerS))
-		return types.ResponseDeliverTx{
-			Code: code.CodeTypeEncodingError,
-			Log:  fmt.Sprintf("Power (%s) is not an int", powerS)}
+			Log:  fmt.Sprintf(err.Error()),
+		}
 	}
 
 	// update

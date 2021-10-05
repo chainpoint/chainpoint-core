@@ -61,41 +61,38 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		}
 	}
 	if tx.TxType == "VAL" {
-		components := strings.Split(tx.Data, "!")
-		if len(components) == 3 {
-			amVal, _ := leader_election.IsValidator(*app.state, app.ID)
-			isSubmitterVal, _ := leader_election.IsValidator(*app.state, tx.CoreID)
-			if !isSubmitterVal {
-				if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
-					submitterRecord.UnAuthValSubmissions++
-					validation.SetValidationRecord(tx.CoreID, submitterRecord, app.state)
+		err, id, _, power := ValidateValidatorTx(tx.Data)
+		if app.LogError(err) != nil {
+			return types2.ResponseCheckTx{
+				Code: code.CodeTypeEncodingError,
+				Log:  fmt.Sprintf(err.Error()),
+			}
+		}
+		amVal, _ := leader_election.IsValidator(*app.state, app.ID)
+		isSubmitterVal, _ := leader_election.IsValidator(*app.state, tx.CoreID)
+		if !isSubmitterVal {
+			if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
+				submitterRecord.UnAuthValSubmissions++
+				validation.SetValidationRecord(tx.CoreID, submitterRecord, app.state)
+			}
+		}
+		if amVal {
+			goodCandidate := false
+			if _, record, err := validation.GetValidationRecord(id, *app.state); err != nil {
+				numValidators := len(app.state.Validators)
+				if power <= 0 {  //make it easier to get rid of a validator than to promote one
+					goodCandidate = true
+				} else {
+					goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
 				}
 			}
-			id := components[0]
-			if amVal {
-				goodCandidate := false
-				if _, record, err := validation.GetValidationRecord(id, *app.state); err != nil {
-					numValidators := len(app.state.Validators)
-					power, err := strconv.ParseInt(components[2], 10, 32)
-					if err != nil {
-						return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-					}
-					if power == -1 {
-						goodCandidate = true
-					} else {
-						goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
-					}
-				}
-				if !(goodCandidate && app.PendingValidator == tx.Data) {
-					app.logger.Info("Validator failed to validate VAL tx")
-					return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-				}
+			if !(goodCandidate && app.PendingValidator == tx.Data) {
+				app.logger.Info("Validator failed to validate VAL tx")
+				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 			}
-		} else {
-			app.logger.Info("Validator failed to validate VAL tx structure")
-			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
 	}
+
 	if tx.TxType == "JWK" && !app.VerifyIdentity(tx) {
 		app.logger.Info("Unable to validate JWK Identity", "CoreID", tx.CoreID)
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}

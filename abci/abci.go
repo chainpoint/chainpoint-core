@@ -180,25 +180,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 			app.state.Migrations[2] = "LatestBtcaHeight=17399"
 		}*/
 
-	key := util.GetEnv("SET_OPTION_KEY", "")
-	val := util.GetEnv("SET_OPTION_VAL", "")
-	if key == "VOTE" || key == "VAL" {
-		go func() {
-			time.Sleep(1 * time.Minute)
-			components := strings.Split(val, "!")
-			if len(components) != 3 {
-				app.logger.Error("VAL or VOTE data is malformed")
-				return
-			}
-			if key == "VAL" {
-				app.PendingValidator = val
-				app.rpc.BroadcastTx("VAL", val, 2, time.Now().Unix(), app.ID, &app.config.ECPrivateKey)
-			}
-			if key == "VOTE" {
-				app.PendingValidator = val
-			}
-		}()
-	}
+	// execute validator promotion logic
+	app.VoteValidator()
 
 	return &app
 }

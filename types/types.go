@@ -59,6 +59,7 @@ type AnchorConfig struct {
 	CoreURI          string
 	CoreName         string
 	AnalyticsID      string
+	ProposedVal      string
 }
 
 //EthConfig holds contract addresses and eth node URI
