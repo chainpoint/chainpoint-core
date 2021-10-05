@@ -702,7 +702,8 @@ func (ln *LnClient) WaitForConnection(d time.Duration) error {
 	deadline := time.Now().Add(d)
 	for !time.Now().After(deadline) {
 		conn, err := ln.CreateConn()
-		if ln.LoggerError(err) != nil {
+		if err != nil {
+			ln.Logger.Error("Waiting on lnd to be ready...")
 			time.Sleep(5 * time.Second)
 			continue
 		} else {

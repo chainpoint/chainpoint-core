@@ -70,6 +70,7 @@ func setup(config types.AnchorConfig) {
 		}
 		configs = append(configs, "network=" + networkResult)
 		config.BitcoinNetwork = networkResult
+		config.LightningConfig.Testnet = config.BitcoinNetwork == "testnet"
 
 		promptPublic := promptui.Select{
 			Label: "Will this node be joining the public Chainpoint Network or running standalone?",
