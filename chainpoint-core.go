@@ -173,8 +173,8 @@ func setup(config types.AnchorConfig) {
 		datawriter.Flush()
 		file.Close()
 
-		fmt.Printf("Chainpoint Core Setup Complete. Run with ./chainpoint-core -config $s", home + "/core.conf")
-		return
+		fmt.Printf("Chainpoint Core Setup Complete. Run with ./chainpoint-core -config %s", home + "/core.conf")
+		os.Exit(0)
 	}
 }
 
