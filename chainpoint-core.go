@@ -101,8 +101,8 @@ func setup(config types.AnchorConfig) {
 		}
 		if _, err := os.Stat(home + "/.lnd"); os.IsNotExist(err) {
 			os.MkdirAll(home + "/.lnd", os.ModePerm)
-			go runLnd(config)
 			config.LightningConfig.NoMacaroons = true
+			go runLnd(config)
 			err = config.LightningConfig.WaitForConnection(5 * time.Minute)
 			if err != nil {
 				fmt.Println("LND not ready after 5 minutes")
