@@ -58,6 +58,7 @@ func setup(config types.AnchorConfig) {
 			panic(err)
 		}
 		configs = append(configs, "chainpoint_core_base_uri=http://" + ipResult)
+		config.CoreURI = ipResult
 
 		promptNetwork := promptui.Select{
 			Label: "Select Bitcoin Network Type",
@@ -68,7 +69,7 @@ func setup(config types.AnchorConfig) {
 			panic(err)
 		}
 		configs = append(configs, "network=" + networkResult)
-
+		config.BitcoinNetwork = networkResult
 
 		promptPublic := promptui.Select{
 			Label: "Will this node be joining the public Chainpoint Network or running standalone?",
@@ -83,6 +84,7 @@ func setup(config types.AnchorConfig) {
 			if networkResult == "mainnet" {
 				seed = "24ba3a2556ebae073b42d94815836b29594a2456@18.220.31.138:26656"
 				seedIp = "18.220.31.138"
+
 			}
 			if networkResult == "testnet" {
 				seed = "5c285f74977733ea970ac2c66e515cc767837644@3.135.54.225:26656"
