@@ -9,6 +9,7 @@ import (
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/lightningnetwork/lnd/lnrpc/invoicesrpc"
+	"os"
 	"runtime"
 	"time"
 
@@ -183,7 +184,7 @@ func (ln *LnClient) GenSeed() ([]string, error) {
 func (ln *LnClient) NewAddress() (string, error) {
 	conn, close, err := ln.GetClient()
 	defer close()
-	if err != nil {
+	if ln.LoggerError(err) != nil {
 		return "", err
 	}
 	addrReq := lnrpc.NewAddressRequest{Type:0}
@@ -708,6 +709,21 @@ func (ln *LnClient) WaitForConnection(d time.Duration) error {
 			continue
 		} else {
 			conn.Close()
+			return nil
+		}
+	}
+	return errors.New("Exceeded LND Connection deadline: check that LND has peers")
+}
+
+func (ln *LnClient) WaitForMacaroon(d time.Duration) error {
+	//Wait for lightning connection
+	deadline := time.Now().Add(d)
+	for !time.Now().After(deadline) {
+		if _, err := os.Stat(ln.MacPath); os.IsNotExist(err) {
+			ln.Logger.Error("Waiting on lnd admin to be ready...")
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
 			return nil
 		}
 	}

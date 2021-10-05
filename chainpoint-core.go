@@ -93,7 +93,7 @@ func setup(config types.AnchorConfig) {
 			seedStatus = util.GetAPIStatus(seedIp)
 			if seedStatus.TotalStakePrice != 0 {
 				inBtc := float64(seedStatus.TotalStakePrice) / float64(100000000)
-				stakeText := fmt.Sprintf("You will need at least %s Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
+				stakeText := fmt.Sprintf("You will need at least %d Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
 				fmt.Printf(stakeText)
 			}
 			configs = append(configs, "seeds=" + seed)
@@ -130,6 +130,11 @@ func setup(config types.AnchorConfig) {
 			}
 			configs = append(configs, "hot_wallet_pass=" + config.LightningConfig.WalletPass)
 			config.LightningConfig.NoMacaroons = false
+			err = config.LightningConfig.WaitForMacaroon(5 * time.Minute)
+			if err != nil {
+				fmt.Println("LND admin not ready after 5 minutes")
+				panic(err)
+			}
 			address, err := config.LightningConfig.NewAddress()
 			if err != nil {
 				fmt.Printf("Failed to create new address!")
