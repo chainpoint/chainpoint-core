@@ -89,7 +89,7 @@ burn:
 
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint:
-	@sleep 20 && rm -rf ${CORE_DATADIR}/data/*
+	@sleep 20 && rm -rf ${CORE_DATADIR}/data/*.db && rm -rf ${CORE_DATADIR}/data/*.wal && rm -rf ${CORE_DATADIR}/data/priv_validator_state.json
 
 ## optimize-network          : increases number of sockets host can use
 optimize-network:

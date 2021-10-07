@@ -153,7 +153,7 @@ func setup(config types.AnchorConfig) {
 			fmt.Printf("****************************************************\n\n")
 			if publicResult == "Public Chainpoint Network" && seedStatus.TotalStakePrice != 0 {
 				inBtc := float64(seedStatus.TotalStakePrice) / float64(100000000)
-				stakeText := fmt.Sprintf("You will need to fund your new address with at least %s Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
+				stakeText := fmt.Sprintf("Please fund your Lightning address with at least %s Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
 				fmt.Printf(stakeText)
 			}
 			sessionBytes := make([]byte, 32)
