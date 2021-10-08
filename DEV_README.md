@@ -4,17 +4,17 @@
 
 The Chainpoint Network's blockchain is based around the Tendermint blockchain library, a Byzantine Fault Tolerant (BFT) peer-to-peer consensus layer. Tendermint allows anyone to interact with a self-generated Tendermint blockchain using an Application-BlockChain Interface (ABCI) app written in Go.
 
-This service module encompasses a Tendermint Core, Chainpoint ABCI app, and various submodules for connecting to C_Level_DB, PostgreSQL, and Redis. The result is one dockerized binary run in a Docker Swarm capable of coordinating all Core services on a single host.
+This service module encompasses a Tendermint Core, Chainpoint ABCI app, LND, and various submodules for connecting to C_Level_DB. 
 
 ## Operation Modes
 
-When initialized, Tendermint will create Genesis, Config, and Node_Key files in `~/.chainpoint/core/config/node_1`. All other data, including ECDSA, redis, and postgresql files, can be found in `~/.chainpoint/core/data`.
+When initialized, Tendermint will create Genesis, Config, and Node_Key files in `~/.chainpoint/core/config`. All other data, including the tendermint db and ECDSA key files, can be found in `~/.chainpoint/core/data`.
 
 A Tendermint full-node can become a validator, and share greater responsibilities such as confirming new Cores, generating proofs, and injecting DRAND Beacon entropy into the blockchain.
 
 ## Deeper Dive
 
-When a Chainpoint Core starts up, it first retrieves all configuration options from the environment variables listed in the `swarm-compose.yaml` file in the project root. It then instantiates both an ABCI application and a Tendermint Core. These become bound together for the duration of operation.
+When a Chainpoint Core starts up, it instantiates an ABCI application, Tendermint Core, and an LND node. These become bound together for the duration of operation.
 
 Every block epoch (60 seconds by default), the ABCI application is set to perform a number of functions:
 
@@ -52,6 +52,6 @@ The following packages contain `go` language utilities which may be useful in th
 
 ## Troubleshooting
 
-- If the Tendermint Core crashes, it will log a `panic` message. Usually this is due to the Tendermint Core having a corrupt copy of the chain. When in doubt, don't be afraid to `make remove` and `make clean` to stop the node and delete the chainstate, then redeploy with `make deploy`. A fast-sync with the rest of the Network should fix the issue.
+- If the Tendermint Core crashes, it will log a `panic` message. Usually this is due to the Tendermint Core having a corrupt copy of the chain. When in doubt, don't be afraid to `make clean-tendermint`, then restart. A fast-sync with the rest of the Network should fix the issue.
 - If the Tendermint Core returns connection errors to other services, make sure all URIs and API keys are correct in your configuration.
 - If you need to move hosts, be sure to save the `~/.chainpoint` directory and move it to the new host. You will want to adjust the Core's public IP in `~/.chainpoint/core/.env` to reflect the new host.
