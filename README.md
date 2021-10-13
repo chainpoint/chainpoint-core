@@ -62,18 +62,27 @@ To start up a Core node and connect to the Chainpoint Network:
 $ sudo apt-get install make git
 $ git clone https://github.com/chainpoint/chainpoint-core.git
 $ cd chainpoint-core
-$ make install-deps
-
-You must logout and login to allow your user to use Docker
-$ exit #Logout of your server
+$ make install-deps    # installs go and cleveldb
+$ source ~/.bashrc     # reload path after dependency installation
+$ make install         # compiles core binary
+$ chainpoint-core      # Run setup
 ```
+
+If you wish to daemonize the service with systemd, the following
+commands are available:
+```
+$ make install-daemon  # install systemd if necessary
+$ make start-daemon    # start systemd daemon
+$ make log-daemon      # print daemon logs
+```
+
+By default the resulting binary will be placed in `~/go/bin`.
 
 #### Configure Core
 
 ```
 $ ssh user@<your_ip> #Log back into your server
-$ cd chainpoint-core
-$ make init
+$ chainpoint-core
 
  ██████╗██╗  ██╗ █████╗ ██╗███╗   ██╗██████╗  ██████╗ ██╗███╗   ██╗████████╗     ██████╗ ██████╗ ██████╗ ███████╗
 ██╔════╝██║  ██║██╔══██╗██║████╗  ██║██╔══██╗██╔═══██╗██║████╗  ██║╚══██╔══╝    ██╔════╝██╔═══██╗██╔══██╗██╔════╝
@@ -94,7 +103,6 @@ You will need at least 3000000 Satoshis (0.03 BTC) to join the Chainpoint Networ
 
 Initializing Lightning wallet...
 Create new address for wallet...
-Creating Docker secrets...
 ****************************************************
 Lightning initialization has completed successfully.
 ****************************************************
@@ -105,64 +113,45 @@ LND Wallet Address: tb1qfvjr20txm464fxcr0n9d4j2gkr5w4xpl55kl6u
 You should back up this information in a secure place.
 ******************************************************
 
-Please fund your Lightning address with at least [staking requirement] Satoshis (0.0X BTC) and wait for 6 confirmations, then run `make deploy`
+Please fund your Lightning address with at least [staking requirement] Satoshis (0.0X BTC) to join the Chainpoint Network`
 
-shutting down LND...
+Chainpoint Core Setup Complete. Run with chainpoint-core -config ~/.chainpoint/core/core.conf
 
-$ make deploy
+$ chainpoint-core -config ~/.chainpoint/core/core.conf
 ```
 
 The staking requirement is determined by the number of cores on the Chainpoint Network multiplied by 1,000,000 satoshis.
 
-After `make deploy`, it will take about 5 minutes to deploy Core. If startup is successful, running `docker service logs -f chainpoint-core_abci` will show the log message `Executed block` every minute after the docker containers download, and going to `<your ip>/status` in a browser will show the Core status in JSON format.
+If startup is successful, the log output will show the log message `Executed block` every minute after the binary connects to the Chainpoint Network, and going to `<your ip>/status` in a browser will show the Core status in JSON format.
 
-### Joining a Network
+### Joining another Network
 
 By default, the init process will join either the Chainpoint Testnet or Mainnet, depending on user choice. However, peering with custom networks is also possible:
 
 1. Specify peers by adding a comma-delimited list of Tendermint URIs, such as `PEERS="087186cd1d631c5e709c4afa15a1ce218c6a28c1@3.133.119.65:26656"` to the .env file in the root project directory
 
-2. Run `make deploy` to start Core. In order to obtain permission to submit hashes to the network, your Core will automatically stake bitcoin by opening lightning channels with the existing network validators.
+2. Run `chainpoint-core -config ~/.chainpoint/core/core.conf` to start Core. In order to obtain permission to submit hashes to the network, your Core will automatically stake bitcoin by opening lightning channels with the existing network validators.
 
 ### Upgrade
 
-Core can be upgraded by running `make clean-tendermint` and `docker-compose pull`, then by redeploying with `make deploy`.
+Core can be upgraded by pulling the latest main branch from this repository and recompiling with `make install`.
 
 ### Troubleshooting
 
-If `make init` fails and the Lightning wallet hasn't yet been generated and funded, run `make burn`, then run `make init` again.
+If setup fails and the Lightning wallet hasn't yet been generated and funded, run `rm -rf ~/.chainpoint/core`, then run `chainpoint-core` again.
 
-To reset the core chain state if the Lightning wallet has already been generated and funded, run `make clean-tendermint`, then `make init` again.
+To reset the core chain state if the Lightning wallet has already been generated and funded, run `make clean-tendermint`, then `chainpoint-core` again.
 
 For further help, [submit an issue](https://github.com/chainpoint/chainpoint-core/issues) to the Chainpoint Core repo.
 
 ### Configuration
 
-`make init` will perform the configuration process for you. However, you may wish to setup a custom Core or Network. To do this, you will need to set up a configuration and secrets (lightning wallet) before running.
+Running chainpoint-core for the first time will perform the configuration process for you. However, you may wish to setup a custom Core or Network. To do this, you will need to set up a configuration and secrets (lightning wallet) before running.
 
-Chainpoint Core currently uses Docker Swarm when running in Production mode. Running `make init` will initialize a Docker Swarm node on the host machine and prompt the user for the the type of network (TESTNET or MAINNET) and public IP.
-There are further settings found in the `.env.sample` and `swarm-compose.yaml` file.
-These are more permanent and altering them may cause problems connecting to the public Chainpoint testnets and mainnet.
-However, they may be invaluable for setting up a private Chainpoint Network with different parameters, for example by configuring more frequent bitcoin anchoring.
+Chainpoint Core currently uses a config file, which by default is at `~/.chainpoint/core/core.conf`. Running `chainpoint-core` without arguments for the first time will initialize this file. 
+Modifying these settings may be invaluable for setting up a private Chainpoint Network with different parameters, for example by configuring more frequent bitcoin anchoring.
 
-The following are the descriptions of the configuration parameters:
-
-| Name                     | Type    | Location           | Description                                                                                                                                      |
-| :----------------------- | :------ | :----------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
-| CHAINPOINT_CORE_BASE_URI | String  | .env               | Public URI of host machine, of the form `http://35.245.53.181`                                                                                   |
-| NETWORK                  | String  | .env               | Set to `testnet` to use Bitcoin testnet. Default is `mainnet`.                                                                                   |
-| SUBMIT_HASH_PRICE_SAT    | String  | .env               | Price required to submit hashes to the API in satoshis                                                                                           |
-| NODE_ENV                 | String  | .env               | Sets Core to use either bitcoin mainnets (`production`) or testnets (`development`). Defaults to `production`                                    |
-| PEERS                    | String  | .env               | Comma-delimited list of Tendermint peer URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
-| SEEDS                    | String  | .env               | Comma-delimited list of Tendermint seed URIs of the form $ID@$IP:\$PORT, such as `73d315d7c92e60df6aa92632259def61cace59de@35.245.53.181:26656`. |
-| ANCHOR_INTERVAL          | String  | swarm-compose.yaml | how often, in block time, the Core network should be anchored to Bitcoin. Default is 60.                                                         |
-| AGGREGATOR_WHITELIST     | String  | swarm-compose.yaml | Comma-delimited list of IPs that are permitted to use Core's API without following the LSAT auth flow                                            |
-| AGGREGATOR_PUBLIC        | Boolean | swarm-compose.yaml | Whether to expose AGGREGATOR_WHITELIST at `/gateways/public` in the Core API.                                                                    |
-| HASHES_PER_MERKLE_TREE   | String  | swarm-compose.yaml | maximum number of hashes the aggregation process will consume per aggregation interval. Default is 250000                                        |
-| AGGREGATE                | Boolean | swarm-compose.yaml | Whether to aggregate hashes and send them to the Calendar blockchain. Defaults to true                                                           |
-| ANCHOR                   | Boolean | swarm-compose.yaml | Whether to anchor the state of the Calendar to Bitcoin                                                                                           |
-| LOG_FILTER               | String  | swarm-compose.yaml | Log Verbosity. Defaults to `"main:debug,state:info,*:error"`                                                                                     |
-| LOG_LEVEL                | String  | swarm-compose.yaml | Level of detail included in Logs. Defaults to `info`                                                                                             |
+A full list of configuration parameters is located at abci/config.go or by running `chainpoint-core -h`.                                                                            |
 
 ## Development
 
@@ -170,17 +159,18 @@ We encourage anyone interested in contributing to fork this repo and submit a pu
 
 ### Build
 
-`make build` will build and tag local docker images for each of the micro-services in this Repo.
+`make build` will build a production application, provided `go` has been installed via install-deps. `make build-dev` will compile a core instance 
+with tendermint and lightning node geared toward production.
 
 ### Run
 
-`make dev` will bring up a docker-compose instance geared toward development. API will be accessible on port 80, while Tendermint is accessible on ports 26656-26657.
+After running `chainpoint-core` with test parameters, API will be accessible by default on port 80, while Tendermint is accessible on ports 26656-26657.
 
 ### Documentation
 
 A description of the Chainpoint Network is available in the [chainpoint-start](https://github.com/chainpoint/chainpoint-start) repository.
 
-The README for the Core application in this repo is available [here](https://github.com/chainpoint/chainpoint-core/blob/master/go-abci-service/README.md).
+The README for the Core application in this repo is available [here](https://github.com/chainpoint/chainpoint-core/blob/master/README.md).
 
 ## License
 

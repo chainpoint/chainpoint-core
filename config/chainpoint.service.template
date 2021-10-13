@@ -1,0 +1,14 @@
+[Unit]
+Description=Chainpoint Core service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=$USER
+ExecStart=$GOPATH/bin/chainpoint-core -config $HOME/.chainpoint/core/core.conf
+
+[Install]
+WantedBy=multi-user.target
