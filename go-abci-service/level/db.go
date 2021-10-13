@@ -3,7 +3,7 @@ package level
 import (
 	"encoding/json"
 	"errors"
-	"github.com/chainpoint/chainpoint-core/go-abci-service/types"
+	"github.com/chainpoint/chainpoint-core/types"
 	db "github.com/tendermint/tm-db"
 	"strconv"
 	"strings"
@@ -252,7 +252,7 @@ func (cache *Cache) PruneOldState() {
 			continue
 		}
 		tm := time.Unix(t, 0)
-		if time.Now().After(tm.Add(6 * time.Hour)) {
+		if time.Now().After(tm.Add(12 * time.Hour)) {
 			key := string(btctxstateIt.Key())
 			id := strings.Split(key, ":")[1]
 			state, _ := cache.GetBTCTxStateObjectByAnchorBTCAggId(id)
@@ -269,7 +269,7 @@ func (cache *Cache) PruneOldState() {
 			continue
 		}
 		tm := time.Unix(t, 0)
-		if time.Now().After(tm.Add(6 * time.Hour)) {
+		if time.Now().After(tm.Add(12 * time.Hour)) {
 			key := string(anchoraggstateIt.Key())
 			id := strings.Split(key, ":")[1]
 			states, _ := cache.GetAnchorBTCAggStateObjectsByCalIds([]string{id})
@@ -287,7 +287,7 @@ func (cache *Cache) PruneOldState() {
 			continue
 		}
 		tm := time.Unix(t, 0)
-		if time.Now().After(tm.Add(6 * time.Hour)) {
+		if time.Now().After(tm.Add(12 * time.Hour)) {
 			key := string(calstateIt.Key())
 			id := strings.Split(key, ":")[1]
 			states, _ := cache.GetCalStateObjectsByAggIds([]string{id})
@@ -305,7 +305,7 @@ func (cache *Cache) PruneOldState() {
 			continue
 		}
 		tm := time.Unix(t, 0)
-		if time.Now().After(tm.Add(6 * time.Hour)) {
+		if time.Now().After(tm.Add(12 * time.Hour)) {
 			key := string(aggstateIt.Key())
 			id := strings.Split(key, ":")[1]
 			states, _ := cache.GetAggStateObjectsByProofIds([]string{id})
