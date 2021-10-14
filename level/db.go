@@ -319,7 +319,7 @@ func (cache *Cache) PruneOldState() {
 	for ; proofstateIt.Valid(); proofstateIt.Next() {
 		value := proofstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
-		cache.Logger.Info("Iterating", "key", proofstateIt.Key(), "proofstateIt", string(value))
+		//cache.Logger.Info("Iterating", "key", proofstateIt.Key(), "proofstateIt", string(value))
 		if err != nil {
 			continue
 		}
