@@ -3,6 +3,7 @@ package util
 import (
 	"bufio"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	random "crypto/rand"
 	"crypto/sha256"
 	"encoding/asn1"
@@ -169,6 +170,29 @@ func DecodePubKey(tx types.Tx) (*ecdsa.PublicKey, error) {
 	return &ecdsa.PublicKey{}, errors.New("unable to create public key from JWK")
 }
 
+func DecodeJWK(jwkType types.Jwk) (*ecdsa.PublicKey, error) {
+	jsonJwk, err := json.Marshal(jwkType)
+	if LogError(err) != nil {
+		return &ecdsa.PublicKey{}, err
+	}
+	set, err := jwk.ParseBytes(jsonJwk)
+	if LogError(err) != nil {
+		return &ecdsa.PublicKey{}, err
+	}
+	for _, k := range set.Keys {
+		pubKeyInterface, err := k.Materialize()
+		if LogError(err) != nil {
+			continue
+		}
+		pubKey := pubKeyInterface.(*ecdsa.PublicKey)
+		pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+		pubKeyHex := fmt.Sprintf("Loading self pubkey as %x", pubKeyBytes)
+		fmt.Printf(pubKeyHex)
+		return pubKey, err
+	}
+	return &ecdsa.PublicKey{}, errors.New("unable to create public key from JWK")
+}
+
 // DecodeTxAndVerifySig accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
 func DecodeTx(incoming []byte) (types.Tx, error) {
 	decoded, err := base64.StdEncoding.DecodeString(string(incoming))
@@ -222,7 +246,7 @@ func DecodeTxAndVerifySig(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) 
 	}
 	err = json.Unmarshal([]byte(decoded), &calendar)
 	/* Skip sig verification if this is a TOKEN tx */
-	if calendar.TxType == "TOKEN" || calendar.TxType == "JWK" {
+	if calendar.TxType == "JWK" {
 		return calendar, nil
 	}
 	/* Verify Signature */

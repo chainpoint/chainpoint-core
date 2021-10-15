@@ -125,6 +125,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	err = nil
 
 	jwkType := util.GenerateKey(config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
+	util.DecodeJWK(jwkType)
 
 	rpcClient := tendermint_rpc.NewRPCClient(config.TendermintConfig, *config.Logger)
 
