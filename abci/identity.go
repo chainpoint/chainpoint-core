@@ -51,6 +51,8 @@ func (app *AnchorApplication) LoadIdentity() error {
 			time.Sleep(5 * time.Second)
 			continue
 		}
+		selfPubKey, _, _:= util.DecodeJWK(app.JWK)
+		app.logger.Info(fmt.Sprintf("Self pubkey is %s", selfPubKey))
 		txs, err := app.rpc.GetAllJWKs()
 		if err == nil {
 			for _, tx := range txs {
