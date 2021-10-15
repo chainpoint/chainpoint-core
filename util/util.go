@@ -249,7 +249,7 @@ func DecodeTxAndVerifySig(incoming []byte, CoreKeys map[string]ecdsa.PublicKey) 
 	}
 	hash := sha256.Sum256(txNoSig)
 	if !ecdsa.Verify(pubKey, hash[:], sig.R, sig.S) {
-		err := LogError(errors.New("Can't validate signature of Tx"))
+		err := LogError(errors.New(fmt.Sprintf("Can't validate signature of Tx from Core %s", calendar.CoreID)))
 		return types.Tx{}, err
 	}
 	calendar.Sig = oldSig
