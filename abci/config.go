@@ -111,9 +111,7 @@ func InitConfig(home string) types.AnchorConfig {
 	ecPrivKey, ok := store.ECPrivateKey()
 	if !ok {
 		util.LogError(errors.New("ecdsa key load failed"))
-	} else {
-		ecPrivKey.P
-	}
+	} 
 
 	var blocklist []string
 	blocklist, err = util.ReadLines(home + "/ip_blocklist.txt")
