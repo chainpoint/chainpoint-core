@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"crypto/elliptic"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/leader_election"
 	"github.com/chainpoint/chainpoint-core/util"
@@ -72,6 +73,15 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.logger.Info(fmt.Sprintf("Stored Peer URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
 			app.state.JWKStaked = false
 		}
+	}
+	selfPubKey, _, _:= util.DecodeJWK(app.JWK)
+	pubKey := app.state.CoreKeys[app.ID]
+	pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+	pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
+	if selfPubKey != pubKeyHex {
+		app.logger.Info("node ID has likely changed. %s != %s", selfPubKey, pubKeyHex)
+		app.logger.Info("Restaking with new credentials")
+		app.state.JWKStaked = false
 	}
 
 	for !app.state.JWKStaked {
