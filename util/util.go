@@ -170,14 +170,14 @@ func DecodePubKey(tx types.Tx) (*ecdsa.PublicKey, error) {
 	return &ecdsa.PublicKey{}, errors.New("unable to create public key from JWK")
 }
 
-func DecodeJWK(jwkType types.Jwk) (*ecdsa.PublicKey, error) {
+func DecodeJWK(jwkType types.Jwk) (string, *ecdsa.PublicKey, error) {
 	jsonJwk, err := json.Marshal(jwkType)
 	if LogError(err) != nil {
-		return &ecdsa.PublicKey{}, err
+		return "", &ecdsa.PublicKey{}, err
 	}
 	set, err := jwk.ParseBytes(jsonJwk)
 	if LogError(err) != nil {
-		return &ecdsa.PublicKey{}, err
+		return "", &ecdsa.PublicKey{}, err
 	}
 	for _, k := range set.Keys {
 		pubKeyInterface, err := k.Materialize()
@@ -187,10 +187,9 @@ func DecodeJWK(jwkType types.Jwk) (*ecdsa.PublicKey, error) {
 		pubKey := pubKeyInterface.(*ecdsa.PublicKey)
 		pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 		pubKeyHex := fmt.Sprintf("Loading self pubkey as %x", pubKeyBytes)
-		fmt.Printf(pubKeyHex)
-		return pubKey, err
+		return pubKeyHex, pubKey, err
 	}
-	return &ecdsa.PublicKey{}, errors.New("unable to create public key from JWK")
+	return "", &ecdsa.PublicKey{}, errors.New("unable to create public key from JWK")
 }
 
 // DecodeTxAndVerifySig accepts a Chainpoint Calendar transaction in base64 and decodes it into abci.Tx struct
