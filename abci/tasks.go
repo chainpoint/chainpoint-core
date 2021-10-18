@@ -79,7 +79,7 @@ func (app *AnchorApplication) StakeIdentity() {
 	pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 	pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
 	if selfPubKey != pubKeyHex {
-		app.logger.Info("node ID has likely changed. %s != %s", selfPubKey, pubKeyHex)
+		app.logger.Info(fmt.Sprintf("node ID has likely changed. %s != %s", selfPubKey, pubKeyHex))
 		app.logger.Info("Restaking with new credentials")
 		app.state.JWKStaked = false
 	}

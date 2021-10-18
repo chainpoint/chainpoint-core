@@ -48,10 +48,9 @@ func GenerateCalendarTree(aggs []types.Aggregation) types.CalAgg {
 }
 
 // CreateCalStateMessage lets proof state service know about a cal anchoring via rabbitmq
-func CreateCalStateMessage(tx types.TxTm, treeDataObj types.CalAgg) []types.CalStateObject {
+func CreateCalStateMessage(baseUri string, tx types.TxTm, treeDataObj types.CalAgg) []types.CalStateObject {
 	calStates := make([]types.CalStateObject, 0)
-	baseURI := util.GetEnv("CHAINPOINT_CORE_BASE_URI", "https://tendermint.chainpoint.org")
-	uri := fmt.Sprintf("%s/calendar/%x/data", baseURI, tx.Hash)
+	uri := fmt.Sprintf("%s/calendar/%x/data", baseUri, tx.Hash)
 	anchor := types.AnchorObj{
 		AnchorID: hex.EncodeToString(tx.Hash),
 		Uris:     []string{uri},
