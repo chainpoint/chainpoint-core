@@ -68,13 +68,13 @@ func (app *AnchorApplication) StakeIdentity() {
 		time.Sleep(30 * time.Second)
 	}
 	// resend JWK if info has changed
-	if lnUri, exists := app.state.LnUris[app.ID]; exists {
+	if lnUri, exists := app.state.LnUris[app.ID]; app.state.JWKStaked && exists {
 		if lnUri.Peer != app.state.LNState.Uris[0] {
 			app.logger.Info(fmt.Sprintf("Stored Peer URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
 			app.state.JWKStaked = false
 		}
 	}
-	if pubKey, exists := app.state.CoreKeys[app.ID]; exists {
+	if pubKey, exists := app.state.CoreKeys[app.ID]; app.state.JWKStaked && exists {
 		selfPubKey, _, _ := util.DecodeJWK(app.JWK)
 		pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 		pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
