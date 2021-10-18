@@ -157,12 +157,9 @@ func GenerateHeadStateObject(uri string, hash []byte, btcMonObj types.BtcMonMsg)
 		}
 		anchorOps.Ops = append(anchorOps.Ops, types.ProofLineItem{Op: "sha-256-x2"})
 	}
-	proofUri := strings.ReplaceAll(uri, "http://", "")
-	uriParts := strings.Split(proofUri, ":")
-	proofUri = uriParts[0]
 	anchorOps.Anchor = types.AnchorObj{
 		AnchorID: strconv.FormatInt(btcMonObj.BtcHeadHeight, 10),
-		Uris:     []string{strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", proofUri, hash))},
+		Uris:     []string{strings.ToLower(fmt.Sprintf("%s/calendar/%x/data", uri, hash))},
 	}
 	headState, _ := json.Marshal(anchorOps)
 	headStateObj := types.AnchorBtcHeadState{

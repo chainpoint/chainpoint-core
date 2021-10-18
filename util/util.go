@@ -319,6 +319,21 @@ func EncodeTx(outgoing types.Tx) string {
 	return base64.StdEncoding.EncodeToString(txJSON)
 }
 
+func NormalizeUri (uri string, removePort bool, http bool, https bool) string {
+	proofUri := strings.ReplaceAll(uri, "http://", "")
+	proofUri = strings.ReplaceAll(proofUri, "https://", "")
+	if removePort {
+		uriParts := strings.Split(proofUri, ":")
+		proofUri = uriParts[0]
+	}
+	if http {
+		proofUri = "http://" + proofUri
+	} else if https {
+		proofUri = "https://" + proofUri
+	}
+	return proofUri
+}
+
 func GetClientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
