@@ -74,14 +74,15 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.state.JWKStaked = false
 		}
 	}
-	selfPubKey, _, _:= util.DecodeJWK(app.JWK)
-	pubKey := app.state.CoreKeys[app.ID]
-	pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
-	pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
-	if selfPubKey != pubKeyHex {
-		app.logger.Info(fmt.Sprintf("node ID has likely changed. %s != %s", selfPubKey, pubKeyHex))
-		app.logger.Info("Restaking with new credentials")
-		app.state.JWKStaked = false
+	if pubKey, exists := app.state.CoreKeys[app.ID]; exists {
+		selfPubKey, _, _ := util.DecodeJWK(app.JWK)
+		pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+		pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
+		if selfPubKey != pubKeyHex {
+			app.logger.Info(fmt.Sprintf("node ID has likely changed. %s != %s", selfPubKey, pubKeyHex))
+			app.logger.Info("Restaking with new credentials")
+			app.state.JWKStaked = false
+		}
 	}
 
 	for !app.state.JWKStaked {
