@@ -143,6 +143,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	case "BTC-E":
 		app.state.LatestErrRoot = tx.Data
 		app.state.LastErrorCoreID = tx.CoreID
+		app.logger.Info(fmt.Sprintf("BTC-E from %s", tx.CoreID))
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 	case "BTC-A":
 		var btca types.BtcTxMsg
