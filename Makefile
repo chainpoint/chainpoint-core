@@ -91,6 +91,13 @@ burn:
 clean-tendermint:
 	@sleep 20 && rm -rf ${CORE_DATADIR}/data/*.db && rm -rf ${CORE_DATADIR}/data/*.wal && rm -rf ${CORE_DATADIR}/data/priv_validator_state.json
 
+##pull
+pull:
+	git pull
+
+## update
+update: pull stop-daemon install start-daemon
+
 ## optimize-network          : increases number of sockets host can use
 optimize-network:
 	@sudo sysctl net.core.somaxconn=1024
