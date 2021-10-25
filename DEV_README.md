@@ -4,7 +4,7 @@
 
 The Chainpoint Network's blockchain is based around the Tendermint blockchain library, a Byzantine Fault Tolerant (BFT) peer-to-peer consensus layer. Tendermint allows anyone to interact with a self-generated Tendermint blockchain using an Application-BlockChain Interface (ABCI) app written in Go.
 
-This service module encompasses a Tendermint Core, Chainpoint ABCI app, LND, and various submodules for connecting to C_Level_DB. 
+The binary encompasses a Tendermint Core, Chainpoint ABCI app, LND, and various submodules for connecting to C_Level_DB, all running in separate threads.
 
 ## Operation Modes
 
@@ -26,7 +26,7 @@ Every block epoch (60 seconds by default), the ABCI application is set to perfor
 
 Every anchor epoch (60 minutes by default), the ABCI application is set to perform the following anchor/reward functions:
 
-- Elect a leader to anchor all hashes received since last anchor epoch by broadcasting their Merkle Root to Bitcoin via the `lnd` service. The resulting Bitcoin TX ID is placed in a BTC-A transaction and submitted to the Calendar.
+- Elect a leader to anchor all hashes received since last anchor epoch by broadcasting their Merkle Root to Bitcoin via the `lnd` thread. The resulting Bitcoin TX ID is placed in a BTC-A transaction and submitted to the Calendar.
 - Monitor for the confirmation of a successful anchor to Bitcoin. The resulting Bitcoin header info containing the anchor is placed in a BTC-C transaction and submitted to the Calendar.
 
 ## Anchor Interface
