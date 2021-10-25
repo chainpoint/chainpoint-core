@@ -39,18 +39,17 @@ Chainpoint Core has been tested with a couple of different hardware configuratio
 
 Minimum:
 
-- `>= 8GB RAM`
+- `>= 4GB RAM`
 - `>= 2 CPU Cores`
-- `256+ GB SSD`
+- `100+ GB SSD`
 - `Public IPv4 address`
 
 Recommended:
 
-- `>= 16GB RAM`
+- `>= 8GB RAM`
 - `>= 4 CPU Cores`
 - `>= 500 GB SSD`
 - `Public IPv4 address`
-- `High-performance (1 Gbps+) Cloud Provider Networking`
 
 ### Quick Start
 
