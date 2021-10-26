@@ -329,6 +329,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 			app.logger.Error("Error: can't find calState for", "aggStateRow.AggID", aggStateRow.AggID)
 			continue
 		}
+		app.logger.Info(fmt.Sprintf("Assembling proof %s:\n BtcAggState: %+v\n TxState: %+v\n, HeadState: %+v", aggStateRow.ProofID, anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState))
 		app.LogError(proof.AddBtcBranch(anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState, app.config.BitcoinNetwork))
 		proofBytes, err := json.Marshal(proof)
 		if app.LogError(err) != nil {
