@@ -1,7 +1,6 @@
 package abci
 
 import (
-	"crypto/elliptic"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/leader_election"
 	"github.com/chainpoint/chainpoint-core/util"
@@ -67,7 +66,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		app.logger.Info("StakeIdentity state loading...")
 		time.Sleep(30 * time.Second)
 	}
-	// resend JWK if info has changed
+/*	// resend JWK if info has changed
 	if lnUri, exists := app.state.LnUris[app.ID]; app.state.JWKStaked && exists {
 		if lnUri.Peer != app.state.LNState.Uris[0] {
 			app.logger.Info(fmt.Sprintf("Stored Peer URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
@@ -83,7 +82,7 @@ func (app *AnchorApplication) StakeIdentity() {
 			app.logger.Info("Restaking with new credentials")
 			app.state.JWKStaked = false
 		}
-	}
+	}*/
 
 	for !app.state.JWKStaked {
 		app.logger.Info("Beginning Lightning staking loop")
