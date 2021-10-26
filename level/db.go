@@ -62,7 +62,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 		if err := json.Unmarshal([]byte(agg), &anchorAggState); err != nil {
 			continue
 		}
-		cache.Logger.Info(fmt.Sprintf("Getting calStates for AnchorBtcAggState %s (calId %s)", anchorAggState.AnchorBtcAggId, anchorAggState.CalId))
+		cache.Logger.Info(fmt.Sprintf("Getting calStates %s for AnchorBtcAggState %s", anchorAggState.CalId, anchorAggState.AnchorBtcAggId))
 		calstates, err := cache.Get("calstate:" + anchorAggState.CalId)
 		if err != nil {
 			continue
@@ -72,7 +72,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 			if err := json.Unmarshal([]byte(cs), &cso); err != nil {
 				continue
 			}
-			cache.Logger.Info(fmt.Sprintf("Getting aggStates for calState %s (aggId %s)", cso.CalId, cso.AggID))
+			cache.Logger.Info(fmt.Sprintf("Getting aggState %s for calState %s", cso.AggID, cso.CalId))
 			aggstates, err := cache.Get("aggstate:" + cso.AggID)
 			if err != nil {
 				continue
@@ -82,6 +82,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 				if err := json.Unmarshal([]byte(aggs), &aggState); err != nil {
 					continue
 				}
+				cache.Logger.Info(fmt.Sprintf("Getting proofID %s for aggState %s", aggState.ProofID, cso.AggID))
 				proofIds = append(proofIds, aggState.ProofID)
 			}
 		}
@@ -167,6 +168,7 @@ func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 			return err
 		}
 		if strings.Contains(proofExists, "btc_anchor_branch") {
+			cache.Logger.Info(fmt.Sprintf("ProofID %s duplicated", proof.ProofID))
 			continue
 		}
 		p, err := json.Marshal(proof)
