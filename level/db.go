@@ -51,7 +51,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 	}
 	btcTxState := types.AnchorBtcTxState{}
 	json.Unmarshal([]byte(btcTxStateStr), &btcTxState)
-	cache.Logger.Info(fmt.Sprint("Getting anchorbtcaggstates for tx %s", btcTxId))
+	cache.Logger.Info(fmt.Sprintf("Getting anchorbtcaggstates for tx %s", btcTxId))
 	anchoraggs, err := cache.Get("anchorbtcaggstate:"+btcTxState.AnchorBtcAggId)
 	if err != nil {
 		return []string{}, nil
@@ -62,7 +62,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 		if err := json.Unmarshal([]byte(agg), &anchorAggState); err != nil {
 			continue
 		}
-		cache.Logger.Info(fmt.Sprint("Getting calStates for AnchorBtcAggState %s (calId %s)", anchorAggState.AnchorBtcAggId, anchorAggState.CalId))
+		cache.Logger.Info(fmt.Sprintf("Getting calStates for AnchorBtcAggState %s (calId %s)", anchorAggState.AnchorBtcAggId, anchorAggState.CalId))
 		calstates, err := cache.Get("calstate:" + anchorAggState.CalId)
 		if err != nil {
 			continue
@@ -72,7 +72,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 			if err := json.Unmarshal([]byte(cs), &cso); err != nil {
 				continue
 			}
-			cache.Logger.Info(fmt.Sprint("Getting aggStates for calState %s (aggId %s)", cso.CalId, cso.AggID))
+			cache.Logger.Info(fmt.Sprintf("Getting aggStates for calState %s (aggId %s)", cso.CalId, cso.AggID))
 			aggstates, err := cache.Get("aggstate:" + cso.AggID)
 			if err != nil {
 				continue
