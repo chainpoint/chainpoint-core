@@ -162,13 +162,13 @@ func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
 func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 	for _, proof := range proofs {
-/*		proofExists, err := cache.GetOne("proof:"+proof.ProofID)
+		proofExists, err := cache.GetOne("proof:"+proof.ProofID)
 		if err != nil {
 			return err
 		}
 		if strings.Contains(proofExists, "btc_anchor_branch") {
 			continue
-		}*/
+		}
 		p, err := json.Marshal(proof)
 		if err != nil {
 			return err
