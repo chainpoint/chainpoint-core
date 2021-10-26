@@ -51,6 +51,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 	}
 	btcTxState := types.AnchorBtcTxState{}
 	json.Unmarshal([]byte(btcTxStateStr), &btcTxState)
+	cache.Logger.Info(fmt.Sprint("Getting anchorbtcaggstates for tx %s", btcTxId))
 	anchoraggs, err := cache.Get("anchorbtcaggstate:"+btcTxState.AnchorBtcAggId)
 	if err != nil {
 		return []string{}, nil
