@@ -3,6 +3,7 @@ package level
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/chainpoint/chainpoint-core/types"
 	db "github.com/tendermint/tm-db"
 	"strconv"
@@ -60,6 +61,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 		if err := json.Unmarshal([]byte(agg), &anchorAggState); err != nil {
 			continue
 		}
+		cache.Logger.Info(fmt.Sprint("Getting calStates for AnchorBtcAggState %s (calId %s)", anchorAggState.AnchorBtcAggId, anchorAggState.CalId))
 		calstates, err := cache.Get("calstate:" + anchorAggState.CalId)
 		if err != nil {
 			continue
@@ -69,6 +71,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 			if err := json.Unmarshal([]byte(cs), &cso); err != nil {
 				continue
 			}
+			cache.Logger.Info(fmt.Sprint("Getting aggStates for calState %s (aggId %s)", cso.CalId, cso.AggID))
 			aggstates, err := cache.Get("aggstate:" + cso.AggID)
 			if err != nil {
 				continue
@@ -158,13 +161,13 @@ func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
 func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 	for _, proof := range proofs {
-		proofExists, err := cache.GetOne("proof:"+proof.ProofID)
+/*		proofExists, err := cache.GetOne("proof:"+proof.ProofID)
 		if err != nil {
 			return err
 		}
 		if strings.Contains(proofExists, "btc_anchor_branch") {
 			continue
-		}
+		}*/
 		p, err := json.Marshal(proof)
 		if err != nil {
 			return err

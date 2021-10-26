@@ -212,6 +212,8 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 		return errors.New("StartAnchoring failure, AggRoot mismatch")
 	}
 	anchorBTCAggStateObjects := calendar.PrepareBtcaStateData(btcAgg)
+	anchorBTCAggStateObjectsJson, _ := json.Marshal(anchorBTCAggStateObjects)
+	app.logger.Info("anchorBTCAggStateObjects for AggRoot %s via BtcTx %s: %s", btcTxObj.AnchorBtcAggRoot, btcTxObj.BtcTxID, anchorBTCAggStateObjectsJson)
 	err = app.Cache.BulkInsertBtcAggState(anchorBTCAggStateObjects)
 	if app.LogError(err) != nil {
 		app.logger.Info(fmt.Sprintf("StartAnchoring TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))

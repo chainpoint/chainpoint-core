@@ -62,7 +62,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			tx.Hash = result.Hash.Bytes()
 			tx.Data = result.Data.Bytes()
 			calStates := calendar.CreateCalStateMessage(app.config.CoreURI, tx, calAgg)
-			app.logger.Info(fmt.Sprintf("Cal States: %#v", len(calStates)))
+			app.logger.Info(fmt.Sprintf("Cal States for CalRoot %s: %#v", calAgg.CalRoot, calStates))
 			app.logger.Info("Generating Cal Batch")
 			app.LogError(app.Cache.BulkInsertCalState(calStates))
 			app.LogError(app.GenerateCalBatch(aggStates, calStates))
