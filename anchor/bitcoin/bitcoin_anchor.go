@@ -296,7 +296,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 	for _, anchorBtcAggState := range anchorBtcAggStates {
 		anchorBTCAggIds = append(anchorBTCAggIds, anchorBtcAggState.AnchorBtcAggId)
 	}
-	btcTxState, err := app.Cache.GetBTCTxStateObjectByAnchorBTCAggId(anchorBTCAggIds[0])
+	btcTxState, err := app.Cache.GetBTCTxStateObjectByBtcHeadState(btcHeadState.BtcTxId)
 	if err != nil {
 		return err
 	}

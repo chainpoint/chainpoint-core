@@ -160,6 +160,19 @@ func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 	return btcTxState, nil
 }
 
+//GetBTCTxStateObjectByAnchorBTCHeadState Get btc state objects, given an array of agg ids
+func (cache *Cache) GetBTCTxStateObjectByBtcHeadState(btctx string) (types.AnchorBtcTxState, error) {
+	btcTxStateStr , err := cache.GetOne("btctxstate:" + btctx)
+	if err != nil {
+		return types.AnchorBtcTxState{}, err
+	}
+	btcTxState := types.AnchorBtcTxState{}
+	if err := json.Unmarshal([]byte(btcTxStateStr), &btcTxState); err != nil {
+		return types.AnchorBtcTxState{}, err
+	}
+	return btcTxState, nil
+}
+
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
 func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 	for _, proof := range proofs {
