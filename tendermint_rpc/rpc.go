@@ -148,7 +148,7 @@ func (rpc *RPC) GetCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.Resu
 		return nil, errors.New("max of tx range is less than or equal to min")
 	}
 	Txs := []core_types.ResultTx{}
-	for i := minTxInt; i <= maxTxInt; i++ {
+	for i := minTxInt; i < maxTxInt; i++ {
 		txResult, err := rpc.client.TxSearch(fmt.Sprintf("CAL.TxInt=%d", i), false, 1, 1, "")
 		if err != nil {
 			return nil, err
