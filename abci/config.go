@@ -34,7 +34,7 @@ func InitConfig(home string) types.AnchorConfig {
 	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
 	var coreName, analyticsID, logLevel string
 	var feeMultiplier float64
-	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval int
+	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval, stakePerCore, updateStake int
 	var useAggregatorAllowlist, doCalLoop, doAnchorLoop, useChpLndConfig bool
 	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
 	flag.StringVar(&bitcoinNetwork, "network", "mainnet", "bitcoin network")
@@ -61,6 +61,8 @@ func InitConfig(home string) types.AnchorConfig {
 	flag.BoolVar(&useChpLndConfig, "chainpoint_lnd_config", true, "whether to use chainpoint's default lnd config")
 	flag.Float64Var(&feeMultiplier, "btc_fee_multiplier", 2.2, "multiply anchoring fee by this constant when mempool is congested")
 	flag.IntVar(&feeInterval, "fee_interval", 10, "interval in minutes to check for new bitcoin tx fee")
+	flag.IntVar(&stakePerCore, "stake_per_core", 1000000, "minimum amount staked per channel to permit the addition of a Core")
+	flag.IntVar(&updateStake, "update_stake", 1000000, "a validator may change this value to adjust the stake_per_core")
 	flag.StringVar(&sessionSecret, "session_secret", "", "mutual LSAT macaroon secret for cores and gateways")
 	flag.StringVar(&tmServer, "tendermint_host", "127.0.0.1", "tendermint api url")
 	flag.StringVar(&tmPort, "tendermint_port", "26657", "tendermint api port")
