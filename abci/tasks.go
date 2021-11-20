@@ -43,6 +43,17 @@ func (app *AnchorApplication) SyncMonitor() {
 				continue
 			}
 			cores := validation.GetLastNSubmitters(128, *app.state) //get Active cores on network
+			chngStakeTxs, err := app.rpc.GetAllCHNGSTK()
+			if app.LogError(err) != nil {
+				continue
+			}
+			if len(chngStakeTxs) != 0 {
+				chngStakeTx := chngStakeTxs[len(chngStakeTxs) - 1]
+				latestStakePerCore, err := strconv.ParseInt(chngStakeTx.Data, 10, 64)
+				if err != nil || latestStakePerCore != app.config.StakePerCore {
+					app.config.StakePerCore = latestStakePerCore
+				}
+			}
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
 			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by validators
 			app.state.Validators = validators.Validators
