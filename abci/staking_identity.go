@@ -10,8 +10,133 @@ import (
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/chainpoint/chainpoint-core/validation"
+	"strconv"
 	"time"
 )
+
+const STATIC_FEE_AMT = 0 // 60k amounts to 240 sat/vbyte
+
+
+func (app *AnchorApplication) SetStake(){
+	for {
+		if app.state.Height != 0 && app.state.ChainSynced && app.ID != "" {
+			validators, err := app.rpc.GetValidators(app.state.Height)
+			amVal, _ := leader_election.IsValidator(*app.state, app.ID)
+			if app.LogError(err) != nil {
+				continue
+			}
+			cores := validation.GetLastNSubmitters(128, *app.state) //get Active cores on network
+			chngStakeTxs, err := app.rpc.GetAllCHNGSTK()
+			if app.LogError(err) != nil {
+				continue
+			}
+			if len(chngStakeTxs) != 0 {
+				chngStakeTx := chngStakeTxs[len(chngStakeTxs)-1]
+				latestStakePerCore, err := strconv.ParseInt(chngStakeTx.Data, 10, 64)
+				if err != nil || latestStakePerCore != app.config.StakePerCore {
+					app.config.StakePerCore = latestStakePerCore
+				}
+			}
+			totalStake := (int64(len(cores)) * app.config.StakePerCore)
+			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by validators
+			app.state.Validators = validators.Validators
+			app.state.LnStakePerVal = stakeAmt
+			app.state.LnStakePrice = totalStake //Total Stake Price includes the other 1/3 just in case
+			if amVal && app.config.UpdateStake != 0 && app.config.UpdateStake != app.config.StakePerCore {
+				app.rpc.BroadcastTx("CHNGSTK", strconv.FormatInt(app.config.UpdateStake, 10), 2, time.Now().Unix(), app.ID, app.config.ECPrivateKey)
+			}
+			return
+			//app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
+		}
+	}
+}
+
+
+//StakeIdentity : updates active ECDSA public keys from all accessible peers
+//Also ensures api is online
+func (app *AnchorApplication) StakeIdentity() {
+	// wait for syncMonitor
+	for app.ID == "" || len(app.state.LNState.Uris) == 0 {
+		app.logger.Info("StakeIdentity state loading...")
+		time.Sleep(30 * time.Second)
+	}
+	/*	// resend JWK if info has changed
+		if lnUri, exists := app.state.LnUris[app.ID]; app.state.JWKStaked && exists {
+			if lnUri.Peer != app.state.LNState.Uris[0] {
+				app.logger.Info(fmt.Sprintf("Stored Peer URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
+				app.state.JWKStaked = false
+			}
+		}
+		if pubKey, exists := app.state.CoreKeys[app.ID]; app.state.JWKStaked && exists {
+			selfPubKey, _, _ := util.DecodeJWK(app.JWK)
+			pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
+			pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
+			if selfPubKey != pubKeyHex {
+				app.logger.Info(fmt.Sprintf("node ID has likely changed. %s != %s", selfPubKey, pubKeyHex))
+				app.logger.Info("Restaking with new credentials")
+				app.state.JWKStaked = false
+			}
+		}*/
+
+	for !app.state.JWKStaked {
+		app.logger.Info("Beginning Lightning staking loop")
+		time.Sleep(60 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
+		if !app.state.ChainSynced || app.state.Height < 2 || app.ID == "" {
+			app.logger.Info("Chain not synced, restarting staking loop...")
+			continue
+		}
+		amValidator, err := leader_election.AmValidator(*app.state)
+		if app.LogError(err) != nil {
+			app.logger.Info("Cannot determin validators, restarting staking loop...")
+			continue
+		}
+
+		//if we're not a validator, we need to "stake" by opening a ln channel to the validators
+		if !amValidator {
+			app.logger.Info("This node is new to the network; beginning staking")
+			waitForValidators := false
+			for _, validator := range app.state.Validators {
+				valID := validator.Address.String()
+				if lnID, exists := app.state.LnUris[valID]; exists {
+					app.logger.Info(fmt.Sprintf("Adding Lightning Peer %s...", lnID.Peer))
+					peerExists, err := app.LnClient.PeerExists(lnID.Peer)
+					app.LogError(err)
+					if peerExists || app.LogError(app.LnClient.AddPeer(lnID.Peer)) == nil {
+						chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.state.LnStakePerVal)
+						app.LogError(err)
+						if !chanExists {
+							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", app.state.LnStakePerVal, lnID.Peer))
+							_, err := app.LnClient.CreateChannel(lnID.Peer, app.state.LnStakePerVal)
+							app.LogError(err)
+						} else {
+							app.logger.Info(fmt.Sprintf("Lightning Channel %s exists, skipping...", lnID.Peer))
+							continue
+						}
+					}
+				} else {
+					waitForValidators = true
+					continue
+				}
+			}
+			if waitForValidators {
+				app.logger.Info("Validator Lightning identities not all declared yet, waiting...")
+				continue
+			}
+			deadline := time.Now().Add(time.Duration(10*(app.LnClient.MinConfs+1)) * time.Minute) // allow btc channel to open
+			for !time.Now().After(deadline) {
+				app.logger.Info("Sleeping to allow validator Lightning channels to open...")
+				time.Sleep(time.Duration(1) * time.Minute)
+			}
+		} else {
+			app.logger.Info("This node is a validator, skipping Lightning staking")
+			app.state.AmValidator = true
+		}
+		if app.SendIdentity() != nil {
+			app.logger.Info("Sending JWK Identity failed, restarting staking loop...")
+			continue
+		}
+	}
+}
 
 func (app *AnchorApplication) SendIdentity() error {
 	jwkJson, err := json.Marshal(app.JWK)
