@@ -45,22 +45,25 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed for tx %+v", tx.CoreID, tx)))
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1} //CodeType for peer disconnection
 	}
-	if app.state.ChainSynced && tx.TxType == "BTC-A" {
-		var btcTxObj types.BtcTxMsg
-		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil {
-			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+	amVal, _ := leader_election.IsValidator(*app.state, app.ID)
+	isSubmitterVal, _ := leader_election.IsValidator(*app.state, tx.CoreID)
+	switch string(tx.TxType) {
+	case "BTC-A":
+		if app.state.ChainSynced {
+			var btcTxObj types.BtcTxMsg
+			if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil {
+				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+			}
+			if matchErr := app.Anchor.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
+				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+			}
 		}
-		if matchErr := app.Anchor.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
-			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-		}
-	}
-	if tx.TxType == "FEE" {
+	case "FEE":
 		//i, err := strconv.ParseInt(tx.Data, 10, 64)
-		if app.LogError(err) != nil {
-			return types2.ResponseCheckTx{Code: code.CodeTypeUnknownError, GasWanted: 1}
-		}
-	}
-	if tx.TxType == "VAL" {
+		//if app.LogError(err) != nil {
+		//	return types2.ResponseCheckTx{Code: code.CodeTypeUnknownError, GasWanted: 1}
+		//}
+	case "VAL":
 		err, id, _, power := ValidateValidatorTx(tx.Data)
 		if app.LogError(err) != nil {
 			return types2.ResponseCheckTx{
@@ -68,8 +71,6 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 				Log:  fmt.Sprintf(err.Error()),
 			}
 		}
-		amVal, _ := leader_election.IsValidator(*app.state, app.ID)
-		isSubmitterVal, _ := leader_election.IsValidator(*app.state, tx.CoreID)
 		if !isSubmitterVal {
 			if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
 				submitterRecord.UnAuthValSubmissions++
@@ -91,14 +92,21 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 			}
 		}
+	case "CHNGSTK":
+		newStakePerCore, err := strconv.ParseInt(tx.Data, 10, 64)
+		if err != nil || newStakePerCore != app.config.StakePerCore {
+			app.logger.Info("Stake proposal does not match configuration")
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		}
+	case "JWK":
+		if !app.VerifyIdentity(tx) {
+			app.logger.Info("Unable to validate JWK Identity", "CoreID", tx.CoreID)
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		} else if tx.TxType == "JWK" {
+			app.logger.Info("JWK Identity validated", "CoreID", tx.CoreID)
+		}
 	}
 
-	if tx.TxType == "JWK" && !app.VerifyIdentity(tx) {
-		app.logger.Info("Unable to validate JWK Identity", "CoreID", tx.CoreID)
-		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-	} else if tx.TxType == "JWK" {
-		app.logger.Info("JWK Identity validated", "CoreID", tx.CoreID)
-	}
 	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
 }
 
@@ -127,7 +135,10 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 				resp = app.execValidatorTx([]byte(data))
 			}
 		}
-		break
+	case "CHNGSTK":
+		tags = app.incrementTxInt(tags)
+		tags = append(tags, kv.Pair{Key: []byte("CHANGE"), Value: []byte("STAKE")})
+		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 	case "CAL":
 		go func() {
 			time.Sleep(1 * time.Minute)
@@ -139,7 +150,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.state.LatestCalTxInt = app.state.TxInt
 		app.state.CurrentCalInts++
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
-		break
 	case "BTC-E":
 		app.state.LatestErrRoot = tx.Data
 		app.state.LastErrorCoreID = tx.CoreID
@@ -164,7 +174,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		// Keep a placeholder in case a CAL Tx is sent in between the time of a BTC-A broadcast and its handling
 		tags = append(tags, kv.Pair{Key: []byte("BTCTX"), Value: []byte(btca.BtcTxID)})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
-		break
 	case "BTC-C":
 		if tx.Data == string(app.state.LatestBtccTx) {
 			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C confirmation tx: %s", tx.Data))
@@ -185,13 +194,10 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, app.state)
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
-		break
 	case "NIST":
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
-		break
 	case "DRAND":
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
-		break
 	case "FEE":
 		i, err := strconv.ParseInt(tx.Data, 10, 64)
 		if app.LogError(err) != nil {
@@ -202,7 +208,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.state.LastBtcFeeHeight = app.state.Height
 		app.LnClient.LastFee = app.state.LatestBtcFee
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
-		break
 	case "JWK":
 		if app.LogError(app.SaveIdentity(tx)) == nil {
 			tags = app.incrementTxInt(tags)

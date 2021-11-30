@@ -207,3 +207,21 @@ func (rpc *RPC) GetAllJWKs() ([]types.Tx, error) {
 	return Txs, nil
 }
 
+// getAllJWKs gets all JWK TXs
+func (rpc *RPC) GetAllCHNGSTK() ([]types.Tx, error) {
+	Txs := []types.Tx{}
+	txResult, err := rpc.client.TxSearch("CHNGSTK.CHANGE='STAKE'", false, 1, 200, "")
+	if err != nil {
+		return nil, err
+	} else if txResult.TotalCount > 0 {
+		rpc.logger.Info(fmt.Sprintf("Found %d CHNGSTK tx while loading", txResult.TotalCount))
+		for _, tx := range txResult.Txs {
+			decoded, err := util.DecodeTx(tx.Tx)
+			if rpc.LogError(err) == nil {
+				Txs = append(Txs, decoded)
+			}
+		}
+	}
+	return Txs, nil
+}
+

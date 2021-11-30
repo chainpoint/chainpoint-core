@@ -167,6 +167,9 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Load JWK into local mapping from redis
 	go app.LoadIdentity()
 
+	// Execute any necessary logic to change the staking amount
+	go app.SetStake()
+
 	// Stake and transmit identity
 	go app.StakeIdentity()
 

@@ -51,6 +51,7 @@ type AnchorConfig struct {
 	AnchorTimeout    int
 	AnchorReward     int
 	StakePerCore     int64
+	UpdateStake      int64
 	FeeInterval      int64
 	FeeMultiplier    float64
 	HashPrice        int
