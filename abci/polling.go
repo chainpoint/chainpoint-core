@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/beacon"
 	fee2 "github.com/chainpoint/chainpoint-core/fee"
@@ -30,6 +31,10 @@ func (app *AnchorApplication) SyncMonitor() {
 			app.ID = app.state.TMState.ValidatorInfo.Address.String()
 			app.state.ID = app.ID
 			app.logger.Info("Core ID set ", "ID", app.ID)
+			key, err := app.config.TendermintConfig.FilePV.GetPubKey()
+			if err != nil {
+				app.logger.Info("Core Tendermint Publickey set", "Key", base64.StdEncoding.EncodeToString(key.Bytes()))
+			}
 		}
 		if app.state.TMState.SyncInfo.CatchingUp {
 			app.state.ChainSynced = false
