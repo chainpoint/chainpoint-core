@@ -17,7 +17,12 @@ They also must vote to add additional validators and increase/decrease the light
    ```
    These must be given to the validator agreeing to run the next steps.
 5. An existing validator operator aggrees to broadcast a VAL transaction at a particular block height agreed upon by the rest of the Validators. 
-    1. This consists of sending a transaction with the format `val:<ID>!<b64_public_key>!<voting_power>` to the network, where voting power is the whole integer representing how many votes the validator should have each block election round. 
+    1. This consists of starting all validators with the argument `proposed_val=val:<ID>!<b64_public_key>!<voting_power>!<block_height>` to the network, where
+        - ID is the Tendermint ID of the node, shown above 
+        - PubKey is the base 64-encoded tendermint public key of the node
+        - Voting power is the amount of weight the node has while voting on new blocks (should be 1 in nearly all cases)
+        - Block height is the height the new validator will take effect at. 
+        
 6. An existing validator whitelists the new node operator’s IP, opening up ports 26656 and 26657 to the new validator. 
 7. The new validator begins operating their node with the `make up` command. It will fastsync and begin voting on new blocks. 
 

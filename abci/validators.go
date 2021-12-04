@@ -28,11 +28,11 @@ func isValidatorTx(tx []byte) bool {
 	return strings.HasPrefix(string(tx), ValidatorSetChangePrefix)
 }
 
-func (app *AnchorApplication) VoteValidator()  {
+func (app *AnchorApplication) CheckVoteValidator()  {
 	var validatorValue string
 	if app.config.ProposedVal != "" {
-		err, _, _, _ := ValidateValidatorTx(app.config.ProposedVal)
-		if app.LogError(err) == nil {
+		err, _, _, _, blockHeight := ValidateValidatorTx(app.config.ProposedVal)
+		if app.LogError(err) == nil && blockHeight == app.state.Height {
 			app.PendingValidator = validatorValue
 			amLeader, leaderId := leader_election.ElectValidatorAsLeader(1, []string{}, *app.state, app.config)
 			app.logger.Info(fmt.Sprintf("Validator Promotion: %s was elected to submit VAL tx", leaderId))
@@ -46,14 +46,14 @@ func (app *AnchorApplication) VoteValidator()  {
 	}
 }
 
-func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power int64) {
+func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power int64, blockHeight int64) {
 	//get the pubkey and power
 	idPubKeyAndPower := strings.Split(val, "!")
-	if len(idPubKeyAndPower) != 3 {
-		return errors.New("Expected 'val:id!pubkey!power'"), "", []byte{}, 0
+	if len(idPubKeyAndPower) != 4 {
+		return errors.New("Expected 'val:id!pubkey!power'"), "", []byte{}, 0, 0
 	}
 
-	idS, pubkeyS, powerS := idPubKeyAndPower[0], idPubKeyAndPower[1], idPubKeyAndPower[2]
+	idS, pubkeyS, powerS, blockS := idPubKeyAndPower[0], idPubKeyAndPower[1], idPubKeyAndPower[2], idPubKeyAndPower[3]
 	id = idS
 	// decode the pubkey
 	pubkey, err = base64.StdEncoding.DecodeString(pubkeyS)
@@ -64,16 +64,20 @@ func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power
 	// decode the power
 	power, err = strconv.ParseInt(powerS, 10, 64)
 	if err != nil {
-		return errors.New("power isn't an integer"), "", []byte{}, 0
+		return errors.New("power isn't an integer"), "", []byte{}, 0, 0
+	}
+	blockH, err := strconv.ParseInt(blockS, 10, 64)
+	if err != nil {
+		return errors.New("block height isn't an integer"), "", []byte{}, 0, 0
 	}
 
-	return nil, id, pubkey, power
+	return nil, id, pubkey, power, blockH
 }
 
 // format is "id!pubkey!power"
 // pubkey is a base64-encoded 32-byte ed25519 key
 func (app *AnchorApplication) execValidatorTx(tx []byte) types.ResponseDeliverTx {
-	err, _, pubkey, power := ValidateValidatorTx(string(tx))
+	err, _, pubkey, power, _ := ValidateValidatorTx(string(tx))
 	if err != nil {
 		return types.ResponseDeliverTx{
 			Code: code.CodeTypeEncodingError,

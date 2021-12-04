@@ -184,7 +184,6 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		}*/
 
 	// execute validator promotion logic
-	app.VoteValidator()
 
 	return &app
 }
@@ -262,6 +261,8 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 			go app.Cache.PruneOldState()
 		}
 	}
+	// check if we need to vote on a pending validator proposal
+	app.CheckVoteValidator()
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
 

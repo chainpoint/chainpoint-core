@@ -64,7 +64,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		//	return types2.ResponseCheckTx{Code: code.CodeTypeUnknownError, GasWanted: 1}
 		//}
 	case "VAL":
-		err, id, _, power := ValidateValidatorTx(tx.Data)
+		err, id, _, power, _ := ValidateValidatorTx(tx.Data)
 		if app.LogError(err) != nil {
 			return types2.ResponseCheckTx{
 				Code: code.CodeTypeEncodingError,
