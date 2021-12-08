@@ -125,6 +125,10 @@ If startup is successful, the log output will show the log message `Executed blo
 
 During startup, lnd and tendermint will initialize in separate background threads. During this time you may see errors or warnings related to `GetStatus` or `BlockSyncMonitor`; these can be ignored.
 
+The process can be daemonized with systemd by running `make install-daemon && make start-daemon`.
+Additionally, `make log-daemon` will use journald to parse the process logs and `make stop-daemon` will shut down the daemon.
+
+
 ### Joining another Network
 
 By default, the init process will join either the Chainpoint Testnet or Mainnet, depending on user choice. However, peering with custom networks is also possible:
