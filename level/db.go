@@ -52,7 +52,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 	btcTxState := types.AnchorBtcTxState{}
 	json.Unmarshal([]byte(btcTxStateStr), &btcTxState)
 	cache.Logger.Info(fmt.Sprintf("Getting anchorbtcaggstates for tx %s", btcTxId))
-	anchoraggs, err := cache.Get("anchorbtcaggstate:"+btcTxState.AnchorBtcAggId)
+	anchoraggs, err := cache.Get("anchorbtcaggstate:" + btcTxState.AnchorBtcAggId)
 	if err != nil {
 		return []string{}, nil
 	}
@@ -91,7 +91,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 }
 
 //GetCalStateObjectsByProofIds : Get calstate objects, given an array of aggIds
-func  (cache *Cache) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
+func (cache *Cache) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
 	results := []types.CalStateObject{}
 	for _, agg := range aggIds {
 		cals, err := cache.Get("calstate_by_agg:" + agg)
@@ -149,7 +149,7 @@ func (cache *Cache) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 
 //GetBTCTxStateObjectByAnchorBTCAggId: Get btc state objects, given an array of agg ids
 func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
-	btcTxStateStr , err := cache.GetOne("btctxstate_by_agg:" + aggId)
+	btcTxStateStr, err := cache.GetOne("btctxstate_by_agg:" + aggId)
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
 	}
@@ -162,7 +162,7 @@ func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 
 //GetBTCTxStateObjectByAnchorBTCHeadState Get btc state objects, given an array of agg ids
 func (cache *Cache) GetBTCTxStateObjectByBtcHeadState(btctx string) (types.AnchorBtcTxState, error) {
-	btcTxStateStr , err := cache.GetOne("btctxstate:" + btctx)
+	btcTxStateStr, err := cache.GetOne("btctxstate:" + btctx)
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
 	}
@@ -176,7 +176,7 @@ func (cache *Cache) GetBTCTxStateObjectByBtcHeadState(btctx string) (types.Ancho
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
 func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 	for _, proof := range proofs {
-		proofExists, err := cache.GetOne("proof:"+proof.ProofID)
+		proofExists, err := cache.GetOne("proof:" + proof.ProofID)
 		if err != nil {
 			return err
 		}
@@ -192,7 +192,7 @@ func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
 		if err != nil {
 			return err
 		}
-		cache.Set("proofCreated:" + proof.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
+		cache.Set("proofCreated:"+proof.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
 	}
 	return nil
 }
@@ -204,9 +204,9 @@ func (cache *Cache) BulkInsertAggState(aggStates []types.AggState) error {
 		if err != nil {
 			continue
 		}
-		err = cache.Add("aggstate:" + agg.AggID, string(a))
-		err2 := cache.Add("aggstate_by_proof:" + agg.ProofID, string(a))
-		cache.Set("aggstateCreated:" + agg.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
+		err = cache.Add("aggstate:"+agg.AggID, string(a))
+		err2 := cache.Add("aggstate_by_proof:"+agg.ProofID, string(a))
+		cache.Set("aggstateCreated:"+agg.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("aggstate insert failed")
 		}
@@ -221,9 +221,9 @@ func (cache *Cache) BulkInsertCalState(calStates []types.CalStateObject) error {
 		if err != nil {
 			continue
 		}
-		err = cache.Add("calstate:" + cal.CalId, string(c))
-		err2 := cache.Add("calstate_by_agg:" + cal.AggID, string(c))
-		cache.Set("calstateCreated:" + cal.AggID, strconv.FormatInt(time.Now().Unix(), 10))
+		err = cache.Add("calstate:"+cal.CalId, string(c))
+		err2 := cache.Add("calstate_by_agg:"+cal.AggID, string(c))
+		cache.Set("calstateCreated:"+cal.AggID, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("calstate insert failed")
 		}
@@ -238,9 +238,9 @@ func (cache *Cache) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) e
 		if err != nil {
 			continue
 		}
-		err = cache.Add("anchorbtcaggstate:"+ agg.AnchorBtcAggId, string(a))
-		err2 := cache.Add("anchorbtcaggstate_by_cal:" + agg.CalId, string(a))
-		cache.Set("anchorbtcaggstateCreated:" + agg.CalId, strconv.FormatInt(time.Now().Unix(), 10))
+		err = cache.Add("anchorbtcaggstate:"+agg.AnchorBtcAggId, string(a))
+		err2 := cache.Add("anchorbtcaggstate_by_cal:"+agg.CalId, string(a))
+		cache.Set("anchorbtcaggstateCreated:"+agg.CalId, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("anchorbtcaggstate insert failed")
 		}
@@ -255,9 +255,9 @@ func (cache *Cache) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) erro
 		if err != nil {
 			continue
 		}
-		err = cache.Set("btctxstate:"+ state.BtcTxId, string(s))
-		err2 := cache.Set("btctxstate_by_agg:" + state.AnchorBtcAggId, string(s))
-		cache.Set("btctxstateCreated:" + state.AnchorBtcAggId, strconv.FormatInt(time.Now().Unix(), 10))
+		err = cache.Set("btctxstate:"+state.BtcTxId, string(s))
+		err2 := cache.Set("btctxstate_by_agg:"+state.AnchorBtcAggId, string(s))
+		cache.Set("btctxstateCreated:"+state.AnchorBtcAggId, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("anchorbtcaggstate insert failed")
 		}
@@ -268,9 +268,9 @@ func (cache *Cache) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) erro
 func (cache *Cache) PruneOldState() {
 	btctxstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("btctxstateCreated:"))
 	anchoraggstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("anchorbtcaggstateCreated:"))
-	calstateIt, _ :=db.IteratePrefix(cache.LevelDb, []byte("calstateCreated:"))
-	aggstateIt, _ :=db.IteratePrefix(cache.LevelDb, []byte("aggstateCreated:"))
-	proofstateIt, _ :=db.IteratePrefix(cache.LevelDb, []byte("proofCreated:"))
+	calstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("calstateCreated:"))
+	aggstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("aggstateCreated:"))
+	proofstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("proofCreated:"))
 	for ; btctxstateIt.Valid(); btctxstateIt.Next() {
 		value := btctxstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
@@ -283,8 +283,8 @@ func (cache *Cache) PruneOldState() {
 			id := strings.Split(key, ":")[1]
 			state, _ := cache.GetBTCTxStateObjectByAnchorBTCAggId(id)
 			cache.Del(key, "")
-			cache.Del("btctxstate_by_agg:" + id, "")
-			cache.Del("btctxstate:" + state.BtcTxId, "")
+			cache.Del("btctxstate_by_agg:"+id, "")
+			cache.Del("btctxstate:"+state.BtcTxId, "")
 			cache.Logger.Info("db pruned", "btcTxState", state.BtcTxId)
 		}
 	}
@@ -300,7 +300,7 @@ func (cache *Cache) PruneOldState() {
 			id := strings.Split(key, ":")[1]
 			states, _ := cache.GetAnchorBTCAggStateObjectsByCalIds([]string{id})
 			cache.Del(key, "")
-			cache.Del("anchorbtcaggstate_by_cal" + id, "")
+			cache.Del("anchorbtcaggstate_by_cal"+id, "")
 			for _, s := range states {
 				cache.Del("anchorbtcaggstate:"+s.AnchorBtcAggId, "")
 			}
@@ -318,7 +318,7 @@ func (cache *Cache) PruneOldState() {
 			id := strings.Split(key, ":")[1]
 			states, _ := cache.GetCalStateObjectsByAggIds([]string{id})
 			cache.Del(key, "")
-			cache.Del("calstate_by_agg:" + id, "")
+			cache.Del("calstate_by_agg:"+id, "")
 			for _, s := range states {
 				cache.Del("calstate:"+s.CalId, "")
 			}
@@ -336,7 +336,7 @@ func (cache *Cache) PruneOldState() {
 			id := strings.Split(key, ":")[1]
 			states, _ := cache.GetAggStateObjectsByProofIds([]string{id})
 			cache.Del(key, "")
-			cache.Del("aggstate_by_proof:" + id, "")
+			cache.Del("aggstate_by_proof:"+id, "")
 			for _, s := range states {
 				cache.Del("aggstate:"+s.AggID, "")
 			}
@@ -354,9 +354,8 @@ func (cache *Cache) PruneOldState() {
 			key := string(proofstateIt.Key())
 			id := strings.Split(key, ":")[1]
 			cache.Del(key, "")
-			cache.Del("proof:" + id, "")
+			cache.Del("proof:"+id, "")
 			cache.Logger.Info("db pruned", "proof", id)
 		}
 	}
 }
-

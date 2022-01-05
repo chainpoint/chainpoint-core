@@ -224,4 +224,3 @@ func (rpc *RPC) GetAllCHNGSTK() ([]types.Tx, error) {
 	}
 	return Txs, nil
 }
-

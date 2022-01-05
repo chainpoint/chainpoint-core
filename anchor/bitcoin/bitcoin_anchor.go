@@ -9,9 +9,9 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	analytics2 "github.com/chainpoint/chainpoint-core/analytics"
-	"github.com/chainpoint/chainpoint-core/level"
 	"github.com/chainpoint/chainpoint-core/calendar"
 	"github.com/chainpoint/chainpoint-core/leader_election"
+	"github.com/chainpoint/chainpoint-core/level"
 	"github.com/chainpoint/chainpoint-core/lightning"
 	"github.com/chainpoint/chainpoint-core/merkletools"
 	"github.com/chainpoint/chainpoint-core/proof"
@@ -104,7 +104,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 				app.logger.Info(fmt.Sprintf("failed sending BTC-A"))
 				panic(err)
 			} else {
-				go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTx, time.Now().Format(time.RFC3339), "", strconv.FormatInt(app.state.LatestBtcFee * 4 / 1000, 10), "")
+				go app.analytics.SendEvent(app.state.LatestTimeRecord, "CreateAnchorTx", btcTx, time.Now().Format(time.RFC3339), "", strconv.FormatInt(app.state.LatestBtcFee*4/1000, 10), "")
 			}
 		}
 
@@ -484,12 +484,12 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 			// this usually means there's something seriously wrong with LND
 			app.logger.Info("StartAnchoring Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", confirmedTx.TxID)
 			// if there are subsequent anchors, we try to re-anchor just that range, else reset for a new anchor period
-			 if app.state.BeginCalTxInt >= anchor.EndCalTxInt {
+			if app.state.BeginCalTxInt >= anchor.EndCalTxInt {
 				go app.AnchorToChain(anchor.BeginCalTxInt, anchor.EndCalTxInt)
 			} else {
-				 if len(confirmedTx.TxID) == 0 {
-					 app.logger.Info("no tx issued for this root, resetting at", "BeginCalTxInt", anchor.BeginCalTxInt)
-				 }
+				if len(confirmedTx.TxID) == 0 {
+					app.logger.Info("no tx issued for this root, resetting at", "BeginCalTxInt", anchor.BeginCalTxInt)
+				}
 				app.ResetAnchor(anchor.BeginCalTxInt)
 			}
 			app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)

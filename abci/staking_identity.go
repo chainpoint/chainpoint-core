@@ -16,8 +16,7 @@ import (
 
 const STATIC_FEE_AMT = 0 // 60k amounts to 240 sat/vbyte
 
-
-func (app *AnchorApplication) SetStake(){
+func (app *AnchorApplication) SetStake() {
 	for {
 		if app.state.Height != 0 && app.state.ChainSynced && app.ID != "" {
 			validators, err := app.rpc.GetValidators(app.state.Height)
@@ -50,7 +49,6 @@ func (app *AnchorApplication) SetStake(){
 		}
 	}
 }
-
 
 //StakeIdentity : updates active ECDSA public keys from all accessible peers
 //Also ensures api is online
@@ -176,7 +174,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 			time.Sleep(5 * time.Second)
 			continue
 		}
-		selfPubKey, _, _:= util.DecodeJWK(app.JWK)
+		selfPubKey, _, _ := util.DecodeJWK(app.JWK)
 		app.logger.Info(fmt.Sprintf("Self pubkey is %s", selfPubKey))
 		txs, err := app.rpc.GetAllJWKs()
 		if err == nil {
@@ -205,7 +203,7 @@ func (app *AnchorApplication) LoadIdentity() error {
 					app.state.LnUris[tx.CoreID] = lnID
 				}
 			}
-			break;
+			break
 		} else {
 			app.LogError(err)
 		}
@@ -264,7 +262,7 @@ func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 		app.state.CoreKeys[tx.CoreID] = *pubKey
 		pubKeyBytes = elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
 		util.LoggerError(app.logger, app.Cache.Add("CoreIDs", tx.CoreID))
-		util.LoggerError(app.logger, app.Cache.Set("CoreID:" + tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes)))
+		util.LoggerError(app.logger, app.Cache.Set("CoreID:"+tx.CoreID, base64.StdEncoding.EncodeToString(pubKeyBytes)))
 	}
 	pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
 	if val, exists := app.state.TxValidation[pubKeyHex]; exists {

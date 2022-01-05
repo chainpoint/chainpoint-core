@@ -40,7 +40,7 @@ func setup(config types.AnchorConfig) {
 	}
 
 	if _, err := os.Stat(home + "/data/keys/ecdsa_key.pem"); os.IsNotExist(err) {
-		os.MkdirAll(home + "/data/keys", os.ModePerm)
+		os.MkdirAll(home+"/data/keys", os.ModePerm)
 		st, _ := pemutil.GenerateECKeySet(elliptic.P256())
 		st.WriteFile(home + "/data/keys/ecdsa_key.pem")
 	}
@@ -57,7 +57,7 @@ func setup(config types.AnchorConfig) {
 		if err != nil {
 			panic(err)
 		}
-		configs = append(configs, "chainpoint_core_base_uri=http://" + ipResult)
+		configs = append(configs, "chainpoint_core_base_uri=http://"+ipResult)
 		config.CoreURI = ipResult
 
 		promptNetwork := promptui.Select{
@@ -68,7 +68,7 @@ func setup(config types.AnchorConfig) {
 		if err != nil {
 			panic(err)
 		}
-		configs = append(configs, "network=" + networkResult)
+		configs = append(configs, "network="+networkResult)
 		config.BitcoinNetwork = networkResult
 
 		promptPublic := promptui.Select{
@@ -79,8 +79,8 @@ func setup(config types.AnchorConfig) {
 		if err != nil {
 			panic(err)
 		}
-		configs = append(configs, "network=" + publicResult)
-		if publicResult == "Public Chainpoint Network"{
+		configs = append(configs, "network="+publicResult)
+		if publicResult == "Public Chainpoint Network" {
 			if networkResult == "mainnet" {
 				seed = "24ba3a2556ebae073b42d94815836b29594a2456@18.220.31.138:26656"
 				seedIp = "18.220.31.138"
@@ -96,12 +96,12 @@ func setup(config types.AnchorConfig) {
 				stakeText := fmt.Sprintf("You will need at least %d Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
 				fmt.Printf(stakeText)
 			}
-			configs = append(configs, "seeds=" + seed)
+			configs = append(configs, "seeds="+seed)
 		}
 		if _, err := os.Stat(home + "/.lnd"); os.IsNotExist(err) {
 			config.LightningConfig.Testnet = config.BitcoinNetwork == "testnet"
 			config.LightningConfig.MacPath = fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, config.BitcoinNetwork)
-			os.MkdirAll(home + "/.lnd", os.ModePerm)
+			os.MkdirAll(home+"/.lnd", os.ModePerm)
 			config.LightningConfig.NoMacaroons = true
 			go runLnd(config)
 			err = config.LightningConfig.WaitForConnection(5 * time.Minute)
@@ -128,7 +128,7 @@ func setup(config types.AnchorConfig) {
 				fmt.Sprintf("Failed to initialize lnd wallet!")
 				panic(err)
 			}
-			configs = append(configs, "hot_wallet_pass=" + config.LightningConfig.WalletPass)
+			configs = append(configs, "hot_wallet_pass="+config.LightningConfig.WalletPass)
 			config.LightningConfig.NoMacaroons = false
 			err = config.LightningConfig.WaitForMacaroon(5 * time.Minute)
 			if err != nil {
@@ -141,7 +141,7 @@ func setup(config types.AnchorConfig) {
 				panic(err)
 			}
 			config.LightningConfig.WalletAddress = address
-			configs = append(configs, "hot_wallet_address=" + address)
+			configs = append(configs, "hot_wallet_address="+address)
 			fmt.Printf("****************************************************\n")
 			fmt.Printf("Lightning initialization has completed successfully.\n")
 			fmt.Printf("****************************************************\n")
@@ -160,9 +160,9 @@ func setup(config types.AnchorConfig) {
 			if _, err := rand.Read(sessionBytes); err != nil {
 				panic(err)
 			}
-			configs = append(configs, "session_secret=" + hex.EncodeToString(sessionBytes))
+			configs = append(configs, "session_secret="+hex.EncodeToString(sessionBytes))
 		}
-		file, err := os.OpenFile(home + "/core.conf", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(home+"/core.conf", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatalf("failed creating file: %s", err)
 		}
@@ -173,7 +173,7 @@ func setup(config types.AnchorConfig) {
 		datawriter.Flush()
 		file.Close()
 
-		fmt.Printf("Chainpoint Core Setup Complete. Run with ./chainpoint-core -config %s", home + "/core.conf")
+		fmt.Printf("Chainpoint Core Setup Complete. Run with ./chainpoint-core -config %s", home+"/core.conf")
 		os.Exit(0)
 	}
 }
@@ -189,7 +189,6 @@ func main() {
 	//runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	//Instantiate Tendermint Node Config
 
-
 	//Instantiate ABCI application
 	config := abci.InitConfig(home)
 	if config.BitcoinNetwork == "mainnet" {
@@ -200,7 +199,6 @@ func main() {
 	setup(config)
 
 	go runLnd(config) //start lnd
-
 
 	app := abci.NewAnchorApplication(config)
 
@@ -278,7 +276,6 @@ func main() {
 	r.Handle("/peers", apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)))
 	r.Handle("/gateways/public", apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)))
 
-
 	server := &http.Server{
 		Handler:      r,
 		Addr:         ":" + config.APIPort,
@@ -290,13 +287,13 @@ func main() {
 	return
 }
 
-func runLnd(config types.AnchorConfig){
+func runLnd(config types.AnchorConfig) {
 	if config.LightningConfig.UseChainpointConfig {
 		lndHome := home + "/.lnd"
 		coreIPOnly := util.GetIPOnly(config.CoreURI)
-		osArgs := []string {
+		osArgs := []string{
 			"--lnddir=" + lndHome,
-			"--logdir=" +  lndHome + "/logs",
+			"--logdir=" + lndHome + "/logs",
 			"--datadir=" + lndHome + "/data",
 			"--bitcoin.active",
 			"--bitcoin.node=neutrino",
@@ -311,7 +308,7 @@ func runLnd(config types.AnchorConfig){
 		}
 		if config.BitcoinNetwork == "mainnet" {
 			osArgs = append(osArgs, "--feeurl=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json")
-			osArgs = append(osArgs, []string{"btcd-mainnet.lightning.computer", "mainnet1-btcd.zaphq.io", "mainnet2-btcd.zaphq.io", "24.155.196.246:8333","75.103.209.147:8333"}...)
+			osArgs = append(osArgs, []string{"btcd-mainnet.lightning.computer", "mainnet1-btcd.zaphq.io", "mainnet2-btcd.zaphq.io", "24.155.196.246:8333", "75.103.209.147:8333"}...)
 			osArgs = append(osArgs, "--bitcoin.mainnet")
 			osArgs = append(osArgs, "--routing.assumechanvalid")
 		} else if config.BitcoinNetwork == "testnet" {
@@ -331,5 +328,3 @@ func runLnd(config types.AnchorConfig){
 		os.Exit(1)
 	}
 }
-
-

@@ -4,24 +4,24 @@ import (
 	"errors"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/util"
+	"github.com/tendermint/tendermint/libs/log"
 	"net"
 	"net/http"
 	"net/url"
-	"github.com/tendermint/tendermint/libs/log"
 	"strings"
 )
 
 type UniversalAnalytics struct {
 	CategoryName string
 	GoogleUaID   string
-	logger      log.Logger
+	logger       log.Logger
 }
 
-func NewClient (CoreName string, GoogleUaId string, logger log.Logger) UniversalAnalytics {
+func NewClient(CoreName string, GoogleUaId string, logger log.Logger) UniversalAnalytics {
 	return UniversalAnalytics{
 		CoreName,
 		GoogleUaId,
-		 logger,
+		logger,
 	}
 }
 
@@ -31,7 +31,7 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, cd3, ip 
 		return nil
 	}
 	if ua.CategoryName == "" || action == "" {
-	    err = errors.New("analytics: category and action are required")
+		err = errors.New("analytics: category and action are required")
 	}
 	if drand == "" {
 		err = errors.New("analytics: no drand beacon yet")
@@ -86,7 +86,7 @@ func (ua *UniversalAnalytics) SendEvent(drand, action, label, cd1, cd2, cd3, ip 
 
 func (ua *UniversalAnalytics) LogError(err error) error {
 	if err != nil {
-		 ua.logger.Error(fmt.Sprintf("Error in %s: %s", util.GetCurrentFuncName(2), err.Error()))
+		ua.logger.Error(fmt.Sprintf("Error in %s: %s", util.GetCurrentFuncName(2), err.Error()))
 	}
 	return err
 }

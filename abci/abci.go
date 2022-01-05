@@ -96,7 +96,7 @@ type AnchorApplication struct {
 func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	// Load state from disk
 	name := "anchor"
-	db := dbm.NewDB(name, dbm.CLevelDBBackend, config.HomePath + "/data")
+	db := dbm.NewDB(name, dbm.CLevelDBBackend, config.HomePath+"/data")
 	load_state := loadState(db)
 	state := &load_state
 	if state.TxValidation == nil {
@@ -134,12 +134,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, cache, &config.LightningConfig, *config.Logger, &analytics)
 
-
 	//Construct application
 	app := AnchorApplication{
 		valAddrToPubKeyMap:   map[string]types2.PubKey{},
 		Db:                   db,
-		Anchor:				  anchorEngine,
+		Anchor:               anchorEngine,
 		state:                state,
 		config:               config,
 		logger:               *config.Logger,
@@ -148,11 +147,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
 		},
-		Cache:       cache,
-		LnClient:    &config.LightningConfig,
-		rpc:         rpcClient,
-		JWK:         jwkType,
-		Analytics:   &analytics,
+		Cache:     cache,
+		LnClient:  &config.LightningConfig,
+		rpc:       rpcClient,
+		JWK:       jwkType,
+		Analytics: &analytics,
 	}
 
 	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked, "JWK Kid", jwkType.Kid)

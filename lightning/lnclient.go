@@ -39,21 +39,21 @@ import (
 )
 
 type LnClient struct {
-	ServerHostPort string
-	TlsPath        string
-	MacPath        string
-	MinConfs       int64
-	TargetConfs    int64
-	Logger         log.Logger
-	LndLogLevel    string
-	Testnet        bool
-	WalletAddress  string
-	WalletPass     string
-	WalletSeed     []string
-	LastFee        int64
-	HashPrice      int64
-	SessionSecret  string
-	NoMacaroons    bool
+	ServerHostPort      string
+	TlsPath             string
+	MacPath             string
+	MinConfs            int64
+	TargetConfs         int64
+	Logger              log.Logger
+	LndLogLevel         string
+	Testnet             bool
+	WalletAddress       string
+	WalletPass          string
+	WalletSeed          []string
+	LastFee             int64
+	HashPrice           int64
+	SessionSecret       string
+	NoMacaroons         bool
 	UseChainpointConfig bool
 }
 
@@ -187,7 +187,7 @@ func (ln *LnClient) NewAddress() (string, error) {
 	if ln.LoggerError(err) != nil {
 		return "", err
 	}
-	addrReq := lnrpc.NewAddressRequest{Type:0}
+	addrReq := lnrpc.NewAddressRequest{Type: 0}
 	resp, err := conn.NewAddress(context.Background(), &addrReq)
 	if err != nil {
 		return "", ln.LoggerError(err)

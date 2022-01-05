@@ -70,7 +70,7 @@ func InitConfig(home string) types.AnchorConfig {
 	flag.StringVar(&coreName, "chainpoint_core_name", "", "core Name")
 	flag.StringVar(&analyticsID, "google_ua_id", "", "google analytics id")
 	flag.StringVar(&logLevel, "log_level", "info", "log level")
-	flag.StringVar(&secretKeyPath, "secret_key_path", home + "/data/keys/ecdsa_key.pem", "path to ECDSA secret key")
+	flag.StringVar(&secretKeyPath, "secret_key_path", home+"/data/keys/ecdsa_key.pem", "path to ECDSA secret key")
 	flag.StringVar(&listenAddr, "chainpoint_core_base_uri", "http://0.0.0.0:26656", "tendermint base uri")
 	flag.StringVar(&tendermintPeers, "peers", "", "comma-delimited list of peers")
 	flag.StringVar(&tendermintSeeds, "seeds", "", "comma-delimited list of seeds")
@@ -113,7 +113,7 @@ func InitConfig(home string) types.AnchorConfig {
 	ecPrivKey, ok := store.ECPrivateKey()
 	if !ok {
 		util.LogError(errors.New("ecdsa key load failed"))
-	} 
+	}
 
 	var blocklist []string
 	blocklist, err = util.ReadLines(home + "/ip_blocklist.txt")
@@ -130,18 +130,18 @@ func InitConfig(home string) types.AnchorConfig {
 		ElectionMode:     electionMode,
 		TendermintConfig: tmConfig,
 		LightningConfig: lightning.LnClient{
-			TlsPath:        tlsCertPath,
-			MacPath:        macaroonPath,
-			ServerHostPort: lndSocket,
-			Logger:         tmLogger,
-			LndLogLevel:    lndLogFilter,
-			MinConfs:       3,
-			Testnet:        bitcoinNetwork == "testnet",
-			WalletAddress:  walletAddress,
-			WalletPass:     walletPass,
-			WalletSeed:     strings.Split(walletSeed, ","),
-			HashPrice:      int64(hashPrice),
-			SessionSecret:  sessionSecret,
+			TlsPath:             tlsCertPath,
+			MacPath:             macaroonPath,
+			ServerHostPort:      lndSocket,
+			Logger:              tmLogger,
+			LndLogLevel:         lndLogFilter,
+			MinConfs:            3,
+			Testnet:             bitcoinNetwork == "testnet",
+			WalletAddress:       walletAddress,
+			WalletPass:          walletPass,
+			WalletSeed:          strings.Split(walletSeed, ","),
+			HashPrice:           int64(hashPrice),
+			SessionSecret:       sessionSecret,
 			UseChainpointConfig: useChpLndConfig,
 		},
 		ECPrivateKey:     ecPrivKey,
@@ -174,7 +174,7 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
 	homeDir := home
 	viper.Set(homeFlag, homeDir)
-	viper.SetConfigName("config")                         // name of config file (without extension)
+	viper.SetConfigName("config")            // name of config file (without extension)
 	viper.AddConfigPath(homeDir + "/config") // search root directory /config
 
 	// If a config file is found, read it in.
@@ -284,7 +284,7 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 		logger.Info("Found genesis file", "path", genFile)
 	} else {
 		genDoc := types2.GenesisDoc{
-			ChainID:         fmt.Sprintf(network + "-chain-%d", time.Now().Second()),
+			ChainID:         fmt.Sprintf(network+"-chain-%d", time.Now().Second()),
 			GenesisTime:     tmtime.Now(),
 			ConsensusParams: types2.DefaultConsensusParams(),
 		}

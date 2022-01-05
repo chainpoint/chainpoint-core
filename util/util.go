@@ -319,7 +319,7 @@ func EncodeTx(outgoing types.Tx) string {
 	return base64.StdEncoding.EncodeToString(txJSON)
 }
 
-func NormalizeUri (uri string, removePort bool, http bool, https bool) string {
+func NormalizeUri(uri string, removePort bool, http bool, https bool) string {
 	proofUri := strings.ReplaceAll(uri, "http://", "")
 	proofUri = strings.ReplaceAll(proofUri, "https://", "")
 	if removePort {

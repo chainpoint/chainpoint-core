@@ -81,7 +81,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 			goodCandidate := false
 			if _, record, err := validation.GetValidationRecord(id, *app.state); err != nil {
 				numValidators := len(app.state.Validators)
-				if power <= 0 {  //make it easier to get rid of a validator than to promote one
+				if power <= 0 { //make it easier to get rid of a validator than to promote one
 					goodCandidate = true
 				} else {
 					goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"

@@ -8,20 +8,20 @@ import (
 )
 
 type Cache struct {
-	RedisClient   *redis.Client
-	LevelDb       dbm.DB
-	Logger        log.Logger
+	RedisClient *redis.Client
+	LevelDb     dbm.DB
+	Logger      log.Logger
 }
 
 // create redis caching layer that gradually migrates to leveldb
-func NewCache (db *dbm.DB, logger log.Logger) *Cache {
+func NewCache(db *dbm.DB, logger log.Logger) *Cache {
 	return &Cache{
-		LevelDb:     *db,
-		Logger:      logger,
+		LevelDb: *db,
+		Logger:  logger,
 	}
 }
 
-func (cache *Cache) Get (key string) ([]string, error) {
+func (cache *Cache) Get(key string) ([]string, error) {
 	bArr, err := cache.LevelDb.Get([]byte(key))
 	if err != nil {
 		return []string{}, err
@@ -37,7 +37,7 @@ func (cache *Cache) Get (key string) ([]string, error) {
 	return arr, nil
 }
 
-func (cache *Cache) GetOne (key string) (string, error) {
+func (cache *Cache) GetOne(key string) (string, error) {
 	bArr, err := cache.LevelDb.Get([]byte(key))
 	return string(bArr), err
 

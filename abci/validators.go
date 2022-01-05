@@ -28,7 +28,7 @@ func isValidatorTx(tx []byte) bool {
 	return strings.HasPrefix(string(tx), ValidatorSetChangePrefix)
 }
 
-func (app *AnchorApplication) CheckVoteValidator()  {
+func (app *AnchorApplication) CheckVoteValidator() {
 	var validatorValue string
 	if app.config.ProposedVal != "" {
 		err, _, _, _, blockHeight := ValidateValidatorTx(app.config.ProposedVal)

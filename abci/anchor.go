@@ -99,4 +99,3 @@ func (app *AnchorApplication) GenerateCalBatch(aggStates []types.AggState, calSt
 	}
 	return app.LogError(app.Cache.BulkInsertProofs(proofs))
 }
-
