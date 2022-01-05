@@ -92,7 +92,7 @@ func InitConfig(home string) types.AnchorConfig {
 		macaroonPath = fmt.Sprintf("%s/.lnd/data/chain/bitcoin/%s/admin.macaroon", home, strings.ToLower(bitcoinNetwork))
 	}
 
-	tmConfig, err := initTendermintConfig(home, listenAddr, tendermintSeeds, tendermintPeers, tendermintLogFilter)
+	tmConfig, err := initTendermintConfig(home, bitcoinNetwork, listenAddr, tendermintSeeds, tendermintPeers, tendermintLogFilter)
 	if util.LogError(err) != nil {
 		panic(err)
 	}
@@ -168,7 +168,7 @@ func InitConfig(home string) types.AnchorConfig {
 }
 
 // initTendermintConfig : imports tendermint config.toml and initializes config variables
-func initTendermintConfig(home string, listenAddr string, tendermintPeers string, tendermintSeeds string, tendermintLogFilter string) (types.TendermintConfig, error) {
+func initTendermintConfig(home string, network string, listenAddr string, tendermintPeers string, tendermintSeeds string, tendermintLogFilter string) (types.TendermintConfig, error) {
 	var TMConfig types.TendermintConfig
 	initEnv("TM")
 	homeFlag := os.ExpandEnv(filepath.Join("$HOME", cfg.DefaultTendermintDir))
@@ -258,6 +258,8 @@ func initTendermintConfig(home string, listenAddr string, tendermintPeers string
 						peerGenesis = true
 					}
 					logger.Info("Saved genesis file from peer", "path", genFile)
+				} else {
+					panic(errors.New("Can't retrieve Genesis File from Public Network- check firewall on both ends"))
 				}
 			}
 		}
@@ -282,7 +284,7 @@ func initTendermintConfig(home string, listenAddr string, tendermintPeers string
 		logger.Info("Found genesis file", "path", genFile)
 	} else {
 		genDoc := types2.GenesisDoc{
-			ChainID:         fmt.Sprintf(util.GetEnv("NETWORK", "testnet")+"-chain-%d", time.Now().Second()),
+			ChainID:         fmt.Sprintf(network + "-chain-%d", time.Now().Second()),
 			GenesisTime:     tmtime.Now(),
 			ConsensusParams: types2.DefaultConsensusParams(),
 		}
