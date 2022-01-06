@@ -102,11 +102,10 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		if !app.VerifyIdentity(tx) {
 			app.logger.Info("Unable to validate JWK Identity", "CoreID", tx.CoreID)
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-		} else if tx.TxType == "JWK" {
+		} else {
 			app.logger.Info("JWK Identity validated", "CoreID", tx.CoreID)
 		}
 	}
-
 	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
 }
 

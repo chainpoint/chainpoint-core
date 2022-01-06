@@ -727,5 +727,21 @@ func (ln *LnClient) WaitForMacaroon(d time.Duration) error {
 			return nil
 		}
 	}
-	return errors.New("Exceeded LND Connection deadline: check that LND has peers")
+	return errors.New("Exceeded LND Macaroon deadline: check that LND has peers")
+}
+
+func (ln *LnClient) WaitForNewAddress(d time.Duration) (string, error) {
+	//Wait for lightning connection
+	deadline := time.Now().Add(d)
+	for !time.Now().After(deadline) {
+		addr, err := ln.NewAddress()
+		if err != nil {
+			ln.Logger.Error("Waiting on lnd to be ready to give new address...")
+			time.Sleep(5 * time.Second)
+			continue
+		} else {
+			return addr, nil
+		}
+	}
+	return "", errors.New("Exceeded LND New Address deadline: check that LND has peers")
 }

@@ -154,6 +154,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		Analytics: &analytics,
 	}
 
+	app.logger.Info("Tendermint Block Height", "block_height", app.state.Height)
+
 	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked, "JWK Kid", jwkType.Kid)
 
 	//Initialize calendar writing if enabled

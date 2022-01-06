@@ -135,7 +135,7 @@ func setup(config types.AnchorConfig) {
 				fmt.Println("LND admin not ready after 5 minutes")
 				panic(err)
 			}
-			address, err := config.LightningConfig.NewAddress()
+			address, err := config.LightningConfig.WaitForNewAddress(5 * time.Minute)
 			if err != nil {
 				fmt.Printf("Failed to create new address!")
 				panic(err)
@@ -173,7 +173,7 @@ func setup(config types.AnchorConfig) {
 		datawriter.Flush()
 		file.Close()
 
-		fmt.Printf("Chainpoint Core Setup Complete. Run with ./chainpoint-core -config %s", home+"/core.conf")
+		fmt.Printf("Chainpoint Core Setup Complete. Run with ./chainpoint-core -config %s\n", home+"/core.conf")
 		os.Exit(0)
 	}
 }
