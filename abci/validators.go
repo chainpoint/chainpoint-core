@@ -48,10 +48,9 @@ func (app *AnchorApplication) CheckVoteValidator() {
 
 func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power int64, blockHeight int64) {
 	//get the pubkey and power
-	valS := strings.TrimPrefix(val, "val:")
 	var idS, pubkeyS, powerS, blockS string
 	var blockH int64
-	idPubKeyAndPower := strings.Split(valS, "!")
+	idPubKeyAndPower := strings.Split(val, "!")
 	if len(idPubKeyAndPower) == 4 {
 		idS, pubkeyS, powerS, blockS = idPubKeyAndPower[0], idPubKeyAndPower[1], idPubKeyAndPower[2], idPubKeyAndPower[3]
 	} else if len(idPubKeyAndPower) == 3 {
@@ -65,6 +64,7 @@ func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power
 
 	id = idS
 	// decode the pubkey
+	pubkeyS = strings.TrimPrefix(pubkeyS, "val:")
 	pubkey, err = base64.StdEncoding.DecodeString(pubkeyS)
 	if err != nil {
 		return errors.New("pubkey is invalid base64"), "", []byte{}, 0, 0
