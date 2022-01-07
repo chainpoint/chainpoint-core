@@ -124,16 +124,9 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	app.LogError(err)
 	switch string(tx.TxType) {
 	case "VAL":
-		components := strings.Split(tx.Data, "!")
-		if len(components) == 3 {
-			data := components[1] + "!" + components[2]
-			tags = app.incrementTxInt(tags)
-			app.logger.Info(fmt.Sprintf("Val tx: %s", data))
-			if isValidatorTx([]byte(data)) {
-				app.logger.Info("Executing VAL tx")
-				resp = app.execValidatorTx([]byte(data))
-			}
-		}
+		tags = app.incrementTxInt(tags)
+		app.logger.Info(fmt.Sprintf("Val tx: %s", tx.Data))
+		resp = app.execValidatorTx([]byte(tx.Data))
 	case "CHNGSTK":
 		tags = app.incrementTxInt(tags)
 		tags = append(tags, kv.Pair{Key: []byte("CHANGE"), Value: []byte("STAKE")})

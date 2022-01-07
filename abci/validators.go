@@ -48,12 +48,18 @@ func (app *AnchorApplication) CheckVoteValidator() {
 
 func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power int64, blockHeight int64) {
 	//get the pubkey and power
+	var idS, pubkeyS, powerS, blockS string
+	var blockH int64
 	idPubKeyAndPower := strings.Split(val, "!")
-	if len(idPubKeyAndPower) != 4 {
+	if len(idPubKeyAndPower) == 4 {
+		idS, pubkeyS, powerS, blockS = idPubKeyAndPower[0], idPubKeyAndPower[1], idPubKeyAndPower[2], idPubKeyAndPower[3]
+	} else if len(idPubKeyAndPower) == 3 {
+		idS, pubkeyS, powerS = idPubKeyAndPower[0], idPubKeyAndPower[1], idPubKeyAndPower[2]
+	} else {
 		return errors.New("Expected 'val:id!pubkey!power'"), "", []byte{}, 0, 0
+
 	}
 
-	idS, pubkeyS, powerS, blockS := idPubKeyAndPower[0], idPubKeyAndPower[1], idPubKeyAndPower[2], idPubKeyAndPower[3]
 	id = idS
 	// decode the pubkey
 	pubkey, err = base64.StdEncoding.DecodeString(pubkeyS)
@@ -66,9 +72,11 @@ func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power
 	if err != nil {
 		return errors.New("power isn't an integer"), "", []byte{}, 0, 0
 	}
-	blockH, err := strconv.ParseInt(blockS, 10, 64)
-	if err != nil {
-		return errors.New("block height isn't an integer"), "", []byte{}, 0, 0
+	if blockS != "" {
+		blockH, err = strconv.ParseInt(blockS, 10, 64)
+		if err != nil {
+			return errors.New("block height isn't an integer"), "", []byte{}, 0, 0
+		}
 	}
 
 	return nil, id, pubkey, power, blockH
