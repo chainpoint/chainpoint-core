@@ -233,13 +233,14 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	return !alreadyExists
 }
 
-//SaveIdentity : save the JWT value retrieved
+//SaveIdentity : save the JWK value retrieved, and list ourselves as staked if we sent it
 func (app *AnchorApplication) SaveIdentity(tx types.Tx) error {
 	jwkType, err := app.SetIdentity(tx)
 	if app.LogError(err) != nil {
 		return err
 	}
-	if jwkType.Kid != "" && app.JWK.Kid != "" && jwkType.Kid == string(app.config.TendermintConfig.NodeKey.ID()) {
+	app.logger.Info("Saving JWK", "jwkType.Kid", jwkType.Kid, "app.JWK.Kid", app.JWK.Kid)
+	if jwkType.Kid != "" && app.JWK.Kid != "" && jwkType.Kid == app.JWK.Kid {
 		app.logger.Info("JWK keysync tx committed")
 		app.state.JWKStaked = true
 	}
