@@ -112,6 +112,7 @@ type AnchorState struct {
 	LatestBtcFee      int64
 	LastBtcFeeHeight  int64
 	Migrations        map[int]string `json:"migrations"`
+	AppReady          bool           `json:"-"`
 }
 
 type LnIdentity struct {

@@ -39,13 +39,16 @@ func (app *AnchorApplication) SyncMonitor() {
 		} else {
 			app.state.ChainSynced = true
 		}
+		if app.state.ChainSynced && app.state.Height > 2 && app.ID != "" {
+			app.state.AppReady = true
+		}
 	}
 }
 
 // BeaconMonitor : elects a leader to poll DRAND. Called every minute by ABCI.commit
 func (app *AnchorApplication) BeaconMonitor() {
 	time.Sleep(30 * time.Second) //sleep after commit for a few seconds
-	if app.state.Height > 2 {
+	if app.state.AppReady {
 		//round, randomness, err := beacon.GetPublicRandomness()
 		round, randomness, err := beacon.GetCloudflareRandomness()
 		chainpointFormat := fmt.Sprintf("%d:%s", round, randomness)
@@ -64,7 +67,7 @@ func (app *AnchorApplication) BeaconMonitor() {
 // FeeMonitor : elects a leader to poll and gossip Fee. Called every n minutes by ABCI.commit
 func (app *AnchorApplication) FeeMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
-	if app.state.Height > 2 && app.state.Height-app.state.LastBtcFeeHeight >= app.config.FeeInterval {
+	if app.state.AppReady && app.state.Height-app.state.LastBtcFeeHeight >= app.config.FeeInterval {
 		var fee int64
 		lndFee, _ := app.LnClient.GetLndFeeEstimate()
 		app.LnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", lndFee))
