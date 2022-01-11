@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/beacon"
 	fee2 "github.com/chainpoint/chainpoint-core/fee"
-	"github.com/chainpoint/chainpoint-core/leader_election"
 	"github.com/chainpoint/chainpoint-core/util"
-	"strconv"
 	"time"
 )
 
@@ -67,20 +65,16 @@ func (app *AnchorApplication) BeaconMonitor() {
 func (app *AnchorApplication) FeeMonitor() {
 	time.Sleep(15 * time.Second) //sleep after commit for a few seconds
 	if app.state.Height > 2 && app.state.Height-app.state.LastBtcFeeHeight >= app.config.FeeInterval {
-		if leader, leaders := leader_election.ElectValidatorAsLeader(1, []string{}, *app.state, app.config); leader {
-			app.logger.Info(fmt.Sprintf("FEE: Elected as leader. Leaders: %v", leaders))
-			var fee int64
-			lndFee, _ := app.LnClient.GetLndFeeEstimate()
-			app.LnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", lndFee))
-			thirdPartyFee, _ := fee2.GetThirdPartyFeeEstimate()
-			app.LnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", thirdPartyFee))
-			fee = util.MaxInt64(lndFee, thirdPartyFee)
-			fee = util.MaxInt64(fee, STATIC_FEE_AMT)
-			app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
-			_, err := app.rpc.BroadcastTx("FEE", strconv.FormatInt(fee, 10), 2, time.Now().Unix(), app.ID, app.config.ECPrivateKey) // elect a leader to send a NIST tx
-			if app.LogError(err) != nil {
-				app.logger.Debug(fmt.Sprintf("Failed to gossip Fee value of %d", fee))
-			}
-		}
+		var fee int64
+		lndFee, _ := app.LnClient.GetLndFeeEstimate()
+		app.LnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", lndFee))
+		thirdPartyFee, _ := fee2.GetThirdPartyFeeEstimate()
+		app.LnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", thirdPartyFee))
+		fee = util.MaxInt64(lndFee, thirdPartyFee)
+		fee = util.MaxInt64(fee, STATIC_FEE_AMT)
+		app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
+		app.state.LatestBtcFee = fee
+		app.state.LastBtcFeeHeight = app.state.Height
+		app.LnClient.LastFee = app.state.LatestBtcFee
 	}
 }

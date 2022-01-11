@@ -237,9 +237,6 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true
 		} else {
-			if tx.CoreID == "08ABE61DA90ED45BD51C26B903D0908DCC80C2FC" {
-				return true
-			}
 			app.logger.Info("JWK Identity: Channel not open, rejecting")
 			return false
 		}
