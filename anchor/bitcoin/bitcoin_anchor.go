@@ -92,13 +92,6 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 		// elect anchorer
 		if iAmLeader {
 			btcTx, btca, err := app.SendBtcTx(treeData, app.state.Height, startTxRange, endTxRange)
-			go func(txid string){
-				time.Sleep(30 * time.Second)
-				if tx, err := app.LnClient.GetTransactionFromStr(txid); app.LogError(err) == nil {
-					txJson, _ := json.Marshal(tx)
-					app.logger.Info("Initial Tx Status: ", "tx", string(txJson))
-				}
-			}(btcTx)
 			if app.LogError(err) != nil {
 				_, err := app.tendermintRpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.state.ID, app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
@@ -507,12 +500,6 @@ func (app *AnchorBTC) MonitorConfirmedTx() {
 		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
 			continue
 		}
-		go func(txid string){
-			if tx, err := app.LnClient.GetTransactionFromStr(txid); app.LogError(err) == nil {
-				txJson, _ := json.Marshal(tx)
-				app.logger.Info("Initial Tx Status: ", "tx", string(txJson))
-			}
-		}(tx.TxID)
 		if tx.BlockHeight == 0 {
 			app.logger.Info(fmt.Sprintf("btc tx %s not yet in block", s))
 			continue
