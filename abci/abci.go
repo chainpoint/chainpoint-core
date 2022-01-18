@@ -255,7 +255,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 			app.Anchor.BlockSyncMonitor()
 			if app.config.DoAnchor {
 				app.Anchor.MonitorConfirmedTx()
-				app.Anchor.FailedAnchorMonitor() //must be roughly synchronous with chain operation in order to recover from failed anchors
+				app.Anchor.MonitorFailedAnchor() //must be roughly synchronous with chain operation in order to recover from failed anchors
 			}
 		}()
 		if app.config.DoAnchor {
