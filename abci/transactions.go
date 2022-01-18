@@ -57,12 +57,6 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 			if matchErr := app.Anchor.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
 				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 			}
-
-		case "FEE":
-			//i, err := strconv.ParseInt(tx.Data, 10, 64)
-			//if app.LogError(err) != nil {
-			//	return types2.ResponseCheckTx{Code: code.CodeTypeUnknownError, GasWanted: 1}
-			//}
 		case "VAL":
 			err, id, _, power, _ := ValidateValidatorTx(tx.Data)
 			if app.LogError(err) != nil {
