@@ -15,7 +15,7 @@ type AnchorEngine interface {
 
 	BlockSyncMonitor()
 
-	FailedAnchorMonitor()
+	MonitorFailedAnchor()
 
 	MonitorConfirmedTx()
 }

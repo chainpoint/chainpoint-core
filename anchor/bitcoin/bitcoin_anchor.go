@@ -20,7 +20,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/tendermint/tendermint/libs/log"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -93,6 +92,13 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 		// elect anchorer
 		if iAmLeader {
 			btcTx, btca, err := app.SendBtcTx(treeData, app.state.Height, startTxRange, endTxRange)
+			go func(txid string){
+				time.Sleep(30 * time.Second)
+				if tx, err := app.LnClient.GetTransactionFromStr(txid); app.LogError(err) == nil {
+					txJson, _ := json.Marshal(tx)
+					app.logger.Info("Initial Tx Status: ", "tx", string(txJson))
+				}
+			}(btcTx)
 			if app.LogError(err) != nil {
 				_, err := app.tendermintRpc.BroadcastTx("BTC-E", treeData.AnchorBtcAggRoot, 2, time.Now().Unix(), app.state.ID, app.config.ECPrivateKey)
 				if app.LogError(err) != nil {
@@ -424,7 +430,7 @@ func (app *AnchorBTC) BlockSyncMonitor() {
 }
 
 //FailedAnchorMonitor: ensures transactions reach btc chain within certain time limit
-func (app *AnchorBTC) FailedAnchorMonitor() {
+func (app *AnchorBTC) MonitorFailedAnchor() {
 	if app.state.LNState.BlockHeight == 0 {
 		app.logger.Info("BTC Height record is 0, waiting for update from btc chain...")
 		return
@@ -453,45 +459,20 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 			continue
 		}
 		hasBeen10CalBlocks := app.state.Height-anchor.CalBlockHeight > 10
-		hasBeen3BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(3)
 		hasBeen144BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(144)
 
-		confirmed, confirmedTx := app.IsInConfirmedTxs(anchor.AnchorBtcAggRoot) // Is this a confirmed tx (all cores)?
-		mempoolButNoBlock := confirmed && confirmedTx.BlockHeight == 0
-
-		// if our tx is in the mempool but late, rbf
-		if hasBeen3BtcBlocks && mempoolButNoBlock {
-			if hasBeen144BtcBlocks {
-				app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)
-			}
-			if anchor.AmLeader {
-				app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-				newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.config.FeeMultiplier)
-				_, err := app.LnClient.ReplaceByFee(confirmedTx.TxID, false, int(newFee))
-				if app.LogError(err) != nil {
-					continue
-				}
-				app.logger.Info("RBF Success for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-				//Remove old anchor check
-				app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)
-				//Add new anchor check
-				anchor.BtcBlockHeight = btcHeight // give ourselves extra time
-				failedAnchorJSON, _ := json.Marshal(anchor)
-				app.Cache.Add(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
-			}
-		}
-		if hasBeen10CalBlocks && !confirmed { // if we have no confirmation of mempool inclusion after 10 minutes
+		if hasBeen10CalBlocks { // if we have no confirmation of mempool inclusion after 10 minutes
 			// this usually means there's something seriously wrong with LND
-			app.logger.Info("StartAnchoring Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", confirmedTx.TxID)
+			app.logger.Info("StartAnchoring Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 			// if there are subsequent anchors, we try to re-anchor just that range, else reset for a new anchor period
 			if app.state.BeginCalTxInt >= anchor.EndCalTxInt {
 				go app.AnchorToChain(anchor.BeginCalTxInt, anchor.EndCalTxInt)
 			} else {
-				if len(confirmedTx.TxID) == 0 {
-					app.logger.Info("no tx issued for this root, resetting at", "BeginCalTxInt", anchor.BeginCalTxInt)
-				}
 				app.ResetAnchor(anchor.BeginCalTxInt)
 			}
+			app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)
+		}
+		if hasBeen144BtcBlocks {
 			app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)
 		}
 	}
@@ -526,6 +507,12 @@ func (app *AnchorBTC) MonitorConfirmedTx() {
 		if app.LogError(json.Unmarshal([]byte(s), &tx)) != nil {
 			continue
 		}
+		go func(txid string){
+			if tx, err := app.LnClient.GetTransactionFromStr(txid); app.LogError(err) == nil {
+				txJson, _ := json.Marshal(tx)
+				app.logger.Info("Initial Tx Status: ", "tx", string(txJson))
+			}
+		}(tx.TxID)
 		if tx.BlockHeight == 0 {
 			app.logger.Info(fmt.Sprintf("btc tx %s not yet in block", s))
 			continue

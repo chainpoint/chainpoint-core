@@ -265,6 +265,14 @@ func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) 
 	return *txResponse, nil
 }
 
+func (ln *LnClient) GetTransactionFromStr(txid string ) (lnrpc.TransactionDetails, error){
+	decodedId, err := hex.DecodeString(txid)
+	if err != nil {
+		return lnrpc.TransactionDetails{}, err
+	}
+	return ln.GetTransaction(decodedId)
+}
+
 func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error) {
 	client, closeFunc, err := ln.GetClient()
 	if ln.LoggerError(err) != nil {
