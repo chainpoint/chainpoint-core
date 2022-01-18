@@ -20,7 +20,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/tendermint/tendermint/libs/log"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -453,45 +452,20 @@ func (app *AnchorBTC) FailedAnchorMonitor() {
 			continue
 		}
 		hasBeen10CalBlocks := app.state.Height-anchor.CalBlockHeight > 10
-		hasBeen3BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(3)
 		hasBeen144BtcBlocks := anchor.BtcBlockHeight != 0 && btcHeight-anchor.BtcBlockHeight >= int64(144)
 
-		confirmed, confirmedTx := app.IsInConfirmedTxs(anchor.AnchorBtcAggRoot) // Is this a confirmed tx (all cores)?
-		mempoolButNoBlock := confirmed && confirmedTx.BlockHeight == 0
-
-		// if our tx is in the mempool but late, rbf
-		if hasBeen3BtcBlocks && mempoolButNoBlock {
-			if hasBeen144BtcBlocks {
-				app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)
-			}
-			if anchor.AmLeader {
-				app.logger.Info("RBF for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-				newFee := math.Round(float64(app.state.LatestBtcFee*4/1000) * app.config.FeeMultiplier)
-				_, err := app.LnClient.ReplaceByFee(confirmedTx.TxID, false, int(newFee))
-				if app.LogError(err) != nil {
-					continue
-				}
-				app.logger.Info("RBF Success for", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
-				//Remove old anchor check
-				app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)
-				//Add new anchor check
-				anchor.BtcBlockHeight = btcHeight // give ourselves extra time
-				failedAnchorJSON, _ := json.Marshal(anchor)
-				app.Cache.Add(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
-			}
-		}
-		if hasBeen10CalBlocks && !confirmed { // if we have no confirmation of mempool inclusion after 10 minutes
+		if hasBeen10CalBlocks { // if we have no confirmation of mempool inclusion after 10 minutes
 			// this usually means there's something seriously wrong with LND
-			app.logger.Info("StartAnchoring Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot, "Tx", confirmedTx.TxID)
+			app.logger.Info("StartAnchoring Timeout while waiting for mempool", "AnchorBtcAggRoot", anchor.AnchorBtcAggRoot)
 			// if there are subsequent anchors, we try to re-anchor just that range, else reset for a new anchor period
 			if app.state.BeginCalTxInt >= anchor.EndCalTxInt {
 				go app.AnchorToChain(anchor.BeginCalTxInt, anchor.EndCalTxInt)
 			} else {
-				if len(confirmedTx.TxID) == 0 {
-					app.logger.Info("no tx issued for this root, resetting at", "BeginCalTxInt", anchor.BeginCalTxInt)
-				}
 				app.ResetAnchor(anchor.BeginCalTxInt)
 			}
+			app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)
+		}
+		if hasBeen144BtcBlocks {
 			app.Cache.Del(CHECK_BTC_TX_IDS_KEY, s)
 		}
 	}
