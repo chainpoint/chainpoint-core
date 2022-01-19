@@ -129,9 +129,6 @@ func (ln *LnClient) Unlocker() error {
 		WalletPassword:       []byte(ln.WalletPass),
 		RecoveryWindow:       10000,
 		ChannelBackups:       nil,
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
 	}
 	_, err = conn.UnlockWallet(context.Background(), &unlockReq)
 	if err != nil {
@@ -156,9 +153,6 @@ func (ln *LnClient) InitWallet() error {
 		RecoveryWindow:       10000,
 		ChannelBackups:       nil,
 		StatelessInit:        false,
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
 	}
 	_, err = conn.InitWallet(context.Background(), &initReq)
 	if err != nil {
@@ -256,21 +250,16 @@ func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) 
 		return lnrpc.TransactionDetails{}, err
 	}
 	defer closeFunc()
-	txResponse, err := client.GetTransactions(context.Background(), &lnrpc.GetTransactionsRequest{
-		Txid: id,
-	})
+	txResponse, err := client.GetTransactions(context.Background(), &lnrpc.GetTransactionsRequest{})
 	if ln.LoggerError(err) != nil {
 		return lnrpc.TransactionDetails{}, err
 	}
-	return *txResponse, nil
-}
-
-func (ln *LnClient) GetTransactionFromStr(txid string ) (lnrpc.TransactionDetails, error){
-	decodedId, err := hex.DecodeString(txid)
-	if err != nil {
-		return lnrpc.TransactionDetails{}, err
+	for _, tx := range txResponse.Transactions {
+		if tx.TxHash == hex.EncodeToString(id) {
+			return lnrpc.TransactionDetails{Transactions: []*lnrpc.Transaction{tx}}, nil
+		}
 	}
-	return ln.GetTransaction(decodedId)
+	return lnrpc.TransactionDetails{}, nil
 }
 
 func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error) {
@@ -512,7 +501,7 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 		}
 
 		// Now we append the macaroon credentials to the dial options.
-		cred := macaroons.NewMacaroonCredential(constrainedMac)
+		cred, _ := macaroons.NewMacaroonCredential(constrainedMac)
 		opts = append(opts, grpc.WithPerRPCCredentials(cred))
 	}
 	// We need to use a custom dialer so we can also connect to unix sockets
@@ -687,17 +676,11 @@ func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (w
 	outpoint := lnrpc.OutPoint{
 		TxidBytes:            txIdBytes,
 		OutputIndex:          outputIndex,
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
 	}
 	rbfReq := walletrpc.BumpFeeRequest{
 		Outpoint:             &outpoint,
 		TargetConf:           0,
 		SatPerByte:           uint32(newfee),
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
 	}
 	resp, err := wallet.BumpFee(context.Background(), &rbfReq)
 	if ln.LoggerError(err) != nil {

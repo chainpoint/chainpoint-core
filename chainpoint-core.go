@@ -317,12 +317,16 @@ func runLnd(config types.AnchorConfig) {
 		}
 		os.Args = append(os.Args, osArgs...)
 	}
-	loadedConfig, err := lnd.LoadConfig()
+	shutdownInterceptor, err := signal.Intercept()
+	if err != nil {
+		panic(err)
+	}
+	loadedConfig, err := lnd.LoadConfig(shutdownInterceptor)
 	if err != nil {
 		panic(err)
 	}
 	if err := lnd.Main(
-		loadedConfig, lnd.ListenerCfg{}, signal.ShutdownChannel(),
+		loadedConfig, lnd.ListenerCfg{}, loadedConfig.ImplementationConfig(shutdownInterceptor), shutdownInterceptor,
 	); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

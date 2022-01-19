@@ -46,9 +46,6 @@ func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 		CltvExpiry:           0,
 		RouteHints:           nil,
 		Private:              false,
-		XXX_NoUnkeyedLiteral: struct{}{},
-		XXX_unrecognized:     nil,
-		XXX_sizecache:        0,
 	})
 	if ln.LoggerError(err) != nil {
 		return LSAT{}, err
