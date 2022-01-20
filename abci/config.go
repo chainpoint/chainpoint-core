@@ -227,9 +227,10 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 	}
 	logger = logger.With("module", "main")
 	TMConfig.Logger = logger
-	peerGenesis := false
+	peerGenesisFound := false
+	peersOrSeedsExist := len(peers) != 0
 	// The following initializes an rpc client for a peer and pulls its genesis file
-	if len(peers) != 0 {
+	if peersOrSeedsExist {
 		peer := peers[0]                    // get first peer
 		nodeUri := strings.Split(peer, "@") // separate to get IP
 		if len(nodeUri) == 2 {
@@ -255,11 +256,9 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 					if err := genDoc.SaveAs(genFile); err != nil {
 						panic(err)
 					} else {
-						peerGenesis = true
+						peerGenesisFound = true
 					}
 					logger.Info("Saved genesis file from peer", "path", genFile)
-				} else {
-					panic(errors.New("Can't retrieve Genesis File from Public Network- check firewall on both ends"))
 				}
 			}
 		}
@@ -280,8 +279,10 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 
 	// initialize genesis file
 	genFile := defaultConfig.GenesisFile()
-	if tmos.FileExists(genFile) || peerGenesis {
+	if tmos.FileExists(genFile) || peerGenesisFound {
 		logger.Info("Found genesis file", "path", genFile)
+	} else if !peersOrSeedsExist {
+		panic(errors.New("Can't retrieve Genesis File from Seed- check firewall on both ends"))
 	} else {
 		genDoc := types2.GenesisDoc{
 			ChainID:         fmt.Sprintf(network+"-chain-%d", time.Now().Second()),
