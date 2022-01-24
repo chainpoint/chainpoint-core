@@ -79,7 +79,7 @@ func setup(config types.AnchorConfig) {
 		if err != nil {
 			panic(err)
 		}
-		configs = append(configs, "network="+publicResult)
+		configs = append(configs, "mode="+publicResult)
 		if publicResult == "Public Chainpoint Network" {
 			if networkResult == "mainnet" {
 				seed = "24ba3a2556ebae073b42d94815836b29594a2456@18.220.31.138:26656"
@@ -317,12 +317,16 @@ func runLnd(config types.AnchorConfig) {
 		}
 		os.Args = append(os.Args, osArgs...)
 	}
-	loadedConfig, err := lnd.LoadConfig()
+	shutdownInterceptor, err := signal.Intercept()
+	if err != nil {
+		panic(err)
+	}
+	loadedConfig, err := lnd.LoadConfig(shutdownInterceptor)
 	if err != nil {
 		panic(err)
 	}
 	if err := lnd.Main(
-		loadedConfig, lnd.ListenerCfg{}, signal.ShutdownChannel(),
+		loadedConfig, lnd.ListenerCfg{}, loadedConfig.ImplementationConfig(shutdownInterceptor), shutdownInterceptor,
 	); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
