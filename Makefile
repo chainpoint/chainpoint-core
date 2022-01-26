@@ -89,7 +89,10 @@ burn:
 
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint:
-	@sleep 20 && rm -rf ${CORE_DATADIR}/data/*.db && rm -rf ${CORE_DATADIR}/data/*.wal && rm -rf ${CORE_DATADIR}/data/priv_validator_state.json
+	rm -rf ~/.chainpoint/core/config
+	rm -rf ~/.chainpoint/core/data/anchor.db
+	rm -rf ~/.chainpoint/core/data/*.wal
+	rm ~/.chainpoint/core/data/*.json
 
 ##pull
 pull:
