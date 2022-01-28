@@ -84,8 +84,8 @@ func (app *AnchorApplication) GenerateCalBatch(aggStates []types.AggState, calSt
 	proofs := []types.ProofState{}
 	for _, aggStateRow := range aggStates {
 		proof := proof.Proof()
-		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.ProofID))
-		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], app.config.BitcoinNetwork))
+		app.LogError(proof.AddChainpointHeader("https://w3id.org/chainpoint/v4", "Chainpoint", aggStateRow.Hash, aggStateRow.ProofID))
+		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], proof.SetProofType(app.config.BitcoinNetwork, "cal")))
 		proofBytes, err := json.Marshal(proof)
 		app.logger.Info(fmt.Sprintf("Proof: %s", string(proofBytes)))
 		if app.LogError(err) != nil {

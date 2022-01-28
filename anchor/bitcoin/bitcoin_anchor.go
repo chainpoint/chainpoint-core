@@ -316,8 +316,9 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 	//associate calendar merkle tree aggregations with corresponding btc merkle tree, then generate final proof
 	for _, aggStateRow := range aggStates {
 		proof := proof.Proof()
-		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.ProofID))
-		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID].CalState, app.config.BitcoinNetwork))
+		app.LogError(proof.AddChainpointHeader("https://w3id.org/chainpoint/v4", "Chainpoint", aggStateRow.Hash, aggStateRow.ProofID))
+
+		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID].CalState, proof.SetProofType(app.config.BitcoinNetwork, "cal")))
 
 		if calVal, exists := calLookUp[aggStateRow.AggID]; exists {
 			if _, exists2 := anchorBtcAggStateLookup[calVal.CalId]; !exists2 {
@@ -329,7 +330,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 			continue
 		}
 		app.logger.Info(fmt.Sprintf("Assembling proof %s:\n BtcAggState: %+v\n TxState: %+v\n, HeadState: %+v", aggStateRow.ProofID, anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState))
-		app.LogError(proof.AddBtcBranch(anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState, app.config.BitcoinNetwork))
+		app.LogError(proof.AddChainBranch(anchorBtcAggStateLookup[calLookUp[aggStateRow.AggID].CalId], btcTxState, btcHeadState, proof.SetProofType(app.config.BitcoinNetwork, "btc")))
 		proofBytes, err := json.Marshal(proof)
 		if app.LogError(err) != nil {
 			continue

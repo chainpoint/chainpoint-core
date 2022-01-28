@@ -14,9 +14,9 @@ func Proof() P {
 	return proof
 }
 
-func (proof *P) AddChainpointHeader(hash string, proofId string) error {
-	(*proof)["@context"] = "https://w3id.org/chainpoint/v4"
-	(*proof)["type"] = "Chainpoint"
+func (proof *P) AddChainpointHeader(context string, jsonType string, hash string, proofId string) error {
+	(*proof)["@context"] = context
+	(*proof)["type"] = jsonType
 	(*proof)["hash"] = hash
 	(*proof)["proof_id"] = proofId
 	proofUUID, err := uuid.Parse(proofId)
@@ -50,7 +50,7 @@ func ConvertGoOpsToJsonMap(ops []types.ProofLineItem) []P {
 	return opsJsonArray
 }
 
-func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, network string) error {
+func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, proofType string) error {
 	calendarBranch := make(map[string]interface{})
 	calendarBranch["label"] = "cal_anchor_branch"
 	aggStateOps := types.OpsState{}
@@ -65,10 +65,6 @@ func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, netw
 	opsJson := ConvertGoOpsToJsonMap(ops)
 
 	calendarAnchor := make(map[string]interface{})
-	proofType := "cal"
-	if network == "testnet" {
-		proofType = "tcal"
-	}
 	calendarAnchor["type"] = proofType
 	calendarAnchor["anchor_id"] = calStateOps.Anchor.AnchorID
 	calendarAnchor["uris"] = calStateOps.Anchor.Uris
@@ -82,7 +78,7 @@ func (proof *P) AddCalendarBranch(aggState types.AggState, calState string, netw
 	return nil
 }
 
-func (proof *P) AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState types.AnchorBtcTxState, btcHeadState types.AnchorBtcHeadState, network string) error {
+func (proof *P) AddChainBranch(btcAggState types.AnchorBtcAggState, btcTxState types.AnchorBtcTxState, btcHeadState types.AnchorBtcHeadState, proofType string) error {
 	btcBranch := make(map[string]interface{})
 	btcBranch["label"] = "btc_anchor_branch"
 	aggState := types.OpsState{}
@@ -101,10 +97,6 @@ func (proof *P) AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState typ
 	opsJson := ConvertGoOpsToJsonMap(ops)
 
 	btcAnchor := make(map[string]interface{})
-	proofType := "btc"
-	if network == "testnet" {
-		proofType = "tbtc"
-	}
 	btcAnchor["type"] = proofType
 	btcAnchor["anchor_id"] = headState.Anchor.AnchorID
 	btcAnchor["uris"] = headState.Anchor.Uris
@@ -116,4 +108,11 @@ func (proof *P) AddBtcBranch(btcAggState types.AnchorBtcAggState, btcTxState typ
 
 	(*proof)["branches"].([]P)[0]["branches"] = []P{btcBranch}
 	return nil
+}
+
+func (proof *P) SetProofType(network string, chainType string) string {
+	if network == "testnet" {
+		return "t" + chainType
+	}
+	return chainType
 }
