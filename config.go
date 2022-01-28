@@ -1,4 +1,4 @@
-package abci
+package main
 
 import (
 	"errors"

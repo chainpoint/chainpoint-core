@@ -190,7 +190,7 @@ func main() {
 	//Instantiate Tendermint Node Config
 
 	//Instantiate ABCI application
-	config := abci.InitConfig(home)
+	config := InitConfig(home)
 	if config.BitcoinNetwork == "mainnet" {
 		config.ChainId = "mainnet-chain-32"
 	}
