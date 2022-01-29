@@ -287,6 +287,7 @@ func main() {
 	return
 }
 
+// runLnd : We pass in commandline arguments because of undefined DefaultConfig unmarshalling behavior in subRPCServers
 func runLnd(config types.AnchorConfig) {
 	if config.LightningConfig.UseChainpointConfig {
 		lndHome := home + "/.lnd"
