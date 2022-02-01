@@ -35,13 +35,18 @@ func InitConfig(home string) types.AnchorConfig {
 	var coreName, analyticsID, logLevel string
 	var feeMultiplier float64
 	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval, stakePerCore, updateStake int
-	var useAggregatorAllowlist, doCalLoop, doAnchorLoop, useChpLndConfig bool
+	var hashQuota, apiQuota, proofQuota int
+	var useAggregatorAllowlist, doCalLoop, doAnchorLoop, useChpLndConfig, removeRateLimits bool
 	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
 	flag.StringVar(&bitcoinNetwork, "network", "mainnet", "bitcoin network")
 	flag.BoolVar(&useAggregatorAllowlist, "aggregator_public", false, "use aggregator allow list")
 	flag.StringVar(&aggregatorAllowStr, "aggregator_whitelist", "", "prevent whitelisted IPs from needing to pay invoices")
 	flag.BoolVar(&doCalLoop, "aggregate", true, "whether to submit calendar transactions to Chainpoint Calendar")
 	flag.BoolVar(&doAnchorLoop, "anchor", true, "whether to participate in bitcoin anchoring elections")
+	flag.BoolVar(&removeRateLimits, "remove_rate_limits", false, "Remove rate limits and LSAT usage from API")
+	flag.IntVar(&hashQuota, "hashes_per_minute", 3, "Rate limits for the hash submission api")
+	flag.IntVar(&apiQuota, "api_per_minute", 15, "Rate limits for the status, peer, and gateway apis")
+	flag.IntVar(&proofQuota, "proof_per_minute", 25, "Rate limits for the proof retrieval api")
 	flag.StringVar(&electionMode, "election", "reputation", "mode for leader election")
 	flag.IntVar(&anchorInterval, "anchor_interval", 60, "interval to use for bitcoin anchoring")
 	flag.IntVar(&anchorTimeout, "anchor_timeout", 20, "timeout use for bitcoin anchoring")
@@ -164,6 +169,10 @@ func InitConfig(home string) types.AnchorConfig {
 		CoreName:         coreName,
 		AnalyticsID:      analyticsID,
 		ProposedVal:      proposedValidator,
+		RemoveRateLimits: removeRateLimits,
+		HashQuota:        hashQuota,
+		ApiQuota:         apiQuota,
+		ProofQuota:       proofQuota,
 	}
 }
 
