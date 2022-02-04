@@ -201,6 +201,7 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 		return TMConfig, err
 	}
 	defaultConfig.SetRoot(homeDir)
+	defaultConfig.FastSyncMode = true
 	defaultConfig.DBPath = homeDir + "/data"
 	defaultConfig.DBBackend = "cleveldb"
 	defaultConfig.Consensus.TimeoutCommit = time.Duration(60 * time.Second)
@@ -213,6 +214,7 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 	defaultConfig.P2P.MaxNumInboundPeers = 300
 	defaultConfig.P2P.MaxNumOutboundPeers = 75
 	defaultConfig.TxIndex.IndexAllKeys = true
+
 	peers := []string{}
 	if tendermintPeers != "" {
 		peers = strings.Split(tendermintPeers, ",")
