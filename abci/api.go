@@ -215,7 +215,7 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 		},
 	}
 	go app.Analytics.SendEvent(app.state.LatestTimeRecord, "HashReceived", hashResponse.ProofId, hashResponse.HashReceived, ip, "", ip)
-	// Add hash item to aggregator
+	// Append hash item to aggregator
 	app.aggregator.AddHashItem(types.HashItem{Hash: hash.Hash, ProofID: proofId})
 	respondJSON(w, http.StatusOK, hashResponse)
 }
@@ -238,7 +238,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": errStr})
 		}
 	}
-	proofStates, err := app.Cache.GetProofsByProofIds(proofids)
+	proofStates, err := app.ChainpointDb.GetProofsByProofIds(proofids)
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve proofs"})
 	}
@@ -282,7 +282,7 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 	if _, exists := vars["txid"]; exists {
 		result, err := app.rpc.GetTxByHash(vars["txid"])
 		if err != nil {
-			root, err := app.Cache.GetOne(vars["txid"])
+			root, err := app.Cache.Get(vars["txid"])
 			if app.LogError(err) != nil {
 				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
 				return

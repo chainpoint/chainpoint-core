@@ -82,7 +82,7 @@ func ByteToInt64(arr string) int64 {
 	return n
 }
 
-// GetEnv : Get an env var but with a default. Untyped, defaults to string.
+// GetEnv : GetArray an env var but with a default. Untyped, defaults to string.
 func GetEnv(key string, def string) string {
 	value := os.Getenv(key)
 	if len(value) == 0 {
@@ -473,7 +473,7 @@ func rotate(slice interface{}, rotate int) error {
 		}
 		// slice[j] = slice
 		sliceV.Index(j).Set(temp)
-		// elemJ.Add(temp)
+		// elemJ.Append(temp)
 	}
 	// success
 	return nil

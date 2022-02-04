@@ -10,8 +10,9 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	analytics2 "github.com/chainpoint/chainpoint-core/analytics"
 	"github.com/chainpoint/chainpoint-core/calendar"
+	"github.com/chainpoint/chainpoint-core/database"
+	"github.com/chainpoint/chainpoint-core/database/level"
 	"github.com/chainpoint/chainpoint-core/leader_election"
-	"github.com/chainpoint/chainpoint-core/level"
 	"github.com/chainpoint/chainpoint-core/lightning"
 	"github.com/chainpoint/chainpoint-core/merkletools"
 	"github.com/chainpoint/chainpoint-core/proof"
@@ -32,19 +33,21 @@ type AnchorBTC struct {
 	state         *types.AnchorState
 	config        types.AnchorConfig
 	tendermintRpc *tendermint_rpc.RPC
-	Cache         *level.Cache
+	Cache         *level.KVStore
+	Db            database.ChainpointDatabase
 	LnClient      *lightning.LnClient
 	logger        log.Logger
 	analytics     *analytics2.UniversalAnalytics
 }
 
 func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
-	cache *level.Cache, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
+	database *database.ChainpointDatabase, cache *level.KVStore, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
 		config:        config,
 		tendermintRpc: tendermintRpc,
 		Cache:         cache,
+		Db:            *database,
 		LnClient:      LnClient,
 		logger:        logger,
 		analytics:     analytics,
@@ -52,7 +55,7 @@ func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, ten
 }
 
 func (app *AnchorBTC) GetTreeFromCalRange(startTxRange int64, endTxRange int64) (types.BtcAgg, error) {
-	// Get CAL transactions between the latest BTCA tx and the current latest tx
+	// GetArray CAL transactions between the latest BTCA tx and the current latest tx
 	txLeaves, err := app.tendermintRpc.GetCalTxRange(startTxRange, endTxRange)
 	app.logger.Info(fmt.Sprintf("Retrieved %d CAL leaves from ranges %d to %d", len(txLeaves), startTxRange, endTxRange))
 	if app.LogError(err) != nil {
@@ -117,7 +120,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 			AmLeader:         iAmLeader,
 		}
 		failedAnchorJSON, _ := json.Marshal(failedAnchorCheck)
-		err := app.Cache.Add(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
+		err := app.Cache.Append(CHECK_BTC_TX_IDS_KEY, string(failedAnchorJSON))
 		if app.LogError(err) != nil {
 			return err
 		}
@@ -188,13 +191,13 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 	app.state.LatestBtcAggRoot = btcTxObj.AnchorBtcAggRoot
 	stateObj := calendar.GenerateAnchorBtcTxState(btcTxObj)
 	app.logger.Info(fmt.Sprintf("BTC-A BtcTx State Obj: %#v", stateObj))
-	err := app.Cache.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
+	err := app.Db.BulkInsertBtcTxState([]types.AnchorBtcTxState{stateObj})
 	if app.LogError(err) != nil {
 		return err
 	}
 
 	txIDBytes, err := json.Marshal(types.TxID{TxID: btcTxObj.BtcTxID, AnchorBtcAggRoot: btcTxObj.AnchorBtcAggRoot})
-	err = app.Cache.Add(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+	err = app.Cache.Append(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 	if err != nil {
 		return err
 	}
@@ -213,7 +216,7 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 	anchorBTCAggStateObjects := calendar.PrepareBtcaStateData(btcAgg)
 	anchorBTCAggStateObjectsJson, _ := json.Marshal(anchorBTCAggStateObjects)
 	app.logger.Info(fmt.Sprintf("anchorBTCAggStateObjects for AggRoot %s via BtcTx %s: %s", btcTxObj.AnchorBtcAggRoot, btcTxObj.BtcTxID, anchorBTCAggStateObjectsJson))
-	err = app.Cache.BulkInsertBtcAggState(anchorBTCAggStateObjects)
+	err = app.Db.BulkInsertBtcAggState(anchorBTCAggStateObjects)
 	if app.LogError(err) != nil {
 		app.logger.Info(fmt.Sprintf("StartAnchoring TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
 		return err
@@ -256,7 +259,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 		app.logger.Info(fmt.Sprintf("Restarting confirmation process for %s", btcMonObj.BtcTxID))
 	}
 	headStateObj := calendar.GenerateHeadStateObject(app.config.CoreURI, hash, btcMonObj)
-	proofIds, err := app.Cache.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
+	proofIds, err := app.Db.GetProofIdsByBtcTxId(btcMonObj.BtcTxID)
 	app.logger.Info(fmt.Sprintf("BTC ProofIds: %#v", proofIds))
 	app.LogError(err)
 	app.logger.Info(fmt.Sprintf("BtcHeadState: %#v", headStateObj))
@@ -267,7 +270,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 
 func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.AnchorBtcHeadState) error {
 	app.logger.Info(util.GetCurrentFuncName(1))
-	aggStates, err := app.Cache.GetAggStateObjectsByProofIds(proofIds)
+	aggStates, err := app.Db.GetAggStateObjectsByProofIds(proofIds)
 	if err != nil {
 		return err
 	}
@@ -275,7 +278,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 	for _, aggState := range aggStates {
 		aggIds = append(aggIds, aggState.AggID)
 	}
-	calStates, err := app.Cache.GetCalStateObjectsByAggIds(aggIds)
+	calStates, err := app.Db.GetCalStateObjectsByAggIds(aggIds)
 	if err != nil {
 		return err
 	}
@@ -284,7 +287,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 		calIds = append(calIds, calState.CalId)
 	}
 
-	anchorBtcAggStates, err := app.Cache.GetAnchorBTCAggStateObjectsByCalIds(calIds)
+	anchorBtcAggStates, err := app.Db.GetAnchorBTCAggStateObjectsByCalIds(calIds)
 	if err != nil {
 		return err
 	}
@@ -295,7 +298,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 	for _, anchorBtcAggState := range anchorBtcAggStates {
 		anchorBTCAggIds = append(anchorBTCAggIds, anchorBtcAggState.AnchorBtcAggId)
 	}
-	btcTxState, err := app.Cache.GetBTCTxStateObjectByBtcHeadState(btcHeadState.BtcTxId)
+	btcTxState, err := app.Db.GetBTCTxStateObjectByBtcHeadState(btcHeadState.BtcTxId)
 	if err != nil {
 		return err
 	}
@@ -342,7 +345,7 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 		proofs = append(proofs, proofState)
 	}
 	app.logger.Info(fmt.Sprintf("btc proofs: %#v", proofs))
-	return app.LogError(app.Cache.BulkInsertProofs(proofs))
+	return app.LogError(app.Db.BulkInsertProofs(proofs))
 }
 
 func (app *AnchorBTC) LogError(err error) error {
@@ -354,7 +357,7 @@ func (app *AnchorBTC) LogError(err error) error {
 
 //FindAndRemoveBtcCheck : remove all checks in case of btc tx failure
 func (app *AnchorBTC) FindAndRemoveBtcCheck(aggRoot string) error {
-	checkResults, err := app.Cache.Get(CHECK_BTC_TX_IDS_KEY)
+	checkResults, err := app.Cache.GetArray(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(err) != nil {
 		return err
 	}
@@ -430,7 +433,7 @@ func (app *AnchorBTC) MonitorFailedAnchor() {
 		return
 	}
 	btcHeight := int64(app.state.LNState.BlockHeight)
-	checkResults, err := app.Cache.Get(CHECK_BTC_TX_IDS_KEY)
+	checkResults, err := app.Cache.GetArray(CHECK_BTC_TX_IDS_KEY)
 	if app.LogError(err) != nil {
 		return
 	}
@@ -473,7 +476,7 @@ func (app *AnchorBTC) MonitorFailedAnchor() {
 }
 
 func (app *AnchorBTC) IsInConfirmedTxs(anchorRoot string) (bool, types.TxID) {
-	results, err := app.Cache.Get(CONFIRMED_BTC_TX_IDS_KEY)
+	results, err := app.Cache.GetArray(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(err) != nil {
 		return false, types.TxID{}
 	}
@@ -491,7 +494,7 @@ func (app *AnchorBTC) IsInConfirmedTxs(anchorRoot string) (bool, types.TxID) {
 
 // MonitorConfirmedTx : Begins anchor confirmation process when a Tx is in the mempool
 func (app *AnchorBTC) MonitorConfirmedTx() {
-	results, err := app.Cache.Get(CONFIRMED_BTC_TX_IDS_KEY)
+	results, err := app.Cache.GetArray(CONFIRMED_BTC_TX_IDS_KEY)
 	if app.LogError(err) != nil {
 		return
 	}
@@ -574,7 +577,7 @@ func (app *AnchorBTC) MonitorBlocksForConfirmation(startHeight int64, endHeight 
 	confirmationTxs := make([]types.TxID, 0)
 	txsIdStrings := make([]string, 0)
 	txsStrings := make([]string, 0)
-	results, err := app.Cache.Get(CONFIRMED_BTC_TX_IDS_KEY)
+	results, err := app.Cache.GetArray(CONFIRMED_BTC_TX_IDS_KEY)
 	if err != nil {
 		return err
 	}
@@ -602,7 +605,7 @@ func (app *AnchorBTC) MonitorBlocksForConfirmation(startHeight int64, endHeight 
 				app.Cache.Del(CONFIRMED_BTC_TX_IDS_KEY, confirmationTx)
 				tx.BlockHeight = i
 				txIDBytes, _ := json.Marshal(tx)
-				app.Cache.Add(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
+				app.Cache.Append(CONFIRMED_BTC_TX_IDS_KEY, string(txIDBytes))
 				app.logger.Info(fmt.Sprintf("Found tx %s in block %d", tx.TxID, i))
 			}
 		}

@@ -130,7 +130,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		go func() {
 			time.Sleep(1 * time.Minute)
 			txHash := tmhash.Sum(rawTx)
-			app.logger.Info("Removing Cal Hash from Cache:", "hash", hex.EncodeToString(txHash))
+			app.logger.Info("Removing Cal Hash from Db:", "hash", hex.EncodeToString(txHash))
 			app.Cache.Del(hex.EncodeToString(txHash), "")
 		}()
 		tags = app.incrementTxInt(tags)
