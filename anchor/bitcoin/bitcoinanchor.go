@@ -12,7 +12,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/calendar"
 	"github.com/chainpoint/chainpoint-core/database"
 	"github.com/chainpoint/chainpoint-core/database/level"
-	"github.com/chainpoint/chainpoint-core/leader_election"
+	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/chainpoint/chainpoint-core/lightning"
 	"github.com/chainpoint/chainpoint-core/merkletools"
 	"github.com/chainpoint/chainpoint-core/proof"
@@ -72,7 +72,7 @@ func (app *AnchorBTC) AnchorToChain(startTxRange int64, endTxRange int64) error 
 	if app.config.ElectionMode == "test" {
 		app.state.LastErrorCoreID = ""
 	}
-	iAmLeader, leaderIDs := leader_election.ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID}, *app.state)
+	iAmLeader, leaderIDs := leaderelection.ElectChainContributorAsLeader(1, []string{app.state.LastErrorCoreID}, *app.state)
 	if len(leaderIDs) == 0 {
 		return errors.New("Leader election error")
 	}
@@ -244,7 +244,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 		//only start BTC-C leader election process if someone else hasn't
 		if btcMonObj.BtcHeadRoot != string(app.state.LatestBtccTx) {
 			// Broadcast the confirmation message with metadata
-			amLeader, _ := leader_election.ElectValidatorAsLeader(1, []string{anchoringCoreID}, *app.state, app.config)
+			amLeader, _ := leaderelection.ElectValidatorAsLeader(1, []string{anchoringCoreID}, *app.state, app.config)
 			if amLeader {
 				result, err := app.tendermintRpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.state.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, app.config.ECPrivateKey)
 				app.LogError(err)

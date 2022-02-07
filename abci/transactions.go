@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/leader_election"
+	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"strconv"
 	"strings"
@@ -46,8 +46,8 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed for tx %+v", tx.CoreID, tx)))
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1} //CodeType for peer disconnection
 	}
-	amVal, _ := leader_election.IsValidator(*app.state, app.ID)
-	isSubmitterVal, _ := leader_election.IsValidator(*app.state, tx.CoreID)
+	amVal, _ := leaderelection.IsValidator(*app.state, app.ID)
+	isSubmitterVal, _ := leaderelection.IsValidator(*app.state, tx.CoreID)
 	switch string(tx.TxType) {
 	case "BTC-A":
 		var btcTxObj types.BtcTxMsg

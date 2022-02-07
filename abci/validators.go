@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/leader_election"
+	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -34,7 +34,7 @@ func (app *AnchorApplication) CheckVoteValidator() {
 		err, _, _, _, blockHeight := ValidateValidatorTx(app.config.ProposedVal)
 		if app.LogError(err) == nil && blockHeight == app.state.Height {
 			app.PendingValidator = validatorValue
-			amLeader, leaderId := leader_election.ElectValidatorAsLeader(1, []string{}, *app.state, app.config)
+			amLeader, leaderId := leaderelection.ElectValidatorAsLeader(1, []string{}, *app.state, app.config)
 			app.logger.Info(fmt.Sprintf("Validator Promotion: %s was elected to submit VAL tx", leaderId))
 			if amLeader {
 				go func() {

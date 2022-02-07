@@ -1,7 +1,8 @@
-package leader_election
+package leaderelection
 
 import (
 	"errors"
+	"github.com/chainpoint/chainpoint-core/leaderelection/seededelection"
 	types2 "github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/validation"
 	"sort"
@@ -50,16 +51,12 @@ func ElectChainContributorAsLeaderNaive(numLeaders int, blacklistedIDs []string,
 		}
 	}
 	sort.Strings(keys)
-	coreListLength := len(keys)
-	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
-	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
-		util.LogError(err)
+	if len(keys) == 0 {
 		return false, []string{}
 	}
-	if numLeaders <= coreListLength {
-		keys = keys[0:numLeaders]
-	} else {
-		keys = keys[0:1]
+	keys = seededelection.ElectLeaders(keys, numLeaders, status.SyncInfo.LatestBlockHash.String()).([]string)
+	if keys == nil {
+		return false, []string{}
 	}
 	iAmLeader := false
 	for _, leader := range keys {
@@ -90,19 +87,12 @@ func ElectChainContributorAsLeader(numLeaders int, blacklistedIDs []string, stat
 		}
 	}
 	sort.Strings(keys)
-	coreListLength := len(keys)
-	if coreListLength == 0 {
+	if len(keys) == 0 {
 		return false, []string{}
 	}
-	index := util.GetSeededRandInt([]byte(status.SyncInfo.LatestBlockHash.String()), coreListLength)
-	if err := util.RotateLeft(keys[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
-		util.LogError(err)
+	keys = seededelection.ElectLeaders(keys, numLeaders, status.SyncInfo.LatestBlockHash.String()).([]string)
+	if keys == nil {
 		return false, []string{}
-	}
-	if numLeaders <= coreListLength {
-		keys = keys[0:numLeaders]
-	} else {
-		keys = keys[0:1]
 	}
 	iAmLeader := false
 	for _, leader := range keys {
@@ -131,16 +121,12 @@ func determineValidatorLeader(numLeaders int, blacklistedIDs []string, status co
 			filteredArray = append(filteredArray, val)
 		}
 	}
-	validatorLength := len(filteredArray)
-	index := util.GetSeededRandInt([]byte(seed), validatorLength)    //seed the first time
-	if err := util.RotateLeft(filteredArray[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
-		util.LogError(err)
+	if len(filteredArray) == 0 {
 		return false, []string{}
 	}
-	if numLeaders <= validatorLength {
-		leaders = filteredArray[0:numLeaders]
-	} else {
-		leaders = filteredArray[0:1]
+	leaders = seededelection.ElectLeaders(filteredArray, numLeaders, seed).([]types.Validator)
+	if leaders == nil {
+		return false, []string{}
 	}
 	leaderStrings := make([]string, 0)
 	iAmLeader := false
@@ -214,16 +200,9 @@ func determineLeader(numLeaders int, blacklistedIDs []string, status core_types.
 				filteredArray = append(filteredArray, peer)
 			}
 		}
-		index := util.GetSeededRandInt([]byte(seed), len(filteredArray)) //seed the first time
-		if err := util.RotateLeft(filteredArray[:], index); err != nil { //get a wrapped-around slice of numLeader leaders
-			util.LogError(err)
+		leaders := seededelection.ElectLeaders(filteredArray, numLeaders, status.SyncInfo.LatestBlockHash.String()).([]core_types.Peer)
+		if leaders == nil {
 			return false, []string{}
-		}
-		leaders := make([]core_types.Peer, 0)
-		if numLeaders <= len(filteredArray) {
-			leaders = filteredArray[0:numLeaders]
-		} else {
-			leaders = filteredArray[0:1]
 		}
 		leaderStrings := make([]string, 0)
 		iAmLeader := false

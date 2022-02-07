@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/blake2s"
-	"github.com/chainpoint/chainpoint-core/leader_election"
+	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/chainpoint/chainpoint-core/lightning"
 	"github.com/chainpoint/chainpoint-core/proof"
 	"github.com/chainpoint/chainpoint-core/types"
@@ -311,7 +311,7 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request) {
 	//ip := util.GetClientIP(r)
 	//app.logger.Info(fmt.Sprintf("Peers Client IP: %s", ip))
-	peers := leader_election.GetPeers(*app.state, app.state.TMState, app.state.TMNetInfo)
+	peers := leaderelection.GetPeers(*app.state, app.state.TMState, app.state.TMNetInfo)
 	peerList := []string{}
 	for _, peer := range peers {
 		var finalIp string

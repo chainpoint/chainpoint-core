@@ -4,7 +4,7 @@ import (
 	"crypto/elliptic"
 	"encoding/json"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/leader_election"
+	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/chainpoint/chainpoint-core/lightning"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
@@ -19,7 +19,7 @@ func (app *AnchorApplication) SetStake() {
 	for {
 		if app.state.AppReady {
 			validators, err := app.rpc.GetValidators(app.state.Height)
-			amVal, _ := leader_election.IsValidator(*app.state, app.ID)
+			amVal, _ := leaderelection.IsValidator(*app.state, app.ID)
 			if app.LogError(err) != nil {
 				continue
 			}
@@ -79,7 +79,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		app.logger.Info("Beginning Lightning staking loop")
 		time.Sleep(60 * time.Second) //ensure loop gives chain time to init and doesn't restart on error too fast
 
-		amValidator, err := leader_election.AmValidator(*app.state)
+		amValidator, err := leaderelection.AmValidator(*app.state)
 		if app.LogError(err) != nil {
 			app.logger.Info("Cannot determine validators, restarting staking loop...")
 			continue
@@ -205,7 +205,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return false
 		}
 		app.logger.Info("Checking if the incoming JWK Identity is from a validator")
-		isVal, err := leader_election.IsValidator(*app.state, tx.CoreID)
+		isVal, err := leaderelection.IsValidator(*app.state, tx.CoreID)
 		app.LogError(err)
 		if isVal {
 			return true
@@ -225,7 +225,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	} else if !app.state.ChainSynced {
 		// we're fast-syncing, so agree with the prior chainstate
 		return true
-	} else if isVal, err := leader_election.IsValidator(*app.state, tx.CoreID); err == nil && isVal && app.state.AmValidator {
+	} else if isVal, err := leaderelection.IsValidator(*app.state, tx.CoreID); err == nil && isVal && app.state.AmValidator {
 		// if we're both validators, verify identity
 		return true
 	}
