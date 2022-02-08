@@ -37,7 +37,7 @@ type AnchorConfig struct {
 	BitcoinNetwork   string
 	ElectionMode     string
 	TendermintConfig TendermintConfig
-	LightningConfig  lightning.LnClient
+	LightningConfig  lightning.LightningClient
 	EthConfig        EthConfig
 	ECPrivateKey     *ecdsa.PrivateKey
 	DoNodeManagement bool

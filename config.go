@@ -134,7 +134,7 @@ func InitConfig(home string) types.AnchorConfig {
 		BitcoinNetwork:   bitcoinNetwork,
 		ElectionMode:     electionMode,
 		TendermintConfig: tmConfig,
-		LightningConfig: lightning.LnClient{
+		LightningConfig: lightning.LightningClient{
 			TlsPath:             tlsCertPath,
 			MacPath:             macaroonPath,
 			ServerHostPort:      lndSocket,

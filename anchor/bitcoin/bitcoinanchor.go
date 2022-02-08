@@ -35,13 +35,13 @@ type AnchorBTC struct {
 	tendermintRpc *tendermint_rpc.RPC
 	Cache         *level.KVStore
 	Db            database.ChainpointDatabase
-	LnClient      *lightning.LnClient
+	LnClient      *lightning.LightningClient
 	logger        log.Logger
 	analytics     *analytics2.UniversalAnalytics
 }
 
 func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
-	database *database.ChainpointDatabase, cache *level.KVStore, LnClient *lightning.LnClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
+	database *database.ChainpointDatabase, cache *level.KVStore, LnClient *lightning.LightningClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
 		config:        config,

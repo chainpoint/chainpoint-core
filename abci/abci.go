@@ -87,7 +87,7 @@ type AnchorApplication struct {
 	aggregator           *aggregator.Aggregator
 	ChainpointDb         database.ChainpointDatabase
 	Cache                *level.KVStore
-	LnClient             *lightning.LnClient
+	LnClient             *lightning.LightningClient
 	rpc                  *tendermint_rpc.RPC
 	ID                   string
 	JWK                  types.Jwk
