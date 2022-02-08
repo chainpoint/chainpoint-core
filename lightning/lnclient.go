@@ -326,7 +326,7 @@ func (ln *LnClient) AddPeer(peer string) error {
 	return nil
 }
 
-func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
+func (ln *LnClient) AnyChannelExists(peer string, satVal int64) (bool, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return false, errors.New("Malformed peer string (must be pubKey@host)")

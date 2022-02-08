@@ -97,7 +97,7 @@ func (app *AnchorApplication) StakeIdentity() {
 					peerExists, err := app.LnClient.PeerExists(lnID.Peer)
 					app.LogError(err)
 					if peerExists || app.LogError(app.LnClient.AddPeer(lnID.Peer)) == nil {
-						chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.state.LnStakePerVal)
+						chanExists, err := app.LnClient.AnyChannelExists(lnID.Peer, app.state.LnStakePerVal)
 						app.LogError(err)
 						if !chanExists {
 							app.logger.Info(fmt.Sprintf("Adding Lightning Channel of local balance %d for Peer %s...", app.state.LnStakePerVal, lnID.Peer))
@@ -211,7 +211,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 			return true
 		}
 		app.logger.Info("JWK Identity: Checking Channel Funding")
-		chanExists, err := app.LnClient.ChannelExists(lnID.Peer, app.state.LnStakePerVal)
+		chanExists, err := app.LnClient.AnyChannelExists(lnID.Peer, app.state.LnStakePerVal)
 		if app.LogError(err) == nil && chanExists {
 			app.logger.Info("JWK Identity: Channel Open and Funded")
 			return true
