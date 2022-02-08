@@ -138,7 +138,6 @@ func InitConfig(home string) types.AnchorConfig {
 			TlsPath:             tlsCertPath,
 			MacPath:             macaroonPath,
 			ServerHostPort:      lndSocket,
-			Logger:              tmLogger,
 			LndLogLevel:         lndLogFilter,
 			MinConfs:            3,
 			Testnet:             bitcoinNetwork == "testnet",

@@ -26,7 +26,7 @@ type LSAT struct {
 
 func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 	preimage, err := GenerateRandomBytes(32)
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return LSAT{}, err
 	}
 	hash := sha256.Sum256(preimage)
@@ -47,11 +47,11 @@ func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 		RouteHints:           nil,
 		Private:              false,
 	})
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return LSAT{}, err
 	}
 	tID, err := MakeIDFromString(hex.EncodeToString(preimage))
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return LSAT{}, err
 	}
 	identifier := Identifier{
@@ -60,13 +60,13 @@ func (ln *LnClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 		TokenID:     tID,
 	}
 	secBytes, err := hex.DecodeString(ln.SessionSecret)
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return LSAT{}, err
 	}
 	var buf bytes.Buffer
 	EncodeIdentifier(&buf, &identifier)
 	mac, err := macaroon.New(secBytes, buf.Bytes(), "lsat", macaroon.LatestVersion)
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return LSAT{}, err
 	}
 	return LSAT{

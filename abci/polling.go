@@ -70,9 +70,9 @@ func (app *AnchorApplication) FeeMonitor() {
 	if app.state.AppReady && app.state.Height-app.state.LastBtcFeeHeight >= app.config.FeeInterval {
 		var fee int64
 		lndFee, _ := app.LnClient.GetLndFeeEstimate()
-		app.LnClient.Logger.Info(fmt.Sprintf("FEE from LND: %d", lndFee))
+		app.logger.Info(fmt.Sprintf("FEE from LND: %d", lndFee))
 		thirdPartyFee, _ := fee2.GetThirdPartyFeeEstimate()
-		app.LnClient.Logger.Info(fmt.Sprintf("FEE from Third Party: %d", thirdPartyFee))
+		app.logger.Info(fmt.Sprintf("FEE from Third Party: %d", thirdPartyFee))
 		fee = util.MaxInt64(lndFee, thirdPartyFee)
 		fee = util.MaxInt64(fee, STATIC_FEE_AMT)
 		app.logger.Info(fmt.Sprintf("Ln Wallet EstimateFEE: %v", fee))
