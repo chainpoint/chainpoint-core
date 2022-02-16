@@ -11,11 +11,19 @@ import (
 	"time"
 )
 
+type Chainpoint_DB struct {
+	db *KVStore
+}
+
+func NewDB(db *KVStore) *Chainpoint_DB {
+	return &Chainpoint_DB{db}
+}
+
 // GetProofIdsByAggIds : get proof ids from agg table, based on aggId
-func (cache *Cache) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
+func (chp *Chainpoint_DB) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 	aggResults := []string{}
 	for _, id := range aggIds {
-		results, err := cache.Get("aggstate:" + id)
+		results, err := chp.db.GetArray("aggstate:" + id)
 		if err != nil {
 			return []string{}, err
 		}
@@ -29,10 +37,10 @@ func (cache *Cache) GetProofIdsByAggIds(aggIds []string) ([]string, error) {
 }
 
 // GetProofsByProofIds : get proofs from proof table, based on id
-func (cache *Cache) GetProofsByProofIds(proofIds []string) (map[string]types.ProofState, error) {
+func (chp *Chainpoint_DB) GetProofsByProofIds(proofIds []string) (map[string]types.ProofState, error) {
 	proofs := make(map[string]types.ProofState)
 	for _, id := range proofIds {
-		result, err := cache.GetOne("proof:" + id)
+		result, err := chp.db.Get("proof:" + id)
 		if err != nil {
 			return map[string]types.ProofState{}, err
 		}
@@ -44,15 +52,15 @@ func (cache *Cache) GetProofsByProofIds(proofIds []string) (map[string]types.Pro
 }
 
 // GetProofIdsByBtcTxId : get proof ids from proof table, based on btctxId
-func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
-	btcTxStateStr, err := cache.GetOne("btctxstate:" + btcTxId)
+func (chp *Chainpoint_DB) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
+	btcTxStateStr, err := chp.db.Get("btctxstate:" + btcTxId)
 	if err != nil {
 		return []string{}, nil
 	}
 	btcTxState := types.AnchorBtcTxState{}
 	json.Unmarshal([]byte(btcTxStateStr), &btcTxState)
-	cache.Logger.Info(fmt.Sprintf("Getting anchorbtcaggstates for tx %s", btcTxId))
-	anchoraggs, err := cache.Get("anchorbtcaggstate:" + btcTxState.AnchorBtcAggId)
+	chp.db.Logger.Info(fmt.Sprintf("Getting anchorbtcaggstates for tx %s", btcTxId))
+	anchoraggs, err := chp.db.GetArray("anchorbtcaggstate:" + btcTxState.AnchorBtcAggId)
 	if err != nil {
 		return []string{}, nil
 	}
@@ -62,8 +70,8 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 		if err := json.Unmarshal([]byte(agg), &anchorAggState); err != nil {
 			continue
 		}
-		cache.Logger.Info(fmt.Sprintf("Getting calStates %s for AnchorBtcAggState %s", anchorAggState.CalId, anchorAggState.AnchorBtcAggId))
-		calstates, err := cache.Get("calstate:" + anchorAggState.CalId)
+		chp.db.Logger.Info(fmt.Sprintf("Getting calStates %s for AnchorBtcAggState %s", anchorAggState.CalId, anchorAggState.AnchorBtcAggId))
+		calstates, err := chp.db.GetArray("calstate:" + anchorAggState.CalId)
 		if err != nil {
 			continue
 		}
@@ -72,8 +80,8 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 			if err := json.Unmarshal([]byte(cs), &cso); err != nil {
 				continue
 			}
-			cache.Logger.Info(fmt.Sprintf("Getting aggState %s for calState %s", cso.AggID, cso.CalId))
-			aggstates, err := cache.Get("aggstate:" + cso.AggID)
+			chp.db.Logger.Info(fmt.Sprintf("Getting aggState %s for calState %s", cso.AggID, cso.CalId))
+			aggstates, err := chp.db.GetArray("aggstate:" + cso.AggID)
 			if err != nil {
 				continue
 			}
@@ -82,7 +90,7 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 				if err := json.Unmarshal([]byte(aggs), &aggState); err != nil {
 					continue
 				}
-				cache.Logger.Info(fmt.Sprintf("Getting proofID %s for aggState %s", aggState.ProofID, cso.AggID))
+				chp.db.Logger.Info(fmt.Sprintf("Getting proofID %s for aggState %s", aggState.ProofID, cso.AggID))
 				proofIds = append(proofIds, aggState.ProofID)
 			}
 		}
@@ -90,11 +98,11 @@ func (cache *Cache) GetProofIdsByBtcTxId(btcTxId string) ([]string, error) {
 	return proofIds, nil
 }
 
-//GetCalStateObjectsByProofIds : Get calstate objects, given an array of aggIds
-func (cache *Cache) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
+//GetCalStateObjectsByProofIds : GetArray calstate objects, given an array of aggIds
+func (chp *Chainpoint_DB) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStateObject, error) {
 	results := []types.CalStateObject{}
 	for _, agg := range aggIds {
-		cals, err := cache.Get("calstate_by_agg:" + agg)
+		cals, err := chp.db.GetArray("calstate_by_agg:" + agg)
 		if err != nil {
 			return []types.CalStateObject{}, err
 		}
@@ -109,11 +117,11 @@ func (cache *Cache) GetCalStateObjectsByAggIds(aggIds []string) ([]types.CalStat
 	return results, nil
 }
 
-//GetAggStateObjectsByProofIds : Get aggstate objects, given an array of proofIds
-func (cache *Cache) GetAggStateObjectsByProofIds(proofIds []string) ([]types.AggState, error) {
+//GetAggStateObjectsByProofIds : GetArray aggstate objects, given an array of proofIds
+func (chp *Chainpoint_DB) GetAggStateObjectsByProofIds(proofIds []string) ([]types.AggState, error) {
 	results := []types.AggState{}
 	for _, id := range proofIds {
-		aggs, err := cache.Get("aggstate_by_proof:" + id)
+		aggs, err := chp.db.GetArray("aggstate_by_proof:" + id)
 		if err != nil {
 			return []types.AggState{}, err
 		}
@@ -128,11 +136,11 @@ func (cache *Cache) GetAggStateObjectsByProofIds(proofIds []string) ([]types.Agg
 	return results, nil
 }
 
-//GetAnchorBTCAggStateObjectsByCalIds: Get anchor state objects, given an array of calIds
-func (cache *Cache) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]types.AnchorBtcAggState, error) {
+//GetAnchorBTCAggStateObjectsByCalIds: GetArray anchor state objects, given an array of calIds
+func (chp *Chainpoint_DB) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]types.AnchorBtcAggState, error) {
 	results := []types.AnchorBtcAggState{}
 	for _, id := range calIds {
-		anchoraggs, err := cache.Get("anchorbtcaggstate_by_cal:" + id)
+		anchoraggs, err := chp.db.GetArray("anchorbtcaggstate_by_cal:" + id)
 		if err != nil {
 			return []types.AnchorBtcAggState{}, nil
 		}
@@ -147,9 +155,9 @@ func (cache *Cache) GetAnchorBTCAggStateObjectsByCalIds(calIds []string) ([]type
 	return results, nil
 }
 
-//GetBTCTxStateObjectByAnchorBTCAggId: Get btc state objects, given an array of agg ids
-func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
-	btcTxStateStr, err := cache.GetOne("btctxstate_by_agg:" + aggId)
+//GetBTCTxStateObjectByAnchorBTCAggId: GetArray btc state objects, given an array of agg ids
+func (chp *Chainpoint_DB) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.AnchorBtcTxState, error) {
+	btcTxStateStr, err := chp.db.Get("btctxstate_by_agg:" + aggId)
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
 	}
@@ -160,9 +168,9 @@ func (cache *Cache) GetBTCTxStateObjectByAnchorBTCAggId(aggId string) (types.Anc
 	return btcTxState, nil
 }
 
-//GetBTCTxStateObjectByAnchorBTCHeadState Get btc state objects, given an array of agg ids
-func (cache *Cache) GetBTCTxStateObjectByBtcHeadState(btctx string) (types.AnchorBtcTxState, error) {
-	btcTxStateStr, err := cache.GetOne("btctxstate:" + btctx)
+//GetBTCTxStateObjectByAnchorBTCHeadState GetArray btc state objects, given an array of agg ids
+func (chp *Chainpoint_DB) GetBTCTxStateObjectByBtcHeadState(btctx string) (types.AnchorBtcTxState, error) {
+	btcTxStateStr, err := chp.db.Get("btctxstate:" + btctx)
 	if err != nil {
 		return types.AnchorBtcTxState{}, err
 	}
@@ -174,39 +182,39 @@ func (cache *Cache) GetBTCTxStateObjectByBtcHeadState(btctx string) (types.Ancho
 }
 
 //BulkInsertProofs : Use pg driver and loop to create bulk proof insert statement
-func (cache *Cache) BulkInsertProofs(proofs []types.ProofState) error {
+func (chp *Chainpoint_DB) BulkInsertProofs(proofs []types.ProofState) error {
 	for _, proof := range proofs {
-		proofExists, err := cache.GetOne("proof:" + proof.ProofID)
+		proofExists, err := chp.db.Get("proof:" + proof.ProofID)
 		if err != nil {
 			return err
 		}
 		if strings.Contains(proofExists, "btc_anchor_branch") {
-			cache.Logger.Info(fmt.Sprintf("ProofID %s duplicated", proof.ProofID))
+			chp.db.Logger.Info(fmt.Sprintf("ProofID %s duplicated", proof.ProofID))
 			continue
 		}
 		p, err := json.Marshal(proof)
 		if err != nil {
 			return err
 		}
-		err = cache.Set("proof:"+proof.ProofID, string(p))
+		err = chp.db.Set("proof:"+proof.ProofID, string(p))
 		if err != nil {
 			return err
 		}
-		cache.Set("proofCreated:"+proof.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
+		chp.db.Set("proofCreated:"+proof.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
 	}
 	return nil
 }
 
 // BulkInsertAggState : inserts aggregator state into postgres
-func (cache *Cache) BulkInsertAggState(aggStates []types.AggState) error {
+func (chp *Chainpoint_DB) BulkInsertAggState(aggStates []types.AggState) error {
 	for _, agg := range aggStates {
 		a, err := json.Marshal(agg)
 		if err != nil {
 			continue
 		}
-		err = cache.Add("aggstate:"+agg.AggID, string(a))
-		err2 := cache.Add("aggstate_by_proof:"+agg.ProofID, string(a))
-		cache.Set("aggstateCreated:"+agg.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
+		err = chp.db.Append("aggstate:"+agg.AggID, string(a))
+		err2 := chp.db.Append("aggstate_by_proof:"+agg.ProofID, string(a))
+		chp.db.Set("aggstateCreated:"+agg.ProofID, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("aggstate insert failed")
 		}
@@ -215,15 +223,15 @@ func (cache *Cache) BulkInsertAggState(aggStates []types.AggState) error {
 }
 
 // BulkInsertCalState : inserts aggregator state into postgres
-func (cache *Cache) BulkInsertCalState(calStates []types.CalStateObject) error {
+func (chp *Chainpoint_DB) BulkInsertCalState(calStates []types.CalStateObject) error {
 	for _, cal := range calStates {
 		c, err := json.Marshal(cal)
 		if err != nil {
 			continue
 		}
-		err = cache.Add("calstate:"+cal.CalId, string(c))
-		err2 := cache.Add("calstate_by_agg:"+cal.AggID, string(c))
-		cache.Set("calstateCreated:"+cal.AggID, strconv.FormatInt(time.Now().Unix(), 10))
+		err = chp.db.Append("calstate:"+cal.CalId, string(c))
+		err2 := chp.db.Append("calstate_by_agg:"+cal.AggID, string(c))
+		chp.db.Set("calstateCreated:"+cal.AggID, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("calstate insert failed")
 		}
@@ -232,15 +240,15 @@ func (cache *Cache) BulkInsertCalState(calStates []types.CalStateObject) error {
 }
 
 // BulkInsertBtcAggState : inserts aggregator state into postgres
-func (cache *Cache) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) error {
+func (chp *Chainpoint_DB) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) error {
 	for _, agg := range aggStates {
 		a, err := json.Marshal(agg)
 		if err != nil {
 			continue
 		}
-		err = cache.Add("anchorbtcaggstate:"+agg.AnchorBtcAggId, string(a))
-		err2 := cache.Add("anchorbtcaggstate_by_cal:"+agg.CalId, string(a))
-		cache.Set("anchorbtcaggstateCreated:"+agg.CalId, strconv.FormatInt(time.Now().Unix(), 10))
+		err = chp.db.Append("anchorbtcaggstate:"+agg.AnchorBtcAggId, string(a))
+		err2 := chp.db.Append("anchorbtcaggstate_by_cal:"+agg.CalId, string(a))
+		chp.db.Set("anchorbtcaggstateCreated:"+agg.CalId, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("anchorbtcaggstate insert failed")
 		}
@@ -249,15 +257,15 @@ func (cache *Cache) BulkInsertBtcAggState(aggStates []types.AnchorBtcAggState) e
 }
 
 // BulkInsertBtcTxState : inserts aggregator state into postgres
-func (cache *Cache) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) error {
+func (chp *Chainpoint_DB) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) error {
 	for _, state := range txStates {
 		s, err := json.Marshal(state)
 		if err != nil {
 			continue
 		}
-		err = cache.Set("btctxstate:"+state.BtcTxId, string(s))
-		err2 := cache.Set("btctxstate_by_agg:"+state.AnchorBtcAggId, string(s))
-		cache.Set("btctxstateCreated:"+state.AnchorBtcAggId, strconv.FormatInt(time.Now().Unix(), 10))
+		err = chp.db.Set("btctxstate:"+state.BtcTxId, string(s))
+		err2 := chp.db.Set("btctxstate_by_agg:"+state.AnchorBtcAggId, string(s))
+		chp.db.Set("btctxstateCreated:"+state.AnchorBtcAggId, strconv.FormatInt(time.Now().Unix(), 10))
 		if err != nil || err2 != nil {
 			return errors.New("anchorbtcaggstate insert failed")
 		}
@@ -265,12 +273,12 @@ func (cache *Cache) BulkInsertBtcTxState(txStates []types.AnchorBtcTxState) erro
 	return nil
 }
 
-func (cache *Cache) PruneOldState() {
-	btctxstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("btctxstateCreated:"))
-	anchoraggstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("anchorbtcaggstateCreated:"))
-	calstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("calstateCreated:"))
-	aggstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("aggstateCreated:"))
-	proofstateIt, _ := db.IteratePrefix(cache.LevelDb, []byte("proofCreated:"))
+func (chp *Chainpoint_DB) PruneOldState() {
+	btctxstateIt, _ := db.IteratePrefix(chp.db.LevelDb, []byte("btctxstateCreated:"))
+	anchoraggstateIt, _ := db.IteratePrefix(chp.db.LevelDb, []byte("anchorbtcaggstateCreated:"))
+	calstateIt, _ := db.IteratePrefix(chp.db.LevelDb, []byte("calstateCreated:"))
+	aggstateIt, _ := db.IteratePrefix(chp.db.LevelDb, []byte("aggstateCreated:"))
+	proofstateIt, _ := db.IteratePrefix(chp.db.LevelDb, []byte("proofCreated:"))
 	for ; btctxstateIt.Valid(); btctxstateIt.Next() {
 		value := btctxstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
@@ -281,11 +289,11 @@ func (cache *Cache) PruneOldState() {
 		if time.Now().After(tm.Add(24 * time.Hour)) {
 			key := string(btctxstateIt.Key())
 			id := strings.Split(key, ":")[1]
-			state, _ := cache.GetBTCTxStateObjectByAnchorBTCAggId(id)
-			cache.Del(key, "")
-			cache.Del("btctxstate_by_agg:"+id, "")
-			cache.Del("btctxstate:"+state.BtcTxId, "")
-			cache.Logger.Info("db pruned", "btcTxState", state.BtcTxId)
+			state, _ := chp.GetBTCTxStateObjectByAnchorBTCAggId(id)
+			chp.db.Del(key, "")
+			chp.db.Del("btctxstate_by_agg:"+id, "")
+			chp.db.Del("btctxstate:"+state.BtcTxId, "")
+			chp.db.Logger.Info("db pruned", "btcTxState", state.BtcTxId)
 		}
 	}
 	for ; anchoraggstateIt.Valid(); anchoraggstateIt.Next() {
@@ -298,11 +306,11 @@ func (cache *Cache) PruneOldState() {
 		if time.Now().After(tm.Add(24 * time.Hour)) {
 			key := string(anchoraggstateIt.Key())
 			id := strings.Split(key, ":")[1]
-			states, _ := cache.GetAnchorBTCAggStateObjectsByCalIds([]string{id})
-			cache.Del(key, "")
-			cache.Del("anchorbtcaggstate_by_cal"+id, "")
+			states, _ := chp.GetAnchorBTCAggStateObjectsByCalIds([]string{id})
+			chp.db.Del(key, "")
+			chp.db.Del("anchorbtcaggstate_by_cal"+id, "")
 			for _, s := range states {
-				cache.Del("anchorbtcaggstate:"+s.AnchorBtcAggId, "")
+				chp.db.Del("anchorbtcaggstate:"+s.AnchorBtcAggId, "")
 			}
 		}
 	}
@@ -316,11 +324,11 @@ func (cache *Cache) PruneOldState() {
 		if time.Now().After(tm.Add(24 * time.Hour)) {
 			key := string(calstateIt.Key())
 			id := strings.Split(key, ":")[1]
-			states, _ := cache.GetCalStateObjectsByAggIds([]string{id})
-			cache.Del(key, "")
-			cache.Del("calstate_by_agg:"+id, "")
+			states, _ := chp.GetCalStateObjectsByAggIds([]string{id})
+			chp.db.Del(key, "")
+			chp.db.Del("calstate_by_agg:"+id, "")
 			for _, s := range states {
-				cache.Del("calstate:"+s.CalId, "")
+				chp.db.Del("calstate:"+s.CalId, "")
 			}
 		}
 	}
@@ -334,18 +342,18 @@ func (cache *Cache) PruneOldState() {
 		if time.Now().After(tm.Add(24 * time.Hour)) {
 			key := string(aggstateIt.Key())
 			id := strings.Split(key, ":")[1]
-			states, _ := cache.GetAggStateObjectsByProofIds([]string{id})
-			cache.Del(key, "")
-			cache.Del("aggstate_by_proof:"+id, "")
+			states, _ := chp.GetAggStateObjectsByProofIds([]string{id})
+			chp.db.Del(key, "")
+			chp.db.Del("aggstate_by_proof:"+id, "")
 			for _, s := range states {
-				cache.Del("aggstate:"+s.AggID, "")
+				chp.db.Del("aggstate:"+s.AggID, "")
 			}
 		}
 	}
 	for ; proofstateIt.Valid(); proofstateIt.Next() {
 		value := proofstateIt.Value()
 		t, err := strconv.ParseInt(string(value), 10, 64)
-		//cache.Logger.Info("Iterating", "key", proofstateIt.Key(), "proofstateIt", string(value))
+		//chp.db.Logger.Info("Iterating", "key", proofstateIt.Key(), "proofstateIt", string(value))
 		if err != nil {
 			continue
 		}
@@ -353,9 +361,9 @@ func (cache *Cache) PruneOldState() {
 		if time.Now().After(tm.Add(24 * time.Hour)) {
 			key := string(proofstateIt.Key())
 			id := strings.Split(key, ":")[1]
-			cache.Del(key, "")
-			cache.Del("proof:"+id, "")
-			cache.Logger.Info("db pruned", "proof", id)
+			chp.db.Del(key, "")
+			chp.db.Del("proof:"+id, "")
+			chp.db.Logger.Info("db pruned", "proof", id)
 		}
 	}
 }

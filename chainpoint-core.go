@@ -190,7 +190,7 @@ func main() {
 	//Instantiate Tendermint Node Config
 
 	//Instantiate ABCI application
-	config := abci.InitConfig(home)
+	config := InitConfig(home)
 	if config.BitcoinNetwork == "mainnet" {
 		config.ChainId = "mainnet-chain-32"
 	}
@@ -236,45 +236,17 @@ func main() {
 
 	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
 
-	hashStore, err := memstore.New(65536)
-	apiStore, err := memstore.New(65536)
-	proofStore, err := memstore.New(65536)
-	if err != nil {
-		panic(err)
-	}
-
-	hashQuota := throttled.RateQuota{throttled.PerMin(3), 5}
-	apiQuota := throttled.RateQuota{throttled.PerSec(15), 50}
-	proofQuota := throttled.RateQuota{throttled.PerSec(25), 100}
-	hashLimiter, err := throttled.NewGCRARateLimiter(hashStore, hashQuota)
-	apiLimiter, err := throttled.NewGCRARateLimiter(apiStore, apiQuota)
-	proofLimiter, err := throttled.NewGCRARateLimiter(proofStore, proofQuota)
-	if err != nil {
-		panic(err)
-	}
-
-	hashRateLimiter := throttled.HTTPRateLimiter{
-		RateLimiter: hashLimiter,
-		VaryBy:      &throttled.VaryBy{RemoteAddr: true},
-	}
-	apiRateLimiter := throttled.HTTPRateLimiter{
-		RateLimiter: apiLimiter,
-		VaryBy:      &throttled.VaryBy{RemoteAddr: true},
-	}
-	proofRateLimiter := throttled.HTTPRateLimiter{
-		RateLimiter: proofLimiter,
-		VaryBy:      &throttled.VaryBy{RemoteAddr: true},
-	}
+	apiHandlers := setupAPI(*app, config)
 
 	r := mux.NewRouter()
-	r.Handle("/", apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)))
-	r.Handle("/hash", hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)))
-	r.Handle("/proofs", proofRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)))
-	r.Handle("/calendar/{txid}", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)))
-	r.Handle("/calendar/{txid}/data", apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)))
-	r.Handle("/status", apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)))
-	r.Handle("/peers", apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)))
-	r.Handle("/gateways/public", apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)))
+	r.Handle("/", apiHandlers.HomeHandler)
+	r.Handle("/hash", apiHandlers.HashHandler)
+	r.Handle("/proofs", apiHandlers.ProofHandler)
+	r.Handle("/calendar/{txid}", apiHandlers.CalHandler)
+	r.Handle("/calendar/{txid}/data", apiHandlers.CalDataHandler)
+	r.Handle("/status", apiHandlers.StatusHandler)
+	r.Handle("/peers", apiHandlers.PeerHandler)
+	r.Handle("/gateways/public", apiHandlers.GatewaysHandler)
 
 	server := &http.Server{
 		Handler:      r,
@@ -287,6 +259,7 @@ func main() {
 	return
 }
 
+// runLnd : We pass in commandline arguments because of undefined DefaultConfig unmarshalling behavior in subRPCServers
 func runLnd(config types.AnchorConfig) {
 	if config.LightningConfig.UseChainpointConfig {
 		lndHome := home + "/.lnd"
@@ -331,4 +304,62 @@ func runLnd(config types.AnchorConfig) {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+// setupAPI : set all API handlers according to options
+func setupAPI(app abci.AnchorApplication, config types.AnchorConfig) types.APIHandlers {
+	var apiHandlers types.APIHandlers
+	if config.RemoveRateLimits {
+		apiHandlers = types.APIHandlers{
+			http.HandlerFunc(app.HomeHandler),
+			http.HandlerFunc(app.HashHandler),
+			http.HandlerFunc(app.ProofHandler),
+			http.HandlerFunc(app.CalHandler),
+			http.HandlerFunc(app.CalDataHandler),
+			http.HandlerFunc(app.StatusHandler),
+			http.HandlerFunc(app.PeerHandler),
+			http.HandlerFunc(app.GatewaysHandler),
+		}
+	} else {
+		hashStore, err := memstore.New(65536)
+		apiStore, err := memstore.New(65536)
+		proofStore, err := memstore.New(65536)
+		if err != nil {
+			panic(err)
+		}
+
+		hashQuota := throttled.RateQuota{throttled.PerMin(config.HashQuota), 5}
+		apiQuota := throttled.RateQuota{throttled.PerSec(config.ApiQuota), 50}
+		proofQuota := throttled.RateQuota{throttled.PerSec(config.ProofQuota), 100}
+		hashLimiter, err := throttled.NewGCRARateLimiter(hashStore, hashQuota)
+		apiLimiter, err := throttled.NewGCRARateLimiter(apiStore, apiQuota)
+		proofLimiter, err := throttled.NewGCRARateLimiter(proofStore, proofQuota)
+		if err != nil {
+			panic(err)
+		}
+
+		hashRateLimiter := throttled.HTTPRateLimiter{
+			RateLimiter: hashLimiter,
+			VaryBy:      &throttled.VaryBy{RemoteAddr: true},
+		}
+		apiRateLimiter := throttled.HTTPRateLimiter{
+			RateLimiter: apiLimiter,
+			VaryBy:      &throttled.VaryBy{RemoteAddr: true},
+		}
+		proofRateLimiter := throttled.HTTPRateLimiter{
+			RateLimiter: proofLimiter,
+			VaryBy:      &throttled.VaryBy{RemoteAddr: true},
+		}
+		apiHandlers = types.APIHandlers{
+			apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)),
+			hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)),
+			proofRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)),
+			apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)),
+			apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)),
+			apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)),
+			apiRateLimiter.RateLimit(http.HandlerFunc(app.PeerHandler)),
+			apiRateLimiter.RateLimit(http.HandlerFunc(app.GatewaysHandler)),
+		}
+	}
+	return apiHandlers
 }

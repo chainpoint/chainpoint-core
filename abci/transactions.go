@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/leader_election"
+	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"strconv"
 	"strings"
@@ -37,6 +37,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 		valid = true
+		app.logger.Info("Syncing, tx validation skipped")
 	}
 	if app.LogError(err) != nil {
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
@@ -45,62 +46,61 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		app.LogError(errors.New(fmt.Sprintf("Validation of peer %s transaction rate failed for tx %+v", tx.CoreID, tx)))
 		return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1} //CodeType for peer disconnection
 	}
-	amVal, _ := leader_election.IsValidator(*app.state, app.ID)
-	isSubmitterVal, _ := leader_election.IsValidator(*app.state, tx.CoreID)
-	if app.state.ChainSynced {
-		switch string(tx.TxType) {
-		case "BTC-A":
-			var btcTxObj types.BtcTxMsg
-			if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil {
-				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-			}
-			if matchErr := app.Anchor.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
-				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-			}
-		case "VAL":
-			err, id, _, power, _ := ValidateValidatorTx(tx.Data)
-			if app.LogError(err) != nil {
-				return types2.ResponseCheckTx{
-					Code: code.CodeTypeEncodingError,
-					Log:  fmt.Sprintf(err.Error()),
-				}
-			}
-			if !isSubmitterVal {
-				if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
-					submitterRecord.UnAuthValSubmissions++
-					validation.SetValidationRecord(tx.CoreID, submitterRecord, app.state)
-				}
-			}
-			if amVal {
-				goodCandidate := false
-				if _, record, err := validation.GetValidationRecord(id, *app.state); err != nil {
-					numValidators := len(app.state.Validators)
-					if power <= 0 { //make it easier to get rid of a validator than to promote one
-						goodCandidate = true
-					} else {
-						goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
-					}
-				}
-				if !(goodCandidate && app.PendingValidator == tx.Data) {
-					app.logger.Info("Validator failed to validate VAL tx")
-					return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-				}
-			}
-		case "CHNGSTK":
-			newStakePerCore, err := strconv.ParseInt(tx.Data, 10, 64)
-			if err != nil || newStakePerCore != app.config.StakePerCore {
-				app.logger.Info("Stake proposal does not match configuration")
-				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-			}
-		case "JWK":
-			if !app.VerifyIdentity(tx) {
-				app.logger.Info("Unable to validate JWK Identity", "CoreID", tx.CoreID)
-				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
-			} else {
-				app.logger.Info("JWK Identity validated", "CoreID", tx.CoreID)
+	amVal, _ := leaderelection.IsValidator(*app.state, app.ID)
+	isSubmitterVal, _ := leaderelection.IsValidator(*app.state, tx.CoreID)
+	switch string(tx.TxType) {
+	case "BTC-A":
+		var btcTxObj types.BtcTxMsg
+		if err := json.Unmarshal([]byte(tx.Data), &btcTxObj); app.LogError(err) != nil {
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		}
+		if matchErr := app.Anchor.CheckAnchor(btcTxObj); app.LogError(matchErr) != nil {
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		}
+	case "VAL":
+		err, id, _, power, _ := ValidateValidatorTx(tx.Data)
+		if app.LogError(err) != nil {
+			return types2.ResponseCheckTx{
+				Code: code.CodeTypeEncodingError,
+				Log:  fmt.Sprintf(err.Error()),
 			}
 		}
+		if !isSubmitterVal {
+			if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
+				submitterRecord.UnAuthValSubmissions++
+				validation.SetValidationRecord(tx.CoreID, submitterRecord, app.state)
+			}
+		}
+		if amVal {
+			goodCandidate := false
+			if _, record, err := validation.GetValidationRecord(id, *app.state); err != nil {
+				numValidators := len(app.state.Validators)
+				if power <= 0 { //make it easier to get rid of a validator than to promote one
+					goodCandidate = true
+				} else {
+					goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
+				}
+			}
+			if !(goodCandidate && app.PendingValidator == tx.Data) {
+				app.logger.Info("Validator failed to validate VAL tx")
+				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+			}
+		}
+	case "CHNGSTK":
+		newStakePerCore, err := strconv.ParseInt(tx.Data, 10, 64)
+		if err != nil || newStakePerCore != app.config.StakePerCore {
+			app.logger.Info("Stake proposal does not match configuration")
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		}
+	case "JWK":
+		if !app.VerifyIdentity(tx) {
+			app.logger.Info("Unable to validate JWK Identity", "CoreID", tx.CoreID)
+			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
+		} else {
+			app.logger.Info("JWK Identity validated", "CoreID", tx.CoreID)
+		}
 	}
+
 	return types2.ResponseCheckTx{Code: code.CodeTypeOK, GasWanted: 1}
 }
 
@@ -130,7 +130,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		go func() {
 			time.Sleep(1 * time.Minute)
 			txHash := tmhash.Sum(rawTx)
-			app.logger.Info("Removing Cal Hash from Cache:", "hash", hex.EncodeToString(txHash))
+			app.logger.Info("Removing Cal Hash from Db:", "hash", hex.EncodeToString(txHash))
 			app.Cache.Del(hex.EncodeToString(txHash), "")
 		}()
 		tags = app.incrementTxInt(tags)

@@ -22,22 +22,22 @@ BUILD_FLAGS = -ldflags "-X github.com/tendermint/tendermint/version.GitCommit=`g
 
 .PHONY : build
 build:
-	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)" chainpoint-core.go
+	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)"
 	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' chainpoint-core
 
 .PHONY : install
 install:
-	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)" chainpoint-core.go
+	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)"
 	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' ${GOPATH}/bin/chainpoint-core
 
 .PHONY : build-dev
 build-dev:
-	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)" chainpoint-core.go
+	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)"
 	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' chainpoint-core
 
 .PHONY : install-dev
 install-dev:
-	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)" chainpoint-core.go
+	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(DEV) $(LND)"
 	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' ${GOPATH}/bin/chainpoint-core
 
 .PHONY : install-deps

@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/blake2s"
-	"github.com/chainpoint/chainpoint-core/leader_election"
-	"github.com/chainpoint/chainpoint-core/lightning"
+	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/chainpoint/chainpoint-core/proof"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/chainpoint/chainpoint-core/uuid"
 	"github.com/gorilla/mux"
-	lnrpc2 "github.com/lightningnetwork/lnd/lnrpc"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -52,67 +50,6 @@ func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	w.Write([]byte(response))
-}
-
-func (app *AnchorApplication) respondLSAT(w http.ResponseWriter, r *http.Request) bool {
-	authorization := r.Header.Get("Authorization")
-	if len(authorization) == 0 {
-		lsat, err := app.LnClient.GenerateHodlLSAT(util.GetClientIP(r))
-		if app.LogError(err) != nil {
-			errorMessage := map[string]interface{}{"error": "Could not generate LSAT"}
-			respondJSON(w, http.StatusInternalServerError, errorMessage)
-			return true
-		}
-		challenge := lsat.ToChallenge()
-		app.logger.Info(fmt.Sprintf("LSAT toChallenge: %s", challenge))
-		w.Header().Set("www-authenticate", challenge)
-		errorMessage := map[string]interface{}{"error": "message: payment required"}
-		respondJSON(w, http.StatusPaymentRequired, errorMessage)
-		return true
-	} else {
-		lsat, err := lightning.FromHeader(&r.Header)
-		app.logger.Info(fmt.Sprintf("LSAT fromChallenge: %#v", lsat))
-		if app.LogError(err) != nil {
-			errorMessage := map[string]interface{}{"error": "Invalid LSAT provided in Authorization header"}
-			respondJSON(w, http.StatusInternalServerError, errorMessage)
-			return true
-		}
-		invoice, err := app.LnClient.LookupInvoice(lsat.PayHash)
-		if app.LogError(err) != nil {
-			errorMessage := map[string]interface{}{"error": fmt.Sprintf("No matching invoice found for payhash %s", lsat.PayHash)}
-			respondJSON(w, http.StatusNotFound, errorMessage)
-			return true
-		}
-		switch invoice.State {
-		case lnrpc2.Invoice_SETTLED:
-			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice has already been settled. Try again with a different LSAT"}
-			respondJSON(w, http.StatusUnauthorized, errorMessage)
-			return true
-		case lnrpc2.Invoice_OPEN:
-			lsat.Invoice = invoice.PaymentRequest
-			challenge := lsat.ToChallenge()
-			app.logger.Info(fmt.Sprintf("LSAT toChallenge Invoice Open: %s", challenge))
-			w.Header().Set("www-authenticate", challenge)
-			errorMessage := map[string]interface{}{"message": "Payment Required"}
-			respondJSON(w, http.StatusPaymentRequired, errorMessage)
-			return true
-		case lnrpc2.Invoice_CANCELED:
-			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice has been cancelled. Try again with a different LSAT"}
-			respondJSON(w, http.StatusUnauthorized, errorMessage)
-			return true
-		case lnrpc2.Invoice_ACCEPTED:
-			break
-		default:
-			errorMessage := map[string]interface{}{"error": "Unauthorized: Invoice in an unknown state"}
-			respondJSON(w, http.StatusUnauthorized, errorMessage)
-			return true
-		}
-		token := lsat.ToToken()
-		app.logger.Info(fmt.Sprintf("LSAT toToken: %s", token))
-		w.Header().Set("authorization", token)
-		return false // don't exit top level handler
-	}
-
 }
 
 func (app *AnchorApplication) StatusHandler(w http.ResponseWriter, r *http.Request) {
@@ -162,13 +99,10 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	if len(ipStrs) == 2 {
 		ip = ipStrs[0]
 	}
-	if !(app.config.UseAllowlist && util.ArrayContains(app.config.GatewayAllowlist, ip)) {
-		if app.respondLSAT(w, r) {
-			//TODO lsat validation
-			return
-		}
-	} else {
+	if app.config.UseAllowlist && util.ArrayContains(app.config.GatewayAllowlist, ip) {
 		app.logger.Info("IP allowed access without LSAT")
+	} else if app.LnClient.RespondLSAT(w, r) {
+		return
 	}
 	contentType := r.Header.Get("Content-type")
 	if contentType != "application/json" {
@@ -215,7 +149,7 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 		},
 	}
 	go app.Analytics.SendEvent(app.state.LatestTimeRecord, "HashReceived", hashResponse.ProofId, hashResponse.HashReceived, ip, "", ip)
-	// Add hash item to aggregator
+	// Append hash item to aggregator
 	app.aggregator.AddHashItem(types.HashItem{Hash: hash.Hash, ProofID: proofId})
 	respondJSON(w, http.StatusOK, hashResponse)
 }
@@ -238,7 +172,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": errStr})
 		}
 	}
-	proofStates, err := app.Cache.GetProofsByProofIds(proofids)
+	proofStates, err := app.ChainpointDb.GetProofsByProofIds(proofids)
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve proofs"})
 	}
@@ -282,7 +216,7 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 	if _, exists := vars["txid"]; exists {
 		result, err := app.rpc.GetTxByHash(vars["txid"])
 		if err != nil {
-			root, err := app.Cache.GetOne(vars["txid"])
+			root, err := app.Cache.Get(vars["txid"])
 			if app.LogError(err) != nil {
 				respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve tx"})
 				return
@@ -311,7 +245,7 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 func (app *AnchorApplication) PeerHandler(w http.ResponseWriter, r *http.Request) {
 	//ip := util.GetClientIP(r)
 	//app.logger.Info(fmt.Sprintf("Peers Client IP: %s", ip))
-	peers := leader_election.GetPeers(*app.state, app.state.TMState, app.state.TMNetInfo)
+	peers := leaderelection.GetPeers(*app.state, app.state.TMState, app.state.TMNetInfo)
 	peerList := []string{}
 	for _, peer := range peers {
 		var finalIp string

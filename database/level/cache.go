@@ -7,21 +7,25 @@ import (
 	dbm "github.com/tendermint/tm-db"
 )
 
-type Cache struct {
+type KVStore struct {
 	RedisClient *redis.Client
 	LevelDb     dbm.DB
 	Logger      log.Logger
 }
 
-// create redis caching layer that gradually migrates to leveldb
-func NewCache(db *dbm.DB, logger log.Logger) *Cache {
-	return &Cache{
+func NewKVStore(db *dbm.DB, logger log.Logger) *KVStore {
+	return &KVStore{
 		LevelDb: *db,
 		Logger:  logger,
 	}
 }
 
-func (cache *Cache) Get(key string) ([]string, error) {
+func (cache *KVStore) Get(key string) (string, error) {
+	bArr, err := cache.LevelDb.Get([]byte(key))
+	return string(bArr), err
+}
+
+func (cache *KVStore) GetArray(key string) ([]string, error) {
 	bArr, err := cache.LevelDb.Get([]byte(key))
 	if err != nil {
 		return []string{}, err
@@ -37,14 +41,8 @@ func (cache *Cache) Get(key string) ([]string, error) {
 	return arr, nil
 }
 
-func (cache *Cache) GetOne(key string) (string, error) {
-	bArr, err := cache.LevelDb.Get([]byte(key))
-	return string(bArr), err
-
-}
-
-func (cache *Cache) Add(key string, value string) error {
-	results, err := cache.Get(key)
+func (cache *KVStore) Append(key string, value string) error {
+	results, err := cache.GetArray(key)
 	if err != nil {
 		return err
 	}
@@ -57,7 +55,7 @@ func (cache *Cache) Add(key string, value string) error {
 	return nil
 }
 
-func (cache *Cache) SetArray(key string, values []string) error {
+func (cache *KVStore) SetArray(key string, values []string) error {
 	bArr, _ := json.Marshal(values)
 	err := cache.LevelDb.Set([]byte(key), bArr)
 	if err != nil {
@@ -66,7 +64,7 @@ func (cache *Cache) SetArray(key string, values []string) error {
 	return nil
 }
 
-func (cache *Cache) Set(key string, value string) error {
+func (cache *KVStore) Set(key string, value string) error {
 	err := cache.LevelDb.Set([]byte(key), []byte(value))
 	if err != nil {
 		return err
@@ -74,11 +72,11 @@ func (cache *Cache) Set(key string, value string) error {
 	return nil
 }
 
-func (cache *Cache) Del(key string, value string) error {
+func (cache *KVStore) Del(key string, value string) error {
 	if value == "" {
 		return cache.LevelDb.Delete([]byte(key))
 	}
-	results, err := cache.Get(key)
+	results, err := cache.GetArray(key)
 	if err != nil {
 		return err
 	}

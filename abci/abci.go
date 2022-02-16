@@ -8,7 +8,8 @@ import (
 	analytics2 "github.com/chainpoint/chainpoint-core/analytics"
 	"github.com/chainpoint/chainpoint-core/anchor"
 	"github.com/chainpoint/chainpoint-core/anchor/bitcoin"
-	"github.com/chainpoint/chainpoint-core/level"
+	"github.com/chainpoint/chainpoint-core/database"
+	"github.com/chainpoint/chainpoint-core/database/level"
 	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"net"
@@ -84,8 +85,9 @@ type AnchorApplication struct {
 	config               types.AnchorConfig
 	logger               log.Logger
 	aggregator           *aggregator.Aggregator
-	Cache                *level.Cache
-	LnClient             *lightning.LnClient
+	ChainpointDb         database.ChainpointDatabase
+	Cache                *level.KVStore
+	LnClient             *lightning.LightningClient
 	rpc                  *tendermint_rpc.RPC
 	ID                   string
 	JWK                  types.Jwk
@@ -130,9 +132,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
-	cache := level.NewCache(&db, *config.Logger)
+	cache := level.NewKVStore(&db, *config.Logger)
 
-	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, cache, &config.LightningConfig, *config.Logger, &analytics)
+	var database database.ChainpointDatabase = level.NewDB(cache)
+
+	var anchorEngine anchor.AnchorEngine = bitcoin.NewBTCAnchorEngine(state, config, rpcClient, &database, cache, &config.LightningConfig, *config.Logger, &analytics)
 
 	//Construct application
 	app := AnchorApplication{
@@ -147,11 +151,12 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
 		},
-		Cache:     cache,
-		LnClient:  &config.LightningConfig,
-		rpc:       rpcClient,
-		JWK:       jwkType,
-		Analytics: &analytics,
+		ChainpointDb: database,
+		Cache:        cache,
+		LnClient:     &config.LightningConfig,
+		rpc:          rpcClient,
+		JWK:          jwkType,
+		Analytics:    &analytics,
 	}
 
 	app.logger.Info("Tendermint Block Height", "block_height", app.state.Height)
@@ -259,7 +264,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 			}
 		}()
 		if app.config.DoAnchor {
-			go app.Cache.PruneOldState()
+			go app.ChainpointDb.PruneOldState()
 		}
 	}
 	// check if we need to vote on a pending validator proposal

@@ -36,12 +36,12 @@ func (app *AnchorApplication) StartAnchoring() {
 func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 	app.logger.Debug("starting scheduled aggregation")
 
-	// Get agg objects
+	// GetArray agg objects
 	aggs := app.aggregator.AggregateAndReset()
 	aggStates := make([]types.AggState, 0)
 	for _, agg := range aggs {
 		aggStates = append(aggStates, agg.AggStates...)
-		app.LogError(app.Cache.BulkInsertAggState(agg.AggStates))
+		app.LogError(app.ChainpointDb.BulkInsertAggState(agg.AggStates))
 	}
 	app.logger.Debug(fmt.Sprintf("Aggregated %d roots: ", len(aggs)))
 	app.logger.Debug(fmt.Sprintf("Aggregation Tree: %#v", aggs))
@@ -64,7 +64,7 @@ func (app *AnchorApplication) AnchorCalendar(height int64) (int, error) {
 			calStates := calendar.CreateCalStateMessage(app.config.CoreURI, tx, calAgg)
 			app.logger.Info(fmt.Sprintf("Cal States for CalRoot %s: %#v", calAgg.CalRoot, calStates))
 			app.logger.Info("Generating Cal Batch")
-			app.LogError(app.Cache.BulkInsertCalState(calStates))
+			app.LogError(app.ChainpointDb.BulkInsertCalState(calStates))
 			app.LogError(app.GenerateCalBatch(aggStates, calStates))
 			hashRoot := hex.EncodeToString(tx.Hash)
 			app.Cache.Set(hashRoot, calAgg.CalRoot)
@@ -84,8 +84,8 @@ func (app *AnchorApplication) GenerateCalBatch(aggStates []types.AggState, calSt
 	proofs := []types.ProofState{}
 	for _, aggStateRow := range aggStates {
 		proof := proof.Proof()
-		app.LogError(proof.AddChainpointHeader(aggStateRow.Hash, aggStateRow.ProofID))
-		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], app.config.BitcoinNetwork))
+		app.LogError(proof.AddChainpointHeader("https://w3id.org/chainpoint/v4", "Chainpoint", aggStateRow.Hash, aggStateRow.ProofID))
+		app.LogError(proof.AddCalendarBranch(aggStateRow, calLookUp[aggStateRow.AggID], proof.SetProofType(app.config.BitcoinNetwork, "cal")))
 		proofBytes, err := json.Marshal(proof)
 		app.logger.Info(fmt.Sprintf("Proof: %s", string(proofBytes)))
 		if app.LogError(err) != nil {
@@ -97,5 +97,5 @@ func (app *AnchorApplication) GenerateCalBatch(aggStates []types.AggState, calSt
 		}
 		proofs = append(proofs, proofState)
 	}
-	return app.LogError(app.Cache.BulkInsertProofs(proofs))
+	return app.LogError(app.ChainpointDb.BulkInsertProofs(proofs))
 }

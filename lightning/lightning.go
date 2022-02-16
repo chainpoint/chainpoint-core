@@ -27,7 +27,6 @@ import (
 
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/lightningnetwork/lnd/lnrpc/walletrpc"
-	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/lightningnetwork/lnd/lnrpc"
 
@@ -38,13 +37,12 @@ import (
 	macaroon "gopkg.in/macaroon.v2"
 )
 
-type LnClient struct {
+type LightningClient struct {
 	ServerHostPort      string
 	TlsPath             string
 	MacPath             string
 	MinConfs            int64
 	TargetConfs         int64
-	Logger              log.Logger
 	LndLogLevel         string
 	Testnet             bool
 	WalletAddress       string
@@ -61,107 +59,99 @@ var (
 	maxMsgRecvSize = grpc.MaxCallRecvMsgSize(1 * 1024 * 1024 * 200)
 )
 
-// LoggerError : Log error if it exists using a logger
-func (ln *LnClient) LoggerError(err error) error {
-	if err != nil {
-		ln.Logger.Error(fmt.Sprintf("Error in %s: %s", GetCurrentFuncName(2), err.Error()))
-	}
-	return err
-}
-
 // GetCurrentFuncName : get name of function being called
 func GetCurrentFuncName(numCallStack int) string {
 	pc, _, _, _ := runtime.Caller(numCallStack)
 	return fmt.Sprintf("%s", runtime.FuncForPC(pc).Name())
 }
 
-func (ln *LnClient) GetClient() (lnrpc.LightningClient, func(), error) {
+func (ln *LightningClient) GetClient() (lnrpc.LightningClient, func(), error) {
 	conn, err := ln.CreateConn()
 	closeIt := func() {
 		conn.Close()
 	}
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, nil, err
 	}
 	return lnrpc.NewLightningClient(conn), closeIt, nil
 }
 
-func (ln *LnClient) GetWalletUnlockerClient() (lnrpc.WalletUnlockerClient, func(), error) {
+func (ln *LightningClient) GetWalletUnlockerClient() (lnrpc.WalletUnlockerClient, func(), error) {
 	conn, err := ln.CreateConn()
 	closeIt := func() {
 		conn.Close()
 	}
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, nil, err
 	}
 	return lnrpc.NewWalletUnlockerClient(conn), closeIt, nil
 }
 
-func (ln *LnClient) GetWalletClient() (walletrpc.WalletKitClient, func(), error) {
+func (ln *LightningClient) GetWalletClient() (walletrpc.WalletKitClient, func(), error) {
 	conn, err := ln.CreateConn()
 	closeIt := func() {
 		conn.Close()
 	}
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, nil, err
 	}
 	return walletrpc.NewWalletKitClient(conn), closeIt, nil
 }
 
-func (ln *LnClient) GetInvoiceClient() (invoicesrpc.InvoicesClient, func(), error) {
+func (ln *LightningClient) GetInvoiceClient() (invoicesrpc.InvoicesClient, func(), error) {
 	conn, err := ln.CreateConn()
 	closeIt := func() {
 		conn.Close()
 	}
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, nil, err
 	}
 	return invoicesrpc.NewInvoicesClient(conn), closeIt, nil
 }
 
-func (ln *LnClient) Unlocker() error {
+func (ln *LightningClient) Unlocker() error {
 	conn, close, err := ln.GetWalletUnlockerClient()
 	defer close()
 	if err != nil {
 		return err
 	}
 	unlockReq := lnrpc.UnlockWalletRequest{
-		WalletPassword:       []byte(ln.WalletPass),
-		RecoveryWindow:       10000,
-		ChannelBackups:       nil,
+		WalletPassword: []byte(ln.WalletPass),
+		RecoveryWindow: 10000,
+		ChannelBackups: nil,
 	}
 	_, err = conn.UnlockWallet(context.Background(), &unlockReq)
 	if err != nil {
 		if strings.Contains(err.Error(), "unknown service lnrpc.WalletUnlocker") || strings.Contains(err.Error(), "wallet already unlocked") {
 			return nil
 		}
-		return ln.LoggerError(err)
+		return err
 	}
 	return nil
 }
 
-func (ln *LnClient) InitWallet() error {
+func (ln *LightningClient) InitWallet() error {
 	conn, close, err := ln.GetWalletUnlockerClient()
 	defer close()
 	if err != nil {
 		return err
 	}
 	initReq := lnrpc.InitWalletRequest{
-		WalletPassword:       []byte(ln.WalletPass),
-		CipherSeedMnemonic:   ln.WalletSeed,
-		AezeedPassphrase:     nil,
-		RecoveryWindow:       10000,
-		ChannelBackups:       nil,
-		StatelessInit:        false,
+		WalletPassword:     []byte(ln.WalletPass),
+		CipherSeedMnemonic: ln.WalletSeed,
+		AezeedPassphrase:   nil,
+		RecoveryWindow:     10000,
+		ChannelBackups:     nil,
+		StatelessInit:      false,
 	}
 	_, err = conn.InitWallet(context.Background(), &initReq)
 	if err != nil {
-		return ln.LoggerError(err)
+		return err
 	}
 	return nil
 }
 
-func (ln *LnClient) GenSeed() ([]string, error) {
+func (ln *LightningClient) GenSeed() ([]string, error) {
 	conn, close, err := ln.GetWalletUnlockerClient()
 	defer close()
 	if err != nil {
@@ -170,27 +160,27 @@ func (ln *LnClient) GenSeed() ([]string, error) {
 	seedReq := lnrpc.GenSeedRequest{}
 	resp, err := conn.GenSeed(context.Background(), &seedReq)
 	if err != nil {
-		return []string{}, ln.LoggerError(err)
+		return []string{}, err
 	}
 	return resp.CipherSeedMnemonic, nil
 }
 
-func (ln *LnClient) NewAddress() (string, error) {
+func (ln *LightningClient) NewAddress() (string, error) {
 	conn, close, err := ln.GetClient()
 	defer close()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return "", err
 	}
 	addrReq := lnrpc.NewAddressRequest{Type: 0}
 	resp, err := conn.NewAddress(context.Background(), &addrReq)
 	if err != nil {
-		return "", ln.LoggerError(err)
+		return "", err
 	}
 	return resp.Address, nil
 }
 
-func CreateClient(serverHostPort string, tlsPath string, macPath string) LnClient {
-	return LnClient{
+func CreateClient(serverHostPort string, tlsPath string, macPath string) LightningClient {
+	return LightningClient{
 		ServerHostPort: serverHostPort,
 		TlsPath:        tlsPath,
 		MacPath:        macPath,
@@ -224,9 +214,9 @@ func GetIpFromUri(uri string) string {
 	return ipArr[0]
 }
 
-func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
+func (ln *LightningClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 	defer closeFunc()
@@ -234,9 +224,9 @@ func (ln *LnClient) GetInfo() (*lnrpc.GetInfoResponse, error) {
 	return resp, err
 }
 
-func (ln *LnClient) GetWalletBalance() (*lnrpc.WalletBalanceResponse, error) {
+func (ln *LightningClient) GetWalletBalance() (*lnrpc.WalletBalanceResponse, error) {
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 	defer closeFunc()
@@ -244,14 +234,14 @@ func (ln *LnClient) GetWalletBalance() (*lnrpc.WalletBalanceResponse, error) {
 	return resp, err
 }
 
-func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) {
+func (ln *LightningClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) {
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.TransactionDetails{}, err
 	}
 	defer closeFunc()
 	txResponse, err := client.GetTransactions(context.Background(), &lnrpc.GetTransactionsRequest{})
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.TransactionDetails{}, err
 	}
 	for _, tx := range txResponse.Transactions {
@@ -262,33 +252,33 @@ func (ln *LnClient) GetTransaction(id []byte) (lnrpc.TransactionDetails, error) 
 	return lnrpc.TransactionDetails{}, nil
 }
 
-func (ln *LnClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error) {
+func (ln *LightningClient) GetBlockByHeight(height int64) (lnrpc.BlockDetails, error) {
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.BlockDetails{}, err
 	}
 	defer closeFunc()
 	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHeight: uint32(height)})
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.BlockDetails{}, err
 	}
 	return *block, nil
 }
 
-func (ln *LnClient) GetBlockByHash(hash string) (lnrpc.BlockDetails, error) {
+func (ln *LightningClient) GetBlockByHash(hash string) (lnrpc.BlockDetails, error) {
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.BlockDetails{}, err
 	}
 	defer closeFunc()
 	block, err := client.GetBlock(context.Background(), &lnrpc.GetBlockRequest{BlockHash: hash})
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.BlockDetails{}, err
 	}
 	return *block, nil
 }
 
-func (ln *LnClient) PeerExists(peer string) (bool, error) {
+func (ln *LightningClient) PeerExists(peer string) (bool, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return false, errors.New("Malformed peer string (must be pubKey@host)")
@@ -296,7 +286,7 @@ func (ln *LnClient) PeerExists(peer string) (bool, error) {
 	pubKey := peerParts[0]
 	addr := peerParts[1]
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return false, err
 	}
 	defer closeFunc()
@@ -312,7 +302,7 @@ func (ln *LnClient) PeerExists(peer string) (bool, error) {
 	return false, nil
 }
 
-func (ln *LnClient) AddPeer(peer string) error {
+func (ln *LightningClient) AddPeer(peer string) error {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return errors.New("Malformed peer string (must be pubKey@host)")
@@ -325,7 +315,7 @@ func (ln *LnClient) AddPeer(peer string) error {
 		Addr: &peerAddr,
 	}
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return err
 	}
 	defer closeFunc()
@@ -336,34 +326,30 @@ func (ln *LnClient) AddPeer(peer string) error {
 	return nil
 }
 
-func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
+func (ln *LightningClient) AnyChannelExists(peer string, satVal int64) (bool, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return false, errors.New("Malformed peer string (must be pubKey@host)")
 	}
 	remotePubkey := peerParts[0]
 	channels, err := ln.GetChannels()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return false, err
 	}
 	for _, chann := range channels.Channels {
 		if chann.RemotePubkey == remotePubkey {
-			ln.Logger.Info("Channel found")
 			if chann.Capacity >= satVal {
-				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
 				return true, nil
 			}
 		}
 	}
 	pending, err := ln.GetPendingChannels()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return false, err
 	}
 	for _, chann := range pending.PendingOpenChannels {
 		if chann.Channel.RemoteNodePub == remotePubkey {
-			ln.Logger.Info("Pending Channel found")
 			if chann.Channel.Capacity >= satVal {
-				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Channel.Capacity)
 				return true, nil
 			}
 		}
@@ -371,21 +357,19 @@ func (ln *LnClient) ChannelExists(peer string, satVal int64) (bool, error) {
 	return false, nil
 }
 
-func (ln *LnClient) OurChannelOpenAndFunded(peer string, satVal int64) (bool, error) {
+func (ln *LightningClient) OurChannelOpenAndFunded(peer string, satVal int64) (bool, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return false, errors.New("Malformed peer string (must be pubKey@host)")
 	}
 	remotePubkey := peerParts[0]
 	channels, err := ln.GetChannels()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return false, err
 	}
 	for _, chann := range channels.Channels {
 		if chann.RemotePubkey == remotePubkey {
-			ln.Logger.Info("Channel found")
 			if chann.Capacity >= satVal {
-				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
 				return true, nil
 			}
 		}
@@ -393,21 +377,19 @@ func (ln *LnClient) OurChannelOpenAndFunded(peer string, satVal int64) (bool, er
 	return false, nil
 }
 
-func (ln *LnClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool, error) {
+func (ln *LightningClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return false, errors.New("Malformed peer string (must be pubKey@host)")
 	}
 	remotePubkey := peerParts[0]
 	channels, err := ln.GetChannels()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return false, err
 	}
 	for _, chann := range channels.Channels {
 		if chann.RemotePubkey == remotePubkey {
-			ln.Logger.Info("Channel found")
 			if chann.Capacity >= satVal {
-				ln.Logger.Info("Funding is correct value ", "Capacity", chann.Capacity)
 				return true, nil
 			}
 		}
@@ -415,9 +397,9 @@ func (ln *LnClient) RemoteChannelOpenAndFunded(peer string, satVal int64) (bool,
 	return false, nil
 }
 
-func (ln *LnClient) GetChannels() (*lnrpc.ListChannelsResponse, error) {
+func (ln *LightningClient) GetChannels() (*lnrpc.ListChannelsResponse, error) {
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 	defer closeFunc()
@@ -425,9 +407,9 @@ func (ln *LnClient) GetChannels() (*lnrpc.ListChannelsResponse, error) {
 	return channels, err
 }
 
-func (ln *LnClient) GetPendingChannels() (*lnrpc.PendingChannelsResponse, error) {
+func (ln *LightningClient) GetPendingChannels() (*lnrpc.PendingChannelsResponse, error) {
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 	defer closeFunc()
@@ -435,13 +417,13 @@ func (ln *LnClient) GetPendingChannels() (*lnrpc.PendingChannelsResponse, error)
 	return channels, err
 }
 
-func (ln *LnClient) CreateChannel(peer string, satVal int64) (lnrpc.Lightning_OpenChannelClient, error) {
+func (ln *LightningClient) CreateChannel(peer string, satVal int64) (lnrpc.Lightning_OpenChannelClient, error) {
 	peerParts := strings.Split(peer, "@")
 	if len(peerParts) != 2 {
 		return nil, errors.New("Malformed peer string (must be pubKey@host)")
 	}
 	pubKey, err := hex.DecodeString(peerParts[0])
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 	openSesame := lnrpc.OpenChannelRequest{
@@ -455,22 +437,22 @@ func (ln *LnClient) CreateChannel(peer string, satVal int64) (lnrpc.Lightning_Op
 		openSesame.TargetConf = int32(ln.TargetConfs)
 	}
 	client, closeFunc, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 	defer closeFunc()
 	resp, err := client.OpenChannel(context.Background(), &openSesame)
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 	return resp, nil
 }
 
-func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
+func (ln *LightningClient) CreateConn() (*grpc.ClientConn, error) {
 	// Load the specified TLS certificate and build transport credentials
 	// with it.
 	creds, err := credentials.NewClientTLSFromFile(ln.TlsPath, "")
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -481,7 +463,7 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 
 	if !ln.NoMacaroons {
 		macBytes, err := ioutil.ReadFile(ln.MacPath)
-		if ln.LoggerError(err) != nil {
+		if err != nil {
 			return nil, err
 		}
 
@@ -496,7 +478,7 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 
 		// Apply constraints to the macaroon.
 		constrainedMac, err := macaroons.AddConstraints(mac, macConstraints...)
-		if ln.LoggerError(err) != nil {
+		if err != nil {
 			return nil, err
 		}
 
@@ -516,17 +498,17 @@ func (ln *LnClient) CreateConn() (*grpc.ClientConn, error) {
 	opts = append(opts, grpc.WithDefaultCallOptions(maxMsgRecvSize))
 
 	conn, err := grpc.Dial(ln.ServerHostPort, opts...)
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return nil, err
 	}
 	return conn, nil
 }
 
-func (ln *LnClient) feeSatByteToWeight() int64 {
+func (ln *LightningClient) feeSatByteToWeight() int64 {
 	return int64(ln.LastFee * 1000 / blockchain.WitnessScaleFactor)
 }
 
-func (ln *LnClient) GetLndFeeEstimate() (int64, error) {
+func (ln *LightningClient) GetLndFeeEstimate() (int64, error) {
 	wallet, closeFunc, err := ln.GetWalletClient()
 	defer closeFunc()
 	fee, err := wallet.EstimateFee(context.Background(), &walletrpc.EstimateFeeRequest{ConfTarget: 2})
@@ -539,49 +521,45 @@ func (ln *LnClient) GetLndFeeEstimate() (int64, error) {
 	return fee.SatPerKw, nil
 }
 
-func (ln *LnClient) AnchorData(hash []byte) (string, string, error) {
+func (ln *LightningClient) AnchorData(hash []byte) (string, string, error) {
 	b := txscript.NewScriptBuilder()
 	b.AddOp(txscript.OP_RETURN)
 	b.AddData(hash)
 	outputScript, err := b.Script()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return "", "", err
 	}
 	wallet, closeFunc, err := ln.GetWalletClient()
 	defer closeFunc()
-	ln.Logger.Info("Ln Wallet client created")
 	outputs := []*signrpc.TxOut{
 		{
 			Value:    0,
 			PkScript: outputScript,
 		},
 	}
-	ln.Logger.Info(fmt.Sprintf("Sending Outputs: %v", outputs))
-	ln.Logger.Info(fmt.Sprintf("Anchoring with FEE: %d", ln.LastFee))
 	outputRequest := walletrpc.SendOutputsRequest{SatPerKw: ln.LastFee, Outputs: outputs}
 	resp, err := wallet.SendOutputs(context.Background(), &outputRequest)
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return "", "", err
 	}
 	tx, err := btcutil.NewTxFromBytes(resp.RawTx)
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return "", "", err
 	}
-	ln.Logger.Info(fmt.Sprintf("Ln SendOutputs Response: %+v", resp))
 	var msgTx wire.MsgTx
-	if ln.LoggerError(msgTx.BtcDecode(bytes.NewReader(resp.RawTx), 0, wire.WitnessEncoding)); err != nil {
+	if err := msgTx.BtcDecode(bytes.NewReader(resp.RawTx), 0, wire.WitnessEncoding); err != nil {
 		return "", "", err
 	}
 	buf := bytes.NewBuffer(make([]byte, 0, msgTx.SerializeSizeStripped()))
-	if ln.LoggerError(msgTx.SerializeNoWitness(buf)); err != nil {
+	if err := msgTx.SerializeNoWitness(buf); err != nil {
 		return "", "", err
 	}
 	return tx.Hash().String(), hex.EncodeToString(buf.Bytes()), nil
 }
 
-func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCoinsResponse, error) {
+func (ln *LightningClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCoinsResponse, error) {
 	wallet, closeWalletFunc, err := ln.GetWalletClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.SendCoinsResponse{}, err
 	}
 	defer closeWalletFunc()
@@ -598,26 +576,25 @@ func (ln *LnClient) SendCoins(addr string, amt int64, confs int32) (lnrpc.SendCo
 		SatPerByte: estimatedFee.SatPerKw,
 	}
 	resp, err := client.SendCoins(context.Background(), &sendCoinsReq)
-	ln.LoggerError(err)
 	return *resp, err
 }
 
-func (ln *LnClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
+func (ln *LightningClient) LookupInvoice(payhash []byte) (lnrpc.Invoice, error) {
 	lightning, close, err := ln.GetClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.Invoice{}, err
 	}
 	defer close()
 	invoice, err := lightning.LookupInvoice(context.Background(), &lnrpc.PaymentHash{RHash: payhash})
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return lnrpc.Invoice{}, err
 	}
 	return *invoice, nil
 }
 
-func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (walletrpc.BumpFeeResponse, error) {
+func (ln *LightningClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (walletrpc.BumpFeeResponse, error) {
 	wallet, close, err := ln.GetWalletClient()
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return walletrpc.BumpFeeResponse{}, err
 	}
 	defer close()
@@ -638,8 +615,7 @@ func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (w
 		return walletrpc.BumpFeeResponse{}, err
 	}
 	var msgTx wire.MsgTx
-	if ln.LoggerError(msgTx.BtcDecode(bytes.NewReader(decodedTx), 0, wire.WitnessEncoding)); err != nil {
-		ln.Logger.Info("RBF Decoding for tx output failed")
+	if err := msgTx.BtcDecode(bytes.NewReader(decodedTx), 0, wire.WitnessEncoding); err != nil {
 		return walletrpc.BumpFeeResponse{}, err
 	}
 	chainParam := chaincfg.Params{}
@@ -653,19 +629,16 @@ func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (w
 		script, _, _, err := txscript.ExtractPkScriptAddrs(
 			txOut.PkScript, &chainParam,
 		)
-		ln.Logger.Info(fmt.Sprintf("Extracted script %s from output %d", script.String(), i))
-		if ln.LoggerError(err) != nil {
+		if err != nil {
 			continue
 		}
 		if OPRETURNIndex {
 			if script.String() == txscript.NullDataTy.String() {
-				ln.Logger.Info("Selected OP_RETURN output")
 				outputIndex = uint32(i)
 				break
 			}
 		} else {
 			if script.String() != txscript.NullDataTy.String() {
-				ln.Logger.Info("Selected Payment output")
 				outputIndex = uint32(i)
 				break
 			}
@@ -674,28 +647,27 @@ func (ln *LnClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee int) (w
 	txIdHash := (msgTx).TxHash()
 	txIdBytes := txIdHash.CloneBytes()
 	outpoint := lnrpc.OutPoint{
-		TxidBytes:            txIdBytes,
-		OutputIndex:          outputIndex,
+		TxidBytes:   txIdBytes,
+		OutputIndex: outputIndex,
 	}
 	rbfReq := walletrpc.BumpFeeRequest{
-		Outpoint:             &outpoint,
-		TargetConf:           0,
-		SatPerByte:           uint32(newfee),
+		Outpoint:   &outpoint,
+		TargetConf: 0,
+		SatPerByte: uint32(newfee),
 	}
 	resp, err := wallet.BumpFee(context.Background(), &rbfReq)
-	if ln.LoggerError(err) != nil {
+	if err != nil {
 		return walletrpc.BumpFeeResponse{}, err
 	}
 	return *resp, nil
 }
 
-func (ln *LnClient) WaitForConnection(d time.Duration) error {
+func (ln *LightningClient) WaitForConnection(d time.Duration) error {
 	//Wait for lightning connection
 	deadline := time.Now().Add(d)
 	for !time.Now().After(deadline) {
 		conn, err := ln.CreateConn()
 		if err != nil {
-			ln.Logger.Error("Waiting on lnd to be ready...")
 			time.Sleep(5 * time.Second)
 			continue
 		} else {
@@ -706,12 +678,11 @@ func (ln *LnClient) WaitForConnection(d time.Duration) error {
 	return errors.New("Exceeded LND Connection deadline: check that LND has peers")
 }
 
-func (ln *LnClient) WaitForMacaroon(d time.Duration) error {
+func (ln *LightningClient) WaitForMacaroon(d time.Duration) error {
 	//Wait for lightning connection
 	deadline := time.Now().Add(d)
 	for !time.Now().After(deadline) {
 		if _, err := os.Stat(ln.MacPath); os.IsNotExist(err) {
-			ln.Logger.Error("Waiting on lnd admin to be ready...")
 			time.Sleep(5 * time.Second)
 			continue
 		} else {
@@ -721,13 +692,12 @@ func (ln *LnClient) WaitForMacaroon(d time.Duration) error {
 	return errors.New("Exceeded LND Macaroon deadline: check that LND has peers")
 }
 
-func (ln *LnClient) WaitForNewAddress(d time.Duration) (string, error) {
+func (ln *LightningClient) WaitForNewAddress(d time.Duration) (string, error) {
 	//Wait for lightning connection
 	deadline := time.Now().Add(d)
 	for !time.Now().After(deadline) {
 		addr, err := ln.NewAddress()
 		if err != nil {
-			ln.Logger.Error("Waiting on lnd to be ready to give new address...")
 			time.Sleep(5 * time.Second)
 			continue
 		} else {

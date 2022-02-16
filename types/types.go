@@ -8,6 +8,7 @@ import (
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	types3 "github.com/tendermint/tendermint/types"
 	"math/big"
+	"net/http"
 
 	"github.com/tendermint/tendermint/privval"
 
@@ -36,7 +37,7 @@ type AnchorConfig struct {
 	BitcoinNetwork   string
 	ElectionMode     string
 	TendermintConfig TendermintConfig
-	LightningConfig  lightning.LnClient
+	LightningConfig  lightning.LightningClient
 	EthConfig        EthConfig
 	ECPrivateKey     *ecdsa.PrivateKey
 	DoNodeManagement bool
@@ -61,6 +62,10 @@ type AnchorConfig struct {
 	CoreName         string
 	AnalyticsID      string
 	ProposedVal      string
+	RemoveRateLimits bool
+	HashQuota        int
+	ApiQuota         int
+	ProofQuota       int
 }
 
 //EthConfig holds contract addresses and eth node URI
@@ -404,4 +409,15 @@ type CoreAPIStatus struct {
 	NodeInfo            p2p.DefaultNodeInfo     `json:"node_info"`
 	SyncInfo            coretypes.SyncInfo      `json:"sync_info"`
 	ValidatorInfo       coretypes.ValidatorInfo `json:"-"`
+}
+
+type APIHandlers struct {
+	HomeHandler     http.Handler
+	HashHandler     http.Handler
+	ProofHandler    http.Handler
+	CalHandler      http.Handler
+	CalDataHandler  http.Handler
+	StatusHandler   http.Handler
+	PeerHandler     http.Handler
+	GatewaysHandler http.Handler
 }
