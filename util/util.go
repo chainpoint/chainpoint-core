@@ -35,7 +35,6 @@ import (
 	"github.com/chainpoint/chainpoint-core/types"
 )
 
-
 // LogError : Log error if it exists
 func LogError(err error) error {
 	if err != nil {

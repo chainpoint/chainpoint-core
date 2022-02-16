@@ -116,9 +116,9 @@ func (ln *LightningClient) Unlocker() error {
 		return err
 	}
 	unlockReq := lnrpc.UnlockWalletRequest{
-		WalletPassword:       []byte(ln.WalletPass),
-		RecoveryWindow:       10000,
-		ChannelBackups:       nil,
+		WalletPassword: []byte(ln.WalletPass),
+		RecoveryWindow: 10000,
+		ChannelBackups: nil,
 	}
 	_, err = conn.UnlockWallet(context.Background(), &unlockReq)
 	if err != nil {
@@ -137,12 +137,12 @@ func (ln *LightningClient) InitWallet() error {
 		return err
 	}
 	initReq := lnrpc.InitWalletRequest{
-		WalletPassword:       []byte(ln.WalletPass),
-		CipherSeedMnemonic:   ln.WalletSeed,
-		AezeedPassphrase:     nil,
-		RecoveryWindow:       10000,
-		ChannelBackups:       nil,
-		StatelessInit:        false,
+		WalletPassword:     []byte(ln.WalletPass),
+		CipherSeedMnemonic: ln.WalletSeed,
+		AezeedPassphrase:   nil,
+		RecoveryWindow:     10000,
+		ChannelBackups:     nil,
+		StatelessInit:      false,
 	}
 	_, err = conn.InitWallet(context.Background(), &initReq)
 	if err != nil {
@@ -647,13 +647,13 @@ func (ln *LightningClient) ReplaceByFee(txid string, OPRETURNIndex bool, newfee 
 	txIdHash := (msgTx).TxHash()
 	txIdBytes := txIdHash.CloneBytes()
 	outpoint := lnrpc.OutPoint{
-		TxidBytes:            txIdBytes,
-		OutputIndex:          outputIndex,
+		TxidBytes:   txIdBytes,
+		OutputIndex: outputIndex,
 	}
 	rbfReq := walletrpc.BumpFeeRequest{
-		Outpoint:             &outpoint,
-		TargetConf:           0,
-		SatPerByte:           uint32(newfee),
+		Outpoint:   &outpoint,
+		TargetConf: 0,
+		SatPerByte: uint32(newfee),
 	}
 	resp, err := wallet.BumpFee(context.Background(), &rbfReq)
 	if err != nil {

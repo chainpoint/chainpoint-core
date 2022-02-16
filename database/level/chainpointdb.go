@@ -15,9 +15,9 @@ type Chainpoint_DB struct {
 	db *KVStore
 }
 
-func NewDB (db *KVStore) *Chainpoint_DB {
+func NewDB(db *KVStore) *Chainpoint_DB {
 	return &Chainpoint_DB{db}
-} 
+}
 
 // GetProofIdsByAggIds : get proof ids from agg table, based on aggId
 func (chp *Chainpoint_DB) GetProofIdsByAggIds(aggIds []string) ([]string, error) {

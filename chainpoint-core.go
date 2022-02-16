@@ -236,7 +236,6 @@ func main() {
 
 	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
 
-
 	apiHandlers := setupAPI(*app, config)
 
 	r := mux.NewRouter()

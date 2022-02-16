@@ -13,14 +13,14 @@ var randSourceLock sync.Mutex
 func ElectLeaders(slice interface{}, numLeaders int, seed string) interface{} {
 	peers := reflect.ValueOf(slice)
 	validatorLength := peers.Len()
-	index := GetSeededRandInt([]byte(seed), validatorLength)    //seed the first time
-	if err := RotateLeft(slice, index); err != nil { //get a wrapped-around slice of numLeader leaders
+	index := GetSeededRandInt([]byte(seed), validatorLength) //seed the first time
+	if err := RotateLeft(slice, index); err != nil {         //get a wrapped-around slice of numLeader leaders
 		return nil
 	}
 	if numLeaders <= validatorLength {
 		return peers.Slice(0, numLeaders).Interface()
 	} else {
-		return peers.Slice(0,1).Interface()
+		return peers.Slice(0, 1).Interface()
 	}
 }
 

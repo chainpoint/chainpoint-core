@@ -38,16 +38,16 @@ func (ln *LightningClient) GenerateHodlLSAT(ip string) (LSAT, error) {
 	}
 	defer closeInvFunc()
 	addInvoiceReq, err := invoice.AddHoldInvoice(context.Background(), &invoicesrpc.AddHoldInvoiceRequest{
-		Memo:                 fmt.Sprintf("HODL invoice payment from Chainpoint Core %s", ln.ServerHostPort),
-		Hash:                 hash[:],
-		Value:                ln.HashPrice,
-		ValueMsat:            0,
-		DescriptionHash:      nil,
-		Expiry:               0,
-		FallbackAddr:         "",
-		CltvExpiry:           0,
-		RouteHints:           nil,
-		Private:              false,
+		Memo:            fmt.Sprintf("HODL invoice payment from Chainpoint Core %s", ln.ServerHostPort),
+		Hash:            hash[:],
+		Value:           ln.HashPrice,
+		ValueMsat:       0,
+		DescriptionHash: nil,
+		Expiry:          0,
+		FallbackAddr:    "",
+		CltvExpiry:      0,
+		RouteHints:      nil,
+		Private:         false,
 	})
 	if err != nil {
 		return LSAT{}, err
