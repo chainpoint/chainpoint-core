@@ -85,7 +85,7 @@ type AnchorApplication struct {
 	config               types.AnchorConfig
 	logger               log.Logger
 	aggregator           *aggregator.Aggregator
-	ChainpointDb         *database.ChainpointDatabase
+	ChainpointDb         database.ChainpointDatabase
 	Cache                *level.KVStore
 	LnClient             *lightning.LightningClient
 	rpc                  *tendermint_rpc.RPC
@@ -151,7 +151,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
 		},
-		ChainpointDb: &database,
+		ChainpointDb: database,
+		Cache:        cache,
 		LnClient:     &config.LightningConfig,
 		rpc:          rpcClient,
 		JWK:          jwkType,
