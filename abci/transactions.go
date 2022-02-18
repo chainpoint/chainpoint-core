@@ -108,7 +108,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDeliverTx {
 	var tx types.Tx
 	var err error
-	var resp types2.ResponseDeliverTx
+	var resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized}
 	tags := []kv.Pair{}
 	if app.state.ChainSynced {
 		tx, err = util.DecodeTxAndVerifySig(rawTx, app.state.CoreKeys)
@@ -123,6 +123,11 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		app.logger.Info(fmt.Sprintf("Val tx: %s", tx.Data))
 		resp = app.execValidatorTx([]byte(tx.Data))
 	case "CHNGSTK":
+		newStakePerCore, err := strconv.ParseInt(tx.Data, 10, 64)
+		if app.LogError(err) != nil {
+			break
+		}
+		app.config.StakePerCore = newStakePerCore
 		tags = app.incrementTxInt(tags)
 		tags = append(tags, kv.Pair{Key: []byte("CHANGE"), Value: []byte("STAKE")})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
@@ -164,7 +169,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	case "BTC-C":
 		if tx.Data == string(app.state.LatestBtccTx) {
 			app.logger.Info(fmt.Sprintf("We've already seen this BTC-C confirmation tx: %s", tx.Data))
-			resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized}
 			break
 		}
 		app.state.LatestBtccTx = []byte(tx.Data)
@@ -188,7 +192,6 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 	case "FEE":
 		i, err := strconv.ParseInt(tx.Data, 10, 64)
 		if app.LogError(err) != nil {
-			resp = types2.ResponseDeliverTx{Code: code.CodeTypeEncodingError}
 			break
 		}
 		app.state.LatestBtcFee = i
@@ -200,11 +203,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 			tags = app.incrementTxInt(tags)
 			tags = append(tags, kv.Pair{Key: []byte("CORE"), Value: []byte("NEW")})
 			resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
-			break
 		}
-		fallthrough
-	default:
-		resp = types2.ResponseDeliverTx{Code: code.CodeTypeUnauthorized}
 	}
 	events := []types2.Event{
 		{
