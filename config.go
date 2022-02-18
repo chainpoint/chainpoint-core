@@ -31,10 +31,10 @@ func InitConfig(home string) types.AnchorConfig {
 	var proposedValidator string
 	var listenAddr, tendermintPeers, tendermintSeeds, tendermintLogFilter, lndLogFilter string
 	var bitcoinNetwork, walletAddress, walletPass, walletSeed, secretKeyPath, aggregatorAllowStr, blockCIDRStr, apiPort string
-	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort string
+	var tlsCertPath, macaroonPath, lndSocket, electionMode, sessionSecret, tmServer, tmPort, updateStake string
 	var coreName, analyticsID, logLevel string
 	var feeMultiplier float64
-	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval, stakePerCore, updateStake int
+	var anchorInterval, anchorTimeout, anchorReward, hashPrice, feeInterval, stakePerCore int
 	var hashQuota, apiQuota, proofQuota int
 	var useAggregatorAllowlist, doCalLoop, doAnchorLoop, useChpLndConfig, removeRateLimits bool
 	flag.String(flag.DefaultConfigFlagname, "", "path to config file")
@@ -67,7 +67,7 @@ func InitConfig(home string) types.AnchorConfig {
 	flag.Float64Var(&feeMultiplier, "btc_fee_multiplier", 2.2, "multiply anchoring fee by this constant when mempool is congested")
 	flag.IntVar(&feeInterval, "fee_interval", 10, "interval in minutes to check for new bitcoin tx fee")
 	flag.IntVar(&stakePerCore, "stake_per_core", 1000000, "minimum amount staked per channel to permit the addition of a Core")
-	flag.IntVar(&updateStake, "update_stake", 0, "a validator may change this value to adjust the stake_per_core")
+	flag.StringVar(&updateStake, "update_stake", "", "a validator may change this value to adjust the stake_per_core")
 	flag.StringVar(&sessionSecret, "session_secret", "", "mutual LSAT macaroon secret for cores and gateways")
 	flag.StringVar(&tmServer, "tendermint_host", "127.0.0.1", "tendermint api url")
 	flag.StringVar(&tmPort, "tendermint_port", "26657", "tendermint api port")
@@ -158,6 +158,7 @@ func InitConfig(home string) types.AnchorConfig {
 		FilePV:           tmConfig.FilePV,
 		AnchorTimeout:    anchorTimeout,
 		AnchorReward:     anchorReward,
+		UpdateStake:      updateStake,
 		StakePerCore:     1000000,
 		FeeInterval:      int64(feeInterval),
 		FeeMultiplier:    feeMultiplier,
