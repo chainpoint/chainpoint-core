@@ -77,6 +77,7 @@ type AnchorApplication struct {
 	ValUpdates           []types2.ValidatorUpdate
 	valAddrToPubKeyMap   map[string]types2.PubKey
 	PendingValidator     string
+	PendingChangeStake   int64
 	NodeRewardSignatures []string
 	CoreRewardSignatures []string
 	Db                   dbm.DB
@@ -269,6 +270,7 @@ func (app *AnchorApplication) EndBlock(req types2.RequestEndBlock) types2.Respon
 	}
 	// check if we need to vote on a pending validator proposal
 	app.CheckVoteValidator()
+	app.CheckVoteChangeStake()
 	return types2.ResponseEndBlock{ValidatorUpdates: app.ValUpdates}
 }
 

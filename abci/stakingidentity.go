@@ -10,6 +10,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/chainpoint/chainpoint-core/validation"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,7 +20,6 @@ func (app *AnchorApplication) SetStake() {
 	for {
 		if app.state.AppReady {
 			validators, err := app.rpc.GetValidators(app.state.Height)
-			amVal, _ := leaderelection.IsValidator(*app.state, app.ID)
 			if app.LogError(err) != nil {
 				continue
 			}
@@ -40,11 +40,29 @@ func (app *AnchorApplication) SetStake() {
 			app.state.Validators = validators.Validators
 			app.state.LnStakePerVal = stakeAmt
 			app.state.LnStakePrice = totalStake //Total Stake Price includes the other 1/3 just in case
-			if amVal && app.config.UpdateStake != 0 && app.config.UpdateStake != app.config.StakePerCore {
-				app.rpc.BroadcastTx("CHNGSTK", strconv.FormatInt(app.config.UpdateStake, 10), 2, time.Now().Unix(), app.ID, app.config.ECPrivateKey)
-			}
 			return
 			//app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
+		}
+	}
+}
+
+func (app *AnchorApplication) CheckVoteChangeStake() {
+	if app.state.AppReady && app.config.UpdateStake != "" {
+		stakes := strings.Split(app.config.UpdateStake, ":")
+		if len(stakes) == 2 {
+			blockHeight, errHeight := strconv.ParseInt(stakes[0], 10, 64)
+			newStake, errStake := strconv.ParseInt(stakes[1], 10, 64)
+			if errHeight == nil && errStake == nil && newStake != app.config.StakePerCore && blockHeight == app.state.Height {
+				app.PendingChangeStake = newStake
+				amLeader, leaderId := leaderelection.ElectValidatorAsLeader(1, []string{}, *app.state, app.config)
+				app.logger.Info(fmt.Sprintf("ChangeStake Cote: %s was elected to submit ChangeStake tx", leaderId))
+				if amLeader {
+					go func() {
+						time.Sleep(1 * time.Minute)
+						app.rpc.BroadcastTx("CHNGSTK", strconv.FormatInt(newStake, 10), 2, time.Now().Unix(), app.ID, app.config.ECPrivateKey)
+					}()
+				}
+			}
 		}
 	}
 }

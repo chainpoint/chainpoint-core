@@ -88,7 +88,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 		}
 	case "CHNGSTK":
 		newStakePerCore, err := strconv.ParseInt(tx.Data, 10, 64)
-		if err != nil || newStakePerCore != app.config.StakePerCore {
+		if err != nil || newStakePerCore != app.PendingChangeStake {
 			app.logger.Info("Stake proposal does not match configuration")
 			return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 		}
