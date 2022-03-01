@@ -44,7 +44,7 @@ Minimum:
 - `100+ GB SSD`
 - `Public IPv4 address`
 
-Recommended:
+Recommended (high usage):
 
 - `>= 8GB RAM`
 - `>= 4 CPU Cores`

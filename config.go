@@ -269,7 +269,7 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 					} else {
 						peerGenesisFound = true
 					}
-					logger.Info("Saved genesis file from peer", "path", genFile)
+					logger.Info("Saved genesis file from peer/seed", "path", genFile)
 				}
 			}
 		}
