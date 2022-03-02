@@ -160,7 +160,7 @@ A full list of configuration parameters is located at abci/config.go or by runni
 
 ## Development
 
-We encourage anyone interested in contributing to fork this repo and submit a pull-request with desired changes. Please be sure to use eslint (npm) and gofmt (go) to check/fix any style issues.
+We encourage anyone interested in contributing to fork this repo and submit a pull-request with desired changes. Please be sure to use gofmt (go) to check/fix any style issues.
 
 ### Build
 

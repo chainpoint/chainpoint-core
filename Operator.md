@@ -22,15 +22,20 @@
 In high-usage or public-facing situations, it is recommended to use [Chainpoint Gateway](https://github.com/chainpoint/chainpoint-gateway) as a public-facing service in front of your Core. 
 It will need to open a channel to your Core in order to submit hashes, or use `AGGREGATOR_WHITELIST=<gateway_ips>` (Core) and `NO_LSAT_CORE_WHITELIST=<core_ips>` (Gateway) to skip lightning usage.
 
-However, when it is possible to use Core directly as a proof generator. Configure your Core to accept requests from your client IPs by adding `AGGREGATOR_WHITELIST=<client_ips>` to your config file (by default at `~/.chainpoint/core/core.conf`).
-If you're planning on submitting potentially several hashes per second, please remove Core's rate limits by adding `REMOVE_RATE_LIMITS=true` to the Core config.
+However, when it is possible to use Core directly as a proof generator. Configure your Core to accept requests from your client IPs by adding 
+```
+AGGREGATOR_WHITELIST=<client_ips>
+REMOVE_RATE_LIMITS=true
+```
+to your config file (by default at `~/.chainpoint/core/core.conf`).
+
 
 #### Sending Hashes
 
 Sending hashes directly to Core from a whitelisted IP is easy. A `proof_id` is returned by core for later retrieval of the full bitcoin proof:
 
 ```
-curl -s -X POST http://18.220.31.138/hash -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{"hash": "1957db7fe23e4be1740ddeb941ddda7ae0a6b782e536a9e00b5aa82db1e84547"}' | jq
+$ curl -s -X POST http://18.220.31.138/hash -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{"hash": "1957db7fe23e4be1740ddeb941ddda7ae0a6b782e536a9e00b5aa82db1e84547"}' | jq
 {
   "hash": "1957db7fe23e4be1740ddeb941ddda7ae0a6b782e536a9e00b5aa82db1e84547",
   "proof_id": "59c2c108-998a-11ec-a979-017ffb31ef5e",
@@ -48,7 +53,7 @@ After a maximum of two minutes, a calendar proof can be retrieved from core usin
 Be advised that since bitcoin mining is probabilistic, the time to retrieve a full bitcoin proof can sometimes be as long as 4 hours. This necessitates an asynchronous retrieval process. 
 
 ```
-curl -s -X GET http://18.220.31.138/proofs -H 'proofids: 59c2c108-998a-11ec-a979-017ffb31ef5e' 
+$ curl -s -X GET http://18.220.31.138/proofs -H 'proofids: 59c2c108-998a-11ec-a979-017ffb31ef5e' 
 [{"proof":{"@context":"https://w3id.org/chainpoint/v4","branches":
 [{"branches":[{"label":"btc_anchor_branch","ops":[
 {"r":"2a98bcca858e7b9f3528959ee15a8421e60b257281d6dbbf074233f826cc0e95"},{"op":"sha-256"},
@@ -103,6 +108,48 @@ async function run() {
     console.log(verifiedProofs)
 }
 run()
+```
+
+#### Retrieving the Merkle Root of a Calendar Anchor
+
+This is used during proof verification to confirm the expected Merkle Root of an anchor. 
+
+```
+$ curl http://18.220.31.138/calendar/cd6377d3e27d9798457725ea8a2d30da857f997ea08b777f8400748837aaf5b7/data
+032d612fda2c2df9420dad0c6504a638102efdf6897702acfc859ae519966070
+```
+
+#### Retrieving Core Status
+
+```
+$ curl http://18.220.31.138/status
+{"version":"0.0.2","time":"2022-03-02T17:49:10.696Z","base_uri":"http://0.0.0.0",
+"jwk":{"kty":"EC","kid":"24ba3a2556ebae073b42d94815836b29594a2456","crv":"P-256","x":"JIVErwpm7UK-LphlGEuCq3kAr5NBIwsJu9EOPifsSG0","y":"E6OMwt1lslzujOpUFdfiwsZxxZBBT0m1QVQiSmofajM"},
+"network":"mainnet","identity_pubkey":"02108182a754e0d0e42e7dcbc9d79f145e51afcc3b49ee6a2463d8999274f8aa4f",
+"lightning_address":"bc1qa2nddalfe5glzknztujpp4asmy3aw0k8vaek64","lightning_balance":{"total_balance":"15766444","confirmed_balance":"15766444","unconfirmed_balance":"0"},
+"public_key":"","uris":["02108182a754e0d0e42e7dcbc9d79f145e51afcc3b49ee6a2463d8999274f8aa4f@18.220.31.138:9735"],
+"alias":"02108182a754e0d0e42e","hash_price_satoshis":2,"total_stake_price":6000000,"validator_stake_price":1200000,
+"num_channels_count":4,"node_info":{"protocol_version":{"p2p":7,"block":10,"app":1},"id":"24ba3a2556ebae073b42d94815836b29594a2456",
+"listen_addr":"18.220.31.138:26656","network":"mainnet-chain-32","version":"0.33.5","channels":"4020212223303800",
+"moniker":"46e15ad75513","other":{"tx_index":"on","rpc_address":"tcp://0.0.0.0:26657"}},
+"sync_info":{"latest_block_hash":"31711B1D07AF30995BAEFB36860E77D572B224069B185E7056A2F163A22DDF3B",
+"latest_app_hash":"8AA2600000000000","latest_block_height":788615,"latest_block_time":"2022-03-02T17:47:51.087775422Z",
+"earliest_block_hash":"79615814D4F75FD6FDD9DA09A4CCB95F6B91E1B2F7F7A59242F925581225DDC4","earliest_app_hash":"",
+"earliest_block_height":1,"earliest_block_time":"2020-03-10T21:50:32.59624701Z","catching_up":false}}
+```
+
+#### Retrieving Core Peers
+
+```
+$ curl http://18.220.31.138/peers
+["3.142.136.148","3.95.20.189","18.118.26.31","3.133.161.241","18.220.31.138","3.145.43.113"]
+```
+
+#### Retrieving Public Gateways
+
+```
+$ curl http://18.220.31.138/gateways/public
+["18.224.185.143","3.133.135.157","18.191.50.129"]
 ```
 
 ## Updates

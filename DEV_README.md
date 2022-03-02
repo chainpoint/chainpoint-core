@@ -6,6 +6,16 @@ The Chainpoint Network's blockchain is based around the Tendermint blockchain li
 
 The binary encompasses a Tendermint Core, Chainpoint ABCI app, LND, and various submodules for connecting to C_Level_DB, all running in separate threads.
 
+This guide encompasses contributor guidelines and a brief technical overview. 
+
+## Contributor Guidelines
+
+We encourage anyone interested in contributing to fork this repo and submit a pull-request with desired changes. 
+
+Please target go v1.16.8 and run gofmt (go) on the source tree to check/fix any style issues.
+
+All contributions and usage must adhere to the GNU aGPL v3 license.  
+
 ## Operation Modes
 
 When initialized, Tendermint will create Genesis, Config, and Node_Key files in `~/.chainpoint/core/config`. All other data, including the tendermint db and ECDSA key files, can be found in `~/.chainpoint/core/data`.
