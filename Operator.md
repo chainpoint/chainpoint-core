@@ -19,10 +19,12 @@
 
 ## Usage
 
+#### With Chainpoint Gateways
 In high-usage or public-facing situations, it is recommended to use [Chainpoint Gateway](https://github.com/chainpoint/chainpoint-gateway) as a public-facing service in front of your Core. 
 It will need to open a channel to your Core in order to submit hashes, or use `AGGREGATOR_WHITELIST=<gateway_ips>` (Core) and `NO_LSAT_CORE_WHITELIST=<core_ips>` (Gateway) to skip lightning usage.
 
-However, when it is possible to use Core directly as a proof generator. Configure your Core to accept requests from your client IPs by adding 
+#### Directly With Core 
+However, it is possible to use Core directly as a proof generator. Configure your Core to accept requests from your client IPs by adding 
 ```
 AGGREGATOR_WHITELIST=<client_ips>
 REMOVE_RATE_LIMITS=true
