@@ -2,20 +2,21 @@
 
 ## Setup
 
+The Makefile process described in the [quickstart](https://github.com/chainpoint/chainpoint-core#quick-start) will install and configure golang on the target box, as well as build the chainpoint-core binary.  
+After compilation, there are two main modes possible:
+
 #### Public Chainpoint Network
- 1. The Makefile process described in the [quickstart](https://github.com/chainpoint/chainpoint-core#quick-start) will install and configure golang on the target box, as well as build the chainpoint-core binary.  
- 2. Manually running the binary will start the setup wizard. Be sure to select the "mainnet" and "Public chainpoint network" options, then put in your server's public IP. 
- 3. The in-built Lightning Node will then initialize and print a bitcoin address, as well as the amount of bitcoin necessary to stake with the public Chainpoint Network. Fund this address with the requested amount. 
- 4. At this point you can kill the process and daemonize the node for long-term running, if you wish. The commands for this are `make install-daemon` and `make start-daemon`. Running `make log-daemon` will let you see the logs. 
- 5. After a few confirmations, your Core will be able to send a JWK message declaring its public key, at which point the stake will be checked and verified by the Validators. 
- 6. If you wish, and after a certain amount of successful time on the Network, our nodes can collectively vote to elevate your Core to Validator status. 
+ 1. Manually running the binary will start the setup wizard. Be sure to select the "mainnet" and "Public chainpoint network" options, then put in your server's public IP. 
+ 2. The in-built Lightning Node will then initialize and print a bitcoin address, as well as the amount of bitcoin necessary to stake with the public Chainpoint Network. Fund this address with the requested amount. 
+ 3. At this point you can kill the process and daemonize the node for long-term running, if you wish. The commands for this are `make install-daemon` and `make start-daemon`. Running `make log-daemon` will let you see the logs. 
+ 4. After a few confirmations, your Core will be able to send a JWK message declaring its public key, at which point the stake will be checked and verified by the Validators. 
+ 5. If you wish, and after a certain amount of successful time on the Network, our nodes can collectively vote to elevate your Core to Validator status. 
 
 #### Private Chainpoint Network
- 1. The Makefile process described in the [quickstart](https://github.com/chainpoint/chainpoint-core#quick-start) will install and configure golang on the target box, as well as build the chainpoint-core binary.  
- 2. Manually running the binary will start the setup wizard. Be sure to select the "mainnet" and "Standalone Mode" options, then put in your server's public IP.
- 3. The in-built Lightning Node will then initialize and print a bitcoin address. You'll need to fund this address with funds sufficient to fund bitcoin anchoring (segwit OP_RETURN transactions). 
- 4. If you're joining another private node to create a private Chainpoint network, specify `"SEEDS=<seed_node_id@<seed_node_IP>:26656"` in the config file (by default at `~/.chainpoint/core/core.conf`). The seed node id can be found from retrieving the `id` json field at `http://<seed_node_IP>/status`.
- 5. At this point you can kill the process and daemonize the node for long-term running, if you wish. The commands for this are `make install-daemon` and `make start-daemon`. Running `make log-daemon` will let you see the logs. 
+ 1. Manually running the binary will start the setup wizard. Be sure to select the "mainnet" and "Standalone Mode" options, then put in your server's public IP.
+ 2. The in-built Lightning Node will then initialize and print a bitcoin address. You'll need to fund this address with funds sufficient to fund bitcoin anchoring (segwit OP_RETURN transactions). 
+ 3. If you're joining another private node to create a private Chainpoint network, specify `"SEEDS=<seed_node_id@<seed_node_IP>:26656"` in the config file (by default at `~/.chainpoint/core/core.conf`). The seed node id can be found from retrieving the `id` json field at `http://<seed_node_IP>/status`.
+ 4. At this point you can kill the process and daemonize the node for long-term running, if you wish. The commands for this are `make install-daemon` and `make start-daemon`. Running `make log-daemon` will let you see the logs. 
 
 ## Usage
 
