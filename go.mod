@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/btcsuite/btcd v0.22.0-beta.0.20211005184431-e3449998be39
 	github.com/btcsuite/btcutil v1.0.3-0.20210527170813-e2ba6805a890
+	github.com/chainpoint/leader-election v0.0.0
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/drand/drand v1.0.0-rc1
 	github.com/enriquebris/goconcurrentqueue v0.6.0

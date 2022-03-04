@@ -2,13 +2,12 @@ package leaderelection
 
 import (
 	"errors"
-	"github.com/chainpoint/chainpoint-core/leaderelection/seededelection"
 	types2 "github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/validation"
 	"sort"
 
 	"github.com/tendermint/tendermint/types"
-
+	seededelection "github.com/chainpoint/leader-election"
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/tendermint/tendermint/p2p"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"

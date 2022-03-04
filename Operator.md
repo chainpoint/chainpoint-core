@@ -2,8 +2,8 @@
 
 ## Setup
 
-The Makefile process described in the [quickstart](https://github.com/chainpoint/chainpoint-core#quick-start) will install and configure golang on the target box, as well as build the chainpoint-core binary.  
-After compilation, there are two main modes possible:
+The Makefile process described in the [quickstart](https://github.com/chainpoint/chainpoint-core#quick-start) will install and configure golang on the target box, as well as build the chainpoint-core binary. 
+After compilation, there are two possible modes:
 
 #### Public Chainpoint Network
  1. Manually running the binary will start the setup wizard. Be sure to select the "mainnet" and "Public chainpoint network" options, then put in your server's public IP. 
