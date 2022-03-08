@@ -138,7 +138,7 @@ func (app *AnchorBTC) SendBtcTx(anchorDataObj types.BtcAgg, height int64, start 
 	if util.LogError(err) != nil {
 		return "", []byte{}, err
 	}
-	txid, rawtx, err := app.LnClient.AnchorData(hexRoot)
+	txid, rawtx, err := app.LnClient.SendOpReturn(hexRoot)
 	if util.LogError(err) != nil {
 		return "", []byte{}, err
 	}
