@@ -3,7 +3,7 @@ package types
 import (
 	"crypto/ecdsa"
 	"database/sql"
-	"github.com/chainpoint/chainpoint-core/lightning"
+	lightning "github.com/chainpoint/lightning-go"
 	lnrpc2 "github.com/lightningnetwork/lnd/lnrpc"
 	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	types3 "github.com/tendermint/tendermint/types"
@@ -66,6 +66,7 @@ type AnchorConfig struct {
 	HashQuota        int
 	ApiQuota         int
 	ProofQuota       int
+	UseChainpointLndConfig bool
 }
 
 //EthConfig holds contract addresses and eth node URI

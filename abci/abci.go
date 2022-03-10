@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chainpoint/chainpoint-core/lightning"
+	lightning "github.com/chainpoint/lightning-go"
 
 	"github.com/chainpoint/chainpoint-core/validation"
 

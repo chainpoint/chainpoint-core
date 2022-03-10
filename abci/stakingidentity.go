@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/leaderelection"
-	"github.com/chainpoint/chainpoint-core/lightning"
+	lightning "github.com/chainpoint/lightning-go"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/chainpoint/chainpoint-core/validation"

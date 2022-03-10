@@ -29,6 +29,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/sethvargo/go-password/password"
 	tmos "github.com/tendermint/tendermint/libs/os"
+	_ "github.com/chainpoint/lightning-go"
 )
 
 var home string
@@ -261,7 +262,7 @@ func main() {
 
 // runLnd : We pass in commandline arguments because of undefined DefaultConfig unmarshalling behavior in subRPCServers
 func runLnd(config types.AnchorConfig) {
-	if config.LightningConfig.UseChainpointConfig {
+	if config.UseChainpointLndConfig {
 		lndHome := home + "/.lnd"
 		coreIPOnly := util.GetIPOnly(config.CoreURI)
 		osArgs := []string{

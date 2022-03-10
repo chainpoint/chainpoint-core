@@ -13,7 +13,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/database"
 	"github.com/chainpoint/chainpoint-core/database/level"
 	"github.com/chainpoint/chainpoint-core/leaderelection"
-	"github.com/chainpoint/chainpoint-core/lightning"
+	lightning "github.com/chainpoint/lightning-go"
 	"github.com/chainpoint/chainpoint-core/merkletools"
 	"github.com/chainpoint/chainpoint-core/proof"
 	"github.com/chainpoint/chainpoint-core/tendermint_rpc"

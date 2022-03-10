@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/lightning"
+	lightning "github.com/chainpoint/lightning-go"
 	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
@@ -146,7 +146,6 @@ func InitConfig(home string) types.AnchorConfig {
 			WalletSeed:          strings.Split(walletSeed, ","),
 			HashPrice:           int64(hashPrice),
 			SessionSecret:       sessionSecret,
-			UseChainpointConfig: useChpLndConfig,
 		},
 		ECPrivateKey:     ecPrivKey,
 		CIDRBlockList:    blockCIDRs,
@@ -173,6 +172,7 @@ func InitConfig(home string) types.AnchorConfig {
 		HashQuota:        hashQuota,
 		ApiQuota:         apiQuota,
 		ProofQuota:       proofQuota,
+		UseChainpointLndConfig: useChpLndConfig,
 	}
 }
 

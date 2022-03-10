@@ -4,8 +4,8 @@ go 1.16
 
 require (
 	github.com/btcsuite/btcd v0.22.0-beta.0.20211005184431-e3449998be39
-	github.com/btcsuite/btcutil v1.0.3-0.20210527170813-e2ba6805a890
 	github.com/chainpoint/leader-election v0.0.0
+	github.com/chainpoint/lightning-go v0.0.2
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/drand/drand v1.0.0-rc1
 	github.com/enriquebris/goconcurrentqueue v0.6.0
@@ -33,10 +33,8 @@ require (
 	github.com/tendermint/tendermint v0.33.5-0.20200528083845-9ee3e4896bf8
 	github.com/tendermint/tm-db v0.5.1
 	github.com/throttled/throttled/v2 v2.8.0
-	google.golang.org/grpc v1.38.0
 	gopkg.in/ini.v1 v1.57.0 // indirect
 	gopkg.in/macaroon-bakery.v2 v2.2.0 // indirect
-	gopkg.in/macaroon.v2 v2.1.0
 )
 
 replace (
