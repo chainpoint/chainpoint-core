@@ -75,23 +75,23 @@ func (app *AnchorApplication) StakeIdentity() {
 		app.logger.Info("StakeIdentity state loading...")
 		time.Sleep(30 * time.Second)
 	}
-	/*	// resend JWK if info has changed
-		if lnUri, exists := app.state.LnUris[app.ID]; app.state.JWKStaked && exists {
-			if lnUri.Peer != app.state.LNState.Uris[0] {
-				app.logger.Info(fmt.Sprintf("Stored Peer URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
-				app.state.JWKStaked = false
-			}
+	// resend JWK if info has changed
+	if lnUri, exists := app.state.LnUris[app.ID]; app.state.JWKStaked && exists {
+		if lnUri.Peer != app.state.LNState.Uris[0] {
+			app.logger.Info(fmt.Sprintf("Stored Peer URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
+			app.state.JWKStaked = false
 		}
-		if pubKey, exists := app.state.CoreKeys[app.ID]; app.state.JWKStaked && exists {
-			selfPubKey, _, _ := util.DecodeJWK(app.JWK)
-			pubKeyBytes := elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y)
-			pubKeyHex := fmt.Sprintf("%x", pubKeyBytes)
-			if selfPubKey != pubKeyHex {
-				app.logger.Info(fmt.Sprintf("node ID has likely changed. %s != %s", selfPubKey, pubKeyHex))
-				app.logger.Info("Restaking with new credentials")
-				app.state.JWKStaked = false
-			}
-		}*/
+	}
+	if pubKey, exists := app.state.CoreKeys[app.ID]; app.state.JWKStaked && exists {
+		_, pubKeyJwk, _ := util.DecodeJWK(app.JWK)
+		pubKeyJwkHex := fmt.Sprintf("%x", elliptic.Marshal(pubKeyJwk.Curve, pubKeyJwk.X, pubKeyJwk.Y))
+		pubKeyHex := fmt.Sprintf("%x", elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y))
+		if pubKeyJwkHex != pubKeyHex {
+			app.logger.Info(fmt.Sprintf("node ID has likely changed. %s != %s", pubKeyJwkHex, pubKeyHex))
+			app.logger.Info("Restaking with new credentials")
+			app.state.JWKStaked = false
+		}
+	}
 
 	for !app.state.JWKStaked {
 		app.logger.Info("Beginning Lightning staking loop")
