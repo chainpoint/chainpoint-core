@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/google/uuid"
+	"github.com/oklog/ulid/v2"
+	"regexp"
 	"time"
 )
 
@@ -19,11 +21,21 @@ func (proof *P) AddChainpointHeader(context string, jsonType string, hash string
 	(*proof)["type"] = jsonType
 	(*proof)["hash"] = hash
 	(*proof)["proof_id"] = proofId
-	proofUUID, err := uuid.Parse(proofId)
-	if err != nil {
-		return err
+	uuidRegex := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`)
+	var unixTime int64
+	if uuidRegex.MatchString(proofId) {
+		proofUUID, err := uuid.Parse(proofId)
+		if err != nil {
+			return err
+		}
+		unixTime, _ = proofUUID.Time().UnixTime()
+	} else {
+		proofULID, err := ulid.Parse(proofId)
+		if err != nil {
+			return err
+		}
+		unixTime = ulid.Time(proofULID.Time()).Unix()
 	}
-	unixTime, _ := proofUUID.Time().UnixTime()
 	(*proof)["hash_received"] = time.Unix(unixTime, 0).Format(time.RFC3339)
 	return nil
 }

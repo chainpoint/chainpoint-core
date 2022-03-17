@@ -1,15 +1,12 @@
 package abci
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/blake2s"
 	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/chainpoint/chainpoint-core/proof"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
-	"github.com/chainpoint/chainpoint-core/uuid"
 	"github.com/gorilla/mux"
 	"net/http"
 	"regexp"
@@ -107,6 +104,7 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	contentType := r.Header.Get("Content-type")
 	if contentType != "application/json" {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid content type"})
+		return
 	}
 	d := json.NewDecoder(r.Body)
 	d.DisallowUnknownFields()
@@ -114,34 +112,23 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	err := d.Decode(&hash)
 	if app.LogError(err) != nil || len(hash.Hash) == 0 {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid JSON body: missing hash"})
+		return
 	}
 	match, err := regexp.MatchString("^([a-fA-F0-9]{2}){20,64}$", hash.Hash)
 	if app.LogError(err) != nil || !match {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid JSON body: bad hash submitted"})
+		return
 	}
 
-	// compute uuid using blake2s
-	t := time.Now()
-	unixTimeMS := strconv.FormatInt(t.UnixNano()/int64(time.Millisecond), 10)
-	timeLength := strconv.Itoa(len(unixTimeMS))
-	hashStr := strings.Join([]string{unixTimeMS, timeLength, hash.Hash, strconv.Itoa(len(hash.Hash))}, ":")
-	blakeHash, err := blake2s.New256WithPersonalization(nil, []byte("CHAINPNT"))
-	blakeHash.Write([]byte(hashStr))
-	blakeHashSum := blakeHash.Sum([]byte{})
-	truncHashSum := blakeHashSum[len(blakeHashSum)-5:]
+	proofId, err := app.ULIDGenerator.NewUlid()
 	if app.LogError(err) != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute blake2s hash"})
+		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute ulid"})
+		return
 	}
-	node := append([]byte{0x01}, truncHashSum...)
-	app.logger.Info(fmt.Sprintf("hashStr is %s, hash bytes are %s", hashStr, hex.EncodeToString(node)))
-	uuid := uuid.UUIDFromTimeNode(t, node)
-	if app.LogError(err) != nil {
-		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "cannot compute uuid"})
-	}
-	proofId := uuid.String()
+	proofIdStr := proofId.String()
 	hashResponse := HashResponse{
 		Hash:         hash.Hash,
-		ProofId:      proofId,
+		ProofId:      proofIdStr,
 		HashReceived: time.Now().Format(time.RFC3339),
 		ProcessingHints: ProcessingHints{
 			CalHint: time.Now().Add(140 * time.Second).Format(time.RFC3339),
@@ -150,7 +137,7 @@ func (app *AnchorApplication) HashHandler(w http.ResponseWriter, r *http.Request
 	}
 	go app.Analytics.SendEvent(app.state.LatestTimeRecord, "HashReceived", hashResponse.ProofId, hashResponse.HashReceived, ip, "", ip)
 	// Append hash item to aggregator
-	app.aggregator.AddHashItem(types.HashItem{Hash: hash.Hash, ProofID: proofId})
+	app.aggregator.AddHashItem(types.HashItem{Hash: hash.Hash, ProofID: proofIdStr})
 	respondJSON(w, http.StatusOK, hashResponse)
 }
 
@@ -160,21 +147,25 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 	proofidHeader := r.Header.Get("proofids")
 	if len(proofidHeader) == 0 {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, at least one hash id required"})
+		return
 	}
 	proofids := strings.Split(strings.ReplaceAll(proofidHeader, " ", ""), ",")
 	if len(proofids) > 250 {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, too many hash ids (250 max)"})
+		return
 	}
+	uuidOrUlidRegex := regexp.MustCompile(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})|([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26})$`)
 	for _, id := range proofids {
-		_, err := uuid.ParseUUID(id)
-		if app.LogError(err) != nil {
+		if !uuidOrUlidRegex.MatchString(id) {
 			errStr := fmt.Sprintf("invalid request, bad proof_id: %s", id)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": errStr})
+			return
 		}
 	}
 	proofStates, err := app.ChainpointDb.GetProofsByProofIds(proofids)
 	if app.LogError(err) != nil {
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve proofs"})
+		return
 	}
 	response := make([]proof.P, 0)
 	for _, id := range proofids {
