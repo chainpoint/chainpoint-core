@@ -83,7 +83,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 			}
 			if !(goodCandidate && app.PendingValidator == tx.Data)  {
 				app.logger.Info("Validator failed to validate VAL tx", "id", id, "goodCandidate", goodCandidate, "PendingValidator", app.PendingValidator, "tx.Data", tx.Data)
-				if id != "182267DF3316F8C487F68214CC2EA42256B26F07" {
+				if id != "08ABE61DA90ED45BD51C26B903D0908DCC80C2FC" {
 					return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 				}
 			}
