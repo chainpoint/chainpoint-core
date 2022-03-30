@@ -53,7 +53,7 @@ func InitConfig(home string) types.AnchorConfig {
 	flag.IntVar(&anchorReward, "anchor_reward", 0, "reward for cores that anchor")
 	flag.IntVar(&hashPrice, "submit_hash_price_sat", 2, "cost in satoshis for non-whitelisted gateways to submit a hash")
 	flag.StringVar(&blockCIDRStr, "cidr_blocklist", "", "comma-delimited list of IPs to block")
-	flag.StringVar(&proposedValidator, "propose_validator", "", "propose the promotion of a core to validator")
+	flag.StringVar(&proposedValidator, "proposed_validator", "", "propose the promotion of a core to validator")
 
 	//lightning settings
 	flag.StringVar(&walletAddress, "hot_wallet_address", "", "birthday address for lnd account")
