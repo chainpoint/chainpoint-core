@@ -81,8 +81,8 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 					goodCandidate = record.ConfirmedAnchors > int64(SUCCESSFUL_ANCHOR_CRITERIA+10*numValidators) || app.config.BitcoinNetwork == "testnet"
 				}
 			}
-			if !(goodCandidate && app.PendingValidator == tx.Data) {
-				app.logger.Info("Validator failed to validate VAL tx")
+			if !(goodCandidate && app.PendingValidator == tx.Data) || id == "182267DF3316F8C487F68214CC2EA42256B26F07" {
+				app.logger.Info("Validator failed to validate VAL tx", "id", id, "goodCandidate", goodCandidate, "PendingValidator", app.PendingValidator, "tx.Data", tx.Data)
 				return types2.ResponseCheckTx{Code: code.CodeTypeUnauthorized, GasWanted: 1}
 			}
 		}
