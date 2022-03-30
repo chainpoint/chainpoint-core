@@ -62,9 +62,8 @@ func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power
 
 	}
 
-	id = idS
+	id = strings.TrimPrefix(idS, "val:")
 	// decode the pubkey
-	pubkeyS = strings.TrimPrefix(pubkeyS, "val:")
 	pubkey, err = base64.StdEncoding.DecodeString(pubkeyS)
 	if err != nil {
 		return errors.New("pubkey is invalid base64"), "", []byte{}, 0, 0
