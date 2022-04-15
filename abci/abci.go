@@ -11,6 +11,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/database"
 	"github.com/chainpoint/chainpoint-core/database/level"
 	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
+	"github.com/chainpoint/chainpoint-core/threadsafe_ulid"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"net"
 	"path"
@@ -93,6 +94,7 @@ type AnchorApplication struct {
 	ID                   string
 	JWK                  types.Jwk
 	Analytics            *analytics2.UniversalAnalytics
+	ULIDGenerator        *threadsafe_ulid.ThreadSafeUlid
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -133,6 +135,8 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
+	ulidGenerator := threadsafe_ulid.NewThreadSafeUlid()
+
 	cache := level.NewKVStore(&db, *config.Logger)
 
 	var database database.ChainpointDatabase = level.NewDB(cache)
@@ -151,6 +155,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		CoreRewardSignatures: make([]string, 0),
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
+			UlidGen: ulidGenerator,
 		},
 		ChainpointDb: database,
 		Cache:        cache,
@@ -158,6 +163,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		rpc:          rpcClient,
 		JWK:          jwkType,
 		Analytics:    &analytics,
+		ULIDGenerator: ulidGenerator,
 	}
 
 	app.logger.Info("Tendermint Block Height", "block_height", app.state.Height)

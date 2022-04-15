@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/chainpoint/chainpoint-core/threadsafe_ulid"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,7 +16,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/chainpoint/chainpoint-core/util"
-	"github.com/google/uuid"
 
 	"github.com/chainpoint/chainpoint-core/merkletools"
 	"github.com/enriquebris/goconcurrentqueue"
@@ -32,6 +32,7 @@ type Aggregator struct {
 	QueueMutex   sync.Mutex
 	TempStop     chan struct{}
 	WaitGroup    sync.WaitGroup
+	UlidGen      *threadsafe_ulid.ThreadSafeUlid
 }
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
@@ -87,6 +88,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 	aggregator.HashItems = goconcurrentqueue.NewFIFO()
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggregator.Aggregations = goconcurrentqueue.NewFIFO()
+	aggregator.UlidGen = threadsafe_ulid.NewThreadSafeUlid()
 	for {
 		aggregator.RestartMutex.Lock()
 		aggregator.TempStop = make(chan struct{})
@@ -162,11 +164,11 @@ func (aggregator *Aggregator) ProcessAggregation(msgStructSlice []types.HashItem
 	var tree merkletools.MerkleTree
 	tree.AddLeaves(hashSlice)
 	tree.MakeTree()
-	uuid, err := uuid.NewUUID()
+	ulid, err := aggregator.UlidGen.NewUlid()
 	if util.LogError(err) != nil {
 		return types.Aggregation{}
 	}
-	agg.AggID = uuid.String()
+	agg.AggID = ulid.String()
 	agg.AggRoot = hex.EncodeToString(tree.GetMerkleRoot())
 
 	//Create proof paths
