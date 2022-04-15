@@ -192,7 +192,7 @@ func (rpc *RPC) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
 // getAllJWKs gets all JWK TXs
 func (rpc *RPC) GetAllJWKs() ([]types.Tx, error) {
 	Txs := []types.Tx{}
-	txResult, err := rpc.client.TxSearch("JWK.CORE='NEW'", false, 1, 200, "")
+	txResult, err := rpc.client.TxSearch("JWK.CORE='NEW'", false, 1, 500, "asc")
 	if err != nil {
 		return nil, err
 	} else if txResult.TotalCount > 0 {
@@ -207,7 +207,7 @@ func (rpc *RPC) GetAllJWKs() ([]types.Tx, error) {
 	return Txs, nil
 }
 
-// getAllJWKs gets all JWK TXs
+// GetAllCHNGSTK gets all change stake txs
 func (rpc *RPC) GetAllCHNGSTK() ([]types.Tx, error) {
 	Txs := []types.Tx{}
 	txResult, err := rpc.client.TxSearch("CHNGSTK.CHANGE='STAKE'", false, 1, 200, "")

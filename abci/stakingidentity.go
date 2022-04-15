@@ -29,7 +29,7 @@ func (app *AnchorApplication) SetStake() {
 				continue
 			}
 			if len(chngStakeTxs) != 0 {
-				chngStakeTx := chngStakeTxs[len(chngStakeTxs)-1]
+				chngStakeTx := chngStakeTxs[0]
 				latestStakePerCore, err := strconv.ParseInt(chngStakeTx.Data, 10, 64)
 				if err != nil || latestStakePerCore != app.config.StakePerCore {
 					app.config.StakePerCore = latestStakePerCore
