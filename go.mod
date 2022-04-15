@@ -22,6 +22,7 @@ require (
 	github.com/ltcsuite/ltcd v0.20.1-beta // indirect
 	github.com/manifoldco/promptui v0.8.0
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
+	github.com/oklog/ulid/v2 v2.0.2
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/sethvargo/go-password v0.2.0
 	github.com/spf13/afero v1.3.0 // indirect

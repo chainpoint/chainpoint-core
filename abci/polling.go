@@ -61,6 +61,7 @@ func (app *AnchorApplication) BeaconMonitor() {
 		if app.LogError(err) != nil {
 			app.logger.Debug(fmt.Sprintf("Failed to obtain DRAND beacon value of %s", chainpointFormat))
 		}
+		app.ULIDGenerator.NewSeededEntropy(randomness)
 	}
 }
 
