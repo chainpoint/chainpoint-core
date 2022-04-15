@@ -169,6 +169,10 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	app.logger.Info("Lightning Staking", "JWKStaked", state.JWKStaked, "JWK Kid", jwkType.Kid)
 
+	if config.ProposedVal != "" {
+		app.logger.Info("Tendermint Proposed Validator", "proposed_validator", config.ProposedVal)
+	}
+
 	//Initialize calendar writing if enabled
 	if config.DoCal {
 		go app.aggregator.StartAggregation()
