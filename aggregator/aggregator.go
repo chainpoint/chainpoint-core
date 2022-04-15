@@ -32,7 +32,7 @@ type Aggregator struct {
 	QueueMutex   sync.Mutex
 	TempStop     chan struct{}
 	WaitGroup    sync.WaitGroup
-	UlidGen      threadsafe_ulid.ThreadSafeUlid
+	UlidGen      *threadsafe_ulid.ThreadSafeUlid
 }
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {

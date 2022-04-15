@@ -3,9 +3,9 @@ package threadsafe_ulid
 import (
 	"encoding/binary"
 	"github.com/oklog/ulid/v2"
-"math/rand"
-"sync"
-"time"
+	"math/rand"
+	"sync"
+	"time"
 )
 
 type ThreadSafeUlid struct {
@@ -13,9 +13,9 @@ type ThreadSafeUlid struct {
 	safe       safeMonotonicReader
 }
 
-func NewThreadSafeUlid () ThreadSafeUlid {
+func NewThreadSafeUlid () *ThreadSafeUlid {
 	t := time.Now()
-	return ThreadSafeUlid{
+	return &ThreadSafeUlid{
 		Time:      t,
 		safe:      safeMonotonicReader{MonotonicReader: ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)},
 	}
@@ -26,6 +26,7 @@ func (u *ThreadSafeUlid) NewUlid () (ulid.ULID, error) {
 }
 
 func (u *ThreadSafeUlid) NewSeededEntropy (seed string) {
+	u.Time = time.Now()
 	seedBytes := []byte(seed)
 	eightByteHash := seedBytes[0:7]
 	seedInt, _ := binary.Varint(eightByteHash)

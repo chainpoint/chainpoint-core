@@ -121,6 +121,22 @@ func UUIDFromHash(seedBytes []byte) (uuid.UUID, error) {
 	return uuid.FromBytes(seedBytes)
 }
 
+func IsUUID(proofId string) bool {
+	uuidRegex := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`)
+	if uuidRegex.MatchString(proofId) {
+		return true
+	}
+	return false
+}
+
+func IsULID(proofId string) bool {
+	ulidRegex := regexp.MustCompile(`^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$`)
+	if ulidRegex.MatchString(proofId) {
+		return true
+	}
+	return false
+}
+
 func DecodePubKey(tx types.Tx) (*ecdsa.PublicKey, error) {
 	var jwkType types.Jwk
 	json.Unmarshal([]byte(tx.Data), &jwkType)

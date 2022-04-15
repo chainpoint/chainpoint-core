@@ -155,6 +155,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		CoreRewardSignatures: make([]string, 0),
 		aggregator: &aggregator.Aggregator{
 			Logger: *config.Logger,
+			UlidGen: ulidGenerator,
 		},
 		ChainpointDb: database,
 		Cache:        cache,
@@ -162,7 +163,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		rpc:          rpcClient,
 		JWK:          jwkType,
 		Analytics:    &analytics,
-		ULIDGenerator: &ulidGenerator,
+		ULIDGenerator: ulidGenerator,
 	}
 
 	app.logger.Info("Tendermint Block Height", "block_height", app.state.Height)
