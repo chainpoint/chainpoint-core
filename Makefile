@@ -99,7 +99,7 @@ pull:
 	git pull
 
 ## update
-update: pull stop-daemon install start-daemon
+update: pull stop-daemon install install-daemon start-daemon
 
 ## optimize-network          : increases number of sockets host can use
 optimize-network:
