@@ -53,9 +53,8 @@ The following packages contain `go` language utilities which may be useful in th
 - `lightning` : Methods for interacting with `tierion/lnd` modified lightning nodes. Most methods can also interact with the lightninglabs lnd nodes. 
 - `aggregator` : Multithreaded method of creating Merkle trees from large numbers of hashes
 - `beacon` : Retrieves timestamped entropy from the [drand](https://drand.love/) network
-- `blake2s` : Implements the [BLAKE](https://en.wikipedia.org/wiki/BLAKE_(hash_function)) hash function 
 - `fee` : Retrieves bitcoin fees from the [bitcoinerlive](https://bitcoiner.live/) service
-- `leader_election` : Methods for deterministically electing a leader from a group of Tendermint nodes
+- `leaderelection` : Methods for deterministically electing a leader from a group of Tendermint nodes
 - `merkletools` : Chainpoint Merkle tree implementation
 - `tendermint_rpc` : RPC methods for interacting with a Tendermint node
 - `util` : Various utilities for doing everything from verifying ECDSA signatures to generically finding array elements
