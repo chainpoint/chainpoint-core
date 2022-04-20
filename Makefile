@@ -84,15 +84,15 @@ init-volumes:
 
 ## burn                      : Burn it all down and destroy the data. Start it again yourself!
 .PHONY : burn
-burn:
+burn: clean-tendermint
 	@rm -rf ${HOMEDIR}/.chainpoint/core/.lnd
 
 ## clean-tendermint          : removes tendermint database, leaving postgres intact
 clean-tendermint:
-	rm -rf ~/.chainpoint/core/config
-	rm -rf ~/.chainpoint/core/data/*.db
-	rm -rf ~/.chainpoint/core/data/*.wal
-	rm ~/.chainpoint/core/data/*.json
+	rm -rf ${HOMEDIR}/.chainpoint/core/config
+	rm -rf ${HOMEDIR}/.chainpoint/core/data/*.db
+	rm -rf ${HOMEDIR}/.chainpoint/core/data/*.wal
+	rm -rf ${HOMEDIR}/.chainpoint/core/data/*.json
 
 ##pull
 pull:
