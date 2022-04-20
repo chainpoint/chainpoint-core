@@ -6,7 +6,7 @@ The Makefile process described in the [quickstart](https://github.com/chainpoint
 After compilation, there are two possible modes:
 
 #### Public Chainpoint Network
- 1. Manually running the binary will start the setup wizard. Be sure to select the "mainnet" and "Public chainpoint network" options, then put in your server's public IP. 
+ 1. Manually running the binary will start the setup wizard. Be sure to select the "mainnet" and "Public chainpoint network" options, then put in your server's public IP. Contact Tierion to allow your IP through the seed node's firewall.
  2. The in-built Lightning Node will then initialize and print a bitcoin address, as well as the amount of bitcoin necessary to stake with the public Chainpoint Network. Fund this address with the requested amount. 
  3. At this point you can kill the process and daemonize the node for long-term running, if you wish. The commands for this are `make install-daemon` and `make start-daemon`. Running `make log-daemon` will let you see the logs. 
  4. After a few confirmations, your Core will be able to send a JWK message declaring its public key, at which point the stake will be checked and verified by the Validators. 

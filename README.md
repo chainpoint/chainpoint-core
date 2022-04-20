@@ -78,6 +78,9 @@ By default the resulting binary will be placed in `~/go/bin`.
 
 #### Configure Core
 
+Before running the binary for the first time, ensure you have contacted Tierion with your public IP 
+so your traffic is allowed through the seed node's firewall. 
+
 ```
 $ ssh user@<your_ip> #Log back into your server
 $ chainpoint-core
