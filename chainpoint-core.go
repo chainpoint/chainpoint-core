@@ -24,12 +24,12 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/abci"
 	"github.com/chainpoint/chainpoint-core/util"
+	_ "github.com/chainpoint/lightning-go"
 	"github.com/common-nighthawk/go-figure"
 	"github.com/gorilla/mux"
 	"github.com/manifoldco/promptui"
 	"github.com/sethvargo/go-password/password"
 	tmos "github.com/tendermint/tendermint/libs/os"
-	_ "github.com/chainpoint/lightning-go"
 )
 
 var home string
@@ -192,9 +192,7 @@ func main() {
 
 	//Instantiate ABCI application
 	config := InitConfig(home)
-	if config.BitcoinNetwork == "mainnet" {
-		config.ChainId = "mainnet-chain-32"
-	}
+
 	logger := config.TendermintConfig.Logger
 
 	setup(config)

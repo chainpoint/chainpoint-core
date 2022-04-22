@@ -104,13 +104,16 @@ func InitConfig(home string) types.AnchorConfig {
 	tmConfig.TMServer = tmServer
 	tmConfig.TMPort = tmPort
 
+	// set automatic fallback for coreName
 	if len(coreName) == 0 {
 		coreName = listenAddr
 	}
 
+	// setup logging
 	allowLevel, _ := log.AllowLevel(strings.ToLower(logLevel))
 	tmLogger := log.NewFilter(log.NewTMLogger(log.NewSyncWriter(os.Stdout)), allowLevel)
 
+	// load secret key used for signing txs
 	store, err := pemutil.LoadFile(secretKeyPath)
 	if err != nil {
 		util.LogError(err)
@@ -120,15 +123,24 @@ func InitConfig(home string) types.AnchorConfig {
 		util.LogError(errors.New("ecdsa key load failed"))
 	}
 
+	// load blacklist if it exists
 	var blocklist []string
 	blocklist, err = util.ReadLines(home + "/ip_blocklist.txt")
 	if util.LogError(err) != nil {
 		blocklist = []string{}
 	}
 
+	var chainId string
+	if tmConfig.Config != nil && tmConfig.Config.ChainID() != "" {
+		chainId = tmConfig.Config.ChainID()
+	} else if bitcoinNetwork == "mainnet"{
+		chainId = "mainnet-chain-32"
+	}
+
 	// Create config object
 	return types.AnchorConfig{
 		HomePath:         home,
+		ChainId:          chainId,
 		APIPort:          apiPort,
 		DBType:           "goleveldb",
 		BitcoinNetwork:   bitcoinNetwork,
@@ -288,11 +300,15 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 	nodeKey, err := p2p.LoadOrGenNodeKey(defaultConfig.NodeKeyFile())
 	TMConfig.NodeKey = nodeKey
 
+	// check if core has already been setup
+	_, err = os.Stat(fmt.Sprintf("%s/core.conf", home));
+	needSetup := errors.Is(err, os.ErrNotExist)
+
 	// initialize genesis file
 	genFile := defaultConfig.GenesisFile()
 	if tmos.FileExists(genFile) || peerGenesisFound {
 		logger.Info("Found genesis file", "path", genFile)
-	} else if !peersOrSeedsExist {
+	} else if !peersOrSeedsExist && !needSetup {
 		panic(errors.New("Can't retrieve Genesis File from Seed- check firewall on both ends"))
 	} else {
 		genDoc := types2.GenesisDoc{
