@@ -163,7 +163,7 @@ func (rpc *RPC) GetCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.Resu
 
 //GetAnchoringCore : gets core to whom last anchor is attributed
 func (rpc *RPC) GetAnchoringCore(queryLine string) (string, error) {
-	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 25, "")
+	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 1, "")
 	if rpc.LogError(err) == nil {
 		for _, tx := range txResult.Txs {
 			decoded, err := util.DecodeTx(tx.Tx)
@@ -179,7 +179,7 @@ func (rpc *RPC) GetAnchoringCore(queryLine string) (string, error) {
 // GetBTCCTx: retrieves and verifies existence of btcc tx
 func (rpc *RPC) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
 	btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
-	txResult, err := rpc.client.TxSearch(btccQueryLine, false, 1, 25, "")
+	txResult, err := rpc.client.TxSearch(btccQueryLine, false, 1, 1, "")
 	if rpc.LogError(err) == nil {
 		for _, tx := range txResult.Txs {
 			hash = tx.Hash
@@ -192,17 +192,21 @@ func (rpc *RPC) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
 // getAllJWKs gets all JWK TXs
 func (rpc *RPC) GetAllJWKs() ([]types.Tx, error) {
 	Txs := []types.Tx{}
-	txResult, err := rpc.client.TxSearch("JWK.CORE='NEW'", false, 1, 500, "asc")
-	if err != nil {
-		return nil, err
-	} else if txResult.TotalCount > 0 {
-		rpc.logger.Info(fmt.Sprintf("Found %d JWK tx while loading", txResult.TotalCount))
-		for _, tx := range txResult.Txs {
-			decoded, err := util.DecodeTx(tx.Tx)
-			if rpc.LogError(err) == nil {
-				Txs = append(Txs, decoded)
+	endPage := 2
+	for i := 1; i <= endPage; i++ {
+		txResult, err := rpc.client.TxSearch("JWK.CORE='NEW'", false, i, 100, "asc")
+		if err != nil {
+			return nil, err
+		} else if txResult.TotalCount > 0 {
+			rpc.logger.Info(fmt.Sprintf("Found %d JWK tx while loading", txResult.TotalCount))
+			for _, tx := range txResult.Txs {
+				decoded, err := util.DecodeTx(tx.Tx)
+				if rpc.LogError(err) == nil {
+					Txs = append(Txs, decoded)
+				}
 			}
 		}
+		endPage = (txResult.TotalCount / 100) + 1
 	}
 	return Txs, nil
 }
@@ -210,17 +214,21 @@ func (rpc *RPC) GetAllJWKs() ([]types.Tx, error) {
 // GetAllCHNGSTK gets all change stake txs
 func (rpc *RPC) GetAllCHNGSTK() ([]types.Tx, error) {
 	Txs := []types.Tx{}
-	txResult, err := rpc.client.TxSearch("CHNGSTK.CHANGE='STAKE'", false, 1, 200, "")
-	if err != nil {
-		return nil, err
-	} else if txResult.TotalCount > 0 {
-		rpc.logger.Info(fmt.Sprintf("Found %d CHNGSTK tx while loading", txResult.TotalCount))
-		for _, tx := range txResult.Txs {
-			decoded, err := util.DecodeTx(tx.Tx)
-			if rpc.LogError(err) == nil {
-				Txs = append(Txs, decoded)
+	endPage := 2
+	for i := 1; i <= endPage; i++ {
+		txResult, err := rpc.client.TxSearch("CHNGSTK.CHANGE='STAKE'", false, i, 100, "")
+		if err != nil {
+			return nil, err
+		} else if txResult.TotalCount > 0 {
+			rpc.logger.Info(fmt.Sprintf("Found %d CHNGSTK tx while loading", txResult.TotalCount))
+			for _, tx := range txResult.Txs {
+				decoded, err := util.DecodeTx(tx.Tx)
+				if rpc.LogError(err) == nil {
+					Txs = append(Txs, decoded)
+				}
 			}
 		}
+		endPage = (txResult.TotalCount / 100) + 1
 	}
 	return Txs, nil
 }
