@@ -94,7 +94,7 @@ func setup(config types.AnchorConfig) {
 			seedStatus = util.GetAPIStatus(seedIp)
 			if seedStatus.TotalStakePrice != 0 {
 				inBtc := float64(seedStatus.TotalStakePrice) / float64(100000000)
-				stakeText := fmt.Sprintf("You will need at least %d Satoshis (%f BTC) to join the Chainpoint Network!\n", seedStatus.TotalStakePrice, inBtc)
+				stakeText := fmt.Sprintf("You will need at least %d Satoshis (%f BTC) to join the Chainpoint Network!\nSetting up LND...", seedStatus.TotalStakePrice, inBtc)
 				fmt.Printf(stakeText)
 			}
 			configs = append(configs, "seeds="+seed)

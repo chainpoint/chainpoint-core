@@ -72,13 +72,13 @@ func (app *AnchorApplication) CheckVoteChangeStake() {
 func (app *AnchorApplication) StakeIdentity() {
 	// wait for syncMonitor
 	for !app.state.AppReady || len(app.state.LNState.Uris) == 0 {
-		app.logger.Info("StakeIdentity state loading...")
+		app.logger.Info("StakeIdentity Lightning state loading...")
 		time.Sleep(30 * time.Second)
 	}
 	// resend JWK if info has changed
 	if lnUri, exists := app.state.LnUris[app.ID]; app.state.JWKStaked && exists {
 		if lnUri.Peer != app.state.LNState.Uris[0] {
-			app.logger.Info(fmt.Sprintf("Stored Peer URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
+			app.logger.Info(fmt.Sprintf("Stored Peer Lightning URI %s different from %s, resending JWK...", lnUri.Peer, app.state.LNState.Uris[0]))
 			app.state.JWKStaked = false
 		}
 	}
@@ -87,8 +87,8 @@ func (app *AnchorApplication) StakeIdentity() {
 		pubKeyJwkHex := fmt.Sprintf("%x", elliptic.Marshal(pubKeyJwk.Curve, pubKeyJwk.X, pubKeyJwk.Y))
 		pubKeyHex := fmt.Sprintf("%x", elliptic.Marshal(pubKey.Curve, pubKey.X, pubKey.Y))
 		if pubKeyJwkHex != pubKeyHex {
-			app.logger.Info(fmt.Sprintf("node ID has likely changed. %s != %s", pubKeyJwkHex, pubKeyHex))
-			app.logger.Info("Restaking with new credentials")
+			app.logger.Info(fmt.Sprintf("Lightning: node ID has likely changed. %s != %s", pubKeyJwkHex, pubKeyHex))
+			app.logger.Info("Lightning: Restaking with new credentials")
 			app.state.JWKStaked = false
 		}
 	}
@@ -99,7 +99,7 @@ func (app *AnchorApplication) StakeIdentity() {
 
 		amValidator, err := leaderelection.AmValidator(*app.state)
 		if app.LogError(err) != nil {
-			app.logger.Info("Cannot determine validators, restarting staking loop...")
+			app.logger.Info("Cannot determine validators, restarting Lightning staking loop...")
 			continue
 		}
 		app.state.AmValidator = amValidator
@@ -107,7 +107,7 @@ func (app *AnchorApplication) StakeIdentity() {
 		waitForValidators := false
 		//if we're not a validator, we need to "stake" by opening a ln channel to the validators
 		if !amValidator {
-			app.logger.Info("This node is new to the network; beginning staking")
+			app.logger.Info("This node is new to the network; beginning Lightning staking")
 			for _, validator := range app.state.Validators {
 				valID := validator.Address.String()
 				if lnID, exists := app.state.LnUris[valID]; exists {
@@ -146,8 +146,8 @@ func (app *AnchorApplication) StakeIdentity() {
 		}
 
 		// If we're ready, declare our identity to the network
-		if app.SendIdentity() != nil {
-			app.logger.Info("Sending JWK Identity failed, restarting staking loop...")
+		if err := app.SendIdentity(); err != nil {
+			app.logger.Info(fmt.Sprintf("Sending JWK Identity failed:%s\nrestarting Lightning staking loop.", err.Error()))
 			continue
 		}
 	}
@@ -155,12 +155,12 @@ func (app *AnchorApplication) StakeIdentity() {
 
 func (app *AnchorApplication) SendIdentity() error {
 	jwkJson, err := json.Marshal(app.JWK)
-	if app.LogError(err) != nil {
+	if err != nil {
 		return err
 	}
 	//Create ln identity struct
 	resp, err := app.LnClient.GetInfo()
-	if app.LogError(err) != nil || len(resp.Uris) == 0 {
+	if err != nil || len(resp.Uris) == 0 {
 		return err
 	}
 	uri := resp.Uris[0]
@@ -169,13 +169,13 @@ func (app *AnchorApplication) SendIdentity() error {
 		RequiredChanAmt: app.state.LnStakePerVal,
 	}
 	lnIDBytes, err := json.Marshal(lnID)
-	if app.LogError(err) != nil {
+	if err != nil {
 		return err
 	}
 	app.logger.Info("Sending JWK...", "JWK", string(jwkJson))
 	//Declare our identity to the network
 	_, err = app.rpc.BroadcastTxWithMeta("JWK", string(jwkJson), 2, time.Now().Unix(), app.ID, string(lnIDBytes), app.config.ECPrivateKey)
-	if app.LogError(err) != nil {
+	if err != nil {
 		return err
 	}
 	return nil
@@ -215,31 +215,27 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 	// If we're the first validator, we accept by default.
 	_, alreadyExists := app.state.CoreKeys[tx.CoreID]
 	if app.ID == tx.CoreID {
-		app.logger.Info("Validated JWK since we're the proposer")
+		app.logger.Info("Validated JWK Identity since we're the proposer")
 		return true
 	} else if app.state.ChainSynced && app.state.AmValidator && !alreadyExists {
 		lnID := types.LnIdentity{}
 		if app.LogError(json.Unmarshal([]byte(tx.Meta), &lnID)) != nil {
 			return false
 		}
-		app.logger.Info("Checking if the incoming JWK Identity is from a validator")
+		app.logger.Info("Checking if the incoming JWK Identity is from a validator", "ID", tx.CoreID, "lnURI", lnID.Peer)
 		isVal, err := leaderelection.IsValidator(*app.state, tx.CoreID)
 		app.LogError(err)
 		if isVal {
 			return true
 		}
-		app.logger.Info("JWK Identity: Checking Channel Funding")
+		app.logger.Info("JWK Identity: Checking Channel Funding", "ID", tx.CoreID, "lnURI", lnID.Peer)
 		chanExists, err := app.LnClient.AnyChannelExists(lnID.Peer, app.state.LnStakePerVal)
 		if app.LogError(err) == nil && chanExists {
-			app.logger.Info("JWK Identity: Channel Open and Funded")
+			app.logger.Info("JWK Identity: Channel Open and Funded", "ID", tx.CoreID, "lnURI", lnID.Peer)
 			return true
-		} else {
-			if tx.CoreID == "08ABE61DA90ED45BD51C26B903D0908DCC80C2FC" {
-				return true
-			}
-			app.logger.Info("JWK Identity: Channel not open, rejecting")
-			return false
 		}
+		app.logger.Info("JWK Identity: Channel not open, rejecting", "ID", tx.CoreID, "lnURI", lnID.Peer)
+		return false
 	} else if !app.state.ChainSynced {
 		// we're fast-syncing, so agree with the prior chainstate
 		return true
@@ -247,7 +243,7 @@ func (app *AnchorApplication) VerifyIdentity(tx types.Tx) bool {
 		// if we're both validators, verify identity
 		return true
 	}
-	app.logger.Info("JWK Identity", "alreadyExists", alreadyExists)
+	app.logger.Info("JWK Identity", "ID", tx.CoreID, "alreadyExists", alreadyExists)
 	return !alreadyExists
 }
 
