@@ -63,10 +63,9 @@ func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power
 
 	id = strings.TrimPrefix(idS, "val:")
 	// decode the pubkey
-	pubkey, err = base64.StdEncoding.DecodeString(pubkeyS)
+	pubkey, err = base64.StdEncoding.DecodeString(strings.TrimPrefix(pubkeyS, "val:"))
 	if err != nil {
 		return errors.New("pubkey is invalid base64"), "", []byte{}, 0, 0
-
 	}
 	// decode the power
 	power, err = strconv.ParseInt(powerS, 10, 64)
@@ -87,7 +86,7 @@ func ValidateValidatorTx(val string) (err error, id string, pubkey []byte, power
 // pubkey is a base64-encoded 32-byte ed25519 key
 func (app *AnchorApplication) execValidatorTx(tx []byte) types.ResponseDeliverTx {
 	err, _, pubkey, power, _ := ValidateValidatorTx(string(tx))
-	if err != nil {
+	if app.LogError(err) != nil {
 		return types.ResponseDeliverTx{
 			Code: code.CodeTypeEncodingError,
 			Log:  fmt.Sprintf(err.Error()),

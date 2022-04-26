@@ -94,6 +94,12 @@ clean-tendermint:
 	rm -rf ${HOMEDIR}/.chainpoint/core/data/*.wal
 	rm -rf ${HOMEDIR}/.chainpoint/core/data/*.json
 
+## clear-chain               : removes tendermint chain but leaves tm keys intact
+clear-chain:
+	rm -rf ${HOMEDIR}/.chainpoint/core/data/*.db
+	rm -rf ${HOMEDIR}/.chainpoint/core/data/*.wal
+	rm -rf ${HOMEDIR}/.chainpoint/core/data/*.json
+
 ##pull
 pull:
 	git pull

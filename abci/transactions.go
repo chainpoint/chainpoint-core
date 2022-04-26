@@ -134,12 +134,14 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 		tags = append(tags, kv.Pair{Key: []byte("CHANGE"), Value: []byte("STAKE")})
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 	case "CAL":
-		go func() {
-			time.Sleep(1 * time.Minute)
-			txHash := tmhash.Sum(rawTx)
-			app.logger.Info("Removing Cal Hash from Db:", "hash", hex.EncodeToString(txHash))
-			app.Cache.Del(hex.EncodeToString(txHash), "")
-		}()
+		if app.state.ChainSynced {
+			go func() {
+				time.Sleep(1 * time.Minute)
+				txHash := tmhash.Sum(rawTx)
+				app.logger.Info("Removing Cal Hash from Db:", "hash", hex.EncodeToString(txHash))
+				app.Cache.Del(hex.EncodeToString(txHash), "")
+			}()
+		}
 		tags = app.incrementTxInt(tags)
 		app.state.LatestCalTxInt = app.state.TxInt
 		app.state.CurrentCalInts++
