@@ -31,12 +31,17 @@ func (app *AnchorApplication) SetStake() {
 			if len(chngStakeTxs) != 0 {
 				chngStakeTx := chngStakeTxs[0]
 				latestStakePerCore, err := strconv.ParseInt(chngStakeTx.Data, 10, 64)
-				if err != nil || latestStakePerCore != app.config.StakePerCore {
+				app.logger.Info("Lightning ChangeStakeTx", "latestStakePerCore", latestStakePerCore)
+				if err != nil || (latestStakePerCore != 0 && latestStakePerCore != app.config.StakePerCore) {
 					app.config.StakePerCore = latestStakePerCore
 				}
+			} else {
+				app.logger.Info("Lightning config.StakePerCore", "config.StakePerCore", app.config.StakePerCore)
 			}
 			totalStake := (int64(len(cores)) * app.config.StakePerCore)
+			app.logger.Info("Lightning Stake Total", "totalStake", totalStake)
 			stakeAmt := totalStake / int64(len(validators.Validators)) //total stake divided by validators
+			app.logger.Info("Lightning Stake Per Core", "stakeAmt", stakeAmt)
 			app.state.Validators = validators.Validators
 			app.state.LnStakePerVal = stakeAmt
 			app.state.LnStakePrice = totalStake //Total Stake Price includes the other 1/3 just in case
