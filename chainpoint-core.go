@@ -80,7 +80,6 @@ func setup(config types.AnchorConfig) {
 		if err != nil {
 			panic(err)
 		}
-		configs = append(configs, "mode="+publicResult)
 		if publicResult == "Public Chainpoint Network" {
 			if networkResult == "mainnet" {
 				seed = "24ba3a2556ebae073b42d94815836b29594a2456@18.220.31.138:26656"

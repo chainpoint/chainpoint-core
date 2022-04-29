@@ -46,7 +46,6 @@ func (app *AnchorApplication) SetStake() {
 			app.state.LnStakePerVal = stakeAmt
 			app.state.LnStakePrice = totalStake //Total Stake Price includes the other 1/3 just in case
 			return
-			//app.logger.Info(fmt.Sprintf("Stake Amt per Val: %d, total stake: %d", stakeAmt, app.state.LnStakePrice))
 		}
 	}
 }
