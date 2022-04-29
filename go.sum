@@ -182,6 +182,8 @@ github.com/chainpoint/leader-election v0.0.0 h1:9hvbH1OkvMPCzpOxH/Rlc1s043CnpRdn
 github.com/chainpoint/leader-election v0.0.0/go.mod h1:Endap5ahA75Y96vbx4ow7g5zJi/1eRelmZV8RGZN24A=
 github.com/chainpoint/lightning-go v0.0.2 h1:S56xxEfd3xPCSmjjXZj8QPn0eoCynIgbFn1yYUE/e2I=
 github.com/chainpoint/lightning-go v0.0.2/go.mod h1:jBjkAAWrfDn2KQbh6MzEXAwA7y5YzG7mADbQ/JAlfsk=
+github.com/chainpoint/merkletools-go v1.0.2 h1:CxUaAvpA1hzuGsMNtOFJBR6dhmV5fpSJPkv5f60zEVw=
+github.com/chainpoint/merkletools-go v1.0.2/go.mod h1:G+EmcRLCI87K0EybxzRBspc5trUFv3Zl6E+YLvFIP5Y=
 github.com/chzyer/logex v1.1.10 h1:Swpa1K6QvQznwJRcfTfQJmTE72DqScAa40E+fbHEXEE=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e h1:fY5BOSpyZCqRo5OhCuC+XN+r/bBCmeuuJtjz+bCNIf8=

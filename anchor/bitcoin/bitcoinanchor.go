@@ -14,7 +14,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/database/level"
 	"github.com/chainpoint/chainpoint-core/leaderelection"
 	lightning "github.com/chainpoint/lightning-go"
-	"github.com/chainpoint/chainpoint-core/merkletools"
+	merkletools "github.com/chainpoint/merkletools-go"
 	"github.com/chainpoint/chainpoint-core/proof"
 	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/types"

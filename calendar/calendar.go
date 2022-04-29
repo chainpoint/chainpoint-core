@@ -12,7 +12,7 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/util"
 
-	"github.com/chainpoint/chainpoint-core/merkletools"
+	merkletools "github.com/chainpoint/merkletools-go"
 )
 
 // GenerateCalendarTree creates the MerkleTree for the aggregation roots which will be committed to the calendar

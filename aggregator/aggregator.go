@@ -17,7 +17,7 @@ import (
 
 	"github.com/chainpoint/chainpoint-core/util"
 
-	"github.com/chainpoint/chainpoint-core/merkletools"
+	merkletools "github.com/chainpoint/merkletools-go"
 	"github.com/enriquebris/goconcurrentqueue"
 )
 
