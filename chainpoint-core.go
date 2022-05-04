@@ -276,6 +276,8 @@ func runLnd(config types.AnchorConfig) {
 			"--tlsextradomain=lnd",
 			"--tlsextraip=" + coreIPOnly,
 			"--debuglevel=" + config.LightningConfig.LndLogLevel,
+			"--accept-amp",
+			"--accept-keysend",
 		}
 		if config.BitcoinNetwork == "mainnet" {
 			osArgs = append(osArgs, "--feeurl=https://nodes.lightning.computer/fees/v1/btc-fee-estimates.json")
