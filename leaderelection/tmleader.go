@@ -6,11 +6,11 @@ import (
 	"github.com/chainpoint/chainpoint-core/validation"
 	"sort"
 
-	"github.com/tendermint/tendermint/types"
-	seededelection "github.com/chainpoint/leader-election"
 	"github.com/chainpoint/chainpoint-core/util"
+	seededelection "github.com/chainpoint/leader-election"
 	"github.com/tendermint/tendermint/p2p"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/tendermint/tendermint/types"
 )
 
 // ElectPeerAsLeader deterministically elects a network leader by creating an array of peers and using a blockhash-seeded random int as an index

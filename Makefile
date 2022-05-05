@@ -121,3 +121,6 @@ migrate:
 	tr A-Z a-z < .env > ${CORE_DATADIR}/core.conf
 	sed -i 's/"//g' ${CORE_DATADIR}/core.conf
 	sed -i 's/lnd:10009/127.0.0.1:10009/g' ${CORE_DATADIR}/core.conf
+
+format:
+	@gofmt -s -w .

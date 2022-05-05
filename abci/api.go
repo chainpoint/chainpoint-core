@@ -33,7 +33,7 @@ type ProcessingHints struct {
 	BtcHint string `json:"btc"`
 }
 
-func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}){
+func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 	for {
 		hashRegex := regexp.MustCompile("^[a-fA-F0-9]{64}$")
 		errors := make(chan error)
