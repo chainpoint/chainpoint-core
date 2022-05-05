@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/btcsuite/btcd v0.22.0-beta.0.20211005184431-e3449998be39
 	github.com/chainpoint/leader-election v0.0.0
-	github.com/chainpoint/lightning-go v0.0.2
+	github.com/chainpoint/lightning-go v0.0.4
 	github.com/chainpoint/merkletools-go v1.0.2
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/drand/drand v1.0.0-rc1

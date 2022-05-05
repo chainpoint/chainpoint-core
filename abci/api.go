@@ -1,6 +1,7 @@
 package abci
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/leaderelection"
@@ -8,6 +9,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/gorilla/mux"
+	"github.com/lightningnetwork/lnd/lnrpc"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -29,6 +31,47 @@ type HashResponse struct {
 type ProcessingHints struct {
 	CalHint string `json:"cal"`
 	BtcHint string `json:"btc"`
+}
+
+func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}){
+	for {
+		hashRegex := regexp.MustCompile("^[a-fA-F0-9]{64}$")
+		errors := make(chan error)
+		results := make(chan lnrpc.Invoice)
+		subscribe := true
+		go app.LnClient.SubscribeInvoicesChannel(quit, errors, results)
+		for subscribe {
+			select {
+			case err := <-errors:
+				app.LogError(err)
+				subscribe = false
+				break
+			case res := <-results:
+				app.logger.Info("Received Invoice", "Invoice", res.PaymentRequest, "Keysend", res.IsKeysend)
+				if res.IsKeysend && res.State == lnrpc.Invoice_SETTLED && (res.Value == int64(app.config.HashPrice) || res.ValueMsat == int64(app.config.HashPrice)*1000) {
+					var hash string
+					if len(res.Htlcs) >= 1 {
+						for _, htlc := range res.Htlcs {
+							for _, value := range htlc.CustomRecords {
+								if hashRegex.MatchString(string(value)) {
+									hash = string(value)
+								}
+							}
+						}
+					} else if hashRegex.MatchString(res.Memo) {
+						hash = res.Memo
+					}
+					if hash != "" {
+						id := sha256.Sum256([]byte(hash))
+						app.aggregator.AddHashItem(types.HashItem{
+							ProofID: string(id[:]),
+							Hash:    hash,
+						})
+					}
+				}
+			}
+		}
+	}
 }
 
 func (app *AnchorApplication) HomeHandler(w http.ResponseWriter, r *http.Request) {
