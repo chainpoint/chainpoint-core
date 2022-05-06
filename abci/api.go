@@ -2,6 +2,7 @@ package abci
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/leaderelection"
@@ -53,18 +54,20 @@ func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 					if len(res.Htlcs) >= 1 {
 						for _, htlc := range res.Htlcs {
 							for _, value := range htlc.CustomRecords {
-								if hashRegex.MatchString(string(value)) {
-									hash = string(value)
+								if hashRegex.MatchString(hex.EncodeToString(value)) {
+									hash = hex.EncodeToString(value)
 								}
 							}
 						}
-					} else if hashRegex.MatchString(res.Memo) {
+					}
+					if hashRegex.MatchString(res.Memo) {
 						hash = res.Memo
 					}
 					if hash != "" {
+						app.logger.Info("Accepting Hash from invoice", "hash", hash)
 						id := sha256.Sum256([]byte(hash))
 						app.aggregator.AddHashItem(types.HashItem{
-							ProofID: string(id[:]),
+							ProofID: hex.EncodeToString(id[:]),
 							Hash:    hash,
 						})
 					}
