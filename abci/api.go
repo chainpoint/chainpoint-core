@@ -36,6 +36,9 @@ type ProcessingHints struct {
 
 func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 	for {
+		if !app.state.AppReady{
+			continue
+		}
 		hashRegex := regexp.MustCompile("^[a-fA-F0-9]{64}$")
 		errors := make(chan error)
 		results := make(chan lnrpc.Invoice)
@@ -64,10 +67,11 @@ func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 						hash = res.Memo
 					}
 					if hash != "" {
-						app.logger.Info("Accepting Hash from invoice", "hash", hash)
 						id := sha256.Sum256([]byte(hash))
+						idStr := hex.EncodeToString(id[:])
+						app.logger.Info("Accepting Hash from invoice", "ProofId:", idStr, "hash", hash)
 						app.aggregator.AddHashItem(types.HashItem{
-							ProofID: hex.EncodeToString(id[:]),
+							ProofID: idStr,
 							Hash:    hash,
 						})
 					}
