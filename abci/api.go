@@ -49,6 +49,7 @@ func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 			case err := <-errors:
 				app.LogError(err)
 				subscribe = false
+				time.Sleep(30 * time.Second)
 				break
 			case res := <-results:
 				app.logger.Info("Received Invoice", "Invoice", res.PaymentRequest, "Keysend", res.IsKeysend)
@@ -69,7 +70,7 @@ func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 					if hash != "" {
 						id := sha256.Sum256([]byte(hash))
 						idStr := hex.EncodeToString(id[:])
-						app.logger.Info("Accepting Hash from invoice", "ProofId:", idStr, "hash", hash)
+						app.logger.Info("Accepting Hash from invoice", "ProofId", idStr, "hash", hash)
 						app.aggregator.AddHashItem(types.HashItem{
 							ProofID: idStr,
 							Hash:    hash,
@@ -204,7 +205,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, too many hash ids (250 max)"})
 		return
 	}
-	uuidOrUlidRegex := regexp.MustCompile(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})|([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26})$`)
+	uuidOrUlidRegex := regexp.MustCompile(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})|([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26})|([a-f0-9]{64})$`)
 	for _, id := range proofids {
 		if !uuidOrUlidRegex.MatchString(id) {
 			errStr := fmt.Sprintf("invalid request, bad proof_id: %s", id)
