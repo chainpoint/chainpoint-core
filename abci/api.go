@@ -52,7 +52,7 @@ func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 				time.Sleep(30 * time.Second)
 				break
 			case res := <-results:
-				app.logger.Info("Received Invoice", "Invoice", res.PaymentRequest, "Keysend", res.IsKeysend)
+				app.logger.Info("Received Invoice", "Invoice", hex.EncodeToString(res.RHash), "Keysend", res.IsKeysend)
 				if res.IsKeysend && res.State == lnrpc.Invoice_SETTLED && (res.Value == int64(app.config.HashPrice) || res.ValueMsat == int64(app.config.HashPrice)*1000) {
 					var hash string
 					if len(res.Htlcs) >= 1 {
@@ -70,11 +70,16 @@ func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 					if hash != "" {
 						id := sha256.Sum256([]byte(hash))
 						idStr := hex.EncodeToString(id[:])
-						app.logger.Info("Accepting Hash from invoice", "ProofId", idStr, "hash", hash)
 						app.aggregator.AddHashItem(types.HashItem{
 							ProofID: idStr,
 							Hash:    hash,
 						})
+						alternateId := hex.EncodeToString(res.RHash)
+						app.aggregator.AddHashItem(types.HashItem{
+							ProofID: alternateId,
+							Hash:    hash,
+						})
+						app.logger.Info("Accepted Hash from invoice", "ProofId", idStr, "AlternateProofId", alternateId, "hash", hash)
 					}
 				}
 			}
