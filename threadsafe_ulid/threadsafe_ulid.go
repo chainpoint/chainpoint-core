@@ -9,23 +9,23 @@ import (
 )
 
 type ThreadSafeUlid struct {
-	Time       time.Time
-	safe       safeMonotonicReader
+	Time time.Time
+	safe safeMonotonicReader
 }
 
-func NewThreadSafeUlid () *ThreadSafeUlid {
+func NewThreadSafeUlid() *ThreadSafeUlid {
 	t := time.Now()
 	return &ThreadSafeUlid{
-		Time:      t,
-		safe:      safeMonotonicReader{MonotonicReader: ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)},
+		Time: t,
+		safe: safeMonotonicReader{MonotonicReader: ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)},
 	}
 }
 
-func (u *ThreadSafeUlid) NewUlid () (ulid.ULID, error) {
+func (u *ThreadSafeUlid) NewUlid() (ulid.ULID, error) {
 	return ulid.New(ulid.Timestamp(u.Time), u.safe)
 }
 
-func (u *ThreadSafeUlid) NewSeededEntropy (seed string) {
+func (u *ThreadSafeUlid) NewSeededEntropy(seed string) {
 	u.Time = time.Now()
 	seedBytes := []byte(seed)
 	eightByteHash := seedBytes[0:7]

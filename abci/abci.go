@@ -154,15 +154,15 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 		NodeRewardSignatures: make([]string, 0),
 		CoreRewardSignatures: make([]string, 0),
 		aggregator: &aggregator.Aggregator{
-			Logger: *config.Logger,
+			Logger:  *config.Logger,
 			UlidGen: ulidGenerator,
 		},
-		ChainpointDb: database,
-		Cache:        cache,
-		LnClient:     &config.LightningConfig,
-		rpc:          rpcClient,
-		JWK:          jwkType,
-		Analytics:    &analytics,
+		ChainpointDb:  database,
+		Cache:         cache,
+		LnClient:      &config.LightningConfig,
+		rpc:           rpcClient,
+		JWK:           jwkType,
+		Analytics:     &analytics,
 		ULIDGenerator: ulidGenerator,
 	}
 

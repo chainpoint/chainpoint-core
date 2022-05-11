@@ -1,6 +1,8 @@
 package abci
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/chainpoint/chainpoint-core/leaderelection"
@@ -8,6 +10,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/gorilla/mux"
+	"github.com/lightningnetwork/lnd/lnrpc"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -29,6 +32,54 @@ type HashResponse struct {
 type ProcessingHints struct {
 	CalHint string `json:"cal"`
 	BtcHint string `json:"btc"`
+}
+
+func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
+	for {
+		if !app.state.AppReady{
+			continue
+		}
+		hashRegex := regexp.MustCompile("^[a-fA-F0-9]{64}$")
+		errors := make(chan error)
+		results := make(chan lnrpc.Invoice)
+		subscribe := true
+		go app.LnClient.SubscribeInvoicesChannel(quit, errors, results)
+		for subscribe {
+			select {
+			case err := <-errors:
+				app.LogError(err)
+				subscribe = false
+				time.Sleep(30 * time.Second)
+				break
+			case res := <-results:
+				app.logger.Info("Received Invoice", "Invoice", res.PaymentRequest, "Keysend", res.IsKeysend)
+				if res.IsKeysend && res.State == lnrpc.Invoice_SETTLED && (res.Value == int64(app.config.HashPrice) || res.ValueMsat == int64(app.config.HashPrice)*1000) {
+					var hash string
+					if len(res.Htlcs) >= 1 {
+						for _, htlc := range res.Htlcs {
+							for _, value := range htlc.CustomRecords {
+								if hashRegex.MatchString(hex.EncodeToString(value)) {
+									hash = hex.EncodeToString(value)
+								}
+							}
+						}
+					}
+					if hashRegex.MatchString(res.Memo) {
+						hash = res.Memo
+					}
+					if hash != "" {
+						id := sha256.Sum256([]byte(hash))
+						idStr := hex.EncodeToString(id[:])
+						app.logger.Info("Accepting Hash from invoice", "ProofId", idStr, "hash", hash)
+						app.aggregator.AddHashItem(types.HashItem{
+							ProofID: idStr,
+							Hash:    hash,
+						})
+					}
+				}
+			}
+		}
+	}
 }
 
 func (app *AnchorApplication) HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +205,7 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 		respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "invalid request, too many hash ids (250 max)"})
 		return
 	}
-	uuidOrUlidRegex := regexp.MustCompile(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})|([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26})$`)
+	uuidOrUlidRegex := regexp.MustCompile(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})|([0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26})|([a-f0-9]{64})$`)
 	for _, id := range proofids {
 		if !uuidOrUlidRegex.MatchString(id) {
 			errStr := fmt.Sprintf("invalid request, bad proof_id: %s", id)

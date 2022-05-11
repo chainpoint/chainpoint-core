@@ -217,12 +217,15 @@ func main() {
 		panic(err)
 	}
 
+	var quit chan struct{} //to signal the infinite invoice processing loop to quit
+
 	// Wait forever, shutdown gracefully upon
 	tmos.TrapSignal(*config.Logger, func() {
 		if n.IsRunning() {
 			app.Cache.LevelDb.Close()
 			logger.Info("Shutting down Core...")
 			n.Stop()
+			close(quit)
 		}
 	})
 
@@ -233,6 +236,8 @@ func main() {
 	logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
 
 	time.Sleep(10 * time.Second) //prevent API from blocking tendermint init
+
+	// all external APIs and gateways start below
 
 	apiHandlers := setupAPI(*app, config)
 
@@ -252,6 +257,9 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+
+	go app.LnPaymentHandler(quit)
+
 	util.LogError(server.ListenAndServe())
 
 	return

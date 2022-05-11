@@ -3,10 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	lightning "github.com/chainpoint/lightning-go"
 	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
+	lightning "github.com/chainpoint/lightning-go"
 	"github.com/jacohend/flag"
 	"github.com/knq/pemutil"
 	"github.com/spf13/viper"
@@ -133,7 +133,7 @@ func InitConfig(home string) types.AnchorConfig {
 	var chainId string
 	if tmConfig.Config != nil && tmConfig.Config.ChainID() != "" {
 		chainId = tmConfig.Config.ChainID()
-	} else if bitcoinNetwork == "mainnet"{
+	} else if bitcoinNetwork == "mainnet" {
 		chainId = "mainnet-chain-32"
 	}
 
@@ -147,43 +147,43 @@ func InitConfig(home string) types.AnchorConfig {
 		ElectionMode:     electionMode,
 		TendermintConfig: tmConfig,
 		LightningConfig: lightning.LightningClient{
-			TlsPath:             tlsCertPath,
-			MacPath:             macaroonPath,
-			ServerHostPort:      lndSocket,
-			LndLogLevel:         lndLogFilter,
-			MinConfs:            3,
-			Testnet:             bitcoinNetwork == "testnet",
-			WalletAddress:       walletAddress,
-			WalletPass:          walletPass,
-			WalletSeed:          strings.Split(walletSeed, ","),
-			HashPrice:           int64(hashPrice),
-			SessionSecret:       sessionSecret,
+			TlsPath:        tlsCertPath,
+			MacPath:        macaroonPath,
+			ServerHostPort: lndSocket,
+			LndLogLevel:    lndLogFilter,
+			MinConfs:       3,
+			Testnet:        bitcoinNetwork == "testnet",
+			WalletAddress:  walletAddress,
+			WalletPass:     walletPass,
+			WalletSeed:     strings.Split(walletSeed, ","),
+			HashPrice:      int64(hashPrice),
+			SessionSecret:  sessionSecret,
 		},
-		ECPrivateKey:     ecPrivKey,
-		CIDRBlockList:    blockCIDRs,
-		IPBlockList:      blocklist,
-		DoCal:            doCalLoop,
-		DoAnchor:         doAnchorLoop,
-		AnchorInterval:   anchorInterval,
-		Logger:           &tmLogger,
-		FilePV:           tmConfig.FilePV,
-		AnchorTimeout:    anchorTimeout,
-		AnchorReward:     anchorReward,
-		UpdateStake:      updateStake,
-		StakePerCore:     1000000,
-		FeeInterval:      int64(feeInterval),
-		FeeMultiplier:    feeMultiplier,
-		HashPrice:        hashPrice,
-		UseAllowlist:     useAggregatorAllowlist,
-		GatewayAllowlist: aggregatorAllowlist,
-		CoreURI:          listenAddr,
-		CoreName:         coreName,
-		AnalyticsID:      analyticsID,
-		ProposedVal:      proposedValidator,
-		RemoveRateLimits: removeRateLimits,
-		HashQuota:        hashQuota,
-		ApiQuota:         apiQuota,
-		ProofQuota:       proofQuota,
+		ECPrivateKey:           ecPrivKey,
+		CIDRBlockList:          blockCIDRs,
+		IPBlockList:            blocklist,
+		DoCal:                  doCalLoop,
+		DoAnchor:               doAnchorLoop,
+		AnchorInterval:         anchorInterval,
+		Logger:                 &tmLogger,
+		FilePV:                 tmConfig.FilePV,
+		AnchorTimeout:          anchorTimeout,
+		AnchorReward:           anchorReward,
+		UpdateStake:            updateStake,
+		StakePerCore:           1000000,
+		FeeInterval:            int64(feeInterval),
+		FeeMultiplier:          feeMultiplier,
+		HashPrice:              hashPrice,
+		UseAllowlist:           useAggregatorAllowlist,
+		GatewayAllowlist:       aggregatorAllowlist,
+		CoreURI:                listenAddr,
+		CoreName:               coreName,
+		AnalyticsID:            analyticsID,
+		ProposedVal:            proposedValidator,
+		RemoveRateLimits:       removeRateLimits,
+		HashQuota:              hashQuota,
+		ApiQuota:               apiQuota,
+		ProofQuota:             proofQuota,
 		UseChainpointLndConfig: useChpLndConfig,
 	}
 }
@@ -301,7 +301,7 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 	TMConfig.NodeKey = nodeKey
 
 	// check if core has already been setup
-	_, err = os.Stat(fmt.Sprintf("%s/core.conf", home));
+	_, err = os.Stat(fmt.Sprintf("%s/core.conf", home))
 	needSetup := errors.Is(err, os.ErrNotExist)
 
 	// initialize genesis file
