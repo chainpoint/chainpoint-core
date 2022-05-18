@@ -161,6 +161,48 @@ func (rpc *RPC) GetCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.Resu
 	return Txs, nil
 }
 
+// GetIndexForCalTx : get transactional index tag for a given tendermint calendar hash
+func (rpc *RPC) GetIndexForCalTx (txid string) (int64, error){
+	calResult, err := rpc.GetTxByHash(txid)
+	if err != nil {
+		return 0, err
+	}
+	var index int64
+	for _, event := range calResult.TxResult.Events {
+		for _, tag := range event.Attributes {
+			if string(tag.Key) == "TxInt" {
+				index = util.ByteToInt64(string(tag.Value))
+				return index, nil
+			}
+		}
+	}
+	return 0, errors.New(fmt.Sprintf("no txInt index found for %s", txid))
+}
+
+// GetBtcaForCalTx : retrieve the corresponding btca tx for a given calendar tx
+func (rpc *RPC) GetBtcaForCalTx (txid string) (types.BtcTxMsg, error) {
+	index, err := rpc.GetIndexForCalTx(txid)
+	if err != nil {
+		return types.BtcTxMsg{}, err
+	}
+	queryLine := fmt.Sprintf("tm.event = 'Tx' AND BTC-A.TxInt > %d", index)
+	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 5, "asc")
+	if rpc.LogError(err) != nil {
+		return types.BtcTxMsg{}, err
+	}
+	for _, res := range txResult.Txs {
+		tx, err := util.DecodeTx(res.Tx)
+		if err == nil {
+			btcMsg := types.BtcTxMsg{}
+			if err := json.Unmarshal([]byte(tx.Data), &btcMsg); err != nil && index >= btcMsg.BeginCalTxInt && index < btcMsg.EndCalTxInt {
+				return btcMsg, nil
+			}
+		}
+	}
+	return types.BtcTxMsg{}, nil
+}
+
+
 //GetAnchoringCore : gets core to whom last anchor is attributed
 func (rpc *RPC) GetAnchoringCore(queryLine string) (string, error) {
 	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 1, "")

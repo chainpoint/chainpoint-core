@@ -245,6 +245,7 @@ func main() {
 	r.Handle("/", apiHandlers.HomeHandler)
 	r.Handle("/hash", apiHandlers.HashHandler)
 	r.Handle("/proofs", apiHandlers.ProofHandler)
+	r.Handle("/proofs/upgrade/{txid}", apiHandlers.ProofUpgradeHandler)
 	r.Handle("/calendar/{txid}", apiHandlers.CalHandler)
 	r.Handle("/calendar/{txid}/data", apiHandlers.CalDataHandler)
 	r.Handle("/status", apiHandlers.StatusHandler)
@@ -322,6 +323,7 @@ func setupAPI(app abci.AnchorApplication, config types.AnchorConfig) types.APIHa
 			http.HandlerFunc(app.HomeHandler),
 			http.HandlerFunc(app.HashHandler),
 			http.HandlerFunc(app.ProofHandler),
+			http.HandlerFunc(app.ProofUpgradeHandler),
 			http.HandlerFunc(app.CalHandler),
 			http.HandlerFunc(app.CalDataHandler),
 			http.HandlerFunc(app.StatusHandler),
@@ -362,6 +364,7 @@ func setupAPI(app abci.AnchorApplication, config types.AnchorConfig) types.APIHa
 			apiRateLimiter.RateLimit(http.HandlerFunc(app.HomeHandler)),
 			hashRateLimiter.RateLimit(http.HandlerFunc(app.HashHandler)),
 			proofRateLimiter.RateLimit(http.HandlerFunc(app.ProofHandler)),
+			proofRateLimiter.RateLimit(http.HandlerFunc(app.ProofUpgradeHandler)),
 			apiRateLimiter.RateLimit(http.HandlerFunc(app.CalHandler)),
 			apiRateLimiter.RateLimit(http.HandlerFunc(app.CalDataHandler)),
 			apiRateLimiter.RateLimit(http.HandlerFunc(app.StatusHandler)),

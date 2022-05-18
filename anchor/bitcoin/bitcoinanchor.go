@@ -268,6 +268,12 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 	return nil
 }
 
+func (app *AnchorBTC) ConstructProof(btca types.BtcTxMsg) (proof.P, error){
+
+
+	return proof.Proof(), nil
+}
+
 func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.AnchorBtcHeadState) error {
 	app.logger.Info(util.GetCurrentFuncName(1))
 	aggStates, err := app.Db.GetAggStateObjectsByProofIds(proofIds)

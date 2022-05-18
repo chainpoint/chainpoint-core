@@ -36,7 +36,7 @@ type ProcessingHints struct {
 
 func (app *AnchorApplication) LnPaymentHandler(quit chan struct{}) {
 	for {
-		if !app.state.AppReady{
+		if !app.state.AppReady {
 			continue
 		}
 		hashRegex := regexp.MustCompile("^[a-fA-F0-9]{64}$")
@@ -237,6 +237,27 @@ func (app *AnchorApplication) ProofHandler(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	respondJSON(w, http.StatusOK, response)
+}
+
+func (app *AnchorApplication) ProofUpgradeHandler(w http.ResponseWriter, r *http.Request) {
+	ip := util.GetClientIP(r)
+	app.logger.Info(fmt.Sprintf("Proof Upgrade Client IP: %s", ip))
+	vars := mux.Vars(r)
+	if _, exists := vars["txid"]; exists {
+		btca, err := app.rpc.GetBtcaForCalTx(vars["txid"])
+		if app.LogError(err) != nil {
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve btca tx"})
+			return
+		}
+		app.logger.Info("Upgrading proof", "cal", vars["txid"], "btca.BeginCalTxInt", btca.BeginCalTxInt)
+		proof, err := app.Anchor.ConstructProof(btca)
+		if app.LogError(err) != nil {
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not reconstruct core proof"})
+			return
+		}
+		respondJSON(w, http.StatusOK, proof)
+	}
+	respondJSON(w, http.StatusNotFound, map[string]interface{}{"error": "txid parameter required"})
 }
 
 func (app *AnchorApplication) CalHandler(w http.ResponseWriter, r *http.Request) {
