@@ -162,7 +162,7 @@ func (rpc *RPC) GetCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.Resu
 }
 
 // GetIndexForCalTx : get transactional index tag for a given tendermint calendar hash
-func (rpc *RPC) GetIndexForCalTx (txid string) (int64, error){
+func (rpc *RPC) GetIndexForCalTx(txid string) (int64, error) {
 	calResult, err := rpc.GetTxByHash(txid)
 	if err != nil {
 		return 0, err
@@ -180,7 +180,7 @@ func (rpc *RPC) GetIndexForCalTx (txid string) (int64, error){
 }
 
 // GetBtcaForCalTx : retrieve the corresponding btca tx for a given calendar tx
-func (rpc *RPC) GetBtcaForCalTx (txid string) (types.BtcTxMsg, error) {
+func (rpc *RPC) GetBtcaForCalTx(txid string) (types.BtcTxMsg, error) {
 	index, err := rpc.GetIndexForCalTx(txid)
 	if err != nil {
 		return types.BtcTxMsg{}, err
@@ -201,7 +201,6 @@ func (rpc *RPC) GetBtcaForCalTx (txid string) (types.BtcTxMsg, error) {
 	}
 	return types.BtcTxMsg{}, nil
 }
-
 
 //GetAnchoringCore : gets core to whom last anchor is attributed
 func (rpc *RPC) GetAnchoringCore(queryLine string) (string, error) {

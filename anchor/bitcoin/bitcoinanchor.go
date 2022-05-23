@@ -227,7 +227,7 @@ func (app *AnchorBTC) BeginTxMonitor(msgBytes []byte) error {
 
 // ConfirmAnchor : consumes a btc mon message and issues a BTC-Confirm transaction along with completing btc proof generation
 func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
-	app.logger.Info(fmt.Sprintf("Consuming BTC-C for %s", btcMonObj.BtcTxID))
+	app.logger.Info(fmt.Sprintf("Creating BTC-C for %s", btcMonObj.BtcTxID))
 	var hash []byte
 	anchoringCoreID, err := app.tendermintRpc.GetAnchoringCore(fmt.Sprintf("BTC-A.BTCTX='%s'", btcMonObj.BtcTxID))
 	if len(anchoringCoreID) == 0 {
@@ -246,7 +246,13 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 			// Broadcast the confirmation message with metadata
 			amLeader, _ := leaderelection.ElectValidatorAsLeader(1, []string{anchoringCoreID}, *app.state, app.config)
 			if amLeader {
-				result, err := app.tendermintRpc.BroadcastTxWithMeta("BTC-C", btcMonObj.BtcHeadRoot, 2, time.Now().Unix(), app.state.ID, anchoringCoreID+"|"+btcMonObj.BtcTxID, app.config.ECPrivateKey)
+				btcc, err := json.Marshal(types.BtcMonMsg{
+					BtcTxID:       btcMonObj.BtcTxID,
+					BtcHeadHeight: btcMonObj.BtcHeadHeight,
+					BtcHeadRoot:   btcMonObj.BtcHeadRoot,
+					Path:          nil,
+				})
+				result, err := app.tendermintRpc.BroadcastTxWithMeta("BTC-C", string(btcc), 3, time.Now().Unix(), app.state.ID, anchoringCoreID, app.config.ECPrivateKey)
 				app.LogError(err)
 				app.logger.Info(fmt.Sprint("BTC-C confirmation Hash: %v", result.Hash))
 			}
@@ -268,9 +274,23 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 	return nil
 }
 
-func (app *AnchorBTC) ConstructProof(btca types.BtcTxMsg) (proof.P, error){
-
-
+func (app *AnchorBTC) ConstructProof(btca types.BtcTxMsg) (proof.P, error) {
+	btcAgg, err := app.GetTreeFromCalRange(btca.BeginCalTxInt, btca.EndCalTxInt)
+	if app.LogError(err) != nil {
+		return proof.Proof(), err
+	}
+	if btcAgg.AnchorBtcAggRoot != btca.AnchorBtcAggRoot {
+		app.logger.Info(fmt.Sprintf("ConstructProof TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btca.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
+		return proof.Proof(), errors.New("StartAnchoring failure, AggRoot mismatch")
+	}
+	anchorBTCAggStateObjects := calendar.PrepareBtcaStateData(btcAgg)
+	err = app.Db.BulkInsertBtcAggState(anchorBTCAggStateObjects)
+	if app.LogError(err) != nil {
+		app.logger.Info(fmt.Sprintf("ConstructProof TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
+		return proof.Proof(), err
+	}
+	//TODO: happy path: query for btcc, extract height, reconstruct blocktree
+	//TODO: sad path: contact anchoringCore for tx/height, reconstruct blocktree
 	return proof.Proof(), nil
 }
 
