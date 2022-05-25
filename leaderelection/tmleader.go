@@ -3,7 +3,7 @@ package leaderelection
 import (
 	"errors"
 	types2 "github.com/chainpoint/chainpoint-core/types"
-	"github.com/chainpoint/chainpoint-core/validation"
+	"github.com/chainpoint/chainpoint-core/txratelimiter"
 	"sort"
 
 	"github.com/chainpoint/chainpoint-core/util"
@@ -73,7 +73,7 @@ func ElectChainContributorAsLeader(numLeaders int, blacklistedIDs []string, stat
 	}
 	status := state.TMState
 	keys := make([]string, 0, len(state.CoreKeys))
-	cores := validation.GetLastNSubmitters(128, state)
+	cores := txratelimiter.GetLastNSubmitters(128, state)
 	for k := range cores {
 		filtered := false
 		for _, id := range blacklistedIDs {

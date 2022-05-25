@@ -1,4 +1,4 @@
-package threadsafe_ulid
+package ulidthreadsafe
 
 import (
 	"encoding/binary"

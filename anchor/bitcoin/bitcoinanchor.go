@@ -14,7 +14,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/database/level"
 	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/chainpoint/chainpoint-core/proof"
-	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
+	"github.com/chainpoint/chainpoint-core/tendermintrpc"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	lightning "github.com/chainpoint/lightning-go"
@@ -32,7 +32,7 @@ const CHECK_BTC_TX_IDS_KEY = "BTC_Mon:CheckNewBTCTxIds"
 type AnchorBTC struct {
 	state         *types.AnchorState
 	config        types.AnchorConfig
-	tendermintRpc *tendermint_rpc.RPC
+	tendermintRpc *tendermintrpc.RPC
 	Cache         *level.KVStore
 	Db            database.ChainpointDatabase
 	LnClient      *lightning.LightningClient
@@ -40,7 +40,7 @@ type AnchorBTC struct {
 	analytics     *analytics2.UniversalAnalytics
 }
 
-func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermint_rpc.RPC,
+func NewBTCAnchorEngine(state *types.AnchorState, config types.AnchorConfig, tendermintRpc *tendermintrpc.RPC,
 	database *database.ChainpointDatabase, cache *level.KVStore, LnClient *lightning.LightningClient, logger log.Logger, analytics *analytics2.UniversalAnalytics) *AnchorBTC {
 	return &AnchorBTC{
 		state:         state,
@@ -258,7 +258,7 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 			}
 		}
 		time.Sleep(70 * time.Second) // wait until next block to query for btc-c
-		hash = app.tendermintRpc.GetBTCCTx(btcMonObj)
+		hash = app.tendermintRpc.GetBTCCForBtcRoot(btcMonObj)
 		if len(hash) > 0 {
 			break
 		}
@@ -274,7 +274,11 @@ func (app *AnchorBTC) ConfirmAnchor(btcMonObj types.BtcMonMsg) error {
 	return nil
 }
 
-func (app *AnchorBTC) ConstructProof(btca types.BtcTxMsg) (proof.P, error) {
+func (app *AnchorBTC) ConstructProof(txid string) (proof.P, error) {
+	btca, err := app.tendermintRpc.GetBtcaForCalTx(txid)
+	if app.LogError(err) != nil {
+		return proof.Proof(), err
+	}
 	btcAgg, err := app.GetTreeFromCalRange(btca.BeginCalTxInt, btca.EndCalTxInt)
 	if app.LogError(err) != nil {
 		return proof.Proof(), err
@@ -283,15 +287,39 @@ func (app *AnchorBTC) ConstructProof(btca types.BtcTxMsg) (proof.P, error) {
 		app.logger.Info(fmt.Sprintf("ConstructProof TreeData calculation failure for BTC-A aggroot: %s, local treeData result was %s", btca.AnchorBtcAggRoot, btcAgg.AnchorBtcAggRoot))
 		return proof.Proof(), errors.New("StartAnchoring failure, AggRoot mismatch")
 	}
+	anchorBtcTxState := calendar.GenerateAnchorBtcTxState(btca)
 	anchorBTCAggStateObjects := calendar.PrepareBtcaStateData(btcAgg)
-	err = app.Db.BulkInsertBtcAggState(anchorBTCAggStateObjects)
+/*	err = app.Db.BulkInsertBtcAggState(anchorBTCAggStateObjects)
 	if app.LogError(err) != nil {
 		app.logger.Info(fmt.Sprintf("ConstructProof TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
 		return proof.Proof(), err
+	}*/
+	btccHash, blockHeight := app.tendermintRpc.GetAnchorHeight(btca)
+	if blockHeight == 0 {
+		//TODO: sad path: contact anchoringCore for tx/height, reconstruct blocktree
+		//TODO: or we're querying too soon
 	}
 	//TODO: happy path: query for btcc, extract height, reconstruct blocktree
-	//TODO: sad path: contact anchoringCore for tx/height, reconstruct blocktree
-	return proof.Proof(), nil
+	btcProofMsg, err := app.GenerateBtcHeaderProof(types.TxID{
+		TxID:             btca.BtcTxID,
+		BlockHeight:      blockHeight,
+		AnchorBtcAggRoot: "",
+	})
+	if err != nil {
+		return proof.Proof(), err
+	}
+	headStateObj := calendar.GenerateHeadStateObject(app.config.CoreURI, btccHash, btcProofMsg)
+
+	anchorBtcAggStateLookup := make(map[string]types.AnchorBtcAggState)
+	for _, anchorAggState := range anchorBTCAggStateObjects {
+		anchorBtcAggStateLookup[anchorAggState.CalId] = anchorAggState
+	}
+	btcProof := proof.Proof()
+	err = btcProof.AddChainBranch(anchorBtcAggStateLookup[txid], anchorBtcTxState, headStateObj, btcProof.SetProofType(app.config.BitcoinNetwork, "btc"))
+	if app.LogError(err) != nil {
+		return proof.Proof(), err
+	}
+	return btcProof, nil
 }
 
 func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.AnchorBtcHeadState) error {
@@ -320,16 +348,13 @@ func (app *AnchorBTC) GenerateBtcBatch(proofIds []string, btcHeadState types.Anc
 	if len(anchorBtcAggStates) == 0 {
 		return errors.New("no anchorbtcggstate to retrieve")
 	}
-	anchorBTCAggIds := []string{}
-	for _, anchorBtcAggState := range anchorBtcAggStates {
-		anchorBTCAggIds = append(anchorBTCAggIds, anchorBtcAggState.AnchorBtcAggId)
-	}
+
 	btcTxState, err := app.Db.GetBTCTxStateObjectByBtcHeadState(btcHeadState.BtcTxId)
 	if err != nil {
 		return err
 	}
 	if len(btcTxState.BtcTxId) == 0 {
-		return errors.New(fmt.Sprintf("btcTxState cannot be located for %s", anchorBTCAggIds[0]))
+		return errors.New(fmt.Sprintf("btcTxState cannot be located for %s", btcHeadState.BtcTxId))
 	}
 
 	calLookUp := make(map[string]types.CalStateObject)
@@ -539,33 +564,38 @@ func (app *AnchorBTC) MonitorConfirmedTx() {
 			app.logger.Info(fmt.Sprintf("btc tx %s at %d confirmations", s, confirmCount))
 			continue
 		}
-		block, tree, txIndex, err := app.GetBlockTree(tx)
-		if app.LogError(err) != nil {
-			if strings.Contains(err.Error(), "not found in block") {
-				app.LogError(app.Cache.Del(CONFIRMED_BTC_TX_IDS_KEY, s))
-			}
-			continue
+		btcmsg, err := app.GenerateBtcHeaderProof(tx)
+		if strings.Contains(err.Error(), "not found in block") {
+			app.LogError(app.Cache.Del(CONFIRMED_BTC_TX_IDS_KEY, s))
 		}
-		var btcmsg types.BtcMonMsg
-		btcmsg.BtcTxID = tx.TxID
-		btcmsg.BtcHeadHeight = tx.BlockHeight
-		btcmsg.BtcHeadRoot = util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot))
-		proofs := tree.GetProof(txIndex)
-		jsproofs := make([]types.JSProof, len(proofs))
-		for i, proof := range proofs {
-			if proof.Left {
-				jsproofs[i] = types.JSProof{Left: hex.EncodeToString(proof.Value)}
-			} else {
-				jsproofs[i] = types.JSProof{Right: hex.EncodeToString(proof.Value)}
-			}
-		}
-		btcmsg.Path = jsproofs
 		go app.ConfirmAnchor(btcmsg)
-		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed from proof index %d", btcmsg, txIndex))
+		app.logger.Info(fmt.Sprintf("btc tx msg %+v confirmed", btcmsg))
 		if app.LogError(app.Cache.Del(CONFIRMED_BTC_TX_IDS_KEY, s)) != nil {
 			continue
 		}
 	}
+}
+
+func (app *AnchorBTC) GenerateBtcHeaderProof(tx types.TxID) (types.BtcMonMsg, error){
+	block, tree, txIndex, err := app.GetBlockTree(tx)
+	if app.LogError(err) != nil {
+		return types.BtcMonMsg{}, err
+	}
+	var btcmsg types.BtcMonMsg
+	btcmsg.BtcTxID = tx.TxID
+	btcmsg.BtcHeadHeight = tx.BlockHeight
+	btcmsg.BtcHeadRoot = util.ReverseTxHex(hex.EncodeToString(block.MerkleRoot))
+	proofs := tree.GetProof(txIndex)
+	jsproofs := make([]types.JSProof, len(proofs))
+	for i, proof := range proofs {
+		if proof.Left {
+			jsproofs[i] = types.JSProof{Left: hex.EncodeToString(proof.Value)}
+		} else {
+			jsproofs[i] = types.JSProof{Right: hex.EncodeToString(proof.Value)}
+		}
+	}
+	btcmsg.Path = jsproofs
+	return btcmsg, nil
 }
 
 // GetBlockTree : constructs block merkel tree with transaction as index

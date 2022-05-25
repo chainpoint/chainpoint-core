@@ -244,13 +244,8 @@ func (app *AnchorApplication) ProofUpgradeHandler(w http.ResponseWriter, r *http
 	app.logger.Info(fmt.Sprintf("Proof Upgrade Client IP: %s", ip))
 	vars := mux.Vars(r)
 	if _, exists := vars["txid"]; exists {
-		btca, err := app.rpc.GetBtcaForCalTx(vars["txid"])
-		if app.LogError(err) != nil {
-			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not retrieve btca tx"})
-			return
-		}
-		app.logger.Info("Upgrading proof", "cal", vars["txid"], "btca.BeginCalTxInt", btca.BeginCalTxInt)
-		proof, err := app.Anchor.ConstructProof(btca)
+		app.logger.Info("Upgrading proof", "cal", vars["txid"])
+		proof, err := app.Anchor.ConstructProof(vars["txid"])
 		if app.LogError(err) != nil {
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "could not reconstruct core proof"})
 			return

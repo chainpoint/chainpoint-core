@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/threadsafe_ulid"
+	"github.com/chainpoint/chainpoint-core/ulidthreadsafe"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,7 +32,7 @@ type Aggregator struct {
 	QueueMutex   sync.Mutex
 	TempStop     chan struct{}
 	WaitGroup    sync.WaitGroup
-	UlidGen      *threadsafe_ulid.ThreadSafeUlid
+	UlidGen      *ulidthreadsafe.ThreadSafeUlid
 }
 
 func (aggregator *Aggregator) AggregateAndReset() []types.Aggregation {
@@ -88,7 +88,7 @@ func (aggregator *Aggregator) StartAggregation() error {
 	aggregator.HashItems = goconcurrentqueue.NewFIFO()
 	//Consume queue in goroutines with output slice guarded by mutex
 	aggregator.Aggregations = goconcurrentqueue.NewFIFO()
-	aggregator.UlidGen = threadsafe_ulid.NewThreadSafeUlid()
+	aggregator.UlidGen = ulidthreadsafe.NewThreadSafeUlid()
 	for {
 		aggregator.RestartMutex.Lock()
 		aggregator.TempStop = make(chan struct{})

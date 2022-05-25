@@ -14,7 +14,7 @@ type AnchorEngine interface {
 
 	ConfirmAnchor(btcMonObj types.BtcMonMsg) error
 
-	ConstructProof(btca types.BtcTxMsg) (proof.P, error)
+	ConstructProof(txid string) (proof.P, error)
 
 	AnchorReward(CoreID string) error
 

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chainpoint/chainpoint-core/validation"
+	"github.com/chainpoint/chainpoint-core/txratelimiter"
 
 	"github.com/chainpoint/chainpoint-core/types"
 
@@ -33,7 +33,7 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 	var err error
 	var valid bool
 	if app.state.ChainSynced {
-		tx, valid, err = validation.Validate(rawTx, app.state)
+		tx, valid, err = txratelimiter.Validate(rawTx, app.state)
 	} else {
 		tx, err = util.DecodeTx(rawTx)
 		valid = true
@@ -66,14 +66,14 @@ func (app *AnchorApplication) validateTx(rawTx []byte) types2.ResponseCheckTx {
 			}
 		}
 		if !isSubmitterVal {
-			if _, submitterRecord, err := validation.GetValidationRecord(tx.CoreID, *app.state); err != nil {
+			if _, submitterRecord, err := txratelimiter.GetValidationRecord(tx.CoreID, *app.state); err != nil {
 				submitterRecord.UnAuthValSubmissions++
-				validation.SetValidationRecord(tx.CoreID, submitterRecord, app.state)
+				txratelimiter.SetValidationRecord(tx.CoreID, submitterRecord, app.state)
 			}
 		}
 		if amVal {
 			goodCandidate := false
-			if _, record, err := validation.GetValidationRecord(id, *app.state); err != nil {
+			if _, record, err := txratelimiter.GetValidationRecord(id, *app.state); err != nil {
 				numValidators := len(app.state.Validators)
 				if power <= 0 { //make it easier to get rid of a validator than to promote one
 					goodCandidate = true
@@ -178,7 +178,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 				break
 			}
 			if btcc.BtcHeadRoot == string(app.state.LatestBtccTx) {
-				app.logger.Info(fmt.Sprintf("We've already seen this BTC-C confirmation tx: %s", tx.Data))
+				app.logger.Info(fmt.Sprintf("We've already seen this BTC-C confirmation tx: %s", btcc.BtcHeadHeight))
 				break
 			}
 			app.state.LatestBtccTx = []byte(btcc.BtcHeadRoot)
@@ -202,7 +202,7 @@ func (app *AnchorApplication) updateStateFromTx(rawTx []byte) types2.ResponseDel
 			if app.state.ChainSynced {
 				go app.Anchor.AnchorReward(app.state.LastAnchorCoreID)
 			}
-			validation.IncrementSuccessAnchor(app.state.LastAnchorCoreID, app.state)
+			txratelimiter.IncrementSuccessAnchor(app.state.LastAnchorCoreID, app.state)
 		}
 		resp = types2.ResponseDeliverTx{Code: code.CodeTypeOK}
 	case "NIST":
