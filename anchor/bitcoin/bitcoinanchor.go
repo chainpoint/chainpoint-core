@@ -298,6 +298,30 @@ func (app *AnchorBTC) ConstructProof(txid string) (proof.P, error) {
 	if blockHeight == 0 {
 		//TODO: sad path: contact anchoringCore for tx/height, reconstruct blocktree
 		//TODO: or we're querying too soon
+		txBytes, err := hex.DecodeString(btca.BtcTxID)
+		if app.LogError(err) != nil {
+			return proof.Proof(), err
+		}
+		txDetails, err := app.LnClient.GetTransaction(txBytes)
+		if app.LogError(err) != nil {
+			return proof.Proof(), err
+		}
+		if len(txDetails.Transactions) > 0 {
+			blockHeight = int64(txDetails.Transactions[0].BlockHeight)
+		}
+		blockDetails, err := app.LnClient.GetBlockByHeight(blockHeight)
+		if app.LogError(err) != nil {
+			return proof.Proof(), err
+		}
+		btccHash = app.tendermintRpc.GetBTCCForBtcRoot(types.BtcMonMsg{
+			BtcTxID:       "",
+			BtcHeadHeight: 0,
+			BtcHeadRoot: util.ReverseTxHex(hex.EncodeToString(blockDetails.MerkleRoot)),
+			Path:          nil,
+		})
+		if len(btccHash) == 0 {
+			return proof.Proof(), errors.New(fmt.Sprintf("Could not retrieve btcc"))
+		}
 	}
 	//TODO: happy path: query for btcc, extract height, reconstruct blocktree
 	btcProofMsg, err := app.GenerateBtcHeaderProof(types.TxID{
