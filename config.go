@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
+	"github.com/chainpoint/chainpoint-core/tendermintrpc"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
 	lightning "github.com/chainpoint/lightning-go"
@@ -265,7 +265,7 @@ func initTendermintConfig(home string, network string, listenAddr string, tender
 					TMServer: peerIP,
 					TMPort:   "26657",
 				}
-				rpc := tendermint_rpc.NewRPCClient(peerRPC, logger)
+				rpc := tendermintrpc.NewRPCClient(peerRPC, logger)
 				// Pull and save genesis file
 				genesis, err := rpc.GetGenesis()
 				if err == nil {

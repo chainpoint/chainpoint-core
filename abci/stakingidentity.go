@@ -7,7 +7,7 @@ import (
 	"github.com/chainpoint/chainpoint-core/leaderelection"
 	"github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/util"
-	"github.com/chainpoint/chainpoint-core/validation"
+	"github.com/chainpoint/chainpoint-core/txratelimiter"
 	lightning "github.com/chainpoint/lightning-go"
 	"strconv"
 	"strings"
@@ -23,7 +23,7 @@ func (app *AnchorApplication) SetStake() {
 			if app.LogError(err) != nil {
 				continue
 			}
-			cores := validation.GetLastNSubmitters(128, *app.state) //get Active cores on network
+			cores := txratelimiter.GetLastNSubmitters(128, *app.state) //get Active cores on network
 			chngStakeTxs, err := app.rpc.GetAllCHNGSTK()
 			if app.LogError(err) != nil {
 				continue
@@ -279,7 +279,7 @@ func (app *AnchorApplication) SetIdentity(tx types.Tx) (types.Jwk, error) {
 	if val, exists := app.state.TxValidation[pubKeyHex]; exists {
 		app.state.TxValidation[pubKeyHex] = val
 	} else {
-		validation := validation.NewTxValidation()
+		validation := txratelimiter.NewTxValidation()
 		app.state.TxValidation[pubKeyHex] = validation
 	}
 	app.state.IDMap[jwkType.Kid] = tx.CoreID

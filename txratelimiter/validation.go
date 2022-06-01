@@ -1,4 +1,4 @@
-package validation
+package txratelimiter
 
 import (
 	"crypto/elliptic"

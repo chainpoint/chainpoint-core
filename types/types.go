@@ -413,12 +413,13 @@ type CoreAPIStatus struct {
 }
 
 type APIHandlers struct {
-	HomeHandler     http.Handler
-	HashHandler     http.Handler
-	ProofHandler    http.Handler
-	CalHandler      http.Handler
-	CalDataHandler  http.Handler
-	StatusHandler   http.Handler
-	PeerHandler     http.Handler
-	GatewaysHandler http.Handler
+	HomeHandler         http.Handler
+	HashHandler         http.Handler
+	ProofHandler        http.Handler
+	ProofUpgradeHandler http.Handler
+	CalHandler          http.Handler
+	CalDataHandler      http.Handler
+	StatusHandler       http.Handler
+	PeerHandler         http.Handler
+	GatewaysHandler     http.Handler
 }

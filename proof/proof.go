@@ -117,7 +117,11 @@ func (proof *P) AddChainBranch(btcAggState types.AnchorBtcAggState, btcTxState t
 	opsJson = append(opsJson, anchorOp)
 	btcBranch["ops"] = opsJson
 
-	(*proof)["branches"].([]P)[0]["branches"] = []P{btcBranch}
+	if _, branchExists := (*proof)["branches"]; branchExists && len((*proof)["branches"].([]P)) > 0  {
+		(*proof)["branches"].([]P)[0]["branches"] = []P{btcBranch}
+	} else {
+		(*proof)["branches"] = []P{btcBranch}
+	}
 	return nil
 }
 

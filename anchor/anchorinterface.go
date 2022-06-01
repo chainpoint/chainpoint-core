@@ -1,6 +1,9 @@
 package anchor
 
-import "github.com/chainpoint/chainpoint-core/types"
+import (
+	"github.com/chainpoint/chainpoint-core/proof"
+	"github.com/chainpoint/chainpoint-core/types"
+)
 
 type AnchorEngine interface {
 	AnchorToChain(startTxRange int64, endTxRange int64) error
@@ -10,6 +13,8 @@ type AnchorEngine interface {
 	BeginTxMonitor(msgBytes []byte) error
 
 	ConfirmAnchor(btcMonObj types.BtcMonMsg) error
+
+	ConstructProof(txid string) (proof.P, error)
 
 	AnchorReward(CoreID string) error
 

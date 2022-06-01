@@ -10,8 +10,8 @@ import (
 	"github.com/chainpoint/chainpoint-core/anchor/bitcoin"
 	"github.com/chainpoint/chainpoint-core/database"
 	"github.com/chainpoint/chainpoint-core/database/level"
-	"github.com/chainpoint/chainpoint-core/tendermint_rpc"
-	"github.com/chainpoint/chainpoint-core/threadsafe_ulid"
+	"github.com/chainpoint/chainpoint-core/tendermintrpc"
+	"github.com/chainpoint/chainpoint-core/ulidthreadsafe"
 	"github.com/tendermint/tendermint/abci/example/code"
 	"net"
 	"path"
@@ -20,7 +20,7 @@ import (
 
 	lightning "github.com/chainpoint/lightning-go"
 
-	"github.com/chainpoint/chainpoint-core/validation"
+	"github.com/chainpoint/chainpoint-core/txratelimiter"
 
 	"github.com/chainpoint/chainpoint-core/util"
 	"github.com/tendermint/tendermint/libs/log"
@@ -90,11 +90,11 @@ type AnchorApplication struct {
 	ChainpointDb         database.ChainpointDatabase
 	Cache                *level.KVStore
 	LnClient             *lightning.LightningClient
-	rpc                  *tendermint_rpc.RPC
+	rpc                  *tendermintrpc.RPC
 	ID                   string
 	JWK                  types.Jwk
 	Analytics            *analytics2.UniversalAnalytics
-	ULIDGenerator        *threadsafe_ulid.ThreadSafeUlid
+	ULIDGenerator        *ulidthreadsafe.ThreadSafeUlid
 }
 
 //NewAnchorApplication is ABCI app constructor
@@ -105,7 +105,7 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 	load_state := loadState(db)
 	state := &load_state
 	if state.TxValidation == nil {
-		state.TxValidation = validation.NewTxValidationMap()
+		state.TxValidation = txratelimiter.NewTxValidationMap()
 	}
 	if state.LnUris == nil {
 		state.LnUris = map[string]types.LnIdentity{}
@@ -131,11 +131,11 @@ func NewAnchorApplication(config types.AnchorConfig) *AnchorApplication {
 
 	jwkType := util.GenerateKey(config.ECPrivateKey, string(config.TendermintConfig.NodeKey.ID()))
 
-	rpcClient := tendermint_rpc.NewRPCClient(config.TendermintConfig, *config.Logger)
+	rpcClient := tendermintrpc.NewRPCClient(config.TendermintConfig, *config.Logger)
 
 	analytics := analytics2.NewClient(config.CoreName, config.AnalyticsID, *config.Logger)
 
-	ulidGenerator := threadsafe_ulid.NewThreadSafeUlid()
+	ulidGenerator := ulidthreadsafe.NewThreadSafeUlid()
 
 	cache := level.NewKVStore(&db, *config.Logger)
 
@@ -351,7 +351,7 @@ func (app *AnchorApplication) Query(reqQuery types2.RequestQuery) (resQuery type
 					resQuery.Code = code.CodeTypeUnauthorized
 					return
 				}*/
-		JWKChanges, _ := validation.GetJWKChanges(coreID, app.state)
+		JWKChanges, _ := txratelimiter.GetJWKChanges(coreID, app.state)
 		if JWKChanges > 3 {
 			app.logger.Info(fmt.Sprintf("id %s unauthorized", coreID))
 			resQuery.Code = code.CodeTypeUnauthorized

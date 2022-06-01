@@ -1,4 +1,4 @@
-package tendermint_rpc
+package tendermintrpc
 
 import (
 	"crypto/ecdsa"
@@ -161,6 +161,47 @@ func (rpc *RPC) GetCalTxRange(minTxInt int64, maxTxInt int64) ([]core_types.Resu
 	return Txs, nil
 }
 
+// GetIndexForCalTx : get transactional index tag for a given tendermint calendar hash
+func (rpc *RPC) GetIndexForCalTx(txid string) (int64, error) {
+	calResult, err := rpc.GetTxByHash(txid)
+	if err != nil {
+		return 0, err
+	}
+	var index int64
+	for _, event := range calResult.TxResult.Events {
+		for _, tag := range event.Attributes {
+			if string(tag.Key) == "TxInt" {
+				index = util.ByteToInt64(string(tag.Value))
+				return index, nil
+			}
+		}
+	}
+	return 0, errors.New(fmt.Sprintf("no txInt index found for %s", txid))
+}
+
+// GetBtcaForCalTx : retrieve the corresponding btca tx for a given calendar tx
+func (rpc *RPC) GetBtcaForCalTx(txid string) (types.BtcTxMsg, error) {
+	index, err := rpc.GetIndexForCalTx(txid)
+	if err != nil {
+		return types.BtcTxMsg{}, err
+	}
+	queryLine := fmt.Sprintf("tm.event = 'Tx' AND BTC-A.TxInt > %d", index)
+	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 5, "asc")
+	if rpc.LogError(err) != nil {
+		return types.BtcTxMsg{}, err
+	}
+	for _, res := range txResult.Txs {
+		tx, err := util.DecodeTx(res.Tx)
+		if err == nil {
+			btcMsg := types.BtcTxMsg{}
+			if err := json.Unmarshal([]byte(tx.Data), &btcMsg); err != nil && index >= btcMsg.BeginCalTxInt && index < btcMsg.EndCalTxInt {
+				return btcMsg, nil
+			}
+		}
+	}
+	return types.BtcTxMsg{}, nil
+}
+
 //GetAnchoringCore : gets core to whom last anchor is attributed
 func (rpc *RPC) GetAnchoringCore(queryLine string) (string, error) {
 	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 1, "")
@@ -176,8 +217,8 @@ func (rpc *RPC) GetAnchoringCore(queryLine string) (string, error) {
 	return "", err
 }
 
-// GetBTCCTx: retrieves and verifies existence of btcc tx
-func (rpc *RPC) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
+// GetBTCCForBtcRoot: retrieves and verifies existence of btcc tx
+func (rpc *RPC) GetBTCCForBtcRoot(btcMonObj types.BtcMonMsg) (hash []byte) {
 	btccQueryLine := fmt.Sprintf("BTC-C.BTCC='%s'", btcMonObj.BtcHeadRoot)
 	txResult, err := rpc.client.TxSearch(btccQueryLine, false, 1, 1, "")
 	if rpc.LogError(err) == nil {
@@ -187,6 +228,26 @@ func (rpc *RPC) GetBTCCTx(btcMonObj types.BtcMonMsg) (hash []byte) {
 		}
 	}
 	return hash
+}
+
+// GetBTCCForBtcTx: retrieves and verifies existence of btcc tx
+func (rpc *RPC) GetAnchorHeight(btcTxObj types.BtcTxMsg) ([]byte, int64) {
+	btccQueryLine := fmt.Sprintf("BTC-C.BTCCTX='%s'", btcTxObj.BtcTxID)
+	txResult, err := rpc.client.TxSearch(btccQueryLine, false, 1, 1, "")
+	if rpc.LogError(err) == nil {
+		for _, tx := range txResult.Txs {
+			for _, tags := range tx.TxResult.Events {
+				for _, pairs := range tags.Attributes {
+					if string(pairs.Key) == "BTCCBH" {
+						blockHeight := util.ByteToInt64(string(pairs.Value))
+						rpc.logger.Info(fmt.Sprint("Found BTC-C Height %d from btctx %s", blockHeight, btcTxObj.BtcTxID))
+						return tx.Hash, blockHeight
+					}
+				}
+			}
+		}
+	}
+	return []byte{}, 0
 }
 
 // getAllJWKs gets all JWK TXs
