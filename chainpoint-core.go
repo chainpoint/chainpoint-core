@@ -217,7 +217,7 @@ func main() {
 		panic(err)
 	}
 
-	var quit chan struct{} //to signal the infinite invoice processing loop to quit
+	quit := make(chan struct{}) //to signal the infinite invoice processing loop to quit
 
 	// Wait forever, shutdown gracefully upon
 	tmos.TrapSignal(*config.Logger, func() {
