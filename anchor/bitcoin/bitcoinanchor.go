@@ -589,7 +589,7 @@ func (app *AnchorBTC) MonitorConfirmedTx() {
 			continue
 		}
 		btcmsg, err := app.GenerateBtcHeaderProof(tx)
-		if strings.Contains(err.Error(), "not found in block") {
+		if err != nil && strings.Contains(err.Error(), "not found in block") {
 			app.LogError(app.Cache.Del(CONFIRMED_BTC_TX_IDS_KEY, s))
 		}
 		go app.ConfirmAnchor(btcmsg)
