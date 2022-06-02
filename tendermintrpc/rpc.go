@@ -194,12 +194,12 @@ func (rpc *RPC) GetBtcaForCalTx(txid string) (types.BtcTxMsg, error) {
 		tx, err := util.DecodeTx(res.Tx)
 		if err == nil {
 			btcMsg := types.BtcTxMsg{}
-			if err := json.Unmarshal([]byte(tx.Data), &btcMsg); err != nil && index >= btcMsg.BeginCalTxInt && index < btcMsg.EndCalTxInt {
+			if err := json.Unmarshal([]byte(tx.Data), &btcMsg); rpc.LogError(err) == nil && index >= btcMsg.BeginCalTxInt && index < btcMsg.EndCalTxInt {
 				return btcMsg, nil
 			}
 		}
 	}
-	return types.BtcTxMsg{}, nil
+	return types.BtcTxMsg{}, errors.New(fmt.Sprintf("No matches from %d results", txResult.TotalCount))
 }
 
 //GetAnchoringCore : gets core to whom last anchor is attributed
