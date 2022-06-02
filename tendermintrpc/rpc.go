@@ -199,7 +199,7 @@ func (rpc *RPC) GetBtcaForCalTx(txid string) (types.BtcTxMsg, error) {
 			}
 		}
 	}
-	return types.BtcTxMsg{}, errors.New(fmt.Sprintf("No matches from %d results", txResult.TotalCount))
+	return types.BtcTxMsg{}, errors.New(fmt.Sprintf("No matches from %d results for cal index %d", txResult.TotalCount, index))
 }
 
 //GetAnchoringCore : gets core to whom last anchor is attributed
