@@ -251,6 +251,7 @@ func (app *AnchorApplication) ProofUpgradeHandler(w http.ResponseWriter, r *http
 			return
 		}
 		respondJSON(w, http.StatusOK, proof)
+		return
 	}
 	respondJSON(w, http.StatusNotFound, map[string]interface{}{"error": "txid parameter required"})
 }
