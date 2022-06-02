@@ -185,7 +185,7 @@ func (rpc *RPC) GetBtcaForCalTx(txid string) (types.BtcTxMsg, error) {
 	if err != nil {
 		return types.BtcTxMsg{}, err
 	}
-	queryLine := fmt.Sprintf("tm.event = 'Tx' AND BTC-A.TxInt > %d", index)
+	queryLine := fmt.Sprintf("BTC-A.TxInt>%d", index)
 	txResult, err := rpc.client.TxSearch(queryLine, false, 1, 5, "asc")
 	if rpc.LogError(err) != nil {
 		return types.BtcTxMsg{}, err
