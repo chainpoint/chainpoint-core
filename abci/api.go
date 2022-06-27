@@ -298,9 +298,16 @@ func (app *AnchorApplication) CalDataHandler(w http.ResponseWriter, r *http.Requ
 				return
 			}
 		}
+		btcc := types.BtcMonMsg{}
+		var res string
+		if err := json.Unmarshal([]byte(tx.Data), &btcc); err != nil {
+			res = tx.Data
+		} else {
+			res = btcc.BtcHeadRoot
+		}
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(tx.Data))
+		w.Write([]byte(res))
 		return
 	}
 	respondJSON(w, http.StatusNotFound, map[string]interface{}{"error": "tx parameter required"})
