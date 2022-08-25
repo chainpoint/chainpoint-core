@@ -1,7 +1,7 @@
 #!/bin/bash
 
 install_go(){
-  curl -L https://git.io/vQhTU | bash -s -- --version 1.16.8
+  curl -L https://git.io/vQhTU | bash -s -- --version 1.17.12
 }
 
 install_deps(){
