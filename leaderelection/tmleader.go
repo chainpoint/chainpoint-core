@@ -2,8 +2,8 @@ package leaderelection
 
 import (
 	"errors"
-	types2 "github.com/chainpoint/chainpoint-core/types"
 	"github.com/chainpoint/chainpoint-core/txratelimiter"
+	types2 "github.com/chainpoint/chainpoint-core/types"
 	"sort"
 
 	"github.com/chainpoint/chainpoint-core/util"
