@@ -289,11 +289,11 @@ func (app *AnchorBTC) ConstructProof(txid string) (proof.P, error) {
 	}
 	anchorBtcTxState := calendar.GenerateAnchorBtcTxState(btca)
 	anchorBTCAggStateObjects := calendar.PrepareBtcaStateData(btcAgg)
-/*	err = app.Db.BulkInsertBtcAggState(anchorBTCAggStateObjects)
-	if app.LogError(err) != nil {
-		app.logger.Info(fmt.Sprintf("ConstructProof TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
-		return proof.Proof(), err
-	}*/
+	/*	err = app.Db.BulkInsertBtcAggState(anchorBTCAggStateObjects)
+		if app.LogError(err) != nil {
+			app.logger.Info(fmt.Sprintf("ConstructProof TreeData save failure, resetting anchor: %s", btcAgg.AnchorBtcAggRoot))
+			return proof.Proof(), err
+		}*/
 	btccHash, blockHeight := app.tendermintRpc.GetAnchorHeight(btca)
 	if blockHeight == 0 {
 		//TODO: sad path: contact anchoringCore for tx/height, reconstruct blocktree
@@ -316,7 +316,7 @@ func (app *AnchorBTC) ConstructProof(txid string) (proof.P, error) {
 		btccHash = app.tendermintRpc.GetBTCCForBtcRoot(types.BtcMonMsg{
 			BtcTxID:       "",
 			BtcHeadHeight: 0,
-			BtcHeadRoot: util.ReverseTxHex(hex.EncodeToString(blockDetails.MerkleRoot)),
+			BtcHeadRoot:   util.ReverseTxHex(hex.EncodeToString(blockDetails.MerkleRoot)),
 			Path:          nil,
 		})
 		if len(btccHash) == 0 {
@@ -600,7 +600,7 @@ func (app *AnchorBTC) MonitorConfirmedTx() {
 	}
 }
 
-func (app *AnchorBTC) GenerateBtcHeaderProof(tx types.TxID) (types.BtcMonMsg, error){
+func (app *AnchorBTC) GenerateBtcHeaderProof(tx types.TxID) (types.BtcMonMsg, error) {
 	block, tree, txIndex, err := app.GetBlockTree(tx)
 	if app.LogError(err) != nil {
 		return types.BtcMonMsg{}, err

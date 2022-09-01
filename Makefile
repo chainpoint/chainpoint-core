@@ -45,9 +45,13 @@ install-deps:
 	bash ./config/install_deps.sh
 	source ${HOMEDIR}/.bashrc
 
+.PHONE : remove-go
+remove-go:
+	curl -L https://git.io/vQhTU | bash -s -- --remove
+
 .PHONY : install-go
 install-go:
-	 curl -L https://git.io/vQhTU | bash -s -- --version 1.16.8
+	 curl -L https://git.io/vQhTU | bash -s -- --version 1.17.12
 
 .PHONY : install-blocklist
 install-blocklist:

@@ -107,7 +107,6 @@ require (
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/jrick/logrotate v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
-	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
 	github.com/kilic/bls12-381 v0.0.0-20200607163746-32e1441c8a9f // indirect
 	github.com/kkdai/bstream v1.0.0 // indirect
@@ -127,10 +126,7 @@ require (
 	github.com/lightningnetwork/lnd/tlv v1.0.3 // indirect
 	github.com/lightningnetwork/lnd/tor v1.0.1 // indirect
 	github.com/ltcsuite/ltcd v0.20.1-beta // indirect
-	github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
-	github.com/mattn/go-colorable v0.1.6 // indirect
-	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mholt/archiver/v3 v3.5.0 // indirect
 	github.com/miekg/dns v1.1.43 // indirect
