@@ -3,7 +3,7 @@ module github.com/chainpoint/chainpoint-core
 go 1.17
 
 require (
-	github.com/btcsuite/btcd v0.23.1
+	github.com/btcsuite/btcd v0.23.2
 	github.com/chainpoint/leader-election v0.0.0
 	github.com/chainpoint/lightning-go v0.1.0
 	github.com/chainpoint/merkletools-go v1.0.2

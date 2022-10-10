@@ -22,11 +22,13 @@ BUILD_FLAGS = -ldflags "-X github.com/tendermint/tendermint/version.GitCommit=`g
 
 .PHONY : build
 build:
+	go mod tidy -compat=1.17 && go mod vendor
 	CGO_ENABLED=1 go build -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)"
 	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' chainpoint-core
 
 .PHONY : install
 install:
+	go mod tidy -compat=1.17 && go mod vendor
 	CGO_ENABLED=1 go install -tags "$(BUILD_TAGS) cleveldb gcc $(PROD) $(LND)"
 	echo "setting up permissions for port 80..." && sudo setcap 'cap_net_bind_service=+ep' ${GOPATH}/bin/chainpoint-core
 
